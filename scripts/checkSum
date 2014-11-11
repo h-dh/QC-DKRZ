@@ -1,0 +1,489 @@
+#! /bin/bash
+
+# calculation of checksums
+
+descript()
+{
+  echo -e "\ncheckSum [opts] filename"
+  echo " Calculate the checksum of file(s) and store parameters in a table."
+  echo " If PROJECT_DATA path and/or a sub-path to the file are provided,"
+  echo " then these are stored in the table, otherwise key-word 'none'."
+  echo " If the modification time of the file equals the one in the table,"
+  echo " then checksum calculation is discarded."
+  echo " Exit codes:"
+  echo "    0  checksum was caculated and stored for the first time."
+  echo "    1  checksum is up-to-date."
+  echo "    2  checksum is replaced in the checksum-table."
+  echo "    3  file not found."
+  echo "    4  checksum calculation failed."
+  echo "    5  mkdir of path to a checksum-table failed."
+  echo "    6  CS changed, but creation_date or tracking_id remained the same."
+  echo "  --debug"
+  echo "  --help"
+  echo "  --no_history Accept remainig creation_date and tracking_id."
+  echo "  --type       Checksum type: md5 | sha1 ; default: md5."
+  echo "  -b  str     path to QC executables."
+  echo "  -m  str  Email notification to addr=str."
+  echo "  -P  str  Path to the PROJECT_DATA."
+  echo "  -q  str  Path to QC_RESULTS."
+  echo "  -S  str  SUB_PATH."
+  echo "  -t       Path to the checksum table [def: locally 'cs_table'."
+  echo "  -w       Create filename.md5 containing the checksum."
+  echo "           This is done where the file resides;"
+  echo "           a failed permission is not reported."
+  echo "  -x  str  Name of the experiment [def: 'EXP_NONE'."
+
+  echo " required parameters:"
+  echo "  -P  str  PROJECT_DATA"
+  echo "  -S  str  SUB_PATH"
+  echo "  filename(s) "
+}
+
+formatText()
+{
+  # format text ready for email of session logging
+  # date and host
+  local k N str0 str
+  str0="$( date +'%F %T' ) ${HOSTNAME%%.*}: external prog: checkSum\n"
+    # in case of any error
+    str0="${str0}FILE: ${file}\n"
+    str0="${str0}EXP_NAME: $EXP_NAME\n"
+#    str0="${str0}EXP_LOGDIR: $EXP_LOGDIR\n"
+    str0="${str0}TABLE_PATH: $TABLE_PATH\n"
+
+  str0="${str0}$*"
+
+  # The total output is subdivided into chunks of pmax characters.
+  # Effect of \n is preserved.
+  N=100
+  str=
+
+  while : ; do
+    k=0  # necessary when skipping the loop
+
+    if [ ${#str0} -ge $N ] ; then
+      # break lines with length > N
+      for (( ; k < N ; ++k )) ; do
+        if [ "${str0:k:2}" = "\n" ] ; then
+          str="${str}${str0:0:k}\n"
+          str0=${str0:$((k+2))}
+          continue 2
+        fi
+      done
+    fi
+
+    # the last line
+    if [ ${#str0} -le $N ] ; then
+      str="${str}${str0}"
+      break
+
+    # sub-lines length equals N
+    elif [ $k -eq $N -a "${str0:k:2}" = "\n" ] ; then
+      str="${str}${str0:0:N}"
+      str0=${str0:N}
+
+    # wrap line
+    else
+      str="${str}${str0:0:N}\n\t\t"
+      str0=${str0:N}
+    fi
+  done
+
+  formattedText=${str}
+}
+
+pre_logY()
+{
+  local ix=${#sTxt[*]}
+
+  if [ $# -eq 0 ] ; then
+    sTxt[$((ix++))]="3file: ${fn}"
+    sTxt[$((ix++))]="3data_path: ${file%/*}"
+    sTxt[$((ix++))]="3result_path: ${QC_RES}/data/${SUB_PATH}"
+    sTxt[$((ix++))]="3check:"
+    sTxt[$((ix++))]="4meta_data: ${y_meta_data:-FAIL}"
+    sTxt[$((ix++))]="4time_values: ${y_time_values:-OMIT}"
+    sTxt[$((ix++))]="4data: ${y_data:-OMIT}"
+    sTxt[$((ix++))]="3events:"
+  fi
+
+  if [ "$1" != '--finally' ] ; then
+    sTxt[$((ix++))]="3 - event:"
+    sTxt[$((ix++))]="7caption: \'${y_caption}\'"
+    sTxt[$((ix++))]="7impact: ${y_impact}"
+    sTxt[$((ix++))]="7tag: \'${y_tag}\'"
+
+    y_meta_data=
+    y_time_values=
+    y_data=
+
+    local i
+    if [ ${#y_text[*]} -gt 0 ] ; then
+      sTxt[$((ix++))]='7text:'
+      for(( i=0 ; i < ${#y_text[*]} ; ++i )) do
+        sTxt[$((ix++))]="7 - ${y_text[i]}"
+      done
+    fi
+  else
+    sTxt[$((ix++))]="3status: ${y_status:-0}"
+    y_status=
+
+    logY
+  fi
+
+#  if [ ${#EMAIL_TO[*]} -gt 0 ] ; then
+#    local t0
+#    for(( i=0 ; i < ${#y_text[*]} ; ++i )) do
+#      t0="${to} ${y_text[i]}"
+#    done
+#    formatText t0
+
+#    sendSubject="Annotation: ${y_caption}"
+#    sendEMail
+#  fi
+
+  unset y_text
+  return
+}
+
+##//! Log annotations to the experiment-logfile
+log_expMessage()
+{
+  # Print execution messages to the check-log file
+  # Note: formattedText is not used, because of the possible line wrapping
+
+  local str
+
+  # extracted name of the experiment from SUB_PATH;
+  # see configuration file
+
+  # date and time range
+  str="$( date +'%F %T' ) "
+
+  str="$str""\nFile:\t\t${NEXT_FILE}"
+  str="$str""\nData path:\t${PROJECT_DATA}/${SUB_PATH}"
+  str="$str""\nQC result path: ${QC_RES}/data/${SUB_PATH}"
+  str="$str""\nCHECK:: meta data: FAIL,        time: OMIT,     data: OMIT"
+#    str="$str""\nDRS tree:\t${SUB_PATH}"
+
+  str="$str""\n$1"
+
+  local out
+  out=${QC_RES}/check_logs/${EXP_NAME}.log
+  echo -e "\n${str}" >> $out
+
+#  if [ ${DISTRIBUTED_FS:-f} = f ] ; then
+#    tryCom echo -e "\n${str}" >> $PROC_POOL/experiments/${EXP_NAME}.$$.log
+#  else
+#    tryRemote ssh ${QC_MANAGER_HOST} \
+#      echo -e "\n${str}"      >> $PROC_POOL/experiments/${EXP_NAME}.$$.log
+#  fi
+
+  return
+}
+
+logY()
+{
+  # print execution messages to the experiment-log file
+
+  local s_out  # collects sTxt for output
+
+  local sp
+  sp[0]=''
+  sp[1]=' '
+  sp[2]='  '
+  sp[3]='   '
+  sp[4]='    '
+  sp[5]='     '
+  sp[6]='      '
+  sp[7]='       '
+  sp[8]='        '
+
+  local out
+  out=${QC_RES}/check_logs/${EXP_NAME}.log
+
+  s_out="${s_out} - date: $( date +'%FT%T' )"
+
+#  if [ ${QC_MANAGER_HOST} = $HOSTNAME ] ; then
+#  test ${ix} -lt 2 && \
+#    echo  "${sp[ix]}date: $( date +'%FT%T' )" >> $out
+#  else
+#    tryRemote ssh ${QC_MANAGER_HOST} \
+#      echo -e ${str} >> $out
+#  fi
+
+  # The total output is subdivided into chunks of pmax characters.
+  # Effect of \n is preserved.
+  local i k str0 str
+  local N=70
+
+  for(( i=0 ; i < ${#sTxt[*]} ; ++i )) ; do
+    #sTxt: 'I[ - ]text'
+    #       ^-- number of leading spaces
+
+    if [ "${sTxt[i]}" != "${sTxt[i]//:/}" -o ${#sTxt[i]} -lt $N ] ; then
+      s_out="${s_out}\n${sp[${sTxt[i]:0:1}]}${sTxt[i]:1}"
+      continue
+    fi
+
+    # break a long text into several line
+    s_out="${s_out} |"  # preserve lines
+
+    if [ "${sTxt[i]:1:3}" = ' - ' ] ; then
+      s_out="${s_out}\n${sp[${sTxt[i]:0:1}]} - |"
+      str0="${sTxt[i]:4} }"
+    fi
+
+    str=
+
+    while : ; do
+      k=0  # necessarily outside the for-loop if the latter is skipped
+
+      if [ ${#str0} -ge $N ] ; then
+        # break lines with length > N
+        for (( ; k < N ; ++k )) ; do
+          if [ "${str0:k:2}" = "\n" ] ; then
+            str="${str}${sp[$(( ${sTxt[i]:0:1} +1))]}${str0:0:k}\n"
+            str0=${str0:$((k+2))}
+            continue 2
+          fi
+        done
+      fi
+
+      if [ $k -eq $N ] ; then
+        str="${str}${sp[$(( ${sTxt[i]:0:1} +1))]}${str0:0:N}\n"
+        str0=${str0:N}
+      else
+        str="${str}${sp[$(( ${sTxt[i]:0:1} +1))]}${str0:0:N}"
+        break
+      fi
+    done
+    s_out="${s_out}${str}"
+
+  done
+
+  echo -e "${s_out}" >> $out
+
+  test "$1" == '--keep' && return
+
+  unset sTxt
+
+  #left=log
+  return
+}
+
+sendEMail()
+{
+  sendSubject="checksum\(\): ${sendSubject}"
+
+  if which mailx &> /dev/null ; then
+    MAIL=mailx
+  elif which mail &> /dev/null ; then
+    MAIL=mail
+  elif which mutt &> /dev/null ; then
+    MAIL="mutt"
+  fi
+
+  eval ${MAIL} -s \"\$sendSubject\"  ${EMAIL_TO[*]} <<!
+$(echo -e "\n$formattedText")
+!
+
+  return
+}
+
+table()
+{
+  test ! -e ${cs_table} && touch $cs_table
+
+  local entry
+  entry=( $( grep "[[:space:]]${fn}" $cs_table ) )
+
+  if [ ${#entry[*]} -eq 0 ]  ; then
+    # new entry
+    echo "$*" >> $cs_table
+    return 0
+  fi
+
+  # special: for moved data
+  if [ ${#entry[*]} -gt 3 ] ; then
+    if [ "${entry[2]}/${entry[3]}/${entry[1]}" != ${file} ] ; then
+       # althought the right filename, the path is different.
+       if [ ${entry[0]} = "${cs[0]}" ] ; then
+         # same checksums, same files -> adjust table
+         # replace the obsolete entry
+         # not: no return, but go on
+         sed -i "\%[[:space:]]${fn}% c $*" $cs_table
+         entry=( $* )
+       fi
+    fi
+  fi
+
+  local xtVal=1  # up-to-date
+
+  # Verify that file AND checksum are not identical in the table.
+  # If file is identical, but the checksum is not, then assume that the
+  # new checksum is valid and delete the former
+  if [ ! \( "${entry[0]}" = "${cs[0]}" -a "${entry[1]}" = "${fn}" \) ] ; then
+
+    # did creation_date or tracking_id NOT change?
+    if [ ${isHistory:-t} = t ] ; then
+      local i n contY logExpStr logExpStr2
+      for(( i=0 ; i < ${#entry[*]} ; ++i )) ; do
+        for n in 0 1 ; do
+          if [ ${entry[i]%=*} = ${att[n]%=*} -a "${att[n]#*=}" = ${entry[i]#*=} ] ; then
+            y_caption="checksum changed, but ${att[n]%=*} remained the same"
+            y_impact=L2
+            y_status=6
+
+            if [ ${n} = 0 ] ; then
+              y_tag=M7
+            else
+              y_tag=M8
+            fi
+
+            if [ ${YAML:-f} = t ] ; then
+              pre_logY $contY
+              contY=--more
+            fi
+
+            logExpStr="${logExpStr}${logExpStr:+\\n}${y_impact}-${y_tag}: ${y_caption}"
+            logExpStr2="${logExpStr2}\\n${y_impact}-${y_tag}: ${y_caption}\\n"
+            xtVal=6
+          fi
+        done
+      done
+
+      if [ ${xtVal} = 6 ] ; then
+        if [ ${YAML:-f} = t ] ; then
+          pre_logY --finally
+        else
+          NEXT_FILE=$fn
+          log_expMessage "${logExpStr}"
+        fi
+
+        local out=${QC_RES}/data/${SUB_PATH}/qc_lock_${fn%.nc}.txt
+        echo "Path: ${file%/*}"                  > $out
+        echo "File: ${file##*/}"                 >> $out
+        echo -e "${logExpStr2}"                  >> $out
+
+        exit 6
+      fi
+    fi
+
+    # up-date of the checksum-table
+    sed -i "\%[[:space:]]${fn}% c $*" $cs_table
+    xtVal=2
+  fi
+
+  return $xtVal
+}
+
+
+# ++++++++++++   main   +++++++++++++++
+EXP_NAME=EXP_NONE
+PRG=md5sum
+
+while getopts b:m:P:q:S:t:wx:-: option ${args[*]}
+do
+  case $option in
+    b)  QC_BIN=${OPTARG}/ ;;
+    m)  EMAIL_TO=( ${OPTARG//,/ } ) ;;
+    P)  PROJECT_DATA=${OPTARG} ;;
+    q)  QC_RES=${OPTARG} ;;
+    S)  SUB_PATH=${OPTARG} ;;
+    t)  TABLE_PATH=${OPTARG}/ ;;
+    w)  STAND_ALONE_FILE=t ;;
+    x)  EXP_NAME=${OPTARG} ;;
+    -)  if [ "$OPTARG" = "help" ] ; then
+          descript
+        elif [ "$OPTARG" = "debug" ] ; then
+          set -x
+        elif [ "$OPTARG" = "no_history" ] ; then
+          isHistory=f
+        elif [ "${OPTARG%=*}" = "type" ] ; then
+           PRG=${OPTARG#*=}
+           test ${PRG} = 'md5' -o ${PRG} = 'sha1' && PRG=${PRG}sum
+        elif [ "$OPTARG" = "yaml" ] ; then
+          YAML=t
+        fi
+        ;;
+   \?)  descript
+  esac
+done
+
+shift $(( $OPTIND - 1 ))
+
+test $# -eq 0 && descript && exit
+
+# the checksum table
+ext=${PRG%sum}
+ext=${ext##*/}
+
+cs_table=${TABLE_PATH}${EXP_NAME}.$ext
+
+# loop over the filenames
+status=0
+
+for fn in $* ; do
+  file=$PROJECT_DATA/$SUB_PATH/$fn
+
+  if [ ${STAND_ALONE_FILE:-f} = t ] ; then
+    if [ ${#TABLE_PATH} -gt 0 ] ; then
+      cs_table=${TABLE_PATH}${fn%.nc}.$ext
+    fi
+  fi
+
+  if [ ! -f "$file" ] ; then
+    if [ ${#EMAIL_TO[*]} -gt 0 ] ; then
+      sendSubject=" file not found"
+      formatText "file ${file} not found."
+      sendEMail
+    fi
+
+    exit 3
+  fi
+
+  tls=( $( ls -o --time-style=+'%F_%T' $file ) )
+  modTime=${tls[4]}
+
+  test "$( grep $fn $cs_table 2> /dev/null \
+    | awk '{print $5}' )" = "${modTime}" && continue  # up-to-date
+
+  # calculation of the checksum
+
+  # calculate the checksum
+  if ! cs=( $( $PRG "$file" 2> /dev/null ) ) ; then
+    if [ ${#EMAIL_TO[*]} -gt 0 ] ; then
+      sendSubject=" calculation failed"
+      formatText "checksum calculation by $PRG failed"
+      sendEMail
+    fi
+
+    # if calculation failed; probably no path to PRG
+    exit 4
+  fi
+
+  # Table directory.
+  if [ ${#TABLE_PATH} -gt 0 ] ; then
+      if [ ! -e $TABLE_PATH ] ; then
+        if ! mkdir -p $TABLE_PATH ; then
+          if [ ${#EMAIL_TO[*]} -gt 0 ] ; then
+            sendSubject=" could not mkdir table-dir"
+            formatText="Could not make directory $TABLE_PATH."
+            sendEMail
+          fi
+          exit 5
+        fi
+      fi
+  fi
+
+  att=( ${str[*]} $( ${QC_BIN}getNC_att.x $file creation_date tracking_id ) )
+
+  table ${cs[0]} $fn $PROJECT_DATA $SUB_PATH ${att[*]} mod_time=$modTime
+
+  stts=$?
+  test $stts -gt $status && status=$stts
+
+done
+
+exit $status

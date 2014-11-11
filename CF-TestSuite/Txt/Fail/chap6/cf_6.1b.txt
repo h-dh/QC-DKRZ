@@ -1,0 +1,32 @@
+netcdf cf_6.1b {
+dimensions:
+   time = 2 ;
+   lat = 5 ;
+   lbl = 1 ;
+   strlen = 64 ;
+
+variables:
+   double time(time) ;
+	     time:long_name = "time" ;
+	     time:units = "days since 1990-1-1 0:0:0" ;
+   float lat(lat) ;
+	     lat:long_name = "latitude" ;
+	     lat:units = "degrees_north" ;
+      lat:axis = "Y" ;
+   char geo_region(lbl,strlen) ;
+	     geo_region:standard_name="region";
+
+   float n_heat_transport(time,lat,lbl);
+      n_heat_transport:units="W";
+      n_heat_transport:standard_name="northward_ocean_heat_transport";
+      n_heat_transport:comment = "invalid: missing attribute coordinates" ;
+
+// global attributes:
+   :comment="Northward heat transport in Atlantic Ocean" ;
+   :Conventions = "CF-1.4" ;
+
+data:
+  geo_region = "atlantic_ocean" ;
+  lat = 10., 20., 30., 40., 50. ;
+  time= 1., 2.;
+}

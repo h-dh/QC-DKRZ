@@ -1,0 +1,19 @@
+netcdf cf_4.3c {
+dimensions:
+   h = 2 ;
+
+variables:
+   float height(h) ;
+      height:standard_name = "height" ;
+      height:positive= "up" ;
+      height:units= "m" ;
+      height:axis= "z" ;
+      height:comment = "invalid: axis not allowed because of aux-coordinate" ;
+
+// global attributes:
+   :comment="Vertical coordinates" ;
+   :Conventions = "CF-1.4" ;
+
+data:
+height = 1., 2. ;
+}

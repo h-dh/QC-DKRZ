@@ -1,0 +1,17 @@
+netcdf cf_3.3e {
+dimensions:
+   lat = 12;
+   lon = 13;
+   time = UNLIMITED ;
+
+variables:
+   float q3(time);
+      q3:standard_name = "specific_humidity";
+      q3:units = "g/g";
+      q3:amip = "abcd" ;
+      q3:comment ="amip is not CF compatible" ;
+
+// global attributes:
+   :comment="Use of standard_name" ;
+   :Conventions = "CF-1.4" ;
+}

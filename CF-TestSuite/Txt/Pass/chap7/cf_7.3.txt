@@ -1,0 +1,39 @@
+netcdf cf_7.3 {
+dimensions:
+   cell = 2 ; // number of grid cells
+   time = 3 ;
+   nv = 6 ; // maximum number of cell vertices
+
+variables:
+   float PS(time,cell) ;
+      PS:long_name="pressure" ;
+	     PS:units = "Pa" ;
+	     PS:coordinates = "lon lat" ;
+	     PS:cell_measures = "area: cell_area" ;
+   float lon(cell) ;
+	     lon:long_name = "longitude" ;
+	     lon:units = "degrees_east" ;
+	     lon:bounds="lon_vertices" ;
+      lon:axis = "X" ;
+   float lat(cell) ;
+	     lat:long_name = "latitude" ;
+	     lat:units = "degrees_north" ;
+	     lat:bounds="lat_vertices" ;
+      lat:axis = "Y" ;
+   float time(time) ;
+	     time:long_name = "time" ;
+	     time:units = "days since 1979-01-01 0:0:0" ;
+   float cell_area(cell) ;
+	     cell_area:long_name = "area of grid cell" ;
+	     cell_area:units = "m2";
+      cell_area:comment = "standard_name removed, because the value area is undefined" ;
+   float lon_vertices(cell,nv) ;
+   float lat_vertices(cell,nv) ;
+
+// global attributes:
+   :comment="Cell areas for a spherical geodesic grid" ;
+   :Conventions = "CF-1.4" ;
+
+data:
+time = 1., 2., 3.;
+}

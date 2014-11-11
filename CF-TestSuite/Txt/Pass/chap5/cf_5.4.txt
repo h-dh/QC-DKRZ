@@ -1,0 +1,35 @@
+netcdf cf_5.4 {
+dimensions:
+   station = 2 ; // measurement locations
+   pressure = 3 ; // pressure levels
+   time = UNLIMITED ;
+
+variables:
+  float humidity(time,pressure) ;
+    	 humidity:long_name = "specific humidity" ;
+    	 humidity:coordinates = "lat lon" ;
+      humidity:comment = "invalid: missing dimension station" ;
+   double time(time) ;
+      time:standard_name = "time" ;
+ 	    time:long_name = "time of measurement" ;
+ 	    time:units = "days since 1970-01-01 00:00:00" ;
+   float lon(station) ;
+ 	    lon:long_name = "station longitude";
+ 	    lon:units = "degrees_east";
+      lon:axis = "X" ;
+   float lat(station) ;
+ 	    lat:long_name = "station latitude" ;
+ 	    lat:units = "degrees_north" ;
+      lat:axis = "Y" ;
+   float pressure(pressure) ;
+ 	    pressure:long_name = "pressure" ;
+ 	    pressure:units = "hPa" ;
+
+// global attributes:
+   :comment="Timeseries of station data" ;
+   :Conventions = "CF-1.4" ;
+
+data:
+time = 1.;
+pressure = 1., 2., 3.;
+}

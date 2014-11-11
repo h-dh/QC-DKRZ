@@ -1,0 +1,15 @@
+netcdf cf_2.3b {
+dimensions:
+   lat = 1;
+   lon = 2;
+
+variables:
+   float _psl(lat,lon) ;
+      _psl:long_name = "mean sea level pressure" ;
+      _psl:units = "hPa" ;
+      _psl:comment = "invalid leading underscore in variable name" ;
+
+// global attributes:
+   :comment="naming convention" ;
+   :Conventions = "CF-1.4" ;
+}

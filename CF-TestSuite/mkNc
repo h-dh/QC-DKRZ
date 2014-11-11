@@ -1,0 +1,4 @@
+#! /bin/bash
+
+ncgen -x -k 3 -o ${1%txt}nc $1
+

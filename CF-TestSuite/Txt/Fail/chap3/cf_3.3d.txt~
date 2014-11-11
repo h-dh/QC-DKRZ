@@ -1,0 +1,16 @@
+netcdf cf_3.3d {
+dimensions:
+   lat = 12;
+   lon = 13;
+   time = UNLIMITED ;
+
+variables:
+   float q2(time);
+      q2:standard_name = "specific_humidity xyz_modifier";
+      q2:units = "g/g";
+      q2:comment ="Standard name: undefined modifier" ;
+
+// global attributes:
+   :comment="Use of standard_name" ;
+   :Conventions = "CF-1.4" ;
+}

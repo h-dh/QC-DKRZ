@@ -1,0 +1,39 @@
+netcdf cf_7.3.1b {
+dimensions:
+   time = UNLIMITED; // (5 currently)
+   station = 2;
+   lat=2;
+   lon=3;
+
+variables:
+   double time(time);
+      time:standard_name = "time" ;
+	     time:long_name = "time";
+	     time:units = "h since 1998-4-19 6:0:0";
+   float lat(lat) ;
+      lat:long_name = "latitude" ;
+      lat:units = "degrees_north" ;
+      lat:standard_name = "latitude" ;
+      lat:axis = "Y" ;
+   float lon(lon) ;
+      lon:long_name = "longitude" ;
+      lon:units = "degrees_east" ;
+      lon:standard_name = "longitude" ;
+      lon:axis = "X" ;
+
+   float maxtemp(time,station);
+      maxtemp:long_name = "temperature";
+      maxtemp:units = "K";
+      maxtemp:coordinates = "lat lon" ;
+      maxtemp:cell_methods = "lon: lat: mean";
+      maxtemp:comment = "recommended: replacement of lon: lat: by area:" ;
+
+// global attributes:
+   :comment="Methods applied to a time series" ;
+   :Conventions = "CF-1.4" ;
+
+data:
+  time = 0., 12., 24., 36., 48.;
+  lat = 1., 2.;
+  lon = 1., 2., 3.;
+}

@@ -1,0 +1,18 @@
+netcdf cf_7.1f {
+dimensions:
+   nv = 2;
+
+variables:
+   float lat;
+    	 lat:standard_name = "latitude";
+	     lat:units = "degrees_north";
+	     lat:bounds = "lat_bnds";
+
+   float lat_bnds(nv);
+      lat_bnds:standard_name = "longitude";
+      lat_bnds:comment = "different standard_name compared to lat" ;
+
+// global attributes:
+   :comment="Cells in a non-rectangular grid" ;
+   :Conventions = "CF-1.4" ;
+}

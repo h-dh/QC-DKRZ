@@ -1,0 +1,23 @@
+netcdf cf_4.3a {
+dimensions:
+   h = 2 ;
+
+variables:
+   float h(h) ;
+      h:long_name = "height" ;
+      h:standard_name = "height" ;
+      h:units= "m" ;
+
+   float height(h) ;
+      height:standard_name = "height" ;
+      height:positive= "up" ;
+      height:comment = "invalid: missing attribute=units" ;
+
+// global attributes:
+   :comment="Vertical coordinates" ;
+   :Conventions = "CF-1.4" ;
+
+data:
+h = 1., 2.;
+height = 1., 2. ;
+}

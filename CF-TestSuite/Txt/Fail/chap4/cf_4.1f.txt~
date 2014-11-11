@@ -1,0 +1,39 @@
+netcdf cf_4.1f {
+dimensions:
+   time = UNLIMITED ; // (3 currently)
+   lat = 4 ;
+   lon = 4 ;
+   p   = 4 ;
+
+variables:
+   double time(time) ;
+    	 time:long_name = "time" ;
+	     time:units = "days since 1990-1-1 0:0:0" ;
+   float lon(lon) ;
+      lon:axis = "Y" ;
+      lon:units = "degree_east" ;
+      lon:standard_name = "longitude" ;
+   float p(p) ;
+      p:long_name = "pressure" ;
+      p:units = "hPa" ;
+   double data_var(time,p,lat,lon) ;
+      data_var:long_name = "something heavy" ;
+      data_var:units= "kg" ;
+
+   float lat(lat) ;
+      lat:axis = "Y" ;
+      lat:units = "degree_north" ;
+      lat:standard_name = "latitude" ;
+      lat:valid_range = -90.f, 90.f ;
+      lat:comment = "invalid: a data point exceeds valid_range, possibly _FillValue" ;
+
+// global attributes:
+   :comment="Time axis" ;
+   :Conventions = "CF-1.4" ;
+
+data:
+time = 1., 2., 3. ;
+lat = 999., 20., 30., 40. ;
+lon = 15., 25., 30., 35. ;
+p = 100, 101., 101.5, 102. ;
+}

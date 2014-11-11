@@ -1,0 +1,17 @@
+netcdf cf_4.4c {
+dimensions:
+   time = UNLIMITED ; // (10 currently)
+
+variables:
+   double time(time) ;
+    	 time:long_name = "time" ;
+	     time:units = "days since 1990-1-1T0:0:0Z" ;
+      time:comment = "valid for udunits" ;
+
+// global attributes:
+   :comment="Time axis" ;
+   :Conventions = "CF-1.4" ;
+
+data:
+time = 1., 2.;
+}

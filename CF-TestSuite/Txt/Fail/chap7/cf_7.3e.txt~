@@ -1,0 +1,43 @@
+netcdf cf_7.3e {
+dimensions:
+   time = UNLIMITED; // (5 currently)
+   station = 2;
+   nv = 2;
+   lon = 2 ;
+   lat = 2 ;
+
+variables:
+   float pressure(time,station);
+    	 pressure:long_name = "pressure";
+	     pressure:units = "kPa";
+   float maxtemp(time,station);
+	     maxtemp:long_name = "temperature";
+	     maxtemp:units = "K";
+	     maxtemp:cell_methods = "time: mean";
+   float ppn(time,station);
+	     ppn:long_name = "depth of water-equivalent precipitation";
+	     ppn:units = "mm";
+   float lat(lat) ;
+      lat:units = "degrees_north" ;
+      lat:standard_name = "latitude" ;
+      lat:axis = "Y" ;
+   float lon(lon) ;
+      lon:units = "degrees_east" ;
+      lon:standard_name = "longitude" ;
+      lon:axis = "X" ;
+
+   double time(time);
+      time:standard_name = "time" ;
+	     time:long_name = "time";
+	     time:units = "h since 1998-4-19 6:0:0";
+      time:comment = "time:bounds should be provided if cell_methods is not for point" ;
+
+// global attributes:
+   :comment="Methods applied to a time series" ;
+   :Conventions = "CF-1.4" ;
+
+data:
+  time = 0., 12., 24., 36., 48.;
+  lat = 1., 2.;
+  lon = 1., 2.;
+}

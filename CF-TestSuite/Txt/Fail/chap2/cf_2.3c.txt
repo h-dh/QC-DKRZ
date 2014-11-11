@@ -1,0 +1,16 @@
+netcdf cf_2.3c {
+dimensions:
+   lat = 1;
+   lon = 2;
+
+variables:
+   float psl-1(lat,lon) ;
+      psl-1:long_name = "mean sea level pressure" ;
+      psl-1:units = "hPa" ;
+      psl-1:standard_name = "air_pressure_at_sea_level" ;
+      psl-1:comment = "invalid use of hyphen in variable name" ;
+
+// global attributes:
+   :comment="naming convention" ;
+   :Conventions = "CF-1.4" ;
+}

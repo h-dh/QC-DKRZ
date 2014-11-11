@@ -1,0 +1,19 @@
+netcdf cf_4.3b {
+dimensions:
+   h = 2 ;
+
+variables:
+   float h(h) ;
+      h:long_name = "height" ;
+      h:standard_name = "height" ;
+      h:units = "m" ;
+      h:axis = "Z" ;
+      h:positive = "up" ;
+
+// global attributes:
+   :comment="vertical coordinate" ;
+   :Conventions = "CF-1.4" ;
+
+data:
+h = 1., 2. ;
+}

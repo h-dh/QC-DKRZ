@@ -1,0 +1,46 @@
+netcdf cf_3.3 {
+dimensions:
+   lat = 12;
+   lon = 13;
+   time = UNLIMITED ;
+
+variables:
+   float psl(lat,lon) ;
+	     psl:units = "hPa" ;
+	     psl:standard_name = "airPressure_at_sea_level" ;
+      psl:comment = "invalid standard_name";
+   float q0(time);
+      q0:standard_name = "specific humidity";
+      q0:units = "g/g";
+      q0:comment ="standard_name contains blanks" ;
+   float q1(time);
+      q1:standard_name = "specific_humidity status_error status_flag";
+      q1:units = "g/g";
+      q1:comment ="standard name: too many modifiers" ;
+   float q2(time);
+      q2:standard_name = "specific_humidity xyz_modifier";
+      q2:units = "g/g";
+      q2:comment ="Standard name: undefined modifier" ;
+   float q3(time);
+      q3:standard_name = "specific_humidity";
+      q3:units = "g/g";
+      q3:amip = "abcd" ;
+      q3:grib = 999 ;
+      q3:comment ="standard name vs. units, amip, and grib are not CF compatible" ;
+   float q4(time);
+      q4:standard_name = "specific_humidity";
+      q4:units = "s";
+      q4:comment ="units not compatible to cf-standard-name-table.xml" ;
+   float q5(time);
+      q5:standard_name = "specific_humidity number_of_observations";
+      q5:units = "g/g";
+      q5:comment ="units must be 1 for modifier=number_of_observations" ;
+   float qx(time);
+      qx:standard_name = "specific humidity";
+      qx:units = "1.E-06";
+      qx:comment ="standard_name contains blanks" ;
+
+// global attributes:
+   :comment="Use of standard_name" ;
+   :Conventions = "CF-1.4" ;
+}

@@ -1,0 +1,15 @@
+netcdf cf_3.1 {
+dimensions:
+   lat = 2;
+   lon = 3;
+
+variables:
+   float psl(lat,lon) ;
+	     psl:long_name = "mean sea level pressure" ;
+	     psl:units = "hPa" ;
+	     psl:standard_name = "air_pressure_at_sea_level" ;
+
+// global attributes:
+   :comment="Use of standard_name" ;
+   :Conventions = "CF-1.4" ;
+}

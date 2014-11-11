@@ -1,0 +1,18 @@
+netcdf cf_2.5c {
+dimensions:
+   lat = 2;
+   lon = 3;
+   time = 2;
+   lev=2;
+
+variables:
+   float psl_1(lat,lon,time,lev) ;
+      psl_1:long_name = "mean sea level pressure" ;
+      psl_1:units = "hPa" ;
+      psl_1:standard_name = "air_pressure_at_sea_level" ;
+      psl_1:comment = "recommendation: order of dimensions should be T Z X Y" ;
+
+// global attributes:
+   :comment="variables" ;
+   :Conventions = "CF-1.4" ;
+}

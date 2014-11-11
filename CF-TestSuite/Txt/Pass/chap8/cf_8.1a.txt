@@ -1,0 +1,27 @@
+netcdf cf_8.1a {
+dimensions:
+   lat=2;
+   lon=3;
+
+variables:
+   float t(lat,lon);
+      t:long_name="temperature";
+    	 t:scaleFactor = 1.f;
+      t:add_offset = 0.f;
+   float lat(lat);
+     lat:standard_name = "latitude" ;
+     lat:units = "degrees_north";
+     lat:axis = "Y" ;
+   float lon(lon);
+     lon:standard_name = "longitude" ;
+     lon:units = "degrees_east";
+     lon:axis = "X" ;
+
+// global attributes:
+   :comment="packed data" ;
+   :Conventions = "CF-1.4" ;
+
+data:
+lat = 1., 2.;
+lon = 1., 2., 3.;
+}

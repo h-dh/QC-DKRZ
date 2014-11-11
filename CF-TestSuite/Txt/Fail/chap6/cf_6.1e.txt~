@@ -1,0 +1,34 @@
+netcdf cf_6.1e {
+dimensions:
+   parcel = 20 ; // number of trajectories
+   times = 3 ;
+   max_len_parcel_name = 64 ; // max length of trajectory name
+
+variables:
+   float T(times,parcel) ;
+      T:long_name = "temperature" ;
+	     T:coordinates = "parcel_name lat lon" ;
+   float times(times) ;
+      times:standard_name = "time" ;
+      times:units="days since 1961-1-1";
+   float lon(times,parcel) ;
+      lon:standard_name= "longitude" ;
+      lon:units= "degrees_east" ;
+   float lat(times,parcel) ;
+      lat:standard_name= "latitude" ;
+      lat:units= "degrees_north" ;
+
+   char parcel_name(parcel) ;
+      parcel_name:comment="max_len_parcel_name is missing" ;
+      parcel_name:comment2="works on condition that the sum of numbers of chars is smaller than max_len_parcel_name" ;
+
+// global attributes:
+   :comment="Several parcel trajectories" ;
+   :Conventions = "CF-1.4" ;
+
+data:
+
+times= 1., 2., 3. ;
+parcel_name= "asdf", "qwer", "yxcv" ;
+
+}

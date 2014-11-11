@@ -1,0 +1,34 @@
+netcdf cf_7.3.3f {
+dimensions:
+   lat=2;
+   lon=3;
+   maxlen=20;
+   ls=2;
+
+variables:
+   char land_sea(ls,maxlen);
+      land_sea:standard_name="area_type";
+   float lat(lat) ;
+      lat:units = "degrees_north" ;
+      lat:standard_name = "latitude" ;
+      lat:axis = "Y" ;
+   float lon(lon) ;
+      lon:units = "degrees_east" ;
+      lon:standard_name = "longitude" ;
+      lon:axis = "X" ;
+
+   float asdf(ls,lat,lon);
+      asdf:long_name = "surface temperature" ;
+      asdf:coordinates="land_sea";
+      asdf:cell_methods="area: mean where land_sea over volcano";
+      asdf:comment = "invalid: volcano is no area_type" ;
+
+// global attributes:
+   :comment="Mean surface temperature over land and sensible heat flux averaged separately over land and sea." ;
+   :Conventions = "CF-1.4" ;
+
+data:
+ land_sea="land","sea";
+ lat=1.,2.;
+ lon=1.,2.,3.;
+}

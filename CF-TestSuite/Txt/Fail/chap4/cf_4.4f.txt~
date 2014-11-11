@@ -1,0 +1,24 @@
+netcdf cf_4.4f {
+dimensions:
+   time = UNLIMITED ; // (3 currently)
+   lat = 4 ;
+
+variables:
+   double time(time) ;
+    	 time:long_name = "time" ;
+	     time:units = "days since 1990-1-1 0:0:0" ;
+      time:comment = "invalid: missing data indicated by default _FillValue" ;
+   float lat(lat) ;
+      lat:long_name = "latitude" ;
+      lat:units = "degree_north" ;
+      lat:standard_name = "latitude" ;
+      lat:_FillValue=999.f ;
+      lat:comment = "invalid: must not have declared _FillValue" ;
+
+// global attributes:
+   :comment="Time axis" ;
+   :Conventions = "CF-1.4" ;
+
+data:
+lat = 10., 20., 999., 40. ;
+}

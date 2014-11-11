@@ -1,0 +1,18 @@
+netcdf cf_4.4.1c {
+dimensions:
+   time = UNLIMITED ; // (3 currently)
+
+variables:
+   double time(time) ;
+    	 time:long_name = "time" ;
+	     time:units = "days since 1-1-1 0:0:0" ;
+	     time:month_lengths = 31 ;
+      time:comment ="invalid: month-lengths requires 12 elements" ;
+
+// global attributes:
+   :comment="Paleoclimate time axis" ;
+   :Conventions = "CF-1.4" ;
+
+data:
+time = 0., 1., 2. ;
+}

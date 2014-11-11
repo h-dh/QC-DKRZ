@@ -1,0 +1,24 @@
+#! /bin/bash
+
+f_t=( $(find Txt -name "*.txt") )
+
+for f in ${f_t[*]} ; do
+  nc=${f%.txt}.nc
+
+  type=${f#Txt/}
+  type=${type%%/*}
+
+  chap=${f#Txt/${type}/}
+  chap=${chap%%/*}
+
+  mkNc $f
+
+  if [ -e $nc ] ; then
+    mkdir -p  Nc/$type/$chap
+    mv $nc Nc/$type/$chap
+  else
+    echo -e "$f \n"
+  fi
+
+done
+

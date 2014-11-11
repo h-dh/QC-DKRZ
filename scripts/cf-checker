@@ -1,0 +1,183 @@
+#! /bin/bash
+
+descript()
+{
+  echo -e "\nUsage: cf-checker [opts] netCDF-file[s]"
+  echo "Purpose: Check for CF Conventions Compliance."
+  echo "The checker is part of the DKRZ-QC package and must have been compiled"
+  echo "by '/your-path-to-QC/install CF'."
+  echo " -C str  CF Convention string; taken from global attributes by default."
+  echo " -F path Find all nc-files in sub-dirs of path."
+  echo " -p str  Path to one or more netCDF Files; this is prefixed"
+  echo "         only to files without any path component."
+  echo " -R      Apply also CF recommendations."
+  echo " -x str  Path to QC/bin; required if this script"
+  echo "         is located outside QC/scripts."
+  echo " --debug"
+  echo " --help"
+  echo " --param-file-only"
+  echo " netCDF-file(s)"
+
+  exit
+}
+
+getPath()
+{
+  # Note: each executable invoked on a bash command-line
+  # gets its name in parameter $0, which is available
+  # in functions.
+
+  if [ ${#qPath} -eq 0 ] ; then
+    # init
+    if [ ${0:0:1} = '/' ] ; then
+      qPath=${0%/*}
+    else
+      qPath=$(pwd)/${0%/*}
+    fi
+
+    xName=${0##*/}
+  fi
+
+  if [ -h $qPath/$xName ] ; then
+
+    qPath=$(ls -l $qPath/${xName} | awk  '{print $(NF)}')
+    xName=${qPath##*/}
+    qPath=${qPath%/*}
+
+    getPath
+
+  else
+
+    # resolve .. and .
+    local arr=( ${qPath//\// } )
+
+    # any //, ., or .. in the middle of the path?
+    local i j sz
+    sz=${#arr[*]}
+
+    for(( i=1 ; i < sz ; ++i )) ; do
+      j=$((i-1))
+
+      if [ "${arr[i]}" = '/' -a "${arr[j]}" = '/' ] ; then
+        unset arr[j]
+      elif [ "${arr[i]}" = '.' ] ; then
+        unset arr[i]
+      elif [ "${arr[i]}" = '..' ] ; then
+        while [ ${#arr[j]} -eq 0 ] ; do
+          j=$((j-1))
+        done
+        unset arr[j]
+        unset arr[i]
+      fi
+    done
+
+    # get rid of empty items
+    arr=( ${arr[*]} )
+
+    sz=${#arr[*]}
+    qPath=
+
+    for(( i=0 ; i < sz ; ++i )) ; do
+      qPath=${qPath}/${arr[i]}
+    done
+
+  fi
+
+  local tmp
+  while [ "${qPath}" != "${qPath%/*}" ] ; do
+    tmp=${qPath##*/}
+    test ${tmp:0:3} = 'QC-' && return
+
+    qPath=${qPath%/*}
+  done
+
+  descript
+
+  if [ ${#xPath} -gt 0 ] ; then
+    echo -e "\nPlease, check option -x; found ${xPath}."
+  else
+    local str
+    str="\nThis script was executed from out-side of the QC package."
+    str="${str}\nIt was probably copied or hard-linked. Please, use a"
+    str="${str}\nsymbolic link, or call it directly from /path/QC-package/scripts,"
+    str="${str}\nor use option -x."
+
+    echo -e "${str}"
+  fi
+
+  exit
+}
+
+# -------  main -----
+test $# -eq 0 && descript
+
+# get execution path of QC scripts
+
+while getopts C:F:hp:Rx:-: option ${args[*]}
+do
+  case $option in
+    C)  CF=${OPTARG}
+#        test ${CF:0:2} = CF && CF=${CF:2}
+#        test ${CF:0:1} = '-' && CF=${CF:1}
+        ;;
+    F)  findPath=$OPTARG ;;
+    h)  descript ;;
+    p)  fPath=${OPTARG} ;;
+    R)  RC=t ;;
+    x)  xPath=${OPTARG}
+        qPath=$xPath
+        ;;
+    -)  if [ "$OPTARG" = "help" ] ; then
+          descript
+        elif [ "${OPTARG}" = "debug" ] ; then
+          set -x
+        elif [ "${OPTARG}" = "param-file-only" ] ; then
+          isParamFileOnly=t
+        fi
+        ;;
+   \?)  descript
+  esac
+done
+
+shift $(( $OPTIND - 1 ))
+
+getPath
+
+# files
+fs=( $* )
+
+if [ ${#findPath} -gt 0 ] ; then
+  fs=( ${fs[*]} $( find ${findPath} -name "*.cn" ) )
+  fs=( ${fs[*]} $( find ${findPath} -name "*.nc" | sort ) )
+fi
+
+param0="\\n-t ${qPath}/tables/projects"
+param0="${param0}\\nX::cL=CF_check-list.conf:nCR:nLL=L1:oP:d"
+param0="${param0}\\nIN::oCF"
+param0="${param0}\\nCF::cFSN=cf-standard-name-table.xml"
+param0="${param0}:rT=cf-standardized-region-names.txt"
+param0="${param0}${CF:+:cF=}${CF}${RC:+:fR}"
+
+echo -e "\n========================================"
+echo -e "\nDKRZ-CF-Checker run ($(date +'%F %T')):"
+
+for(( i=0 ; i < ${#fs[*]} ; ++i )) ; do
+  param=
+
+  # prepare parameters for the cf-checker.x
+  test ${#fPath} -gt 0 && param="-p ${fPath}\\n"
+
+  param="${param}-f ${fs[i]}${param0}"
+
+  if [ ${isParamFileOnly:-f} = t ] ; then
+    echo -e "$param" > param_file.txt
+    exit
+  fi
+
+  param="$(echo -e $param)"
+  $qPath/bin/cf-checker.x ${param}
+done
+
+echo "========================================"
+
+test -e param_file_$$.txt && \rm param_file_$$.txt

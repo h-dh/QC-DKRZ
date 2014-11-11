@@ -1,0 +1,37 @@
+netcdf cf_8.1b {
+dimensions:
+   lat=3;
+   lon=4;
+   depth = 4;
+   landpoint=3;
+
+variables:
+   int landpoint(landpoint);
+      landpoint:long_name = "compressed lat_lon index" ;
+    	 landpoint:compress="lat lon";
+   float landsoilt(landpoint,depth);
+	     landsoilt:long_name="soil temperature";
+    	 landsoilt:units="K";
+   float depth(depth);
+     depth:standard_name = "height" ;
+     depth:units = "m";
+     depth:axis = "Z";
+   float lat(lat);
+     lat:standard_name = "latitude" ;
+     lat:units = "degrees_north";
+     lat:axis = "Y" ;
+   float lon(lon);
+     lon:standard_name = "longitude" ;
+     lon:units = "degrees_east";
+     lon:axis = "X" ;
+
+// global attributes:
+   :comment="Horizontal compression of a three-dimensional array" ;
+   :Conventions = "CF-1.4" ;
+
+data:
+ landpoint=1, 4, 9;
+ depth = 1., 2., 3., 4.;
+ lat = 1., 2., 3.;
+ lon = 1., 2., 3., 4.;
+}

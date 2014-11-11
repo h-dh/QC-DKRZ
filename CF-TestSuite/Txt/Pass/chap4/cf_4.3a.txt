@@ -1,0 +1,18 @@
+netcdf cf_4.3 {
+dimensions:
+   p = 2 ;
+
+variables:
+   float p(p) ;
+      p:long_name = "pressure" ;
+      p:standard_name = "air_pressure" ;
+      p:units = "hPa" ;
+      p:positive= "Down" ;
+
+// global attributes:
+   :comment="vertical coordinate" ;
+   :Conventions = "CF-1.4" ;
+
+data:
+p = 1., 2. ;
+}

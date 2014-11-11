@@ -1,0 +1,41 @@
+netcdf cf_5.2b {
+dimensions:
+   xc = 2 ;
+   yc = 3 ;
+   p = 4 ;
+
+variables:
+   float T(p,yc,xc) ;
+	     T:long_name = "temperature" ;
+	     T:units = "K" ;
+	     T:coordinates = "lat lon xc yc" ;
+   float xc(xc) ;
+	     xc:axis = "X" ;
+	     xc:long_name = "x-coordinate in Cartesian system" ;
+	     xc:units = "m" ;
+   float yc(yc) ;
+	     yc:axis = "Y" ;
+	     yc:long_name = "y-coordinate in Cartesian system" ;
+	     yc:units = "m" ;
+   float p(p) ;
+	     p:long_name = "pressure level" ;
+	     p:units = "hPa" ;
+	  float lon(yc,xc) ;
+	     lon:long_name = "longitude" ;
+	     lon:units = "degrees_east" ;
+
+	  float lat(yc,xc) ;
+	     lat:long_name = "latitude" ;
+	     lat:units = "degrees_north" ;
+      lat:coordinates = "yc xc" ;
+      lat:comment = "invalid: attribute coordinates must not appear here" ;
+
+// global attributes:
+   :comment="Two-dimensional coordinate variables" ;
+   :Conventions = "CF-1.4" ;
+
+data:
+yc = 1., 2.;
+xc = 1., 2., 3.;
+p  = 1., 2., 3., 4;
+}

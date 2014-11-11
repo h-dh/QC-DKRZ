@@ -1,0 +1,44 @@
+netcdf cf_7.12 {
+dimensions:
+   time=3;
+   nv=2;
+   lat=3;
+   lon=4;
+
+variables:
+   float precipitation(time,lat,lon);
+      precipitation:long_name="Accumulated precipitation";
+      precipitation:cell_methods="area: mean time: sum within days time: maximum over days";
+      precipitation:units="kg";
+   double time(time);
+      time:standard_name="time" ;
+      time:climatology="climatology_bounds";
+      time:units="days since 2000-6-1";
+   double climatology_bounds(time,nv);
+   float lat(lat);
+      lat:long_name = "latitude";
+      lat:units = "degrees_north";
+      lat:axis = "Y" ;
+   float lon(lon);
+      lon:long_name = "longitude";
+      lon:units = "degrees_east";
+      lon:axis = "X" ;
+
+// global attributes:
+   :comment="Monthly-maximum daily precipitation totals" ;
+   :Conventions = "CF-1.4" ;
+
+data:
+//time="2000-6-16", "2000-7-16", "2000-8-16" ;
+
+time=15., 45., 76. ;
+
+//climatology_bounds="2000-6-1 6:00:00", "2000-7-1 6:00:00",
+//"2000-7-1 6:00:00", "2000-8-1 6:00:00",
+//"2000-8-1 6:00:00", "2000-9-1 6:00:00" ;
+
+climatology_bounds=
+0.25, 30.25,
+30.25, 61.25,
+61.25, 92.25 ;
+}

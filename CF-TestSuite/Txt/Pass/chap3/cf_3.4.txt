@@ -1,0 +1,19 @@
+netcdf cf_3.4 {
+dimensions:
+   time = UNLIMITED ; // (10 currently)
+   depth = 1 ;
+   lat = 2 ;
+   lon = 3 ;
+
+variables:
+   byte sensor_status_qc(time, depth, lat, lon) ;
+    	 sensor_status_qc:long_name = "Sensor Status" ;
+    	 sensor_status_qc:_FillValue = 0b ;
+    	 sensor_status_qc:valid_range = 1b, 63b ;
+    	 sensor_status_qc:flag_masks = 1b, 2b, 4b, 8b, 16b, 32b ;
+    	 sensor_status_qc:flag_meanings = "low_battery processor_fault memory_fault disk_fault software_fault maintenance_required" ;
+
+// global attributes:
+   :comment=" A flag variable, using flag_masks" ;
+   :Conventions = "CF-1.4" ;
+}

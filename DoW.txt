@@ -1,0 +1,11 @@
+DISCLAIMER OF WARRANTY
+
+The programs of package are provided `as is' without warranty of any kind. 
+We make no warranties, express or implied, that the programs are free of error, or 
+are consistent with any particular standard, or that they will 
+meet your requirements for any particular application. They should not be relied upon 
+for solving a problem whose incorrect solution could result in injury to a person or 
+loss of property.  You use this package at your own risk. 
+The author and publisher disclaim all liability for direct, 
+incidental or consequential damages resulting from your use 
+of the programs, scipts or anything else in this book.

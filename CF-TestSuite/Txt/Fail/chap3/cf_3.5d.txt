@@ -1,0 +1,21 @@
+netcdf cf_3.5bd{
+dimensions:
+   time = UNLIMITED ; // (10 currently)
+   depth = 5 ;
+   lat = 12 ;
+   lon = 13 ;
+
+variables:
+   byte current_speed_qc(time, depth, lat, lon) ;
+    	 current_speed_qc:long_name = "Current Speed Quality" ;
+    	 current_speed_qc:standard_name = "sea_water_speed status_flag" ;
+    	 current_speed_qc:_FillValue = -128b ;
+    	 current_speed_qc:valid_range = 0b, 2b ;
+    	 current_speed_qc:flag_values = 0b, 1b, 2b ;
+    	 current_speed_qc:flag_meanings = "one three" ;
+      current_speed_qc:comment = "flag_meanings: missing item" ;
+
+// global attributes:
+   :comment="A flag variable, using flag_values" ;
+   :Conventions = "CF-1.4" ;
+}

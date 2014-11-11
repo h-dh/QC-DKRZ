@@ -1,0 +1,19 @@
+netcdf cf_2.5.1g {
+dimensions:
+   lat = 2;
+   lon = 3;
+
+variables:
+   float psl(lat,lon) ;
+      psl:long_name = "mean sea level pressure" ;
+      psl:units = "hPa" ;
+      psl:standard_name = "air_pressure_at_sea_level" ;
+      psl:valid_range = 0.f, 20.f ;
+      psl:valid_max = 30.f;
+      psl:valid_min = 0.0f ;
+      psl:comment = "warning: valid_range(max) < valid_max" ;
+
+// global attributes:
+   :comment="variables" ;
+   :Conventions = "CF-1.4" ;
+}

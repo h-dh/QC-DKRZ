@@ -1,0 +1,19 @@
+netcdf cf_4.4.1b {
+dimensions:
+   time = UNLIMITED ; // (3 currently)
+
+variables:
+   double time(time) ;
+    	 time:long_name = "time" ;
+	     time:units = "days since 1-7-15 0:0:0" ;
+	     time:calendar = "126 kyr B.P." ;
+      time:comment ="invalid: missing attribute month_lengths" ;
+
+// global attributes:
+   :comment="Time axis" ;
+   :Conventions = "CF-1.4" ;
+
+data:
+
+time = 0., 1., 2.;
+}

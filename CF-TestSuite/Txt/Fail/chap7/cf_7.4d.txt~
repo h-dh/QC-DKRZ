@@ -1,0 +1,55 @@
+netcdf cf_7.4d {
+dimensions:
+   time=4;
+   nv=2;
+   lat=2;
+   lon=3;
+
+variables:
+   double time(time);
+      time:standard_name = "time" ;
+	     time:units="days since 1960-1-1";
+      time:climatology="climatology_bounds";
+   double climatology_bounds(time,nv);
+   float lat(lat) ;
+      lat:units = "degrees_north" ;
+      lat:standard_name = "latitude" ;
+      lat:axis="Y";
+      lat:bounds = "lat_bnds" ;
+   float lat_bnds(lat,nv) ;
+
+   float lon(lon) ;
+      lon:units = "degrees_east" ;
+      lon:standard_name = "longitude" ;
+      lon:axis="X";
+
+   float T(time,lat,lon);
+      T:long_name="surface air temperature";
+      T:cell_methods="time: mean within days lat: mean over days";
+      T:units="K";
+      T:climatology="climatology_bounds";
+      T:comment = "climatology may only be attached to the time coordinate variable" ;
+
+// global attributes:
+   :comment="Climatological seasons" ;
+   :Conventions = "CF-1.4" ;
+
+data:
+lat = 1., 2.;
+lon = 1., 2., 3.;
+lat_bnds = 0.,1.,1.,2.;
+
+//time="1960-4-16", "1960-7-16", "1960-10-16", "1961-1-16" ;
+time=106., 197., 289., 381. ;
+
+//climatology_bounds="1960-3-1", "1990-6-1",
+//"1960-6-1", "1990-9-1",
+//"1960-9-1", "1990-12-1",
+//"1960-12-1", "1991-3-1" ;
+
+climatology_bounds=
+60. ,11109. ,
+152. ,11201. ,
+244. ,11292. ,
+335. ,11382. ;
+}

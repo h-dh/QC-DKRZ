@@ -1,0 +1,16 @@
+netcdf cf_3.3g {
+dimensions:
+   lat = 12;
+   lon = 13;
+   time = UNLIMITED ;
+
+variables:
+   float q5(time);
+      q5:standard_name = "specific_humidity number_of_observations";
+      q5:units = "g/g";
+      q5:comment ="units must be 1 for modifier=number_of_observations" ;
+
+// global attributes:
+   :comment="Use of standard_name" ;
+   :Conventions = "CF-1.4" ;
+}

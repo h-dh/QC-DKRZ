@@ -1,0 +1,32 @@
+netcdf cf_5.9 {
+dimensions:
+   lat = 2 ;
+   lon = 3 ;
+
+variables:
+   double lat(lat) ;
+      lat:units = "degrees_north" ;
+      lat:standard_name = "latitude" ;
+      lat:axis = "Y" ;
+   double lon(lon) ;
+      lon:units = "degrees_east" ;
+      lon:standard_name = "longitude" ;
+      lon:axis = "X" ;
+   float temp(lat, lon) ;
+	     temp:long_name = "temperature" ;
+	     temp:units = "K" ;
+	     temp:grid_mapping = "crs" ;
+   int crs ;
+	     crs:grid_mapping_name = "latitude_longitude";
+	     crs:longitude_of_prime_meridian = 0.0 ;
+	     crs:semi_major_axis = 6378137.0 ;
+	     crs:inverse_flattening = 298.257223563 ;
+
+// global attributes:
+   :comment="Latitude and longitude on the WGS 1984 datum" ;
+   :Conventions = "CF-1.4" ;
+
+data:
+lat = 1., 2.;
+lon = 1., 2., 3.;
+}

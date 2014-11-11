@@ -1,0 +1,37 @@
+netcdf cf_8.2b {
+dimensions:
+   lat=2;
+   lon=3;
+   depth = 4;
+   landpoint=3;
+
+variables:
+   float landsoilt(depth,landpoint);
+	    landsoilt:long_name="soil temperature";
+    	landsoilt:units="K";
+   float depth(depth);
+     depth:standard_name = "height" ;
+     depth:units = "m";
+     depth:axis = "Z";
+     depth:positive = "down" ;
+   float lat(lat);
+     lat:standard_name = "latitude" ;
+     lat:units = "degrees_east";
+   float lon(lon);
+     lon:standard_name = "longitude" ;
+     lon:units = "degrees_north";
+
+   int landpoint(landpoint);
+     landpoint:compress="lat height";
+     landpoint:comment="invalid: non-existent dimension height" ;
+
+// global attributes:
+   :comment="" ;
+   :Conventions = "CF-1.4" ;
+
+data:
+ depth = 1., 2., 3., 4.;
+ landpoint=1, 2, 3;
+ lat = 1., 2.;
+ lon = 1., 2., 3.;
+}

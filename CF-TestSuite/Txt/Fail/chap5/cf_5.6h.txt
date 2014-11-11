@@ -1,0 +1,51 @@
+netcdf cf_5.6h {
+dimensions:
+   y = 2;
+   x = 3;
+   time = 4;
+
+variables:
+   double y(y);
+	     y:units = "km";
+	     y:long_name = "y coordinate of projection";
+	     y:standard_name = "projection_y_coordinate";
+      y:axis = "Y" ;
+   double x(x);
+	     x:units = "km";
+	     x:long_name = "x coordinate of projection";
+	     x:standard_name = "projection_x_coordinate";
+      x:axis = "X" ;
+   double lat(y, x);
+	     lat:units = "degrees_north";
+	     lat:long_name = "latitude coordinate";
+	     lat:standard_name = "latitude";
+   double lon(y, x);
+	     lon:units = "degrees_east";
+	     lon:long_name = "longitude coordinate";
+	     lon:standard_name = "longitude";
+   int time(time);
+	     time:long_name = "forecast time";
+	     time:units = "hours since 2004-06-23T22:00:00Z";
+   float T(time, y, x);
+	     T:units = "K";
+	     T:long_name = "T @ surface";
+	     T:coordinates = "lat lon";
+	     T:grid_mapping = "Lambert_Conformal";
+
+   int Lambert_Conformal;
+      Lambert_Conformal:grid_mapping_name = "";
+      Lambert_Conformal:standard_parallel = 25.0;
+      Lambert_Conformal:longitude_of_central_meridian = 265.0;
+      Lambert_Conformal:latitude_of_projection_origin = 25.0;
+      Lambert_Conformal:comment = "invalid: undefined grid_mapping_name" ;
+
+// global attributes:
+    :comment="Lambert conformal projection" ;
+    :Conventions = "CF-1.4" ;
+
+data:
+y = 1., 2.;
+x = 1., 2., 3.;
+time = 1., 2., 3., 4;
+
+}

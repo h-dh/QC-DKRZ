@@ -1,0 +1,18 @@
+#! /bin/bash
+
+# Purpose: copy user permissions to group
+
+# get permissions of user
+userP=$( ls -ld $1 | awk '{print $1}' )
+
+#compose group permissions 
+groupP="g+"
+
+# note: 0 indicates directory
+test "${userP:1:1}" = r && groupP="${groupP}r"
+test "${userP:2:1}" = w && groupP="${groupP}w"
+test "${userP:3:1}" = x && groupP="${groupP}x"
+
+# set group permission
+chmod  $groupP $1
+

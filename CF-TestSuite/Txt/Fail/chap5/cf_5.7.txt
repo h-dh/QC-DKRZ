@@ -1,0 +1,28 @@
+netcdf cf_5.7 {
+dimensions:
+   lat = 2 ;
+   lon = 3 ;
+
+variables:
+   float lat(lat) ;
+      lat:standard_name = "latitude" ;
+      lat:units = "degrees_north" ;
+      lat:axis = "Y" ;
+   float xwind(lat) ;
+      xwind:long_name = "zonal wind" ;
+      xwind:units = "m/s" ;
+      xwind:coordinates = "lat lon" ;
+
+   float lon ;
+      lon:standard_name = "longitude" ;
+      lon:units = "degrees_east" ;
+      lon:comment="Strongly recommended: do not use a dimension name as name of a scalar coordiante variable" ;
+
+// global attributes:
+   :comment=" Independent coordinate variables" ;
+   :Conventions = "CF-1.4" ;
+
+data:
+lon = 1.;
+lat = 1., 2.;
+}

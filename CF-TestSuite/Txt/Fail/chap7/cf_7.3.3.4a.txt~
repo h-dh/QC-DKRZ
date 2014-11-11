@@ -1,0 +1,27 @@
+netcdf cf_7.3.4a {
+dimensions:
+   time=3;
+   nv=2;
+
+variables:
+   double time(time);
+      time:standard_name="time" ;
+      time:climatology="climatology_bounds";
+      time:units="days since 1961-1-1";
+
+   float t(time);
+      t:long_name="surface air temperature";
+      t:cell_methods="area: mean time: mean within days",
+                     "time: mean over days time: mean over years";
+      t:units="K";
+      t:comment="Note that area: without any X-Y axis implies the whole world, by convention";
+      t:comment2="Recommendation: define variables lon|lat with dim=1 and corresponding bounds";
+
+// global attributes:
+   :comment="Cell-methods when there is no coordinate" ;
+   :Conventions = "CF-1.4" ;
+
+data:
+
+time= 1., 2., 3.;
+}

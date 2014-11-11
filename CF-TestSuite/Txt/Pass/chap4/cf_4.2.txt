@@ -1,0 +1,18 @@
+netcdf cf_4.2 {
+dimensions:
+   lon = 2 ;
+
+variables:
+   float lon(lon) ;
+    	 lon:long_name = "longitude" ;
+	     lon:units = "degrees_east" ;
+	     lon:standard_name = "longitude" ;
+      lon:axis = "X" ;
+
+// global attributes:
+   :comment="Longitude axis" ;
+   :Conventions = "CF-1.4" ;
+
+data:
+lon = 1., 2. ;
+}

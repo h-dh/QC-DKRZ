@@ -1,0 +1,38 @@
+netcdf cf_5b {
+dimensions:
+   lat1 = 2 ;
+   lat2 = 2 ;
+   pres = 4 ;
+   time = 2 ;
+
+variables:
+   float lat1(lat1) ;
+	     lat1:long_name = "latitude" ;
+	     lat1:units = "degrees_north" ;
+      lat1:axis = "Y" ;
+   float lat2(lat2) ;
+      lat2:long_name = "latitude" ;
+      lat2:units = "degrees_north" ;
+      lat2:axis = "Y" ;
+   float pres(pres) ;
+	     pres:long_name = "pressure" ;
+	     pres:units = "hPa" ;
+   double time(time) ;
+	     time:long_name = "time" ;
+	     time:units = "days since 1990-1-1 0:0:0" ;
+
+   float xwind(time,pres,lat1,lat2) ;
+      xwind:long_name = "zonal wind" ;
+      xwind:units = "m/s" ;
+      xwind:comment ="invalid: two dimensions for the same Y-direction" ;
+
+// global attributes:
+   :comment=" Independent coordinate variables" ;
+   :Conventions = "CF-1.4" ;
+
+data:
+lat1 = 1., 2. ;
+lat2 = 1., 2. ;
+pres = 1., 2., 3., 4. ;
+time = 1., 2. ;
+}

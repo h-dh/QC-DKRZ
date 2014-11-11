@@ -1,0 +1,24 @@
+netcdf cf_7.2 {
+dimensions:
+   imax = 2;
+   jmax = 3;
+   nv = 4;
+   threeD = 2;
+
+variables:
+   float lat(jmax,imax);
+    	 lat:long_name = "latitude";
+	     lat:units = "degrees_north";
+	     lat:bounds = "lat_bnds";
+   float lon(jmax,imax);
+	     lon:long_name = "longitude";
+	     lon:units = "degrees_east";
+	     lon:bounds = "lon_bnds";
+   float lat_bnds(jmax,imax,nv,threeD);
+      lat_bnds:comment = "invalid number of dimensions" ;
+   float lon_bnds(jmax,imax,nv);
+
+// global attributes:
+   :comment="Cells in a non-rectangular grid" ;
+   :Conventions = "CF-1.4" ;
+}

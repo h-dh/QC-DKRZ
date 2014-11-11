@@ -1,0 +1,20 @@
+netcdf cf_3.2 {
+dimensions:
+   time = UNLIMITED; // (10 currently)
+
+variables:
+   float q(time);
+    	 q:standard_name = "specific_humidity";
+    	 q:units = "g/g";
+    	 q:ancillary_variables = "q_error_limit q_detection_limit";
+   float q_error_limit(time);
+    	 q_error_limit:standard_name = "specific_humidity standard_error";
+    	 q_error_limit:units = "g/g";
+   float q_detection_limit(time) ;
+    	 q_detection_limit:standard_name = "specific_humidity detection_minimum";
+    	 q_detection_limit:units = "g/g";
+
+// global attributes:
+   :comment="Instrument data" ;
+   :Conventions = "CF-1.4" ;
+}

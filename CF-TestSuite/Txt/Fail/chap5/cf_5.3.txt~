@@ -1,0 +1,28 @@
+netcdf cf_5.3 {
+dimensions:
+   londim = 2 ;
+   latdim = 3 ;
+   rgrid = 2 ;
+
+variables:
+   float lon(rgrid) ;
+	     lon:long_name = "longitude" ;
+	     lon:units = "degrees_east" ;
+   float lat(rgrid) ;
+	     lat:long_name = "latitude" ;
+	     lat:units = "degrees_north" ;
+   int rgrid(rgrid);
+	     rgrid:compress = "latdim londim";
+
+   float ps(rgrid) ;
+      ps:long_name = "surface pressure" ;
+      ps:units = "Pa" ;
+      ps:comment = "invalid: missing coordinates attribute" ;
+
+// global attributes:
+   :comment="Reduced horizontal grid" ;
+   :Conventions = "CF-1.4" ;
+
+data:
+rgrid = 1., 5.;
+}

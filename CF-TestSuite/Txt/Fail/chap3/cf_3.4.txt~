@@ -1,0 +1,19 @@
+netcdf cf_3.4 {
+dimensions:
+   time = UNLIMITED; // (10 currently)
+
+variables:
+   float q(time);
+    	 q:standard_name = "specific_humidity";
+    	 q:units = "g/g";
+    	 q:ancillary_variables = "q_error_limit q_undefined_var";
+      q:comment ="undefined variable name" ;
+   float q_error_limit(time);
+    	 q_error_limit:standard_name = "specific_humidity";
+    	 q_error_limit:units = "g/g";
+      q_error_limit:comment = "ancillary_variables: item is not a variable";
+
+// global attributes:
+   :comment="Instrument data" ;
+   :Conventions = "CF-1.4" ;
+}

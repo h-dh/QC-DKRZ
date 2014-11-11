@@ -1,0 +1,125 @@
+#! /bin/bash
+
+# doxygen generated documentation
+
+descript()
+{
+  echo -e "\nmakeDoc"
+  echo "Usage: Generate htmnl documentation utilising doxygen, "
+  echo "www.doxygen.org"
+  echo "  --debug      Display execution commands."
+  echo "  --help       Also option -h."
+
+  exit
+}
+
+linkTargets()
+{
+  local i ix j f fs t ts
+  declare -a fs ts
+
+  cd doc/source/qc-sources
+
+  fs=( $( ls ../../../include/*.h ) )
+
+  # some header files contain a date; such files are linked
+  # to a version without. Those without are used only.
+  for(( i=0 ; i < ${#fs[*]} ; ++i )) ; do
+    #index array
+    ix[${i}]=$i
+  done
+
+  for(( i=0 ; i < ${#ix[*]} ; ++i )) ; do
+    test -z ${ix[i]} && continue
+
+    ts=( $( ls -l ${fs[i]} ) )
+    t=${ts[$(( ${#ts[*]}-1))]}
+
+    if [ "${ts[$(( ${#ts[*]}-2))]}" = '->' ] ; then
+      for(( j=0 ; j < ${#ix[*]} ; ++j )) ; do
+         test -z ${ix[j]} && continue
+
+         if [ "${t}" = "${fs[j]##*/}" ] ; then
+           ix[${j}]=''
+           continue 2
+         fi
+      done  
+    fi
+  done
+
+  unset ts
+  for(( i=0 ; i < ${#ix[*]} ; ++i )) ; do
+    test -z ${ix[i]} && continue
+
+    ts[${#ts[*]}]=${fs[i]}
+  done
+
+  for f in ${ts[*]} ; do
+    # excluded header files
+    test ${f#*/} = qc.h && continue
+
+    ln -sf $f
+  done
+
+  # a few stand-alone C utilities which have no header file
+  cd ../tools
+
+  for f in ../../../src/*.c ; do
+    ln -sf $f
+  done
+
+  # a few stand-alone C++ utilities which have no header file
+  for f in getNC_att getStatus  hist syncFiles testValidNC ; do
+    ln -sf ../../../src/$f.cpp
+  done
+
+  # a few scripts with very specific comments; usually, doxygen
+  # doesn't work for bash.
+  cd ../scripts
+  for f in qcConfiguration qcExecution qc-DKRZ ; do
+    ln -sf ../../../scripts/$f $f.bash
+  done
+
+  cd $rPWD
+
+  return
+}
+
+# ---------  main -------
+
+while getopts h:-: option ${args[*]}
+do
+  case $option in
+    h)  descript ;;
+    -)  test "${OPTARG}" = "debug" && set -x
+        test "${OPTARG}" = "help" && descript
+        ;;
+   \?)  descript
+        exit
+  esac
+done
+
+if ! which doxygen &> /dev/null ; then
+  echo "doxygen: no such executable"
+  echo "Please, install doxygen (or ask your administrator)."
+  exit
+fi
+
+rPWD=$( pwd)
+
+# remove older versions of the documentation
+test -d doc/QC.html && \rm -r doc/QC.html
+test -d doc/source && \rm -r doc/source
+
+mkdir -p doc/source/qc-sources
+mkdir -p doc/source/tools
+mkdir -p doc/source/scripts
+
+# make links to files
+linkTargets
+
+doxygen doc/doxygen_config
+
+mv doc/html doc/QC.html
+
+\rm -r doc/source

@@ -1,0 +1,94 @@
+#! /bin/bash
+
+descript()
+{
+  echo -e "\ninstall_local_hdf5"
+  echo "  -q             Quiet."
+  echo "  --debug[=script]  Display execution commands."
+  echo "  --help         Also option -h."
+  echo "  --prefix=path  Path to the installation dir."
+  echo "  --src=string   Path to the sources."
+}
+
+# ------ main -------
+
+QC_SRC=${0%/*}
+test ${QC_SRC##*/} = scripts && QC_SRC=${QC_SRC%/*}
+
+mkdir -p $QC_SRC/local/source
+out=$QC_SRC/local/source/INSTALL_hdf.log
+
+while getopts hp:q-: option ${args[*]}
+do
+  case $option in
+    h)  descript
+        exit ;;
+    q)  QUIET=t ;;
+    -)  if [ "${OPTARG%=*}" = "debug" ] ; then
+           test ${OPTARG} = debug -o ${OPTARG#*=} = ${0##*/} && set -x
+        elif [ "$OPTARG" = "distclean" ] ; then
+           isDistClean=t
+        elif [ "$OPTARG" = "help" ] ; then
+           descript
+           exit
+        elif [ "${OPTARG%%=*}" = "prefix" ] ; then
+           installPath=${OPTARG#*=}
+           prefix=--${OPTARG}
+        elif [ "${OPTARG%%=*}" = "src" ] ; then
+           src=${OPTARG#*=}
+        fi
+        ;;
+   \?)  descript
+        exit 1 ;;
+  esac
+done
+
+shift $(( $OPTIND - 1 ))
+
+if [ -d "${src}" ] ; then
+  cd $src &> /dev/null
+else
+  exit 1
+  return
+fi
+
+if [ ${isDistClean:-f} = t ] ; then
+  make distclean  >>${out} 2>&1
+  echo -e "\n-------------\n"  >>${out} 2>&1
+  exit 0
+fi
+
+#export CC=/usr/bin/gcc
+#export CFLAGS='-static -O2'
+#export CPPFLAGS=
+#export CXX=/usr/bin/g++
+#export CXXFLAGS='-static -O2'
+
+./configure ${prefix} --enable-cxx --enable-hl \
+  --disable-fortran --disable-parallel \
+  --with-zlib=$installPath  >>${out} 2>&1
+
+test $? -gt 0 && exit 1
+
+if ! make  >>${out} 2>&1 ; then
+  echo "${src##*/}: make failed" 1>&2
+  exit 2
+fi
+
+if ! make check  >>${out} 2>&1 ; then
+  echo "${src##*/}: make check failed" 1>&2
+  exit 3
+fi           # run test suite.
+
+if ! make install  >>${out} 2>&1 ; then
+  echo "${src##*/}: make install failed"  1>&2
+  exit 4
+fi
+
+if ! make check-install  >>${out} 2>&1  ; then
+  echo "${src##*/}: make check-install failed" 1>&2
+  exit 5
+fi  # verify installation
+
+
+exit 0

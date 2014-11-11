@@ -1,0 +1,95 @@
+#! /bin/bash
+
+descript()
+{
+  echo -e "\ninstall_local_udunits"
+  echo "  -q               Quiet."
+  echo "  --debug[=script] Display execution commands."
+  echo "  --help           Also option -h."
+  echo "  --prefix=path    Path to the installation dir."
+  echo "  --src_name=path  Package name."
+}
+
+c()
+{
+#  export CC="/usr/bin/gcc"
+   export CFLAGS="${CFLAGS} -I $prefix/include "
+   export CPPFLAGS="${CPPFLAGS} -I $prefix/include "
+#  export CXX=""
+#  export CXXFLAGS=""
+#  export FC=""
+#  export F90=""
+   export LDFLAGS="-L$prefix/lib -L$prefix/lib64"
+   export LD_LIBRARY_PATH=$prefix/lib:$prefix/lib64
+
+  #--enable-cxx-4
+  #--enable-docs-install
+  ./configure --prefix=${prefix} &> ${out}
+
+  #--disable-fortran-compiler-check --disable-f77
+
+  return $?
+}
+
+# main
+
+QC_SRC=${0%/*}
+test ${QC_SRC##*/} = scripts && QC_SRC=${QC_SRC%/*}
+
+mkdir -p $QC_SRC/local/source
+out=$QC_SRC/local/source/INSTALL_udunits.log
+
+while getopts hp:q-: option ${args[*]}
+do
+  case $option in
+    h)  descript
+        exit ;;
+    q)  QUIET=t ;;
+    -)  if [ "${OPTARG%%=*}" = "prefix" ] ; then
+           prefix=${OPTARG#*=}
+        elif [ "$OPTARG" = "help" ] ; then
+           descript
+           exit
+        elif [ "${OPTARG%=*}" = "debug" ] ; then
+           test ${OPTARG} = debug -o ${OPTARG#*=} = ${0##*/} && set -x
+        elif [ "$OPTARG" = "distclean" ] ; then
+           isDistClean=t
+        elif [ "${OPTARG%%=*}" = "src" ] ; then
+           src=${OPTARG#*=}
+        fi
+        ;;
+   \?)  descript
+        exit 1 ;;
+  esac
+done
+
+shift $(( $OPTIND - 1 ))
+
+if [ -d "$src" ] ; then
+  cd $src &> /dev/null
+else
+  exit 1
+  return
+fi
+
+if [ ${isDistClean:-f} = t ] ; then
+  make distclean  >>${out} 2>&1
+  echo -e "\n-------------\n"  >>${out} 2>&1
+  exit 0
+fi
+
+# configure and make for C
+
+if ! c ; then
+  status=$?
+  echo "${src##*/}: configure failed"
+  exit $status
+fi
+
+if ! make check install  >>${out} 2>&1 ; then
+  status=$?
+  echo "${src##*/}: make check install failed"
+  exit $status
+fi
+
+exit 0

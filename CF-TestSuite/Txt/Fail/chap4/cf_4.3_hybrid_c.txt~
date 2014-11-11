@@ -1,0 +1,50 @@
+netcdf cf_4.3_hybrid_c {
+dimensions:
+   lev = 3 ;
+   lat = 3 ;
+   lon = 4 ;
+
+variables:
+   float lat(lat) ;
+      lat:long_name = "latitude" ;
+      lat:units = "degrees_north" ;
+      lat:standard_name = "latitude" ;
+      lat:axis="Y" ;
+   float lon(lon) ;
+      lon:long_name = "longitude" ;
+      lon:units = "degrees_east" ;
+      lon:standard_name = "longitude" ;
+      lon:axis="X" ;
+   double ap(lev) ;
+      ap:long_name = "vertical coordinate formula term: ap(k)" ;
+      ap:units = "Pa" ;
+   double b(lev) ;
+      b:long_name = "vertical coordinate formula term: b(k)" ;
+   float ps(lat, lon) ;
+      ps:standard_name = "surface_air_pressure" ;
+      ps:long_name = "Surface Air Pressure" ;
+      ps:units = "Pa" ;
+   double data_var(time,lev,lat,lon) ;
+       data_var:long_name = "anything" ;
+       data_var:units = "m" ;
+
+   float lev(lev) ;
+      lev:long_name = "hybrid sigma pressure coordinate" ;
+      lev:positive = "down" ;
+      lev:standard_name = "atmosphere_hybrid_sigma_pressure_coordinate" ;
+      lev:formula = "p = a + b*ps" ;
+      lev:term = "ap: ap b: b ps: ps" ;
+      lev:comment = "invalid: required attribute name is formula_terms" ;
+
+// global attributes:
+   :comment="Atmosphere sigma coordinate" ;
+   :Conventions = "CF-1.4" ;
+
+data:
+lat = 1., 2., 3.;
+lon = 1., 2., 3., 4.;
+ap  = 1., 2., 3. ;
+b   = 1., 2., 3. ;
+ps  = 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12. ;
+
+}

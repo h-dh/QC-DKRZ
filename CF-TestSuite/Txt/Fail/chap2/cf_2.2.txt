@@ -1,0 +1,15 @@
+netcdf cf_2.2 {
+dimensions:
+   lat = 2;
+   lon = 3;
+
+variables:
+   string psl(lat,lon) ;
+	     psl:long_name = "mean sea level pressure" ;
+	     psl:units = "hPa" ;
+	     psl:comment = "invalid type string" ;
+
+// global attributes:
+   :comment="Invalid filename extension .cn" ;
+   :Conventions = "CF-1.4" ;
+}

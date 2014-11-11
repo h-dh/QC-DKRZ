@@ -1,0 +1,487 @@
+#! /bin/bash
+set -x
+# may be overwritten by the task
+MAX_NUM_MANAGER_THREADS=1
+
+descript()
+{
+  echo "usage: qc_task [opts] [qc-DKRZ-Opts] [task-files]"
+  echo "purpose: execute task-files, placed in a TASK directory."
+  echo "         Eventually, the task-file is moved to directory 'Executed'"
+  echo "         made inside a TASK directory."
+  echo "         A task-file must have the extension '.conf' or '.task'; others are ignored."
+  echo "         In daemon mode, this script runs permanently in the back-ground"
+  echo "         looking for tasks newly dropped into a TASK directory."
+  echo "         If found, then a session is spawned by qc-DKRZ."
+  echo "         When started in non-daemon mode, then the script will end after"
+  echo "         the launch of the last task-file."
+  echo "  -n            Maximum number of parallel sessions [1]."
+  echo "                Note that the number of threads per session is given in the"
+  echo "                configuration and if these differ, then the sessions with a "
+  echo "                lower number are postponed."
+  echo "  -t tasks      Specified task-files take precedence over files in the TASK directory."
+  echo "                Note that these may not reside in a TASK directory (then with path)."
+  echo "  --debug       Display execution commands."
+  echo "  --help        This text."
+  echo "  --max-num     The maximum number of parallel qc-DKRZ sessions."
+  echo "  --restart[=PID] [qc-DKRZ-opts]"
+  echo "                Restart a qc_task process. If only a single process"
+  echo "                is alive, then its process-id (PID) may be omitted. If options"
+  echo "                are omitted, then nothing happens. Accepts comma-separated list."
+  echo "  --start       Start a qc_task process in daemon mode. Note that there is no"
+  echo "                balancing between multiple running qc_task processes;"
+  echo "                each spawns sessions as requested."
+  echo "  --stop[=PID]  Stop a qc_task daemon. If no process-id (PID) is provided,"
+  echo "                then all qc_task processes are stopped. Note that also spawned"
+  echo "                sessions are terminated. Aternatively, dropping a file of the name"
+  echo "                'STOP_TASK' (contents does not matter) terminates the qc_task"
+  echo "                processes scanning the corresponding TASK directory."
+  echo "                Accepts comma-separated list."
+  echo "  --td=str      Path(s) to the TASK directories [QC_RESULTS/Task]. Note that"
+  echo "                more than a single directory may be specified by multiple usage"
+  echo "                by a comma-separated list."
+  echo "                If none of the TASK directories is valid, this script will"
+  echo "                exit with a warning."
+
+  echo "  str           Any option to qc-DKRZ may be provided by str, e.g. '-m -E_NEXT'."
+  echo "                If '-f task' is found, then this is treated as if called with '-t' above."
+  echo "  STOP_TASK     A file of this name in any of the bound task directories stops the program,"
+  echo "                when a next task is scheduled."
+}
+
+doTask()
+{
+  # be nice
+  getPIDs qc-DKRZ # provides pids globally
+
+  # test for running processes spawned by this instance.
+  # clear array from vanished pids
+  local i j is
+  local index ix
+
+  #find spawned PIDs processed in the meanwhile
+  for(( i=0 ; i < ${#spawnedPIDS[*]} ; ++i )) ; do
+    is=t
+    for(( j=0 ; j < ${#pids[*]} ; ++j )) ; do
+      test "${pids[j]}" = "${spawnedPIDS[i]}" && is=f
+    done
+
+    test $is = t && index[${#index[*]}]=$i
+  done
+
+  for ix in ${index[*]} ; do
+      mv $TASK_DIR/Executed/$$/${movedTask[ix]} $TASK_DIR/Executed
+
+      unset movedTask[${ix}]
+      unset spawnedPIDS[${ix}]
+  done
+
+  test ${#spawnedPIDS[*]} -gt ${MAX_NUM_MANAGER_THREADS} && return 0
+
+  if [ ${#task} -eq 0 ] ; then
+    if [ $# -eq 0 ] ; then
+      # daemon mode.
+      # find name of task and task-dir.
+      if ! getNextTask ; then
+        return 0 # nothing to do; task dir is empty
+      fi
+    else
+      task=$1
+
+      is=t
+      for TASK_DIR in ${TASK_DIRS[*]} ; do
+        # TASK_DIR and task have to be defined
+        if [ -e $TASK_DIR/$task ] ; then
+          is=f
+          break
+        fi
+      done
+
+      if [ $is = t ] ; then
+        echo "${task}: no such task"
+        return 1  # try another one
+      fi
+    fi
+  fi
+
+  saveTaskFile
+
+  # this starts a qc run
+  $QC_SRC/scripts/qc-DKRZ -Q -f $TASK_DIR/Executed/$$/$task ${collect[*]} &
+
+  spawnedPIDS[${#spawnedPIDS[*]}]=$!
+  movedTask[${#movedTask[*]}]=$task
+  task=
+
+  return 2 # try next
+}
+
+finally()
+{
+  for sP in ${spawnedPIDS[*]} ; do
+    mvTaskFile $sP
+  done
+
+  for(( t=0 ; t < ${#TASK_DIRS[*]} ; ++t )) ; do
+    rmdir ${TASK_DIRS[t]}/Executed/$$ 2> /dev/null
+  done
+
+  exit
+}
+
+getNextTask()
+{
+   # get only one (the first) task out of potentially more.
+
+   for TASK_DIR in ${TASK_DIRS[*]} ; do
+     # looking for a stop sign
+     test -e ${TASK_DIR}/STOP_TASK} && exit
+   done
+
+   local t ts
+   declare -a ts
+
+   for TASK_DIR in ${TASK_DIRS[*]} ; do
+     # get new task
+     ts=( $( ls -d $TASK_DIR/*.conf $TASK_DIR/*.task 2> /dev/null ) )
+     test ${#ts[*]} -eq 0 && continue
+
+     # test validity
+     for(( t=0 ; t < ${#ts[*]} ; ++t )) ; do
+       if [ -f ${TASK_DIR}/${ts[t]##*/} ] ; then
+         task=${ts[t]##*/}  # on global scale; also TASK_DIR
+         return 0
+       fi
+     done
+   done
+
+   return 1  # no new task
+}
+
+getPIDs()
+{
+  local n names p pd ppd pds r
+  pds=()
+  names=()
+  r=()
+
+  for p in $* ; do
+     if expr match $p '[[:digit:]]*$' &> /dev/null ; then
+        pds[${#pds[*]}]=$p
+     else
+        names[${#names[*]}]=$p
+     fi
+  done
+
+  # only integer parameter is pid; any other is a process name
+  if [ ${#pds[*]} -gt 0 ] ; then
+    for p in ${pds[*]} ; do
+      r=( ${r[*]} $( ps -o pid= -o ppid= -p $p 2> /dev/null)  )
+    done
+  else
+    # all running qc processes
+    # Note: there is alway one more pid, namely for the grep in the pipe.
+    #       This is eliminated by 'grep -v grep'
+    test ${#names[*]} -eq 0 && names=( qc-DKRZ qc_task )
+
+    for n in ${names[*]} ; do
+      r=( ${r[*]} $( ps -ef 2> /dev/null| grep $n | grep -v grep | awk '{print $2,$3}' )  )
+    done
+  fi
+
+  pd=()
+  ppd=()
+
+  # sort pids according to child and parent;
+  for(( i=0 ; i < ${#r[*]} ; ++i )) ;  do
+
+    pd[${#pd[*]}]=${r[i++]}
+    ppd[${#ppd[*]}]=${r[i]}
+  done
+
+  pids=()
+  local i j
+
+  # discard children
+  for(( i=0 ; i < ${#pd[*]} ; ++i )) ;  do
+    for(( j=0 ; j < ${#pd[*]} ; ++j )) ;  do
+      test ${ppd[i]} = ${pd[j]} && continue 2
+    done
+
+    pids[${#pids[*]}]=${pd[i]}
+  done
+
+  return
+}
+
+mvTaskFile()
+{
+  local locPID
+  local locTD
+
+  if [ $# -eq 0 ] ; then
+    locPID=$$
+    locTD=( ${TASK_DIRS[*]} )
+  else
+    # envoked by a --stop; inquire ps output for task dirs
+    locPID=$1
+
+    local td_stop
+    if ! td_stop=( $( ps -ww -o args= -p $locPID 2> /dev/null) ) ; then
+      return  # does not exist
+    fi
+
+    # search is independent on position
+    local word
+    for word in ${td_stop[*]} ; do
+      if [ ${word:0:5} = '--td=' ] ; then
+        word=${word:5}
+        locTD=( ${locTD[*]} ${word//,/ } )
+      fi
+    done
+  fi
+
+  # only files saved by the running process
+  for td in ${locTD[*]} ; do
+    test ! -d $td/Executed/$locPID && continue
+
+    fs=( $( ls $td/Executed/$locPID 2> /dev/null) )
+    for f in ${fs[*]##*/} ; do
+      mv $td/Executed/$locPID/$f $td/Executed
+    done
+
+    # only for --stopping processes, i.e. aliens
+    test $locPID != $$ && rmdir $TASK_DIR/Executed/$locPID 2> /dev/null
+  done
+
+  return
+}
+
+restart()
+{
+  for(( i=0 ; i <= ${#arr[*]} ; ++i )) ; do
+    if [ ${arr[i]} = '--restart' ] ; then
+      unset arr[${i}]
+      arr=( ${arr[*]} )
+      break
+    fi
+  done
+
+  stop
+  start
+
+  return
+}
+
+saveTaskFile()
+{
+  mkdir -p $TASK_DIR/Executed/$$
+  mv $TASK_DIR/$task $TASK_DIR/Executed/$$
+  return
+}
+
+start()
+{
+  for(( i=0 ; i < ${#arr[*]} ; ++i )) ; do
+    test ${arr[i]} = '--start' && unset arr[${i}]
+  done
+
+  exec ${QC_SRC}/scripts/qc_task ${arr[*]} --daemon  &
+  exit 0
+  return
+}
+
+stop()
+{
+  if [ $# -eq 0 ] ; then
+    getPIDs qc_task
+  else
+    pids=( $* )
+  fi
+
+  for p in ${pids[*]} ; do
+    termTask ${p}
+  done
+
+  return
+}
+
+termTask()
+{
+  local p pds
+
+  if [ $# -gt 0 ] ; then
+    for p in $* ; do
+       if expr match $p '[[:digit:]]*$' &> /dev/null ; then
+         for p in $* ; do
+           # check for a still running process
+           if comm=$( ps -o comm= -p $p 2> /dev/null ) ; then
+             # check that it is really qc_task
+             test ${comm} = qc_task && pds=( ${pds[*]} $p )
+           fi
+         done
+       else
+          getPIDs $p
+          pds=( ${pds[*]} ${pids[*]} )
+       fi
+    done
+  else
+    getPIDs  # get all
+    pds=( ${pids[*]} )
+  fi
+
+  for(( i=0 ; i < ${#pds[*]} ; ++i )) ;  do
+    test ${pds[i]} -eq $$ && continue  #don't terminate this one
+    mvTaskFile ${pds[i]}
+
+    kill -TERM ${pds[i]}
+  done
+
+  return
+}
+
+xtractSrcPath()
+{
+  # Note: each executable invoked on a bash command-line
+  # gets its name in parameter $0, which is unchanged
+  # in a function.
+
+  # this function is called recursively
+
+  # remember the current path
+  if [ $# -eq 0 ] ; then
+    local oldPath=$(pwd)
+    local p=$0
+  else
+    p=$1
+  fi
+
+  if [ ${p} != "${p//\./}" ] ; then
+    cd ${p%/*}
+    xtractSrcPath ${p##*/}
+    return
+  fi
+
+  # Is it a symbolic link?
+  # The symbolic link could point to another symbolic link
+  if [ -h $p ] ; then
+    local tmps
+    tmps=( $( ls -l $p ) )
+
+    # get the target of the symbolic link
+    p=${tmps[$(( ${#tmps[*]}-1 ))]}
+    cd ${p%/*}  # strip command
+
+    xtractSrcPath ${p##*/}
+    return
+  fi
+
+  QC_SRC=$(pwd)
+  QC_SRC=${QC_SRC%/scripts}
+
+  cd $oldPath
+  return
+}
+
+
+# ------------  main -----
+  trap finally EXIT TERM
+
+  arr=( $* )
+
+  #extract the path to QC from $0
+  xtractSrcPath
+
+  TASK_DIRS=( $QC_SRC/Tasks )
+
+  OPTERR=0
+  while getopts n:t:-: option ${args[*]}
+  do
+    case $option in
+      n)  MAX_NUM_PARALLEL_SESSIONS=$OPTARG ;;
+      t)  tasks=( ${tasks[*]} ${OPTARG//,/ } ) ;;
+      -)  if [ "$OPTARG" = "help" ] ; then
+             descript && exit 1
+          elif [ "$OPTARG" = "daemon" ] ; then
+             isDaemon=t
+          elif [ "$OPTARG" = "debug" ] ; then
+             set -x
+          elif [ "$OPTARG%=*" = "max-num" ] ; then
+            MAX_NUM_MANAGER_THREADS=${OPTARG#*=}
+          elif [ "${OPTARG%%=*}" = "restart" ] ; then
+            if [ "${OPTARG}" = "restart" ] ; then
+               isRestart=t
+            else
+               OPTARG=${OPTARG#*=}
+               isRestart=t
+               restart_arg=( ${OPTARG//,/ } )
+             fi
+           elif [ "$OPTARG" = "start" ] ; then
+             start
+          elif [ "${OPTARG%%=*}" = "stop" ] ; then
+            if [ "${OPTARG}" = "stop" ] ; then
+              stop
+            else
+              OPTARG=${OPTARG#*=}
+              stop ${OPTARG//,/ }
+            fi
+            exit
+          elif [ "${OPTARG%%=*}" = "td" ] ; then
+            td=${OPTARG#td=}
+            TASK_DIRS=( ${TASK_DIRS[*]} ${td//,/ } )
+          fi
+          ;;
+     \?)  ;;
+    esac
+  done
+
+  test ${isRestart:-f} = t && restart ${restart_arg[*]}
+
+  for(( i=0 ; i < ${#arr[*]} ; ++i )) ; do
+     test "${arr[i]}" = -n && i=$((i+1)) && continue
+     test "${arr[i]}" = -t && i=$((i+1)) && continue
+     test "${arr[i]}" = --help           && continue
+     test "${arr[i]}" = --daemon         && continue
+     test "${arr[i]}" = --debug          && continue
+     test "${arr[i]}" = --restart        && continue
+     test "${arr[i]}" = --start          && continue
+     test "${arr[i]}" = --stop           && continue
+     test "${arr[i]:0:4}" = --td         && continue
+
+     if [ "${arr[i]}" = -f ] ; then
+        i=$((i+1))
+        tasks=( ${arr[i]//,/ } ${tasks[*]} )
+        continue
+     fi
+
+     collect[${#collect[*]}]="${arr[i]}"
+  done
+
+  # remove all positional parameters
+  shift $#
+
+  for task in ${tasks[*]} ; do
+    # note: doTask with return values
+    #       0: maximum number of jobs already active
+    #       1: no more tasks; task directory is empty
+    #       2: launched a task
+
+    while doTask $task ; do
+      for(( i=0 ; i < 10 ; ++i )) ; do
+        sleep 1 # waiting for a free slot
+      done
+    done
+  done
+
+  test ${isDaemon:-f} = f && exit
+
+  # daemon mode
+  while : ; do
+    while doTask ; do
+      for(( i=0 ; i < 10 ; ++i )) ; do
+        sleep 1 # waiting for a free slot
+      done
+    done
+
+    sleep 2
+  done

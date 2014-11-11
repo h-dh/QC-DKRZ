@@ -1,0 +1,61 @@
+netcdf cf_H16 {
+dimensions:
+   station = 2 ;
+   profile = 3 ;
+   z = 4 ;
+   name_strlen = 23 ;
+
+variables:
+   float lon(station) ;
+      lon:standard_name = "longitude" ;
+      lon:long_name = "station longitude" ;
+      lon:units = "degrees_east" ;
+      lon:axis = "X" ;
+   float lat(station) ;
+      lat:standard_name = "latitude" ;
+      lat:long_name = "station latitude" ;
+      lat:units = "degrees_north" ;
+      lat:axis = "Y" ;
+   char station_name(station, name_strlen) ;
+      station_name:cf_role = "timeseries_id" ;
+      station_name:long_name = "station name" ;
+   int station_info(station) ;
+      station_info:long_name = "some kind of station info" ;
+
+   float alt(station, profile , z) ;
+      alt:standard_name = "altitude" ;
+      alt:long_name = "height above mean sea level" ;
+      alt:units = "km" ;
+      alt:positive = "up" ;
+      alt:axis = "Z" ;
+
+   double time(station, profile ) ;
+      time:standard_name = "time";
+      time:long_name = "time of measurement" ;
+      time:units = "days since 1970-01-01 00:00:00" ;
+      time:missing_value = -999.9 ;
+
+   float pressure(station, profile , z) ;
+      pressure:standard_name = "air_pressure" ;
+      pressure:long_name = "pressure level" ;
+      pressure:units = "hPa" ;
+      pressure:coordinates = "time lon lat alt" ;
+
+   float temperature(station, profile , z) ;
+      temperature:standard_name = "surface_temperature" ;
+      temperature:long_name = "skin temperature" ;
+      temperature:units = "Celsius" ;
+      temperature:coordinates = "time lon lat alt" ;
+
+   float humidity(station, profile , z) ;
+      humidity:standard_name = "relative_humidity" ;
+      humidity:long_name = "relative humidity" ;
+      humidity:units = "%" ;
+      humidity:coordinates = "time lon lat alt" ;
+
+// global attributes:
+   :featureType = "timeSeriesProfile" ;
+   :comment="Time series of profiles from a set of locations stored in a multidimensional array representation." ;
+   :Conventions = "CF-1.6" ;
+
+}

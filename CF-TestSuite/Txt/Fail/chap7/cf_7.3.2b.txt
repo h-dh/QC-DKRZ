@@ -1,0 +1,34 @@
+netcdf cf_7.3.2b {
+dimensions:
+   lat=2;
+   lon=3;
+   time=1;
+
+variables:
+   float time(time);
+      time:standard_name = "time" ;
+      time:units="days since 1990-01-01 00:00:00";
+   float lat(lat) ;
+      lat:units = "degrees_north" ;
+      lat:standard_name = "latitude" ;
+      lat:axis = "Y" ;
+   float lon(lon) ;
+      lon:units = "degrees_east" ;
+      lon:standard_name = "longitude" ;
+      lon:axis = "X" ;
+
+   float TS_var(time,lat,lon);
+    	 TS_var:long_name="surface air temperature variance";
+	     TS_var:units="K2";
+      TS_var:cell_methods="area: mean time: variance (interval: 1 )" ;
+      TS_var:comment = "invalid in cell_methods: missing units of value=1" ;
+
+// global attributes:
+   :comment="Surface air temperature variance" ;
+   :Conventions = "CF-1.4" ;
+
+data:
+ time=.5;
+ lat=1.,2.;
+ lon=1.,2.,3.;
+}

@@ -1,0 +1,211 @@
+#! /bin/bash
+
+bufOut()
+{
+   local vf
+
+   if [ ${isFirst:-t} = t -a "$1" != '--flush' ] ; then
+      local pp
+      pp=${period##*/}
+      pp=${pp%.period}
+
+      eval echo '' $out
+      eval echo "=========================================" $out
+      eval echo -e "\\\\nVariable-frequency cases listed in CORDEX_variables_requirement," $out
+      eval echo "but not found in available data frequencies:\\\\n" $out
+      isFirst=f
+    fi
+
+
+   test "${1}" != '--flush' && vf=(${1//_/ } )
+
+   if [ "${vf[1]}" != "${currF}" ] ; then
+     # flush vars
+     test ${#oVar} -gt 0 && eval echo -e "\\\\t${oVar//,/, }" $out
+     test "${1}" = '--flush' && return
+
+     # new freq-caption
+     eval echo "\\ \\ \\ freq.: ${vf[1]}" $out
+
+     currF=${vf[1]}
+     oVar=
+   fi
+
+   if [ ${#oVar} -gt 0 ] ; then
+     oVar=${oVar},${vf[0]}
+   else
+     oVar=${vf[0]}
+   fi
+
+   test ${#oVar} -lt 50 && return
+
+   # output a line of about 50-60 chars
+   eval echo -e "\\\\t${oVar//,/, }" $out
+   oVar=
+
+   return
+}
+
+cordex()
+{
+  # read table
+  isTake=f
+  local frqs
+
+  while read line ; do
+    test ${#line}   -eq 0  && continue
+    test "${line:0:6}" = 'output' && continue
+
+    word=( ${line//,/ } )
+
+    # switch frequency
+    if [ "${word[0]}" = 'Table:' ] ; then
+      isTake=f
+      test "${word[1]}" = 'all' && break
+
+      q=${word[1]}
+
+      if [ ${kind} = core ] ; then
+        test "$q" = mon -o "$q" = sem && isTake=t
+      fi
+
+      continue
+    fi
+
+    # append to the list of var and freq
+    test ${isTake} = t && t_var[${#t_var[*]}]=${word[0]}_$q
+  done < $table
+
+  # read period-file
+  if [ ${isYaml:-f} = t ] ; then
+    while read -a line ; do
+      # the build is different:
+      #  1) frequency closes a freq-table
+      #  2) frequency is appended to the filename
+      #  3) fx vars have also a trailing '.nc'
+
+      test ${#line[*]}   -eq 0  && continue
+
+      if [ ${line[0]} = Frequency: ] ; then
+         q=${line[1]%,}  # get the frequency
+         frqs[${#frqs[*]}]=$q  # collect available frequencies
+
+         isTake=t
+         if [ ${kind} = core ] ; then
+           test "$q" != 'mon' -a "$q" != 'sem' && isTake=f
+         fi
+
+         continue
+      fi
+
+      # append to the list of var and freq
+      p_var[${#p_var[*]}]=${line[0]%%_*}_${q}
+    done < $period
+  else
+    while read line ; do
+      # the build is different:
+      #  1) frequency closes a freq-table
+      #  2) frequency is appended to the filename
+      #  3) fx vars have also a trailing '.nc'
+
+      test ${#line}   -eq 0  && continue
+      test ${line:0:1} = '-' && continue
+
+      word=( ${line%.nc} )
+
+      q=${word[0]##*_}
+
+      isTake=t
+      if [ ${kind} = core ] ; then
+        test "$q" != 'mon' -a "$q" != 'sem' && isTake=f
+      fi
+
+      # append to the list of var and freq
+      test ${isTake} = t && \
+        p_var[${#p_var[*]}]=${word[0]%%_*}_${q}
+    done < $period
+  fi
+
+  # test existance in both lists
+  # bool for a caption
+  is=t
+
+  for t in ${t_var[*]} ; do
+    for p in ${p_var[*]} ; do
+      test $t = $p && continue 2
+
+      # only for available frequencies
+      for q in ${frqs[*]} ; do
+         test $q = ${t##*_} && continue 2  # ready to bufOut
+      done
+
+      continue 2 # skip bufOut
+    done
+
+    bufOut $t
+  done
+
+  bufOut --flush
+  return
+}
+
+
+descript()
+{
+  echo -e "\nfindNotDelivered"
+  echo    "Purpose: Find variable_freq cases, which are not available."
+  echo " --debug[=script]"
+  echo " --kind=str         At present fixed to the default CORE"
+  echo " --out=file         Append output to file"
+  echo " --period=file      Period-file produced by taskSummary."
+  echo " --project=name     Project name"
+  echo " --table=name       Project Standard Table; csv formatted"
+  echo " --help"
+  exit
+}
+
+# -------  main -----
+test $# -eq 0 && descript
+
+kind=core
+
+while getopts ad:h-: option ${args[*]}
+do
+  case $option in
+    -)  if [ "$OPTARG" = "help" ] ; then
+          descript
+        elif [ "$OPTARG" = "full" ] ; then
+          isFullNotes=t
+        elif [ "${OPTARG%%=*}" = "debug" ] ; then
+          this=${0##*/}
+          test "${OPTARG}" = debug -o ${OPTARG##*=} = ${this} && set -x
+        elif [ "${OPTARG%%=*}" = "kind" ] ; then
+          kind=${OPTARG#*=}
+          kind=$( echo -n "${kind}" \
+                  | tr [:upper:] [:lower:] )
+        elif [ "${OPTARG%%=*}" = "out" ] ; then
+          out=">> ${OPTARG#*=}"
+        elif [ "${OPTARG%%=*}" = "period" ] ; then
+          period=${OPTARG#*=}
+          argCount=$(( ${argCount:-0} + 1 ))
+        elif [ "${OPTARG%%=*}" = "project" ] ; then
+          project=${OPTARG#*=}
+          argCount=$(( ${argCount:-0} + 1 ))
+        elif [ "${OPTARG%%=*}" = "table" ] ; then
+          table=${OPTARG#*=}
+          argCount=$(( ${argCount:-0} + 1 ))
+        elif [ "$OPTARG" = "yaml" ] ; then
+          isYaml=t
+        fi
+        ;;
+   \?)  descript
+  esac
+done
+
+shift $(( $OPTIND - 1 ))
+
+test ${argCount} -ne 3 && descript
+
+if [ ${project} = CORDEX ] ; then
+  cordex
+fi

@@ -1,0 +1,28 @@
+netcdf cf_7.7 {
+dimensions:
+   lat=3;
+   lon=4;
+
+variables:
+   float sea_ice_thickness(lat,lon);
+      sea_ice_thickness:cell_methods="area: mean where sea_ice over sea";
+      sea_ice_thickness:standard_name="sea_ice_thickness";
+      sea_ice_thickness:units="m";
+   float snow_thickness(lat,lon);
+      snow_thickness:cell_methods="area: mean where sea_ice over sea";
+      snow_thickness:standard_name="lwe_thickness_of_surface_snow_amount";
+      snow_thickness:units="m";
+   float lat(lat);
+      lat:long_name = "latitude";
+      lat:units = "degrees_north";
+      lat:axis = "Y" ;
+   float lon(lon);
+      lon:long_name = "longitude";
+      lon:units = "degrees_east";
+      lon:axis = "X" ;
+
+// global attributes:
+   :comment="Thickness of sea-ice and snow on sea-ice averaged over sea area." ;
+   :Conventions = "CF-1.4" ;
+}
+

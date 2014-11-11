@@ -1,0 +1,21 @@
+netcdf cf_7.1 {
+dimensions:
+   lat = 3;
+   nv = 2; // number of vertices
+   threeD=1 ;
+
+variables:
+   float lat(lat);
+	     lat:long_name = "latitude";
+	     lat:units = "degrees_north";
+	     lat:bounds = "lat_bnds";
+   float lat_bnds(lat,nv,threeD);
+      lat_bnds:comment = "invalid number of dimensions" ;
+
+// global attributes:
+   :comment="Cells on a latitude axis" ;
+   :Conventions = "CF-1.4" ;
+
+data:
+lat = 1., 2., 3.;
+}

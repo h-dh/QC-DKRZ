@@ -1,0 +1,41 @@
+netcdf cf_7.3.3d {
+dimensions:
+   lat=2;
+   lon=3;
+   maxlen=20;
+   ls=2;
+   height = 1 ;
+
+variables:
+   char land_sea(ls,maxlen);
+      land_sea:standard_name="area_type";
+   float height(height) ;
+     height:standard_name = "height" ;
+     height:units = "m" ;
+     height:positive = "up" ;
+     height:axis = "Z";
+   float lat(lat) ;
+      lat:units = "degrees_north" ;
+      lat:standard_name = "latitude" ;
+      lat:axis = "Y" ;
+   float lon(lon) ;
+      lon:units = "degrees_east" ;
+      lon:standard_name = "longitude" ;
+      lon:axis = "X" ;
+
+   float surface_t(ls,height,lat,lon);
+      surface_t:long_name = "surface temperature" ;
+      surface_t:coordinates="height land_sea";
+      surface_t:cell_methods="area: mean where height";
+      surface_t:comment = "invalid: type-var height is a coordinate var" ;
+
+// global attributes:
+   :comment="Mean surface temperature over land and sensible heat flux averaged separately over land and sea." ;
+   :Conventions = "CF-1.4" ;
+
+data:
+ land_sea="land","sea";
+ height = 1.;
+ lat=1.,2.;
+ lon=1.,2.,3.;
+}

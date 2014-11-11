@@ -1,0 +1,41 @@
+netcdf cf_8.2 {
+dimensions:
+   time=2;
+   oceanpoint=3;
+   depth=4;
+   lat=3;
+   lon=4;
+
+variables:
+   float salinity(time,oceanpoint);
+     salinity:long_name = "salinity" ;
+   int oceanpoint(oceanpoint);
+    	 oceanpoint:compress="depth lat lon";
+
+   float depth(depth);
+     depth:standard_name = "height" ;
+     depth:units = "m";
+     depth:axis = "Z";
+   float lat(lat);
+     lat:standard_name = "latitude" ;
+     lat:units = "degrees_north";
+     lat:axis = "Y" ;
+   float lon(lon);
+     lon:standard_name = "longitude" ;
+     lon:units = "degrees_east";
+     lon:axis = "X" ;
+   float time(time) ;
+     time:long_name = "time" ;
+     time:units = "days since 1990-1-1 0:0:0" ;
+
+// global attributes:
+   :comment="Compression of a three-dimensional field" ;
+   :Conventions = "CF-1.4" ;
+
+data:
+time= 1., 2.;
+depth = 1., 2., 3., 4.;
+lat = -60., 0., 60.;
+lon = 0., 90., 180., 270.;
+oceanpoint = 1, 6, 11;
+}
