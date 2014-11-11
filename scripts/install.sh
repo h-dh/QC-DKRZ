@@ -868,6 +868,8 @@ else
   BIN=${QC_PATH}/bin
 fi
 
+test ! -d $BIN && mkdir bin
+
 # Note that any failure in a function called below causes an EXIT
 
 if [ ${isShowInst:-f} = t ] ; then
