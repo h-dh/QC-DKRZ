@@ -49,6 +49,39 @@ check_QC_Path()
   return
 }
 
+checkTables()
+{
+  # Revision numbers >5610 have a different default behaviour.
+  # Try a clearance of tables of older package revision before ana update.
+
+  if [ ${isResetTables:-f} = f ] ; then return ; fi
+
+  # reset tables
+  local fs f ff
+   local is
+  fs=( $( ls tables/projects/* ) )
+  for f in ${fs[*]} ; do
+    ff=${f##*/}
+    if [ -f tables/${ff} ] ; then
+      if diff tables/$ff $f &> /dev/null ; then
+        \rm tables/$ff  # no difference
+      else
+        mkdir -p tables/old
+        mv tables/$ff tables/old
+        if [ ${is:-t} = t ] ; then
+          is=f
+          echo "tables are saved in directory tables/old ."
+        fi
+        echo "diff tables/$ff tables/projects/$ff: found difference"
+      fi
+    fi
+  done
+
+  \rm -rf tables/QC.xlsx
+  \rm -rf tables/cordex_specs
+  return
+}
+
 descript()
 {
   echo "Usage: install [options] [project[s]]"
@@ -401,6 +434,8 @@ for(( i=${#item[*]}-1 ; i >= 0 ; --i )) ; do
 
   unset item[i]
 done
+
+checkTables $prj
 
 log ${allArgs}
 

@@ -794,6 +794,10 @@ log_pwd=$(pwd)/
 
 # Installation of external packages.
 
+mkdir -p $srcPath
+
+test ${#LIB} -eq 0 && LIB=local/lib
+
 if ! mkdir -p ${prefix} 2> /dev/null ; then
   descript
   txt="Could not mkdir -p ${prefix}"
@@ -802,10 +806,6 @@ if ! mkdir -p ${prefix} 2> /dev/null ; then
   log ${txt} DONE
   exit 1
 fi
-
-mkdir -p $srcPath
-
-test ${#LIB} -eq 0 && LIB=local/lib
 
 test ${isDistClean:-f} = t  && distclean
 
