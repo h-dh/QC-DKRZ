@@ -1,7 +1,7 @@
 QC-DKRZ
 =======
 
-Quality and CF checker of meta-data in climate realted data sets (netCDF files)
+Quality and CF checker of meta-data in climate related data sets (netCDF files)
 
 A brief overview and installation guide is given at
 
