@@ -14,3 +14,6 @@ Unfortunately, documentation in directory 'doc' is out-dated.
 
 Please take note of the "Disclaimer of Warranty" in file DoW.txt!
 
+NOTE: the package is still in a testing stage, in particular CF-1.6 Chapter 9
+related issues.
+
