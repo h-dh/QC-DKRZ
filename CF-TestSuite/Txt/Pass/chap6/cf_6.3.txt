@@ -1,10 +1,11 @@
 netcdf cf_6.3 {
 dimensions:
-   sigma = 10 ;
-   lat = 5 ;
+   sigma = 2 ;
+   lat = 2 ;
 
 variables:
    float xwind(sigma,lat);
+      xwind:long_name="wind";
 	     xwind:coordinates="model_level";
    float sigma(sigma); // physical height coordinate
 	     sigma:long_name="sigma";
@@ -18,4 +19,7 @@ variables:
 // global attributes:
    :comment="Model level numbers" ;
    :Conventions = "CF-1.4" ;
+
+data:
+sigma= 1., 2.;
 }

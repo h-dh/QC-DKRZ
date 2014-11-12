@@ -2,8 +2,8 @@ netcdf cf_7.11b {
 dimensions:
    time=1;
    nv=2;
-   lat=3;
-   lon=4;
+   lat=2;
+   lon=2;
 
 variables:
    float n1(lat,lon);
@@ -17,7 +17,7 @@ variables:
    float threshold;
       threshold:standard_name="air_temperature";
       threshold:units="degC";
-   double time;
+   double time(time);
       time:standard_name="time" ;
       time:climatology="climatology_bounds";
       time:units="days since 2000-6-1";
@@ -38,6 +38,8 @@ variables:
 data:
 //time="2008-1-16 6:00";
 time=2785.25 ;
+lat=1.,2.;
+lon=1.,2.;
 
 //climatology_bounds="2007-12-1 6:00", "2008-2-28 6:00";
 climatology_bounds=2739.25, 2828.25 ;

@@ -7,6 +7,7 @@ dimensions:
 
 variables:
    float precipitation(time,lat,lon);
+      precipitation:long_name="precipitation";
       precipitation:cell_methods="area: mean time: sum within years time: mean over years (ENSO years)";
       precipitation:units="kg m-2";
       precipitation:comment = "the example is extended by non-standardised description (ENSO years)" ;
@@ -29,6 +30,9 @@ variables:
    :Conventions = "CF-1.4" ;
 
 data:
+lon= 1.,2.,3.;
+lat=1.,2.;
+
 //time="1965-1-15", "1975-1-15", "1985-1-15" ;
 time= 23390., 27042., 30695. ;
 

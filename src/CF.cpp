@@ -1009,7 +1009,7 @@ CF::checkCoordVarValues(Variable& var)
     ++i;
 
     std::string capt("all values of coordinate variable=");
-    capt += var.name + " has to be different, found equal values at indexes=" ;
+    capt += var.name + " have to be different, found equal values at indexes=" ;
     capt += hdhC::itoa(i-1) + "," + hdhC::itoa(i) ;
 
     (void) notes->operate(capt) ;
@@ -1689,7 +1689,7 @@ CF::finalAtt_coordinates(void)
 
      if( var.coord.isCoordVar )
        cv_ix.push_back(ix);
-     else if( var.isDataVar )
+     else if( var.isDataVar && var.boundsOf.size() == 0 )
        tmp_dv_ix.push_back(ix);
      else if( var.isCoordinate() || var.isLabel )
        acv_ix.push_back(ix);
@@ -4275,7 +4275,8 @@ CF::chap4_1(Variable& var)
 
   if( !isGridUnits && var.units.size() == 0 && (isX || isY) )
   {
-     if( notes->inq(bKey + "41e", var.name) )
+     if( ! notes->findMapItem(bKey + "5c", var.name)
+            && notes->inq(bKey + "41e", var.name) )
      {
        std::string capt("!" + var.name + ":axis=" );
        capt +=  var.getAttValue(n_axis);
@@ -4308,7 +4309,9 @@ CF::chap4_1(Variable& var)
 
   if( isCheck && !isGridUnits && isStndName  )
   {
-     if( notes->inq(bKey + "41e", var.name) )
+     if( ! notes->findMapItem(bKey + "5c", var.name)
+           && ! notes->findMapItem(bKey + "41e", var.name)
+              && notes->inq(bKey + "41e", var.name) )
      {
        std::string capt("!" + var.name );
        capt +=  ":standard_name=" + sn ;
@@ -5268,7 +5271,37 @@ CF::chap5_6_gridMappingVar(Variable& var, std::string &s, std::string gmn)
      std::string str( var_gmv.getAttValue("grid_mapping_name") );
 
      if( str.size() )
-       retVal = (str == gmn) ? 0 : (3+ix);
+     {
+        if( gmn.size() == 0 )
+        {
+           // all methods defined in CF
+           std::vector<std::string> vs_gmn;
+           vs_gmn.push_back("albers_conical_equal_area");
+           vs_gmn.push_back("azimuthal_equidistant");
+           vs_gmn.push_back("lambert_azimuthal_equal_area");
+           vs_gmn.push_back("lambert_conformal_conic");
+           vs_gmn.push_back("lambert_cylindrical_equal_area");
+           vs_gmn.push_back("latitude_longitude");
+           vs_gmn.push_back("mercator");
+           vs_gmn.push_back("orthographic");
+           vs_gmn.push_back("polar_stereographic");
+           vs_gmn.push_back("rotated_latitude_longitude");
+           vs_gmn.push_back("stereographic");
+           vs_gmn.push_back("transverse_mercator");
+           vs_gmn.push_back("vertical_perspective");
+
+           for( size_t i=0 ; i < vs_gmn.size() ; ++i )
+           {
+             if( str == vs_gmn[i] )
+             {
+                gmn = str ;
+                break;
+             }
+           }
+        }
+
+        retVal = (str == gmn) ? 0 : (3+ix);
+     }
 
      // recommendation: grid mapping variable should have no dimensions
      if( followRecommendations && var_gmv.dimName.size() )
@@ -5718,11 +5751,20 @@ CF::chap7_1(void)
 
     size_t sz_is = var_is.dimName.size() ;
     size_t sz_has = var_has.dimName.size() ;
+    size_t sz_scalar=0;
+
+    if( sz_has == 0 )
+    {
+       if( pIn->nc.isDimValid(var_has.name)
+              && pIn->nc.getDimSize(var_has.name) == 1 )
+          sz_scalar=1;
+    }
 
     bool isMissingVerticesDim=false;
     bool hasTooManyVerticesDim=false;
     bool isNotIdenticalSubSet=false;
 
+/*
     if( sz_has == 0 )
     {
       // a scalar variable has no dims;
@@ -5736,6 +5778,7 @@ CF::chap7_1(void)
     }
     else
     {
+*/
       size_t sz = ( sz_is < sz_has ) ? sz_is : sz_has ;
 
       size_t v;
@@ -5743,7 +5786,7 @@ CF::chap7_1(void)
          if( var_is.dimName[v] != var_has.dimName[v] )
             break;
 
-      if( !( v == sz && (v+1) == sz_is ) )
+      if( !( v == sz && (v+1+sz_scalar) == sz_is ) )
       {
         if( v < sz )
           isNotIdenticalSubSet=true;
@@ -5752,7 +5795,7 @@ CF::chap7_1(void)
         else if( sz_is > sz_has )
           hasTooManyVerticesDim=true;
       }
-    }
+//    }
 
     if( isNotIdenticalSubSet )
     {
@@ -7086,7 +7129,7 @@ CF::chap8_2(Variable& var)
 
     if(is)
     {
-      if( notes->inq(bKey + "82f", var.name) )
+      if( ! notes->findMapItem(bKey+"12a", var.name) && notes->inq(bKey + "82f", var.name) )
       {
         std::string capt("variable=" + var.name) ;
         capt += ": compressed index exceeds valid range, found index=" ;
@@ -7263,6 +7306,9 @@ CF::chap9(void)
 
     }
   }
+
+// todo
+return;
 
   // Go for the specific featureTypes. If not given, try to estimate the right one.
   // Return true if a featureType could be estimated

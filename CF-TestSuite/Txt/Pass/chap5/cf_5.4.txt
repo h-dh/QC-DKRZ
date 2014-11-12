@@ -16,11 +16,9 @@ variables:
    float lon(station) ;
  	    lon:long_name = "station longitude";
  	    lon:units = "degrees_east";
-      lon:axis = "X" ;
    float lat(station) ;
  	    lat:long_name = "station latitude" ;
  	    lat:units = "degrees_north" ;
-      lat:axis = "Y" ;
    float pressure(pressure) ;
  	    pressure:long_name = "pressure" ;
  	    pressure:units = "hPa" ;

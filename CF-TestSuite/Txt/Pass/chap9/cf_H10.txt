@@ -55,5 +55,6 @@ variables:
    :comment="Profiles for a common set of vertical coordinates stored in the contiguous ragged array representation." ;
    :Conventions = "CF-1.6" ;
 
-
+data:
+profile=1.,2.;
 }

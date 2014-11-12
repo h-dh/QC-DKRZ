@@ -6,9 +6,11 @@ dimensions:
 
 variables:
    float temperature(parcel,times) ;
+      temperature:long_name="arbitrary temperature" ;
 	     temperature:coordinates = "parcel_name lat lon" ;
       temperature:comment = "order of dimensions is valid, because times is not unlimited" ;
    float times(times) ;
+      times:standard_name="time" ;
       times:units="days since 1961-1-1";
    char parcel_name(parcel,max_len_parcel_name) ;
    float lon(parcel,times) ;
@@ -22,4 +24,6 @@ variables:
    :comment="Several parcel trajectories" ;
    :Conventions = "CF-1.4" ;
 
+data:
+times= 1., 2., 3.;
 }

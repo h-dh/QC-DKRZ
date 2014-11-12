@@ -22,12 +22,10 @@ variables:
 	     lat:units = "degrees_north";
 	     lat:long_name = "latitude coordinate";
 	     lat:standard_name = "latitude";
-      lat:axis = "Y" ;
    double lon(y, x);
 	     lon:units = "degrees_east";
 	     lon:long_name = "longitude coordinate";
 	     lon:standard_name = "longitude";
-      lon:axis = "X" ;
    double time(time);
 	     time:long_name = "forecast time";
 	     time:units = "hours since 2004-06-23T22:00:00Z";

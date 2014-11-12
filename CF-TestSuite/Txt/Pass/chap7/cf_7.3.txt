@@ -14,12 +14,10 @@ variables:
 	     lon:long_name = "longitude" ;
 	     lon:units = "degrees_east" ;
 	     lon:bounds="lon_vertices" ;
-      lon:axis = "X" ;
    float lat(cell) ;
 	     lat:long_name = "latitude" ;
 	     lat:units = "degrees_north" ;
 	     lat:bounds="lat_vertices" ;
-      lat:axis = "Y" ;
    float time(time) ;
 	     time:long_name = "time" ;
 	     time:units = "days since 1979-01-01 0:0:0" ;

@@ -13,11 +13,9 @@ variables:
    float lon(time) ;
 	     lon:standard_name = "longitude" ;
 	     lon:units = "degrees_east" ;
-      lon:axis = "X" ;
    float lat(time) ;
 	     lat:standard_name = "latitude" ;
 	     lat:units = "degrees_north" ;
-      lat:axis = "Y" ;
    float z(time) ;
 	     z:long_name = "height above mean sea level" ;
 	     z:units = "km" ;

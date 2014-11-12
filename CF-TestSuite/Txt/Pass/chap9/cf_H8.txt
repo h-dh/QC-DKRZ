@@ -54,4 +54,5 @@ variables:
 
 data:
 z = 1., 2. ;
+profile = 1.,2.,3.;
 }

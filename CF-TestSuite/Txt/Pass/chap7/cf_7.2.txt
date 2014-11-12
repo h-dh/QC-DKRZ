@@ -9,12 +9,10 @@ variables:
     	 lat:long_name = "latitude";
 	     lat:units = "degrees_north";
 	     lat:bounds = "lat_bnds";
-      lat:axis = "Y" ;
    float lon(jmax,imax);
 	     lon:long_name = "longitude";
 	     lon:units = "degrees_east";
 	     lon:bounds = "lon_bnds";
-      lon:axis = "X" ;
    float lat_bnds(jmax,imax,nv);
    float lon_bnds(jmax,imax,nv);
 

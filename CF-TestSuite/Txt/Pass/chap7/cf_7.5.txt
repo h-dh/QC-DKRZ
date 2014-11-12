@@ -1,26 +1,43 @@
 netcdf cf_7.5 {
 dimensions:
-   lat=2;
-   lon=3;
-   time=1;
+   lat=1;
+   lon=1;
+   t=1;
    nv=2;
 
 variables:
-   float TS_var(time,lat,lon);
+   float TS_var(t,lat,lon);
     	 TS_var:long_name="surface air temperature variance";
 	     TS_var:units="K2";
       TS_var:cell_methods="area: mean time: variance (interval: 1 hr comment: sampled instantaneously)" ;
-   float time(time);
-      time:standard_name = "time" ;
-	     time:units="days since 1990-01-01 00:00:00";
-	     time:bounds="time_bnds";
-   float time_bnds(time,nv);
+      TS_var:coment = "time is an appropriate standard_name" ;
+   float t(t);
+      t:standard_name = "time" ;
+	     t:units="days since 1990-01-01 00:00:00";
+	     t:bounds="time_bnds";
+   float time_bnds(t,nv);
+   float lon(lon);
+      lon:standard_name = "longitude" ;
+      lon:units="degrees_east";
+      lon:bounds="lon_bnds";
+      lon:axis="X";
+   float lat(lat);
+      lat:standard_name = "latitude" ;
+      lat:units="degrees_north";
+      lat:bounds="lat_bnds";
+      lat:axis="Y";
+   float lon_bnds(lon,nv);
+   float lat_bnds(lat,nv);
 
 // global attributes:
    :comment="Surface air temperature variance" ;
    :Conventions = "CF-1.4" ;
 
 data:
- time=.5;
+ t=.5;
  time_bnds=0.,1.;
+ lon= 180.;
+ lat= 0.;
+ lon_bnds=0.,360.;
+ lat_bnds=-90.,90.;
 }

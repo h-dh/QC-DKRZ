@@ -13,21 +13,21 @@ variables:
 	     xc:axis = "X" ;
 	     xc:long_name = "x-coordinate in Cartesian system" ;
 	     xc:units = "m" ;
+      xc:axis = "X" ;
    float yc(yc) ;
 	     yc:axis = "Y" ;
 	     yc:long_name = "y-coordinate in Cartesian system" ;
 	     yc:units = "m" ;
+      yc:axis = "Y" ;
    float lev(lev) ;
 	     lev:long_name = "pressure level" ;
 	     lev:units = "hPa" ;
 	  float lon(yc,xc) ;
 	     lon:long_name = "longitude" ;
 	     lon:units = "degrees_east" ;
-      lon:axis = "X" ;
 	  float lat(yc,xc) ;
 	     lat:long_name = "latitude" ;
 	     lat:units = "degrees_north" ;
-      lat:axis = "Y" ;
 
 // global attributes:
    :comment="Two-dimensional coordinate variables" ;

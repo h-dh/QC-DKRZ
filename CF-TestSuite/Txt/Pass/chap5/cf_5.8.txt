@@ -11,7 +11,7 @@ variables:
    double lon(lon) ;
       lon:units = "degrees_east" ;
       lon:standard_name = "longitude" ;
-      lat:axis = "X" ;
+      lon:axis = "X" ;
    float temp(lat, lon) ;
     	 temp:long_name = "temperature" ;
 	     temp:units = "K" ;

@@ -33,4 +33,5 @@ variables:
 
 data:
 time = 1., 2., 3. ;
+pressure = 1., 2., 3., 4., 5.;
 }

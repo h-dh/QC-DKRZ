@@ -30,4 +30,6 @@ variables:
 
 data:
 land_sea="land","sea";
+lon= 1.,2.,3.;
+lat=1.,2.;
 }

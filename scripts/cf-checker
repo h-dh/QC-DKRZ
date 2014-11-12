@@ -151,7 +151,7 @@ if [ ${#findPath} -gt 0 ] ; then
   fs=( ${fs[*]} $( find ${findPath} -name "*.nc" | sort ) )
 fi
 
-param0="\\n-t ${qPath}/tables/projects"
+param0="\\n-t ${qPath}/tables/projects/CF"
 param0="${param0}\\nX::cL=CF_check-list.conf:nCR:nLL=L1:oP:d"
 param0="${param0}\\nIN::oCF"
 param0="${param0}\\nCF::cFSN=cf-standard-name-table.xml"

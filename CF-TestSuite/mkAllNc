@@ -1,0 +1,26 @@
+#! /bin/bash
+
+# make all nc-files of the CF Test Suite
+currPWD=$(pwd)
+
+test ${currPWD##*/} != CF-TestSuite && exit
+
+for d in Pass Fail ; do
+
+  cd ${currPWD}/Txt/$d
+
+  chap=( $( ls -d chap* ) )
+
+  for c in ${chap[*]} ; do
+
+    cd ${currPWD}/Txt/$d/$c
+
+    fs=( $( ls *.txt 2> /dev/null) )
+
+    if [ ${#fs[*]} -gt 0 ] ; then
+      for f in ${fs[*]} ; do ${currPWD}/mkNc $f ; done
+      mv *.nc ${currPWD}/Nc/$d/$c
+    fi
+  done
+
+done

@@ -38,19 +38,19 @@ variables:
       pressure:standard_name = "air_pressure" ;
       pressure:long_name = "pressure level" ;
       pressure:units = "hPa" ;
-      pressure:coordinates = "time lon lat alt" ;
+      pressure:coordinates = "station_name time lon lat alt" ;
 
    float temperature(profile , z) ;
       temperature:standard_name = "surface_temperature" ;
       temperature:long_name = "skin temperature" ;
       temperature:units = "Celsius" ;
-      temperature:coordinates = "time lon lat alt" ;
+      temperature:coordinates = "station_name time lon lat alt" ;
 
    float humidity(profile , z) ;
       humidity:standard_name = "relative_humidity" ;
       humidity:long_name = "relative humidity" ;
       humidity:units = "%" ;
-      humidity:coordinates = "time lon lat alt" ;
+      humidity:coordinates = "station_name time lon lat alt" ;
 
 // global attributes:
    :featureType = "timeSeriesProfile" ;

@@ -5,7 +5,7 @@ dimensions:
    z = 4 ;
 
 variables:
-   int trajectory (trajectory ) ;
+   int trajectory (trajectory) ;
       trajectory:long_name = "trajectory name" ;
       trajectory:cf_role = "trajectory_id" ;
 
@@ -55,4 +55,6 @@ variables:
    :comment="Time series of profiles along a set of trajectories stored in a multidimensional array representation." ;
    :Conventions = "CF-1.6" ;
 
+data:
+trajectory= 1, 2;
 }
