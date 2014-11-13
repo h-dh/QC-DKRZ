@@ -621,7 +621,7 @@ CF::cellMethods_WhereOver(
             std::string capt("!" + var.name + ":" + n_cell_methods);
             capt += "=(where type1 over type2=" + tVar.name;
             capt += ") where " + tVar.name ;
-            capt += " must not have more than a single area-type string" ;
+            capt += " should not have more than a single area-type string" ;
 
             (void) notes->operate(capt) ;
             notes->setCheckCF_Str( fail );
@@ -759,7 +759,7 @@ CF::checkAuxCoordData(Variable& var)
     if( indexFV > -1 && notes->inq(bKey + "12a", var.name) )
     {
       std::string capt("auxiliary coordinate variable=" + var.name);
-      capt += " must not have _FillValue data";
+      capt += " should not have _FillValue data";
       if( sz )
       {
         capt += ", found in record num=" ;
@@ -799,7 +799,7 @@ CF::checkCoordVarFillValueAtt(Variable& var)
       if( notes->inq(bKey + "12c", var.name) )
       {
         std::string capt("coordinate variable=");
-        capt += var.name + " must not have attribute " ;
+        capt += var.name + " should not have attribute " ;
         if( isF )
         {
           capt +=  sF ;
@@ -1941,7 +1941,7 @@ CF::finalAtt_coordinates(void)
              capt = "auxiliary ";
 
           capt += "coordinate variable=" + var.name;
-          capt += " must not have a coordinates attribute" ;
+          capt += " should not have a coordinates attribute" ;
 
           (void) notes->operate(capt) ;
           notes->setCheckCF_Str( fail );
@@ -2973,7 +2973,7 @@ CF::chap2_2(void)
       if( notes->inq(bKey + "22a", var.name) )
       {
         std::string capt("variable=") ;
-        capt +=  var.name + " must not be type NC_STRING";
+        capt +=  var.name + " should not be type NC_STRING";
 
         (void) notes->operate(capt) ;
         notes->setCheckCF_Str( fail );
@@ -2988,7 +2988,7 @@ CF::chap2_2(void)
         {
           std::string capt("attribute=") ;
           capt += var.name + ":" ;
-          capt += var.attName[j] + " must not be type NC_STRING";
+          capt += var.attName[j] + " should not be type NC_STRING";
 
           (void) notes->operate(capt) ;
           notes->setCheckCF_Str( fail );
@@ -5803,7 +5803,7 @@ CF::chap7_1(void)
               && notes->inq(bKey + "71a", var_is.name) )
       {
         std::string capt("boundary variable=" + var_is.getDimNameStr(true));
-        capt += " must have the dimensions" ;
+        capt += " should have the dimensions" ;
         capt += " of the associated variable=";
         capt += var_has.getDimNameStr(true) + " as sub-set" ;
 
@@ -6049,7 +6049,7 @@ CF::chap7_2(void)
         {
           std::string capt("measures variable ") ;
           capt += cm_arg[0];
-          capt += " must have units" ;
+          capt += " should have units" ;
 
           (void) notes->operate(capt) ;
           notes->setCheckCF_Str( fail );
@@ -6611,7 +6611,7 @@ CF::chap7_4(void)
         notes->eraseMapItem(bKey + "71a","",true); // any name
 
         std::string capt("variable=" + var.name);
-        capt += " must not have a " + n_climatology + " attribute" ;
+        capt += " should not have a " + n_climatology + " attribute" ;
 
         (void) notes->operate(capt) ;
         notes->setCheckCF_Str( fail );

@@ -21,10 +21,9 @@ variables:
 	     time:long_name = "time" ;
 	     time:units = "days since 1990-1-1 0:0:0" ;
 
-   float xwind(time,pres,lat1,lat2) ;
-      xwind:long_name = "zonal wind" ;
-      xwind:units = "m/s" ;
-      xwind:comment ="invalid: two dimensions for the same Y-direction" ;
+   float rh(time,pres,lat1,lat2) ;
+      rh:long_name = "relative humidity" ;
+      rh:comment ="invalid: two dimensions for the same Y-direction" ;
 
 // global attributes:
    :comment=" Independent coordinate variables" ;

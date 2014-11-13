@@ -16,11 +16,11 @@ variables:
       lat:units= "degrees_north" ;
    char parcel_name(max_len_parcel_name) ;
 
-   float T(parcel,times) ;
-      T:comment2 = "ordering of dimensions is valid, because times is not unlimited" ;
-      T:long_name = "temperature" ;
-      T:coordinates = "lat lon" ;
-      T:comment = "coordinates misses parcel_name" ;
+   float rh(parcel,times) ;
+      rh:comment2 = "ordering of dimensions is valid, because times is not unlimited" ;
+      rh:long_name = "relative humidity" ;
+      rh:coordinates = "lat lon" ;
+      rh:comment = "coordinates misses parcel_name" ;
 
 // global attributes:
    :comment="Several parcel trajectories" ;

@@ -5,10 +5,9 @@ dimensions:
    p = 4 ;
 
 variables:
-   float T(p,yc,xc) ;
-	     T:long_name = "temperature" ;
-	     T:units = "K" ;
-	     T:coordinates = "lat lon xc yc" ;
+   float rh(p,yc,xc) ;
+	     rh:long_name = "realtive humidity" ;
+	     rh:coordinates = "lat lon xc yc" ;
    float xc(xc) ;
 	     xc:axis = "X" ;
 	     xc:long_name = "x-coordinate in Cartesian system" ;
