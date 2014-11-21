@@ -1258,9 +1258,15 @@ Annotation::readConf(void)
     }
 
     // one for all
-    if( useAlways.size() ||
-          (pos=str0.find("NOTE_ALWAYS")) < std::string::npos )
+    size_t pos_x=0;
+    if( useAlways.size()
+          || (pos_x=str0.find("NOTE_ALWAYS=")) < std::string::npos
+            || (pos=str0.find("NOTE_ALWAYS")) < std::string::npos )
     {
+      pos = 12;
+      if( pos_x < std::string::npos )
+         ++pos ;  // for the assignment '=' char
+
       if( useAlways.size() )
         groups.set(useAlways) ;
       else
