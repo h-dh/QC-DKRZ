@@ -2695,17 +2695,36 @@ initT()
    local table=${1%=*}
    local value=${1#*=}
 
-   test ${#value} -eq 0 && return  # not provided
-
-   local p
-   local ix
-
    local pDir  # index 0 -> 3 provides precedence
 
    pDir[0]=tables/projects/${PROJECT_AS}
    pDir[1]=tables/projects
    pDir[2]=tables/${PROJECT_AS}
    pDir[3]=tables
+
+   if [ "$table" = TABLE_RCM_NAME ] ; then
+     if [ -d ${pDir[0]}/IS-ENES-Data.github.io ] ; then
+       ( cd ${pDir[0]}/IS-ENES-Data.github.io && \
+         git pull origin ) &> /dev/null
+     else
+       ( cd ${pDir[0]} && \
+         git clone  https://github.com/IS-ENES-Data/IS-ENES-Data.github.io ) \
+         &> /dev/null
+     fi
+
+     test ! -d ${pDir[0]}/cordex_specs && mkdir ${pDir[0]}/cordex_specs
+
+     wget --tries=3 -q -N \
+     --directory-prefix=${pDir[0]}/cordex_specs \
+     http://cordex.dmi.dk/joomla/images/CORDEX/RCMModelName.txt \
+     &> /dev/null
+   fi
+
+   test ${#value} -eq 0 && return  # not provided
+
+   local p
+   local ix
+
    # implicitly and highest: local file and file with absolute path
 
    for(( ix=0 ; ix < 4 ; ++ix )) ; do
@@ -2730,7 +2749,11 @@ initT()
 
    value=${value##*/}
 
-   if [ -f "${p}${value}" ] ; then
+   if [ ${table} = TABLE_RCM_NAME ] ; then
+     cat ${pDir[0]}/IS-ENES-Data.github.io/CORDEX_ToU_RCMModel.txt \
+         ${pDir[0]}/cordex_specs/RCMModelName.txt \
+         > ${TABLE_PATH}/CORDEX_RCMModelName.txt
+   elif [ -f "${p}${value}" ] ; then
      if ! diff ${p}${value} ${TABLE_PATH}/${value} \
            &> /dev/null ; then
        tryCom \

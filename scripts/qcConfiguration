@@ -240,7 +240,7 @@ checkTools()
   # a few simple commands
   local cmd
   for cmd in basename 'date +\'%F%T'' \
-bc grep kill ls mkdir mv perl rm sleep ssh test
+bc git grep kill ls mkdir mv perl rm sleep ssh svn test
   do
     if tryExist com $cmd ; then
       test $CHECK_TOOLS = t && std_out "${cmd}\t\t available"
