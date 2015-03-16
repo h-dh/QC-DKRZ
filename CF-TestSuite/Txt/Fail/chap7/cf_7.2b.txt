@@ -14,16 +14,13 @@ variables:
       time:standard_name = "time" ;
 	     time:long_name = "time" ;
 	     time:units = "days since 1979-01-01 0:0:0" ;
-   float cell_area(cell) ;
-	     cell_area:long_name = "area of grid cell" ;
-	     cell_area:units = "m2";
 
    float ps(time,cell) ;
       ps:long_name = "pressure" ;
       ps:units = "Pa" ;
       ps:coordinates = "lon lat" ;
       ps:cell_measures = "area: xyz" ;
-      ps:comment = "invalid: undefined variable in cell_measures" ;
+      ps:comment = "invalid: undefined variable named by cell_measures" ;
 
 // global attributes:
    :comment="Cell areas for a spherical geodesic grid" ;

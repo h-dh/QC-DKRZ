@@ -1,0 +1,26 @@
+netcdf cf_3.3b {
+dimensions:
+   lat=2;
+   lon=3;
+
+variables:
+   float surface_fraction(lat,lon);
+      surface_fraction:standard_name="land_cover";
+      surface_fraction:units = "1" ;
+   float lat(lat);
+      lat:long_name = "latitude";
+      lat:units = "degrees_north";
+      lat:axis = "Y" ;
+   float lon(lon);
+      lon:long_name = "longitude";
+      lon:units = "degrees_east";
+      lon:axis = "X" ;
+
+// global attributes:
+   :comment="Mean surface temperature over land and sensible heat flux averaged separately over land and sea." ;
+   :Conventions = "CF-1.4" ;
+
+data:
+lon= 1.,2.,3.;
+lat=1.,2.;
+}

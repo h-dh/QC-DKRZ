@@ -131,8 +131,12 @@ do
           descript
         elif [ "${OPTARG}" = "debug" ] ; then
           set -x
-        elif [ "${OPTARG}" = "param-file-only" ] ; then
+        elif [ "${OPTARG:0:5}" = "param" ] ; then
           isParamFileOnly=t
+        elif [ "${OPTARG}" = "test-suite" ] ; then
+          isTestSuite=t
+        elif [ "${OPTARG}" = "ts" ] ; then
+          isTestSuite=t
         fi
         ;;
    \?)  descript
@@ -151,15 +155,22 @@ if [ ${#findPath} -gt 0 ] ; then
   fs=( ${fs[*]} $( find ${findPath} -name "*.nc" | sort ) )
 fi
 
-param0="\\n-t ${qPath}/tables/projects/CF"
-param0="${param0}\\nX::cL=CF_check-list.conf:nCR:nLL=L1:oP:d"
-param0="${param0}\\nIN::oCF"
-param0="${param0}\\nCF::cFSN=cf-standard-name-table.xml"
-param0="${param0}:rT=cf-standardized-region-names.txt"
-param0="${param0}${CF:+:cF=}${CF}${RC:+:fR}"
+param_T="\\n-t ${qPath}/tables/projects/CF"
 
-echo -e "\n========================================"
-echo -e "\nDKRZ-CF-Checker run ($(date +'%F %T')):"
+param_IN="\\nIN::oCF"
+
+param_CF="\\nCF::cFSN=cf-standard-name-table.xml"
+param_CF="${param_CF}:rT=cf-standardized-region-names.txt"
+param_CF="${param_CF}${CF:+:cF=}${CF}${RC:+:fR}"
+
+param_X="${param_X}\\nX::cL=CF_check-list.conf:nCR:nLL=L1:oP:d"
+#param_X="${param_X}:note={CF_12h,D}"  # data variable without any data
+
+
+if [ ${isParamFileOnly:-f} = f ] ; then
+  echo -e "\n========================================"
+  echo -e "\nDKRZ-CF-Checker run ($(date +'%F %T')):"
+fi
 
 for(( i=0 ; i < ${#fs[*]} ; ++i )) ; do
   param=
@@ -167,7 +178,16 @@ for(( i=0 ; i < ${#fs[*]} ; ++i )) ; do
   # prepare parameters for the cf-checker.x
   test ${#fPath} -gt 0 && param="-p ${fPath}\\n"
 
-  param="${param}-f ${fs[i]}${param0}"
+  param="${param}-f ${fs[i]}"
+  param="${param}${param_T}"
+  param="${param}${param_IN}"
+  param="${param}${param_CF}"
+
+  param="${param}${param_X}:note="
+  param="${param}${param}{CF_12h,D}"
+  if [ ${isTestSuite:-f} = t ] ; then
+    test ${fs[i]##*/} != cf_0f.nc && param="${param},{CF_0f,D}"
+  fi
 
   if [ ${isParamFileOnly:-f} = t ] ; then
     echo -e "$param" > param_file.txt

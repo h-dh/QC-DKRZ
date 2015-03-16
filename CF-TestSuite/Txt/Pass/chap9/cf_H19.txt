@@ -69,4 +69,6 @@ variables:
    :comment="Time series of profiles from a set of locations stored in a ragged array representation." ;
    :Conventions = "CF-1.6" ;
 
+data:
+profile=1, 2;
 }

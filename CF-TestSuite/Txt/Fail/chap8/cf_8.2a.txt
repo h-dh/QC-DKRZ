@@ -8,22 +8,22 @@ dimensions:
 variables:
    float landsoilt(depth,landpoint);
 	    landsoilt:long_name="soil temperature";
-     landsoilt:units="K";
+      landsoilt:units="K";
    float depth(depth);
-     depth:standard_name = "height" ;
-     depth:units = "m";
-     depth:axis = "Z";
-     depth:positive = "down" ;
+      depth:standard_name = "height" ;
+      depth:units = "m";
+      depth:axis = "Z";
+      depth:positive = "down" ;
    float lat(lat);
-     lat:standard_name = "latitude" ;
-     lat:units = "degrees_east";
+      lat:standard_name = "latitude" ;
+      lat:units = "degrees_north";
    float lon(lon);
-     lon:standard_name = "longitude" ;
-     lon:units = "degrees_north";
+      lon:standard_name = "longitude" ;
+      lon:units = "degrees_east";
 
    double landpoint(landpoint);
-     landpoint:compress="lat lon";
-     landpoint:comment = "invalid: type of landpoint must be int" ;
+      landpoint:compress="lat lon";
+      landpoint:comment = "invalid: type of landpoint must be int" ;
 
 // global attributes:
    :comment="" ;

@@ -15,10 +15,14 @@ variables:
       lat:units = "degrees_north" ;
       lat:standard_name = "latitude" ;
       lat:axis="Y";
-   float lon(lon) ;
+      lat:bounds="lat_bnds";
+  float lat_bnds(lat,nv);
+  float lon(lon) ;
       lon:units = "degrees_east" ;
       lon:standard_name = "longitude" ;
       lon:axis="X";
+      lon:bounds="lon_bnds";
+   float lon_bnds(lon,nv);
 
    float T(time,lat,lon);
       T:long_name="surface air temperature";
@@ -33,6 +37,8 @@ variables:
 data:
 lat = 1., 2.;
 lon = 1., 2., 3.;
+lat_bnds = 0.,1., 1.,2.;
+lon_bnds = 0.,1., 1.,2., 2.,3.;
 
 //time="1960-4-16", "1960-7-16", "1960-10-16", "1961-1-16" ;
 time=106., 197., 289., 381. ;

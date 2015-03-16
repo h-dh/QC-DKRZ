@@ -15,6 +15,5 @@ variables:
      sensor_status_qc:comment = "flag_meanings: invalid character" ;
 
 // global attributes:
-   :comment=" A flag variable, using flag_masks" ;
    :Conventions = "CF-1.6" ;
 }

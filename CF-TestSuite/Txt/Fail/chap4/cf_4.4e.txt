@@ -3,12 +3,14 @@ dimensions:
    time = UNLIMITED ; // (3 currently)
 
 variables:
+   double var(time) ;
+      var:units="m" ;
+      var:long_name="data variable";
    double time(time) ;
-    	 time:standard_name = "time" ;
-      time:comment ="invalid: missing units" ;
+     time:standard_name = "time" ;
+     time:comment ="invalid: missing units" ;
 
 // global attributes:
-   :comment="Time axis" ;
    :Conventions = "CF-1.4" ;
 
 data:

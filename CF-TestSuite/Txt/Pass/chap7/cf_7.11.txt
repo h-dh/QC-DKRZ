@@ -20,10 +20,14 @@ variables:
       lat:long_name = "latitude";
       lat:units = "degrees_north";
       lat:axis = "Y" ;
+      lat:bounds = "lat_bnds" ;
+   float lat_bnds(lat,nv);
    float lon(lon);
       lon:long_name = "longitude";
       lon:units = "degrees_east";
       lon:axis = "X" ;
+      lon:bounds = "lon_bnds" ;
+   float lon_bnds(lon,nv);
 
 // global attributes:
    :comment="Temperature for each hour of the typical climatological day" ;
@@ -34,6 +38,8 @@ data: // time coordinates translated to date/time format
 
 lat=1.,2.,3.;
 lon=1.,2.,3.,4.;
+lat_bnds= 0.,1., 1.,2., 2.,3.;
+lon_bnds= 0.,1., 1.,2., 2.,3., 3.,4. ;
 
 time= 90.0208, 90.0625, 90.1042, 90.1458, 90.1875, 90.2292, 90.2708,
 90.3125, 90.3542, 90.3958, 90.4375, 90.4792, 90.5208, 90.5625, 90.6042,

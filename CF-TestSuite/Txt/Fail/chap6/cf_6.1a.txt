@@ -14,16 +14,16 @@ variables:
    float lat(parcel,times) ;
       lat:standard_name = "latitude";
       lat:units= "degrees_north" ;
-   char parcel_name(max_len_parcel_name) ;
+   char parcel_name(parcel,max_len_parcel_name) ;
 
    float rh(parcel,times) ;
       rh:comment2 = "ordering of dimensions is valid, because times is not unlimited" ;
       rh:long_name = "relative humidity" ;
       rh:coordinates = "lat lon" ;
-      rh:comment = "coordinates misses parcel_name" ;
+      rh:comment = "label parcel_name is missing in coordinates" ;
 
 // global attributes:
-   :comment="Several parcel trajectories" ;
+   :comment="Strictness of Chap6 (CF-1.4) is ignored in Appendix H (CF-1.6)" ;
    :Conventions = "CF-1.4" ;
 
 data:

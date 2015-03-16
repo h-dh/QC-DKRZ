@@ -9,6 +9,5 @@ variables:
       q4:comment ="units not CF compatible for given standard_name" ;
 
 // global attributes:
-   :comment="Use of standard_name" ;
    :Conventions = "CF-1.4" ;
 }

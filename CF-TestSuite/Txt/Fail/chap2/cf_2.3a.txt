@@ -12,6 +12,6 @@ variables:
       psl:units = "hPa" ;
 
 // global attributes:
-   :comment="warning: same names when case is ignored" ;
+   :comment="warning: same names of variables when case is ignored" ;
    :Conventions = "CF-1.4" ;
 }

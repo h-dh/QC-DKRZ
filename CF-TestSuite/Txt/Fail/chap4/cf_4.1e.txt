@@ -7,8 +7,8 @@ dimensions:
 
 variables:
    double time(time) ;
-    	 time:long_name = "time" ;
-	     time:units = "days since 1990-1-1 0:0:0" ;
+      time:long_name = "time" ;
+      time:units = "days since 1990-1-1 0:0:0" ;
    float lat(lat) ;
       lat:axis = "Y" ;
       lat:units = "degree_north" ;
@@ -27,7 +27,6 @@ variables:
       p:comment = "invalid: data values of a coordinate variable must be different" ;
 
 // global attributes:
-   :comment="Time axis" ;
    :Conventions = "CF-1.4" ;
 
 data:

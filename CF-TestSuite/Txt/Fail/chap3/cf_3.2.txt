@@ -3,12 +3,14 @@ dimensions:
    lev = 2 ;
 
 variables:
+   double var(lev) ;
+      var:units="m" ;
+      var:long_name="data variable";
    float lev(lev) ;
       lev:units= "hPa" ;
       lev:comment = "Usage of long_name or standard_name is recommended" ;
 
 // global attributes:
-   :comment="Atmosphere sigma coordinate" ;
    :Conventions = "CF-1.4" ;
 
 data:

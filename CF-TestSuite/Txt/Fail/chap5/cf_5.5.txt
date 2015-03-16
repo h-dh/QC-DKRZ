@@ -18,9 +18,9 @@ variables:
       O3:coordinates = "lon lat z" ;
 
    float z(time) ;
-	     z:standard_name = "height" ;
-	     z:units = "km" ;
-	     z:comment = "invalid: auxiliary vertical variable without positive attribute" ;
+      z:standard_name = "height" ;
+      z:units = "km" ;
+      z:comment = "invalid: auxiliary vertical variable without positive attribute" ;
 
 // global attributes:
    :comment="Trajectories" ;
@@ -28,4 +28,5 @@ variables:
 
 data:
 time = 1., 2., 3.;
+O3= 1., 2., 3.;
 }

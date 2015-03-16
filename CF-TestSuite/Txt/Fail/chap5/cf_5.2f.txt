@@ -17,7 +17,7 @@ variables:
 	     lev:long_name = "pressure level" ;
 	     lev:units = "hPa" ;
 	  float lon(yc,xc) ;
-      lon:axis = "X" ;
+       lon:axis = "X" ;
 	     lon:long_name = "longitude" ;
 	     lon:units = "degrees_east" ;
 	  float lat(yc,xc) ;

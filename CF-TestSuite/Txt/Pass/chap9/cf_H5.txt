@@ -44,7 +44,7 @@ variables:
    float temp(time) ;
       temp:standard_name = "air_temperature" ;
       temp:units = "Celsius" ;
-      temp:coordinates = "time lat lon alt precise_lon precise_lat " ;
+      temp:coordinates = "time lat lon alt precise_lon precise_lat" ;
       temp:_FillValue = -999.9 ;
 
 // global attributes:

@@ -3,14 +3,16 @@ dimensions:
    time = UNLIMITED ; // (3 currently)
 
 variables:
+   double var(time) ;
+      var:units="m" ;
+      var:long_name="data variable";
    double time(time) ;
-    	 time:long_name = "time" ;
-	     time:units = "days since 1990-1-1 0:0:0" ;
+      time:long_name = "time" ;
+      time:units = "days since 1990-1-1 0:0:0" ;
       time:calendar = "365" ;
       time:comment = "invalid: should be 365_day" ;
 
 // global attributes:
-   :comment="Time axis" ;
    :Conventions = "CF-1.4" ;
 
 data:

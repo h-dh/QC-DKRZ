@@ -13,12 +13,10 @@ variables:
 	     xc:axis = "X" ;
 	     xc:long_name = "x-coordinate in Cartesian system" ;
 	     xc:units = "m" ;
-      xc:axis = "X" ;
    float yc(yc) ;
 	     yc:axis = "Y" ;
 	     yc:long_name = "y-coordinate in Cartesian system" ;
 	     yc:units = "m" ;
-      yc:axis = "Y" ;
    float lev(lev) ;
 	     lev:long_name = "pressure level" ;
 	     lev:units = "hPa" ;

@@ -1,0 +1,13 @@
+netcdf cf_3.3ba {
+dimensions:
+   time = UNLIMITED ;
+
+variables:
+   float q0(time);
+      q0:standard_name = "specific humidity standard_error";
+      q0:units = "g/g";
+      q0:comment ="invalid: standard_name contains blanks" ;
+
+// global attributes:
+   :Conventions = "CF-1.4" ;
+}

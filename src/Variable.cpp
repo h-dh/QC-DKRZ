@@ -4,6 +4,7 @@ VariableMeta::VariableMeta()
 {
   // preset some members
   isArithmeticMean=false;
+  isAux=false;
   isChecked=false;
   isClimatology=false;
   isCompress=false;
@@ -18,11 +19,12 @@ VariableMeta::VariableMeta()
   isNoData=false;
   isScalar=false;
   isUnitsDefined=false;
+  isVoid=false;
 
-  is_ull_X=true;
-  is_ull_Y=true;
-  is_ull_rotX=true;
-  is_ull_rotY=true;
+  is_1st_X=true;
+  is_1st_Y=true;
+  is_1st_rotX=true;
+  is_1st_rotY=true;
 
   isUnlimited_=-1;
   indication_DV=0;
@@ -30,11 +32,13 @@ VariableMeta::VariableMeta()
   range[0]=MAXDOUBLE;
   range[1]=-MAXDOUBLE;
 
-  clearCoordStruct();
+  indication_DV=0;
+
+  clearCoord();
 }
 
 void
-VariableMeta::clearCoordStruct(void)
+VariableMeta::clearCoord(void)
 {
   coord.isAny=false;
   coord.isCoordVar=false;
@@ -249,9 +253,65 @@ Variable::getCoordinateType(void)
 }
 
 bool
-Variable::isCoordinate(void)
+Variable::inqDataVar(void)
 {
-   return  coord.isAny || coord.isX || coord.isY || coord.isZ || coord.isT ;
+  if( isDataVar )
+    return isDataVar;
+
+  if( boundsOf.size() )
+      --indication_DV ;
+
+//    return (isDataVar=false) ;  // bounds are associated to coordinates
+  if( isCoordinate() )
+      --indication_DV ;
+
+//  return (isDataVar=false) ;
+
+
+  /*
+    if( dimName.size() > 2
+          && ! pIn->variable[pIn->varSz].isValidAtt("featureType") )
+      indication_DV += 10 ;
+*/
+  
+    // look for attributes which should be asssociated only
+    // to data varriables, although we know real files better
+    if( isValidAtt("axis") )
+      --indication_DV ;
+    if( isValidAtt("bounds") )
+      --indication_DV ;
+    if( isValidAtt("cell_measures") )
+      ++indication_DV ;
+    if( isValidAtt("cell_methods") )
+      ++indication_DV ;
+    if( isValidAtt("cf_role") )
+      --indication_DV ;
+    if( isValidAtt("climatology") )
+      --indication_DV ;
+    if( isValidAtt("coordinates") )
+      ++indication_DV ;
+    if( isValidAtt("FillValue") || isValidAtt("missing_value") )
+      ++indication_DV ;
+    if( isValidAtt("positive") )
+      --indication_DV ;
+    if( isValidAtt("grid_mapping") )
+      ++indication_DV ;
+    if( isValidAtt("ancilliary_variables") )
+      ++indication_DV ;
+    if( isValidAtt("flag_values") )
+      ++indication_DV ;
+    if( isValidAtt("flag_masks") )
+      ++indication_DV ;
+
+    if( indication_DV < 1 )
+      isDataVar = false;
+    else
+    {
+      clearCoord();
+      isDataVar = true;
+    }
+
+  return isDataVar;
 }
 
 bool
@@ -290,6 +350,22 @@ Variable::isValidAtt(std::string s, bool tryLowerCase)
   }
 
   return is;
+}
+
+bool
+Variable::isValidAtt(std::string aName, std::string sub)
+{
+  int j;
+  if( (j=getAttIndex(aName)) > -1 )
+  {
+    Split x_aV(attValue[j][0]);
+
+    for( size_t j=0 ; j < x_aV.size() ; ++j )
+      if( x_aV[j] == sub )
+        return true;
+  }
+
+  return false;
 }
 
 void
@@ -435,6 +511,20 @@ Variable::makeObj(bool is)
   pMA->disableValueExceptionUpdate();
 
   return;
+}
+
+void
+Variable::push_aux(std::string& name)
+{
+   size_t i;
+   for( i=0 ; i < aux.size() ; ++i )
+     if( aux[i] == name )
+       break;
+
+   if( i == aux.size() )
+     aux.push_back(name);
+
+   return;
 }
 
 template<typename T>

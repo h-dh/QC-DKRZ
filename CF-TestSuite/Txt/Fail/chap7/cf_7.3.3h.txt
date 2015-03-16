@@ -1,9 +1,9 @@
 netcdf cf_7.3h {
 dimensions:
    time=24;
-   nv=2;
    lat=2;
    lon=3;
+   nv=2;
 
 variables:
    double time(time);
@@ -14,26 +14,31 @@ variables:
       lat:units = "degrees_north" ;
       lat:standard_name = "latitude" ;
       lat:axis = "Y" ;
+      lat:bounds="lat_bnds";
+   float lat_bnds(lat,nv);
    float lon(lon) ;
       lon:units = "degrees_east" ;
       lon:standard_name = "longitude" ;
       lon:axis = "X" ;
+      lon:bounds="lon_bnds";
+   float lon_bnds(lon,nv);
    double climatology_bounds(time,nv);
 
    float t(time,lat,lon);
       t:long_name="surface air temperature";
+      t:units="K";
       t:cell_methods="area: mean time: mean within days",
                      "time: mean over days time: mean over years";
-      t:units="K";
       t:comment="cell_methods: note that netcdf concatenates the strings without a space";
 
 // global attributes:
-   :comment="Cell-methods when there is no coordinate" ;
    :Conventions = "CF-1.4" ;
 
 data:
   lat = 1., 2.;
   lon = 1., 2., 3.;
+  lat_bnds = 0.,1., 1.,2.;
+  lon_bnds = 0.,1., 1.,2., 2.,3.;
 
 // time coordinates translated to date/time format
 //time="1961-4-1 0:30", "1961-4-1 1:30", ..., "1961-4-1 23:30" ;

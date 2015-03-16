@@ -195,13 +195,21 @@ Annotation::copyInit(Annotation *n)
 }
 
 void
-Annotation::eraseMapItem(std::string str, std::string name, bool any)
+Annotation::eraseAnnotation(std::string str, std::string name)
 {
+  if( !findAnnotation(str, name) )
+    return;
+
   // Note: composition: level-flag.
   std::map<std::string, std::string>::iterator it;
 
+  bool any=true;
+
   if( name.size() )
+  {
      str += "_" + name ;
+     any=false;
+  }
 
   for( it=mp.begin() ; it != mp.end() ; ++it )
   {
@@ -229,7 +237,7 @@ Annotation::eraseMapItem(std::string str, std::string name, bool any)
   return;
 }
 
-void
+bool
 Annotation::findIndex(std::string &key, bool isOnly)
 {
   // scan over explicit flags and explicit name
@@ -245,7 +253,8 @@ Annotation::findIndex(std::string &key, bool isOnly)
       if( effVar[i] == currName )
       {
          currIndex = effIndex[i] ;
-         return ;
+
+         return isMultipleTags ? false : true ;
       }
     }
   }
@@ -267,7 +276,7 @@ Annotation::findIndex(std::string &key, bool isOnly)
                effVar.push_back( currName );
              }
 
-             return ;
+             return false;
           }
         }
      }
@@ -290,7 +299,7 @@ Annotation::findIndex(std::string &key, bool isOnly)
                effVar.push_back( currName );
              }
 
-             return ;
+             return false;
           }
         }
      }
@@ -321,17 +330,17 @@ Annotation::findIndex(std::string &key, bool isOnly)
                effVar.push_back( currName );
              }
 
-             return ;
+             return false;
           }
         }
      }
   }
 
-  return ;
+  return false;
 }
 
 bool
-Annotation::findMapItem(std::string s, std::string name)
+Annotation::findAnnotation(std::string s, std::string name)
 {
   if ( mp.begin() == mp.end() )
     return false;
@@ -484,7 +493,9 @@ Annotation::inq( std::string key, std::string name, std::string mode)
   }
 
   // find handling setting for key; sets variable currIndex
-  findIndex(key, isOnly);
+  // return value true, for a redo of non-multiple tags
+  if( findIndex(key, isOnly) )
+    return false;
 
   // configured to discard?
   if( task[currIndex].find("D") < std::string::npos )
@@ -1008,7 +1019,9 @@ Annotation::printFlags(void)
       else
          out += ' ';
 
-      s = mp_capt[f] ;
+      // remove surrounding blanks
+      s = hdhC::stripSurrounding(mp_capt[f]);
+
       // convert the first char of the caption to upper case.
       if( s[0] == '!' ) // suppression
         out += s.substr(1);

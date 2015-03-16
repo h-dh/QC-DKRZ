@@ -1,0 +1,47 @@
+netcdf cf_H13 {
+dimensions:
+   time = 3 ;
+   name_strlen = 23 ;
+
+variables:
+   char trajectory(name_strlen) ;
+      trajectory:long_name = "trajectory name" ;
+      trajectory:cf_role = "trajectory_id" ;
+   double time(time) ;
+      time:standard_name = "time" ;
+      time:long_name = "time" ;
+      time:units = "days since 1970-01-01 00:00:00" ;
+   float lon(time) ;
+      lon:standard_name = "longitude" ;
+      lon:long_name = "longitude" ;
+      lon:units = "degrees_east" ;
+      lon:axis = "X" ;
+   float lat(time) ;
+      lat:standard_name = "latitude" ;
+      lat:long_name = "latitude" ;
+      lat:units = "degrees_north" ;
+      lat:axis = "Y" ;
+   float z(time) ;
+      z:standard_name = "altitude" ;
+      z:long_name = "height above mean sea level" ;
+      z:units = "km" ;
+      z:positive = "up" ;
+      z:axis = "Z" ;
+   float O3(time) ;
+      O3:standard_name = "mass_fraction_of_ozone_in_air" ;
+      O3:long_name = "ozone concentration" ;
+      O3:units = "1e-9" ;
+      O3:coordinates = "time lon lat z" ;
+   float NO3(time) ;
+      NO3:standard_name = "mass_fraction_of_nitrate_radical_in_air" ;
+      NO3:long_name = "NO3 concentration" ;
+      NO3:units = "1e-9" ;
+      NO3:coordinates = "time lon lat z" ;
+
+// global attributes:
+   :comment = "trajectory" ;
+   :Conventions = "CF-1.6" ;
+
+data:
+time = 1., 2., 3. ;
+}

@@ -31,7 +31,7 @@ class VariableMeta
   public:
   VariableMeta();
 
-  void clearCoordStruct(void);
+  void clearCoord(void);
 
   std::string name;
   nc_type     type;
@@ -44,11 +44,25 @@ class VariableMeta
   double      addOffset;
   double      range[2];
   bool        isUnitsDefined;
+  std::string std_name;
   std::string units;
-  std::string canonical_units;
   std::vector<std::string>               attName;
   std::map<std::string, int>             attNameMap;
+  std::vector<nc_type>                   attType;
   std::vector<std::vector<std::string> > attValue;
+
+  struct SN_TableEntry
+  {
+     std::string std_name;
+     std::string remainder;
+     bool        found;
+     bool        hasBlanks;
+     std::string alias;
+     std::string canonical_units;
+     std::string amip;
+     std::string grib;
+  };
+  SN_TableEntry snTableEntry;
 
   struct Coordinates
   {
@@ -68,6 +82,7 @@ class VariableMeta
   Coordinates coord;
 
   bool isArithmeticMean; // externally set
+  bool isAux;
   bool isChecked;
   bool isClimatology;
   bool isCompress;
@@ -81,15 +96,19 @@ class VariableMeta
   bool isMissingValue;
   bool isNoData;
   bool isScalar;
-  bool is_ull_X;  // one-time switches in units_lon_lat()
-  bool is_ull_Y;
-  bool is_ull_rotX;
-  bool is_ull_rotY;
-
   int  isUnlimited_;  // access by isUnlimited() method
+  bool isVoid;
   int  indication_DV;  // data variable
 
+  bool is_1st_X;  // one-time switches in units_lon_lat()
+  bool is_1st_Y;
+  bool is_1st_rotX;
+  bool is_1st_rotY;
+
+
 //  std::string associatedTo;
+  std::vector<std::string> aux;
+  std::vector<std::string> auxOf;
   std::string boundsOf;    // also for climatological statistics
   std::string bounds ;  // -"-
 };
@@ -120,14 +139,19 @@ class Variable : public VariableMeta
   // forceLowerCase==true will return the value always as lower-case
   std::string
        getAttValue(std::string, bool forceLowerCase=false);
-  bool getData(NcAPI &, int rec, int leg=0);
-  bool isCoordinate(void);
+  bool isCoordinate(void)
+         {return coord.isAny || coord.isX || coord.isY || coord.isZ || coord.isT ;}
   int  getCoordinateType(void);  // X: 0, Y: 1, Z: 2, T: 3, any: 4, none: -1
-  bool isValidAtt(std::string s, bool tryLowerCase=true);
+  bool getData(NcAPI &, int rec, int leg=0);
   std::string
        getDimNameStr(bool isWithVar=false, char sep=',');
+  int  getVarIndex(){ return id ;}
+  bool inqDataVar(void);
   bool isUnlimited(void) ;
+  bool isValidAtt(std::string s, bool tryLowerCase=true);
+  bool isValidAtt(std::string s, std::string sub_str);
   void makeObj(bool is);
+  void push_aux(std::string&);
   void setID(int i){id=i;}
 
   MtrxArr<char>               *mvCHAR;

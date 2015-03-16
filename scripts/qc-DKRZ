@@ -1575,10 +1575,10 @@ getNextVariable()
 
   for(( l=0 ;  l < ${#nV_fls[*]} ; ++l )) ; do
     f=$nextPath/${nV_fls[l]}
-    if [ ! -s $nextPath/${nV_fls[l]} ] ; then
-        local num=${#nV_fls[*]}
-        progressFileNum=$(( ${progressFileNum:-0} + num ))
+    local num=${#nV_fls[*]}
+    progressFileNum=$(( ${progressFileNum:-0} + num ))
 
+    if [ ! -s $nextPath/${nV_fls[l]} ] ; then
       if [ ${QUERY_EMPTY_FILE:-f} = t ] ; then
         y_impact=L2
         y_caption='empty data file'
@@ -1589,12 +1589,19 @@ getNextVariable()
 
       is=t
     elif ! expr match ${nV_fls[l]} "${1}.*\.nc" &> /dev/null ; then
-      local num=${#nV_fls[*]}
-      progressFileNum=$(( ${progressFileNum:-0} + num ))
-
       if [ ${QUERY_ALIEN_FILE:-f} = t ] ; then
-        y_impact=L2
-        y_caption='invalid filename'
+        local sz=${#1}
+        test ${#nV_fls[l]} -lt ${sz} && sz=${#nV_fls[l]}
+        local cnt=0
+        local ix
+        for(( ix=0 ; ix < sz ; ++ix )) ; do
+          if [ "${nV_fls[l]:ix:1}" != "${1:ix:1}" ] ; then
+            test $((cnt++)) -gt 4 && break
+          fi
+        done
+
+        y_caption="invalid filename, found ${nV_fls[l]:0:ix}..."
+        y_caption="${y_caption}, expected ${1:0:ix}..."
         y_tag=M6
         initLog ${nV_fls[l]}
         unset nV_fls[${l}]

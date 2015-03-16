@@ -11,7 +11,7 @@ variables:
       psl:valid_range = 0.f, 20.f ;
       psl:valid_max = 30.f;
       psl:valid_min = 0.0f ;
-      psl:comment = "warning: valid_range(max) < valid_max" ;
+      psl:comment = "warning: valid_range(max) equals not valid_max" ;
 
 // global attributes:
    :comment="variables" ;

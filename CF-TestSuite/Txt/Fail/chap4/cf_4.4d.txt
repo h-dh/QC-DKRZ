@@ -3,13 +3,15 @@ dimensions:
    time = UNLIMITED ; // (10 currently)
 
 variables:
+   double var(time) ;
+      var:units="m" ;
+      var:long_name="data variable";
    double time(time) ;
-    	 time:long_name = "time" ;
-	     time:units = "days since 1990-1-1 0-0-0" ;
-      time:comment = "invalid separator in the time part, must be colon" ;
+     time:long_name = "time" ;
+     time:units = "days since 1990-1-1 0-0-0" ;
+     time:comment = "invalid separator in the time part, must be colon" ;
 
 // global attributes:
-   :comment="Time axis" ;
    :Conventions = "CF-1.4" ;
 
 data:

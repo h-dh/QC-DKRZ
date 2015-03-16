@@ -335,6 +335,8 @@ InFile::getVariableMeta(Variable &var)
 
      nc_type a_id = nc.getAttType(var.attName[i], t);
 
+     var.attType.push_back(a_id );
+
      if( a_id == NC_CHAR )
      {
         nc.getAttValues(vs, var.attName[i], t );
@@ -440,6 +442,8 @@ InFile::getVariable(void)
   {
     Variable &var = variable[i] ;
 
+    var.pIn = this;
+    
     // names of the dimensions
     ds = nc.getDimNames( var.name );
 

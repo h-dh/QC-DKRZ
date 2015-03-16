@@ -1,7 +1,8 @@
 netcdf cf_7.7 {
 dimensions:
-   lat=3;
-   lon=4;
+   lat=2;
+   lon=2;
+   nv=2;
 
 variables:
    float sea_ice_thickness(lat,lon);
@@ -16,17 +17,23 @@ variables:
       lat:long_name = "latitude";
       lat:units = "degrees_north";
       lat:axis = "Y" ;
+      lat:bounds = "lat_bnds" ;
+   float lat_bnds(lat,nv);
    float lon(lon);
       lon:long_name = "longitude";
       lon:units = "degrees_east";
       lon:axis = "X" ;
+      lon:bounds = "lon_bnds" ;
+   float lon_bnds(lon,nv);
 
 // global attributes:
    :comment="Thickness of sea-ice and snow on sea-ice averaged over sea area." ;
    :Conventions = "CF-1.4" ;
 
 data:
-lon= 1.,2.,3.;
+lon= 1.,2.;
 lat=1.,2.;
+lat_bnds= 0.,1., 1.,2.;
+lon_bnds= 0.,1., 1.,2.;
 }
 

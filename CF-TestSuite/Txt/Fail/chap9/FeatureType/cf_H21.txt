@@ -1,0 +1,55 @@
+netcdf cf_H21 {
+dimensions:
+   profile = 3 ;
+   z = 4 ;
+
+variables:
+   int trajectory ;
+      trajectory:long_name = "trajectory name" ;
+      trajectory:cf_role = "trajectory_id" ;
+
+   float lon(profile) ;
+      lon:standard_name = "longitude" ;
+      lon:units = "degrees_east" ;
+      lon:axis = "X" ;
+   float lat(profile) ;
+      lat:standard_name = "latitude" ;
+      lat:axis = "Y" ;
+      lat:units = "degrees_north" ;
+
+   float alt(profile, z) ;
+      alt:standard_name = "altitude" ;
+      alt:long_name = "height above mean sea level" ;
+      alt:units = "km" ;
+      alt:positive = "up" ;
+      alt:axis = "Z" ;
+
+   double time(profile ) ;
+      time:standard_name = "time" ;
+      time:long_name = "time of measurement" ;
+      time:units = "days since 1970-01-01 00:00:00" ;
+      time:missing_value = -999.9 ;
+
+   float pressure(profile, z) ;
+      pressure:standard_name = "air_pressure" ;
+      pressure:long_name = "pressure level" ;
+      pressure:units = "hPa" ;
+      pressure:coordinates = "time lon lat alt" ;
+
+   float temperature(profile, z) ;
+      temperature:standard_name = "surface_temperature" ;
+      temperature:long_name = "skin temperature" ;
+      temperature:units = "Celsius" ;
+      temperature:coordinates = "time lon lat alt" ;
+
+   float humidity(profile, z) ;
+      humidity:standard_name = "relative_humidity" ;
+      humidity:long_name = "relative humidity" ;
+      humidity:units = "%" ;
+      humidity:coordinates = "time lon lat alt" ;
+
+// global attributes:
+   :comment = "trajectoryProfile" ;
+   :Conventions = "CF-1.6" ;
+
+}

@@ -6,7 +6,7 @@ dimensions:
 variables:
    float t(lat,lon);
       t:long_name="temperature";
-    	 t:scaleFactor = 1.f;
+      t:scale_factor = 1.f;
       t:add_offset = 0.f;
    float lat(lat);
      lat:standard_name = "latitude" ;

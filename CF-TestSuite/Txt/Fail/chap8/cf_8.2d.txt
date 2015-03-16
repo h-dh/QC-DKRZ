@@ -16,10 +16,10 @@ variables:
      depth:positive = "down" ;
    float lat(lat);
      lat:standard_name = "latitude" ;
-     lat:units = "degrees_east";
+     lat:units = "degrees_north";
    float lon(lon);
      lon:standard_name = "longitude" ;
-     lon:units = "degrees_north";
+     lon:units = "degrees_east";
 
    int landpoint(landpoint);
      landpoint:compress="lat lon";

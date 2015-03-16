@@ -1281,8 +1281,8 @@ QC_Data::checkFinally(Variable *var)
          notes->setCheckDataStr(pQC->fail);
 
        // erase redundant map entries
-       notes->eraseMapItem("R200");
-       notes->eraseMapItem("R3200");
+       notes->eraseAnnotation("R200");
+       notes->eraseAnnotation("R3200");
 
        return;
     }
@@ -1302,7 +1302,7 @@ QC_Data::checkFinally(Variable *var)
          notes->setCheckDataStr(pQC->fail);
 
        // erase redundant map entries
-       notes->eraseMapItem("R100");
+       notes->eraseAnnotation("R100");
 
        return;
     }
@@ -1322,7 +1322,7 @@ QC_Data::checkFinally(Variable *var)
           notes->setCheckDataStr(pQC->fail);
 
         // erase redundant map entries
-        notes->eraseMapItem("R3200");
+        notes->eraseAnnotation("R3200");
       }
    }
 

@@ -9,6 +9,5 @@ variables:
       q:comment ="units must be 1 for modifier=number_of_observations" ;
 
 // global attributes:
-   :comment="Use of standard_name" ;
    :Conventions = "CF-1.4" ;
 }

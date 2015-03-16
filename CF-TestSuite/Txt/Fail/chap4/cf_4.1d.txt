@@ -7,8 +7,8 @@ dimensions:
 
 variables:
    double time(time) ;
-    	 time:long_name = "time" ;
-	     time:units = "days since 1990-1-1 0:0:0" ;
+      time:long_name = "time" ;
+      time:units = "days since 1990-1-1 0:0:0" ;
    float lat(lat) ;
       lat:axis = "Y" ;
       lat:long_name = "latitude" ;
@@ -28,7 +28,6 @@ variables:
       lon:comment = "invalid: data of a coordinate variable must be monotonic" ;
 
 // global attributes:
-   :comment="Time axis" ;
    :Conventions = "CF-1.4" ;
 
 data:

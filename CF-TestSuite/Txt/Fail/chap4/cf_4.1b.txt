@@ -24,10 +24,9 @@ variables:
    double time(time) ;
       time:long_name = "time" ;
       time:units = "days since 1990-1-1 0:0:0" ;
-      time:comment = "invalid: coordinate variable must not have missing data indicated by the default _FillValue" ;
+      time:comment = "invalid: coordinate variable should not have missing data indicated by the default _FillValue" ;
 
 // global attributes:
-   :comment="Time axis" ;
    :Conventions = "CF-1.4" ;
 
 data:

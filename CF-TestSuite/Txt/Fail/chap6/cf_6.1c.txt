@@ -14,7 +14,7 @@ variables:
 	     time:units = "days since 1990-1-1 0:0:0" ;
 
    char geo_region(lbl,strlen) ;
-      geo_region:comment = "a standardised data string is available, thus standard_name=region is missing" ;
+      geo_region:comment = "standard_name=region is missing" ;
 
 // global attributes:
    :comment="Northward heat transport in Atlantic Ocean" ;
@@ -23,4 +23,5 @@ variables:
 data:
   geo_region = "atlantic_ocean" ;
   time = 1., 2.;
+  n_heat_transport=1.,2.;
 }

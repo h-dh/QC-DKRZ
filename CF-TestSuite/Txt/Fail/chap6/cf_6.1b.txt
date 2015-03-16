@@ -12,7 +12,7 @@ variables:
    float lat(lat) ;
 	     lat:long_name = "latitude" ;
 	     lat:units = "degrees_north" ;
-      lat:axis = "Y" ;
+       lat:axis = "Y" ;
    char geo_region(lbl,strlen) ;
 	     geo_region:standard_name="region";
 

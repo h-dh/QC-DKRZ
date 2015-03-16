@@ -1001,7 +1001,7 @@ QC::checkDRS(InFile &in)
            text += p_items[i] ;
         }
 
-        text  += "\nDRS(expected)=...";
+        text  += "\nDRS(by global atts)=...";
         for( j=0 ; j <= a_ix ; ++j )
         {
            text += "/";
@@ -4759,6 +4759,8 @@ QC::requiredAttributes_check(InFile &in)
   std::vector<std::string> fVmv;
   fVmv.push_back("_FillValue");
   fVmv.push_back("missing_value");
+  bool isBoth[] = { false, false};
+  size_t both_ix  ;
 
   for( size_t j=0 ; j < in.varSz ; ++j )
   {
@@ -4766,6 +4768,9 @@ QC::requiredAttributes_check(InFile &in)
     {
       if( in.variable[j].isValidAtt(fVmv[l]) )
       {
+        isBoth[l]=true;
+        both_ix = j ;
+
         std::vector<float> aV;
         in.nc.getAttValues(aV, fVmv[l], in.variable[j].name ) ;
         float rV = 1.E20 ;
@@ -4787,6 +4792,24 @@ QC::requiredAttributes_check(InFile &in)
           }
         }
       }
+    }
+  }
+
+  // both _FillValue and missing_value must be defined in CORDEX
+  if( isBoth[0] != isBoth[1] )
+  {
+    std::string key("34b");
+
+    if( notes->inq( key, fVarname) )
+    {
+      std::string capt("variable=") ;
+      capt += in.variable[both_ix].name ;
+      capt += ": both attributes ";
+      capt += fVmv[0] + " and " + fVmv[1] ;
+      capt += " have to be defined";
+
+      (void) notes->operate(capt) ;
+      notes->setCheckMetaStr( fail );
     }
   }
 
@@ -5300,6 +5323,12 @@ QC::requiredAttributes_checkVariable(InFile &in,
            if( x_reqA[1] == "pressure level" && aV == "pressure" )
              is=false;
          }
+         else if( (x_reqA[0] == "positive") || (x_reqA[0] == "axis") )
+         {
+           // case insensitive
+           if( x_reqA[1] == hdhC::Lower()(aV) )
+             is=false;
+         }
 
          std::string key("20_3");
          if( is &&  notes->inq( key, vName ) )
@@ -5311,11 +5340,10 @@ QC::requiredAttributes_checkVariable(InFile &in,
            capt += " does not match required value=" ;
            capt += x_reqA[1];
 
-           std::string text("variable=");
-           text += vName + ", attribute=" ;
-           text += x_reqA[0] + "\nvalue (required)=" ;
-           text += x_reqA[1] += "\nvalue (file)=" ;
-           text += aV ;
+           std::string text("variable=" + vName);
+           text += ", attribute=" + x_reqA[0] ;
+           text += "\nvalue (required)=" + x_reqA[1] ;
+           text += "\nvalue (file)=" + aV ;
 
            (void) notes->operate(capt, text) ;
            notes->setCheckMetaStr( fail );

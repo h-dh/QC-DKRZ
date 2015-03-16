@@ -63,9 +63,9 @@ class Annotation : public IObj
   void applyOptions(void);
   void config(void);
   void copyInit(Annotation *);
-  void eraseMapItem( std::string str, std::string name="", bool any=true) ;
-  bool findMapItem(std::string tag, std::string name="");
-  void findIndex(std::string &key, bool only=false);
+  void eraseAnnotation( std::string str, std::string name="") ;
+  bool findAnnotation(std::string tag, std::string name="");
+  bool findIndex(std::string &key, bool only=false);
   std::string
        getCheckResults(void);
   int  getExitValue(void);

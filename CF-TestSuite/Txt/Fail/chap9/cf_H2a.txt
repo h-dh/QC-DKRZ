@@ -33,6 +33,6 @@ variables:
       station_name:cf_role = "timeseries_id";
 
 // global attributes:
-   :comment="Invalid: missing attribute featureType=timeSeries" ;
+   :comment="Reco: orthogonal multi-dim array rep. should have featureType" ;
    :Conventions = "CF-1.6" ;
 }

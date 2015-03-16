@@ -19,10 +19,14 @@ variables:
       lat:long_name = "latitude";
       lat:units = "degrees_north";
       lat:axis = "Y" ;
+      lat:bounds = "lat_bnds" ;
+   float lat_bnds(lat,nv);
    float lon(lon);
       lon:long_name = "longitude";
       lon:units = "degrees_east";
       lon:axis = "X" ;
+      lon:bounds = "lon_bnds" ;
+   float lon_bnds(lon,nv);
 
 // global attributes:
    :comment="Climatological seasons" ;
@@ -31,6 +35,8 @@ variables:
 data:
 lon= 1.,2.,3.;
 lat=1.,2.;
+lat_bnds= 0.,1., 1.,2.;
+lon_bnds= 0.,1., 1.,2.;
 
 //time="1960-4-16", "1960-7-16", "1960-10-16", "1961-1-16" ;
 time=106., 197., 289., 381. ;

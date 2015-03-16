@@ -109,7 +109,7 @@ class Split
 //! Error messages are written to a file. Exits immediately.
   void   exceptionError(std::string);
 
-  //! Get a vector containing all sub-strings in ascending order.
+  //! Get a vector containing all sub-strings
   std::vector<std::string>
          getItems(void);
 

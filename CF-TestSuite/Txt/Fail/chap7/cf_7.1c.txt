@@ -1,8 +1,11 @@
 netcdf cf_7.1c {
 dimensions:
-   nv = 2;
 
 variables:
+   double var ;
+      var:units="m" ;
+      var:long_name="data variable";
+      var:coordinates="lat";
    float lat;
     	 lat:long_name = "latitude";
 	     lat:units = "degrees_north";

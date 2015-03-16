@@ -6,26 +6,26 @@ dimensions:
 
 variables:
    float rh(p,yc,xc) ;
-	     rh:long_name = "realtive humidity" ;
-	     rh:coordinates = "lat lon xc yc" ;
+      rh:long_name = "realtive humidity" ;
+      rh:coordinates = "lat lon xc yc" ;
    float xc(xc) ;
-	     xc:axis = "X" ;
-	     xc:long_name = "x-coordinate in Cartesian system" ;
-	     xc:units = "m" ;
+      xc:axis = "X" ;
+      xc:long_name = "x-coordinate in Cartesian system" ;
+      xc:units = "m" ;
    float yc(yc) ;
-	     yc:axis = "Y" ;
-	     yc:long_name = "y-coordinate in Cartesian system" ;
-	     yc:units = "m" ;
+      yc:axis = "Y" ;
+      yc:long_name = "y-coordinate in Cartesian system" ;
+      yc:units = "m" ;
    float p(p) ;
-	     p:long_name = "pressure level" ;
-	     p:units = "hPa" ;
+      p:long_name = "pressure level" ;
+      p:units = "hPa" ;
 	  float lon(yc,xc) ;
-	     lon:long_name = "longitude" ;
-	     lon:units = "degrees_east" ;
+      lon:long_name = "longitude" ;
+      lon:units = "degrees_east" ;
 
 	  float lat(yc,xc) ;
-	     lat:long_name = "latitude" ;
-	     lat:units = "degrees_north" ;
+      lat:long_name = "latitude" ;
+      lat:units = "degrees_north" ;
       lat:coordinates = "yc xc" ;
       lat:comment = "invalid: attribute coordinates must not appear here" ;
 

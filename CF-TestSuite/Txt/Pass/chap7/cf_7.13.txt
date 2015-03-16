@@ -19,9 +19,13 @@ variables:
       lat:long_name = "latitude";
       lat:units = "degrees_north";
       lat:axis = "Y" ;
+      lat:bounds = "lat_bnds" ;
+   float lat_bnds(lat,nv);
    float lon(lon);
       lon:long_name = "longitude";
       lon:units = "degrees_east";
+      lon:bounds = "lon_bnds" ;
+   float lon_bnds(lon,nv);
       lon:axis = "X" ;
 
 // global attributes:
@@ -32,6 +36,8 @@ data:
 
 lat=1.,2.,3.;
 lon=1.,2.,3.,4.;
+lat_bnds= 0.,1., 1.,2., 2.,3.;
+lon_bnds= 0.,1., 1.,2., 2.,3., 3.,4. ;
 
 //time="2000-6-16", "2000-7-16", "2000-8-16" ;
 

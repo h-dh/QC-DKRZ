@@ -19,10 +19,14 @@ variables:
       lat:long_name = "latitude";
       lat:units = "degrees_north";
       lat:axis = "Y" ;
+      lat:bounds = "lat_bnds" ;
+   float lat_bnds(lat,nv);
    float lon(lon);
       lon:long_name = "longitude";
       lon:units = "degrees_east";
       lon:axis = "X" ;
+      lon:bounds = "lon_bnds" ;
+   float lon_bnds(lon,nv);
 
 // global attributes:
    :comment="Monthly-maximum daily precipitation totals" ;
@@ -34,6 +38,8 @@ data:
 time=15., 45., 76. ;
 lat=1.,2.,3.;
 lon=1.,2.,3.,4.;
+lat_bnds= 0.,1., 1.,2., 2.,3.;
+lon_bnds= 0.,1., 1.,2., 2.,3., 3.,4. ;
 
 //climatology_bounds="2000-6-1 6:00:00", "2000-7-1 6:00:00",
 //"2000-7-1 6:00:00", "2000-8-1 6:00:00",

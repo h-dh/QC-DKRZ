@@ -1,14 +1,14 @@
 netcdf cf_H14 {
 dimensions:
    obs = 2 ;
-   trajectory = 3 ;
+   trjctry = 3 ;
    name_strlen = 23 ;
 
 variables:
-   char trajectory(trajectory, name_strlen) ;
+   char trajectory(trjctry, name_strlen) ;
       trajectory:long_name = "trajectory name" ;
       trajectory:cf_role = "trajectory_id" ;
-   int rowSize(trajectory) ;
+   int rowSize(trjctry) ;
       rowSize:long_name = "number of obs for this trajectory " ;
       rowSize:sample_dimension = "obs" ;
 

@@ -1,0 +1,53 @@
+netcdf cf_4.3_formula_b {
+dimensions:
+   lev = 3 ;
+   lat = 3 ;
+   lon = 4 ;
+   time = UNLIMITED ;
+
+variables:
+   double time(time) ;
+      time:long_name = "time" ;
+      time:units = "days since 1990-1-1 0:0:0" ;
+   float lat(lat) ;
+      lat:long_name = "latitude" ;
+      lat:units = "degrees_north" ;
+      lat:standard_name = "latitude" ;
+      lat:axis="Y" ;
+   float lon(lon) ;
+      lon:long_name = "longitude" ;
+      lon:units = "degrees_east" ;
+      lon:standard_name = "longitude" ;
+      lon:axis="X" ;
+   double var2(lev) ;
+      var2:long_name = "vertical coordinate formula term: b(k)" ;
+   double var3(time,lat,lon) ;
+      var3:long_name = "vertical coordinate formula term: ps" ;
+      var3:units = "Pa" ;
+   double data_var(time,lev,lat,lon) ;
+       data_var:long_name = "anything" ;
+       data_var:units = "m" ;
+   double var1(lev) ;
+      var1:long_name = "vertical coordinate formula term: ap(k)" ;
+      var1:units = "Pa" ;
+
+   float lev(lev) ;
+      lev:long_name = "atmosphere_hybrid_height_coordinate" ;
+      lev:positive = "down" ;
+      lev:units = "m";
+      lev:standard_name = "atmosphere_hybrid_sigma_pressure_coordinate" ;
+      lev:formula_terms = "ap: var1 b: var2 ps: var3" ;
+      lev:comment = "invalid: units must be dimensionless or of a deprecated value." ;
+
+// global attributes:
+   :Conventions = "CF-1.4" ;
+
+data:
+time  = 1., 2. ;
+lat   = 1., 2., 3. ;
+lon   = 1., 2., 3., 4.;
+var1  = 1., 2., 3. ;
+var2  = 1., 2., 3. ;
+var3  = 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12. ,
+        13., 14., 15., 14., 15., 16., 17., 18., 19., 20., 21., 22. ;
+}

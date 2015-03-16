@@ -3,14 +3,16 @@ dimensions:
    time = UNLIMITED ; // (3 currently)
 
 variables:
+   double var(time) ;
+      var:units="m" ;
+      var:long_name="data variable";
    double time(time) ;
-    	 time:long_name = "time" ;
-	     time:units = "days since 1-7-15 0:0:0" ;
-	     time:calendar = "126 kyr B.P." ;
-      time:comment ="invalid: missing attribute month_lengths" ;
+     time:long_name = "time" ;
+     time:units = "days since 1-7-15 0:0:0" ;
+     time:calendar = "126 kyr B.P." ;
+     time:comment ="invalid: missing attribute month_lengths" ;
 
 // global attributes:
-   :comment="Time axis" ;
    :Conventions = "CF-1.4" ;
 
 data:

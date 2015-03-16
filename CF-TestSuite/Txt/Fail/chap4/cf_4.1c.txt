@@ -7,8 +7,8 @@ dimensions:
 
 variables:
    double time(time) ;
-    	 time:long_name = "time" ;
-	     time:units = "days since 1990-1-1 0:0:0" ;
+      time:long_name = "time" ;
+      time:units = "days since 1990-1-1 0:0:0" ;
    float lon(lon) ;
       lon:axis = "X" ;
       lon:long_name = "longitude" ;
@@ -26,10 +26,9 @@ variables:
       lat:units = "degree_north" ;
       lat:standard_name = "latitude" ;
       lat:_FillValue=999.f ;
-      lat:comment = "invalid: a coordinate variable must not have _FillValue attribute" ;
+      lat:comment = "invalid: a coordinate variable should not have a _FillValue attribute" ;
 
 // global attributes:
-   :comment="Time axis" ;
    :Conventions = "CF-1.4" ;
 
 data:

@@ -7,8 +7,8 @@ dimensions:
 
 variables:
    double time(time) ;
-    	 time:long_name = "time" ;
-	     time:units = "days since 1990-1-1 0:0:0" ;
+      time:long_name = "time" ;
+      time:units = "days since 1990-1-1 0:0:0" ;
    float lon(lon) ;
       lon:axis = "X" ;
       lon:units = "degree_east" ;
@@ -28,7 +28,6 @@ variables:
       lat:comment = "invalid: a data point exceeds valid_range, possibly _FillValue" ;
 
 // global attributes:
-   :comment="Time axis" ;
    :Conventions = "CF-1.4" ;
 
 data:

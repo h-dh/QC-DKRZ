@@ -25,4 +25,5 @@ variables:
 data:
 lon = 1.;
 lat = 1., 2.;
+xwind=1.,2.;
 }

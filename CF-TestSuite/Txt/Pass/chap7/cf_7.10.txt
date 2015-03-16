@@ -7,23 +7,27 @@ dimensions:
 
 variables:
    float precipitation(time,lat,lon);
-    	 precipitation:long_name="Accumulated precipitation";
-	     precipitation:cell_methods="area: mean time: sum within days time: maximum over days";
-	     precipitation:units="kg";
+      precipitation:long_name="Accumulated precipitation";
+      precipitation:cell_methods="area: mean time: sum within days time: maximum over days";
+      precipitation:units="kg";
    double time(time);
       time:standard_name="time" ;
-	     time:climatology="climatology_bounds";
-    	 time:units="hours since 1997-4-1";
-	     time:calendar="360_day";
+      time:climatology="climatology_bounds";
+      time:units="hours since 1997-4-1";
+      time:calendar="360_day";
    double climatology_bounds(time,nv);
    float lat(lat);
       lat:long_name = "latitude";
       lat:units = "degrees_north";
       lat:axis = "Y" ;
+      lat:bounds = "lat_bnds" ;
+   float lat_bnds(lat,nv);
    float lon(lon);
       lon:long_name = "longitude";
       lon:units = "degrees_east";
       lon:axis = "X" ;
+      lon:bounds = "lon_bnds" ;
+   float lon_bnds(lon,nv);
 
 // global attributes:
    :comment="Temperature for each hour of the average day" ;
@@ -36,6 +40,8 @@ time=0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5, 11.5,
 
 lat= 1., 2.;
 lon=1., 2.;
+lat_bnds= 0.,1., 1.,2.;
+lon_bnds= 0.,1., 1.,2.;
 
 //climatology_bounds="1997-4-1 0:00", "1997-4-30 1:00",
 //"1997-4-1 1:00", "1997-4-30 2:00",

@@ -22,7 +22,7 @@ variables:
       maxtemp:long_name = "temperature";
       maxtemp:units = "K";
       maxtemp:cell_methods = "time: ";
-      maxtemp:comment = "invalid: missing key-word, e.g. mean" ;
+      maxtemp:comment = "invalid: missing method, e.g. mean" ;
 
 // global attributes:
    :comment="Methods applied to a time series" ;

@@ -3,17 +3,19 @@ dimensions:
    time = UNLIMITED ; // (3 currently)
 
 variables:
+   double var(time) ;
+      var:units="m" ;
+      var:long_name="data variable";
    double time(time) ;
-    	 time:long_name = "time" ;
-	     time:units = "days since 1-1-1 0:0:0" ;
-	     time:calendar = "126 kyr B.P." ;
-      time:month_lengths = 34, 31, 32, 30, 29, 27, 28, 28, 28, 32, 32, 34 ;
-      time:leap_year = 1901 ;
-	     time:leap_month = 0 ;
-      time:comment ="invalid: leap_month must be in the range of 1 - 12" ;
+     time:long_name = "time" ;
+     time:units = "days since 1-1-1 0:0:0" ;
+     time:calendar = "126 kyr B.P." ;
+     time:month_lengths = 34, 31, 32, 30, 29, 27, 28, 28, 28, 32, 32, 34 ;
+     time:leap_year = 1901 ;
+     time:leap_month = 0 ;
+     time:comment ="invalid: leap_month must be in the range of 1 - 12" ;
 
 // global attributes:
-   :comment="Paleoclimate time axis" ;
    :Conventions = "CF-1.4" ;
 
 data:

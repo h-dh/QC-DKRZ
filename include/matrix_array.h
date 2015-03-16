@@ -93,6 +93,7 @@ ValueException<T>::copy( const ValueException<T> &g, bool is)
 {
     exceptionValue = g.exceptionValue ;
     exceptionCount = g.exceptionCount ;
+    isValueExceptionTest = g.isValueExceptionTest ;
     countInf  = g.countInf;
     countNaN  = g.countNaN;
 
@@ -111,7 +112,7 @@ template<typename T>
 void
 ValueException<T>::disableValueExceptionTest(std::string s)
 {
-    hdhC::Lower()(s);
+    s = hdhC::Lower()(s);
 
     size_t c=0;
     if( s.find("inf") < std::string::npos )
@@ -287,7 +288,7 @@ ValueException<T>::resetExceptionCounts(void)
 
      return;
 }
-   
+
 template<typename T>
 void
 ValueException<T>::setExceptionValue(T *argv, size_t argc, std::string &s)
@@ -343,7 +344,7 @@ ValueException<T>::testValueException( T* arr, size_t arr_sz,
    size_t isArrSz=1000;
    bool *isArr = new bool [isArrSz];
    size_t i=0;
-   size_t count=0; 
+   size_t count=0;
 
    // test first block
    isInfNaN(isArr, isArrSz, i, arr, arr_sz);
@@ -388,7 +389,7 @@ ValueException<T>::testValueException( T* arr, size_t arr_sz,
       validRangeEnd.push_back( 0 );
       return;
    }
-     
+
    // regular search
    for( ; i < arr_sz ; )
    {
@@ -622,7 +623,7 @@ MArep<T>::exceptionError(std::string str)
 template<typename T>
 void
 MArep<T>::getDim(std::vector<size_t> &d_in)
-{ 
+{
     if( d_in == dim )
       return  ;
 
@@ -981,6 +982,8 @@ public:
 
   void    setExceptionValue(T *vE, size_t sz, std::string s="")
             { valExp->setExceptionValue(vE, sz, s);}
+
+  void    setExceptionValue(std::vector<T> vE, std::string s="");
 
   //! Get size of data.
   size_t  size(void) const { return rep->arr_sz;}
@@ -1342,7 +1345,7 @@ MtrxArr<T>::operator/(const T v)
 
   // ignore division by zero
   if( v == static_cast<T>(1) )
-    return; 
+    return;
 
   rep=rep->makeRoot();
   arr=rep->arr;
@@ -1796,7 +1799,7 @@ MtrxArr<T>::getExceptionCount(size_t i)
   // special: indicates the index of user exception counts
 
   if( valExp->exceptionCount.size() <= i )
-    return 0; 
+    return 0;
 
   return valExp->exceptionCount[i] ;
 }
@@ -1932,7 +1935,7 @@ MtrxArr<T>::put(T val, size_t i0, size_t i1, size_t i2)
   if( i1 == UINT_MAX  )        // 1-D
     ii=i0;
   else if( i2 == UINT_MAX )   // 2-D
-    ii=i0*rep->dim[1] + i1;  
+    ii=i0*rep->dim[1] + i1;
   else                        // 3-D
     ii=(i0*rep->dim[1]+i1) * rep->dim[2] + i2 ;
 
@@ -1966,14 +1969,14 @@ MtrxArr<T>::put(bool b, T val, size_t i0, size_t i1, size_t i2)
   // Omit exception tests
 
   if( ! arr )  // no data
-    return ; 
+    return ;
 
   size_t ii;
 
   if( i1 == UINT_MAX  )        // 1-D
     ii=i0;
   else if( i2 == UINT_MAX )   // 2-D
-    ii=i0*rep->dim[1] + i1;  
+    ii=i0*rep->dim[1] + i1;
   else                        // 3-D
     ii=(i0*rep->dim[1]+i1) * rep->dim[2] + i2 ;
 
@@ -2003,6 +2006,30 @@ MtrxArr<T>::resize(std::vector<size_t> &d)
   // resize
   rep->assign(0, &d );
   arr=rep->arr;
+
+  return;
+}
+
+template<typename T>
+void
+MtrxArr<T>::setExceptionValue(std::vector<T> e, std::string s)
+{
+  size_t sz = e.size();
+
+  if( sz )
+  {
+    T* tmpArr = new T [sz] ;
+    for( size_t i=0 ; i < sz ; ++i )
+      tmpArr[i] = e[i];
+
+    setExceptionValue(tmpArr, sz, s);
+    delete [] tmpArr;
+  }
+  else
+  {
+    T* p=0;
+    setExceptionValue(p, 0, s);
+  }
 
   return;
 }

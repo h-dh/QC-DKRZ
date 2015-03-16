@@ -9,6 +9,5 @@ variables:
       q2:comment ="Standard name: undefined modifier" ;
 
 // global attributes:
-   :comment="Use of standard_name" ;
    :Conventions = "CF-1.4" ;
 }

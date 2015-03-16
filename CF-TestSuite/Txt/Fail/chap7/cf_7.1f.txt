@@ -3,6 +3,10 @@ dimensions:
    nv = 2;
 
 variables:
+   double var ;
+      var:units="m" ;
+      var:long_name="data variable";
+      var:coordinates="lat";
    float lat;
     	 lat:standard_name = "latitude";
 	     lat:units = "degrees_north";

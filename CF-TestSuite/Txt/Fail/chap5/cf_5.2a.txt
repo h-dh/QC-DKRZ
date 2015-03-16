@@ -6,27 +6,27 @@ dimensions:
 
 variables:
    float xc(xc) ;
-	     xc:long_name = "x-coordinate in Cartesian system" ;
-	     xc:units = "m" ;
+      xc:long_name = "x-coordinate in Cartesian system" ;
+      xc:units = "m" ;
    float yc(yc) ;
-	     yc:long_name = "y-coordinate in Cartesian system" ;
-	     yc:units = "m" ;
+      yc:long_name = "y-coordinate in Cartesian system" ;
+      yc:units = "m" ;
    float lev(lev) ;
-	     lev:long_name = "pressure level" ;
-	     lev:units = "hPa" ;
+      lev:long_name = "pressure level" ;
+      lev:units = "hPa" ;
 	  float lon(yc,xc) ;
       lon:axis = "X" ;
-	     lon:long_name = "longitude" ;
-	     lon:units = "degrees_east" ;
+      lon:long_name = "longitude" ;
+      lon:units = "degrees_east" ;
    float T(lev,yc,xc) ;
       T:long_name = "temperature" ;
       T:units = "K" ;
       T:coordinates = "lat lon xc yc" ;
 
 	  float lat(yc,xc) ;
+      lat:long_name = "latitude" ;
+      lat:units = "degrees_north" ;
       lat:axis = "X" ;
-	     lat:long_name = "latitude" ;
-	     lat:units = "degrees_north" ;
       lat:comment= "invalid: wrong axis value, should be Y" ;
 
 // global attributes:

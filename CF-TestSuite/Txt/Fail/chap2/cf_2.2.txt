@@ -10,6 +10,5 @@ variables:
 	     psl:comment = "invalid type string" ;
 
 // global attributes:
-   :comment="Invalid filename extension .cn" ;
    :Conventions = "CF-1.4" ;
 }

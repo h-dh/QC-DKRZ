@@ -3,13 +3,16 @@ dimensions:
    lon = 3 ;
 
 variables:
+   double var(lon) ;
+      var:units="m" ;
+      var:long_name="data variable";
    float lon(lon) ;
-    	 lon:long_name = "longitude" ;
-	     lon:standard_name = "longitude" ;
+      lon:long_name = "longitude" ;
+      lon:standard_name = "longitude" ;
+      lon:axis = "X";
       lon:comment = "coordinate variable must have units" ;
 
 // global attributes:
-   :comment="Longitude axis" ;
    :Conventions = "CF-1.4" ;
 
 data:

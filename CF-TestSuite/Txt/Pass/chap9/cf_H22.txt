@@ -61,5 +61,5 @@ variables:
    :Conventions = "CF-1.6" ;
 
 data:
-trajectory = 1, 2;
+trajectory = 1, 2, 3;
 }

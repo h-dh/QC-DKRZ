@@ -222,7 +222,7 @@ and PROJECT_DATA/SUB_PATH must not be identical"
   fi
 
   # destination for results
-  tryCom cd $QC_RESULTS/data/${SUB_PATH}
+  test ${SHOW_CALL:-f} = f && tryCom cd $QC_RESULTS/data/${SUB_PATH}
 
   if [ ! -s ${ncFile} ] ; then  # no file found
     # this might happen, if someone has deleted

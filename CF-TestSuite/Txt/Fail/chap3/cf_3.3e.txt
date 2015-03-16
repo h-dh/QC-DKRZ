@@ -10,6 +10,5 @@ variables:
       q3:comment ="amip is not CF compatible" ;
 
 // global attributes:
-   :comment="Use of standard_name" ;
    :Conventions = "CF-1.4" ;
 }

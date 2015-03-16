@@ -1,26 +1,77 @@
 #! /bin/bash
 
-# make all nc-files of the CF Test Suite
-currPWD=$(pwd)
+doit()
+{
+  # $1: Fail | Pass
+  # $2: chapX[/...]
 
-test ${currPWD##*/} != CF-TestSuite && exit
+  if [ $# -ne 2 ] ; then
+    echo 'function doit() failed'
+    exit
+  fi
+
+  cd $2
+
+  local ncDir=${initPWD}/Nc/$1/$2
+
+  # clear nc-files int Txt which will not be re-processed
+  \rm -f *.nc
+
+   # clear all Nc files, but write-protected ones
+  if [ -d ${ncDir}  ] ; then
+    for f in ${ncDir}/*.nc ; do
+       test -w $f && \rm $f
+    done
+  fi
+
+  fs=( $( ls *.txt 2> /dev/null) )
+
+  if [ ${#fs[*]} -gt 0 ] ; then
+    test ! -d ${ncDir} && mkdir -p ${ncDir}
+
+    for f in ${fs[*]} ; do
+      test $f = Readme.txt && continue
+
+      echo "$d/$2 $f"
+      ${initPWD}/mkNc $f
+    done
+
+    for f in *.nc ; do
+       # preserve write-protected files
+      test -f $ncDir/${f##*/} && test ! -w $ncDir/${f##*/} && continue
+
+      mv $f $ncDir
+    done
+  fi
+
+  cd - &> /dev/null
+
+  return
+}
+
+# make all nc-files of the CF Test Suite
+initPWD=$(pwd)
+
+test ${initPWD##*/} != CF-TestSuite && exit
 
 for d in Pass Fail ; do
 
-  cd ${currPWD}/Txt/$d
+  cd ${initPWD}/Txt/$d
 
   chap=( $( ls -d chap* ) )
 
   for c in ${chap[*]} ; do
 
-    cd ${currPWD}/Txt/$d/$c
+    cd ${initPWD}/Txt/$d
+    oPwd=$(pwd)
 
-    fs=( $( ls *.txt 2> /dev/null) )
+    # descend into dir tree starting at chapX
+    dirs=( $( find $c -type d ) )
 
-    if [ ${#fs[*]} -gt 0 ] ; then
-      for f in ${fs[*]} ; do ${currPWD}/mkNc $f ; done
-      mv *.nc ${currPWD}/Nc/$d/$c
-    fi
+    for dir in ${dirs[*]} ; do
+      test -d ${dir} && doit $d ${dir}
+    done
+
   done
 
 done

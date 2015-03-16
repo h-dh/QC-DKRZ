@@ -1,10 +1,15 @@
 netcdf cf_4.3a {
 dimensions:
-   h = 2 ;
+  h = 2 ;
+  lat = 1 ;
+  lon = 2;
 
 variables:
+   float T(lat,lon) ;
+      T:long_name = "temperature" ;
+      T:units = "K" ;
+
    float h(h) ;
-      h:long_name = "height" ;
       h:standard_name = "height" ;
       h:units= "m" ;
       h:positive = "up" ;
@@ -15,10 +20,10 @@ variables:
       height:comment = "invalid: missing attribute=units" ;
 
 // global attributes:
-   :comment="Vertical coordinates" ;
    :Conventions = "CF-1.4" ;
 
 data:
 h = 1., 2.;
 height = 1., 2. ;
+T=100., 200.;
 }

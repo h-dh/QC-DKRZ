@@ -1,0 +1,55 @@
+netcdf cf_H9 {
+dimensions:
+   z = 2 ;
+
+variables:
+   int profile ;
+      profile:long_name = "profile" ;
+      profile:cf_role = "profile_id" ;
+   double time ;
+      time:standard_name = "time" ;
+      time:long_name = "time" ;
+      time:units = "days since 1970-01-01 00:00:00" ;
+   float lon ;
+      lon:standard_name = "longitude" ;
+      lon:long_name = "longitude" ;
+      lon:units = "degrees_east" ;
+      lon:axis = "X" ;
+   float lat ;
+      lat:standard_name = "latitude" ;
+      lat:long_name = "latitude" ;
+      lat:units = "degrees_north" ;
+      lat:axis = "Y" ;
+
+   float z(z) ;
+      z:standard_name = "altitude" ;
+      z:long_name = "height above mean sea level" ;
+      z:units = "km" ;
+      z:positive = "up" ;
+      z:axis = "Z" ;
+
+   float pressure(z) ;
+      pressure:standard_name = "air_pressure" ;
+      pressure:long_name = "pressure level" ;
+      pressure:units = "hPa" ;
+      pressure:coordinates = "time lon lat z" ;
+
+   float temperature(z) ;
+      temperature:standard_name = "surface_temperature" ;
+      temperature:long_name = "skin temperature" ;
+      temperature:units = "Celsius" ;
+      temperature:coordinates = "time lon lat z" ;
+
+   float humidity(z) ;
+      humidity:standard_name = "relative_humidity" ;
+      humidity:long_name = "relative humidity" ;
+      humidity:units = "%" ;
+      humidity:coordinates = "time lon lat z" ;
+
+// global attributes:
+   :comment = "profile" ;
+   :Conventions = "CF-1.6" ;
+
+data:
+z = 1., 2. ;
+}

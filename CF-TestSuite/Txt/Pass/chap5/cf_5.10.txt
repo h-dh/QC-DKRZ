@@ -1,18 +1,16 @@
 netcdf cf_5.10 {
 dimensions:
-   lat = 6 ;
-   lon = 6 ;
    y = 2 ;
    x = 3 ;
 
 variables:
    double x(x) ;
-	     x:standard_name = "projection_x_coordinate" ;
-	     x:units = "m" ;
+      x:standard_name = "projection_x_coordinate" ;
+      x:units = "m" ;
       x:axis = "X" ;
    double y(y) ;
-	     y:standard_name = "projection_y_coordinate" ;
-	     y:units = "m" ;
+      y:standard_name = "projection_y_coordinate" ;
+      y:units = "m" ;
       y:axis = "Y" ;
    double lat(y, x) ;
       lat:units = "degrees_north" ;
@@ -34,7 +32,7 @@ variables:
 	     crs:longitude_of_projection_origin = -2.0 ;
 	     crs:false_easting = 400000.0 ;
 	     crs:false_northing = -100000.0 ;
-	     crs:scale_factor_at_projection_origin = 0.9996012717 ;
+       crs:scale_factor_at_projection_origin = 0.9996012717 ;
 
 // global attributes:
    :comment="British National Grid" ;

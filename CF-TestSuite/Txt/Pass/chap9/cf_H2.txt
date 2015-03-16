@@ -7,7 +7,7 @@ dimensions:
 variables:
    float humidity(time,station) ;
       humidity:long_name = "specific humidity" ;
-      humidity:coordinates = "station_name lat lon alt" ;
+      humidity:coordinates = "lat lon alt" ;
    double time(time) ;
       time:standard_name = "time" ;
       time:long_name = "time of measurement" ;

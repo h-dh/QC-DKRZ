@@ -1,0 +1,59 @@
+netcdf cf_H10 {
+dimensions:
+   obs = UNLIMITED ;
+   profile = 2 ;
+
+variables:
+   int profile(profile) ;
+      profile:cf_role = "profile_id" ;
+      profile:long_name = "profile" ;
+   double time(profile) ;
+      time:standard_name = "time" ;
+      time:long_name = "time" ;
+      time:units = "days since 1970-01-01 00:00:00" ;
+   float lon(profile) ;
+      lon:standard_name = "longitude" ;
+      lon:long_name = "longitude" ;
+      lon:units = "degrees_east" ;
+      lon:axis = "X" ;
+   float lat(profile) ;
+      lat:standard_name = "latitude" ;
+      lat:long_name = "latitude" ;
+      lat:units = "degrees_north" ;
+      lat:axis = "Y" ;
+   int rowSize(profile) ;
+      rowSize:long_name = "number of obs for this profile " ;
+      rowSize:sample_dimension = "obs" ;
+
+   float z(obs) ;
+      z:standard_name = "altitude" ;
+      z:long_name = "height above mean sea level" ;
+      z:units = "km" ;
+      z:positive = "up" ;
+      z:axis = "Z" ;
+
+   float pressure(obs) ;
+      pressure:standard_name = "air_pressure" ;
+      pressure:long_name = "pressure level" ;
+      pressure:units = "hPa" ;
+      pressure:coordinates = "time lon lat z" ;
+
+   float temperature(obs) ;
+      temperature:standard_name = "surface_temperature" ;
+      temperature:long_name = "skin temperature" ;
+      temperature:units = "Celsius" ;
+      temperature:coordinates = "time lon lat z" ;
+
+   float humidity(obs) ;
+      humidity:standard_name = "relative_humidity" ;
+      humidity:long_name = "relative humidity" ;
+      humidity:units = "%" ;
+      humidity:coordinates = "time lon lat z" ;
+
+// global attributes:
+   :comment = "profile" ;
+   :Conventions = "CF-1.6" ;
+
+data:
+profile=1.,2.;
+}

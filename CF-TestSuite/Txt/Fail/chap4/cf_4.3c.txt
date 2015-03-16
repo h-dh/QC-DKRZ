@@ -3,6 +3,9 @@ dimensions:
    h = 2 ;
 
 variables:
+   double var(h) ;
+      var:units="m" ;
+      var:long_name="data variable";
    float height(h) ;
       height:standard_name = "height" ;
       height:positive= "up" ;
@@ -11,7 +14,6 @@ variables:
       height:comment = "invalid: axis not allowed because of auxiliary coordinate" ;
 
 // global attributes:
-   :comment="Vertical coordinates" ;
    :Conventions = "CF-1.4" ;
 
 data:

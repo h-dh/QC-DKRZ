@@ -27,7 +27,19 @@
 /*! NcAPI provides a C++ API to netCDF.\n
  Note: netCDF C routines not covered by this class may always
        be used directly by the ncid ID stored within this object.
-       A connection to the Annotation object is made.*/
+       An annotation object is connected.
+
+       Annotations are issued with a flag NC_group_currNum :
+       1  file handling
+       2  inquiries
+       3  attributes
+       4  NC-4 specific
+       5  variables
+       6  misc
+       7  data (get)
+       8  data (out)
+*/
+
 class NcAPI
 {
 public:
@@ -102,6 +114,9 @@ public:
 
 //! Has variable an unlimited dimension?
       std::vector<bool> hasVarUnlimitedDim;
+
+//! Is the data section empty for a given variable?
+      std::vector<bool> noData;
 
 //! Names of variable's dimensions
       std::vector<std::vector<std::string> > varDimNames;
@@ -328,6 +343,16 @@ public:
 void
       generate(std::string confFile);
 
+    // Return -1 for empty string, and -2 if
+    // the string-parameter is not a valid variable.
+    // Varid<0 for global attributes
+    int
+      getAttID(std::string aName, std::string vName="")
+         { return getAttID(aName, getVarID(vName) );}
+
+    int
+      getAttID(std::string&, int varid);
+
 //! Get names of the attributes of given variable.
 /*! Returns empty vector, if no attributes were defined
     or the given variable name is not a netCDF variable.
@@ -357,7 +382,8 @@ void
     to a string representation, i.e. NC_BYTE, NC_CHAR, NC_SHORT,
     NC_INT, NC_FLOAT, and NC_DOUBLE. Empty string for 'no type'.*/
     std::string
-      getAttTypeStr(std::string attName, std::string varName="");
+      getAttTypeStr(std::string attName, std::string varName="")
+        { return getTypeStr(getAttType(attName, varName)); }
 
 //! Get first or only value converted to double.
 /*! Returns MAXDOUBLE, if no value was found.*/
@@ -427,6 +453,17 @@ void
       getEndian(NcAPI &u, std::string vName, int &endian)
          {getEndian(u, u.getVarID(vName), endian);}
 
+//! Get fill values in vector(_FV, MV, default)
+/*! If no attribute defined fill-value is available, then _FV and/or MV
+    return the default. Whether _FV and/or MV are set is inidicated by the
+    return array. */
+    std::vector<bool>
+      get_FillValueStr(std::string& vName, std::vector<std::string>& );
+
+  template <typename T>
+    std::vector<bool>
+      get_FillValue(std::string& vName, std::vector<T>&, bool unique=false );
+
 //! Fletcher32 properties from source for netcdf4
     void
       getFletcher32(NcAPI &u, std::string vName, int &f)
@@ -461,6 +498,9 @@ void
     Do not confuse with number of records.*/
     size_t
       getRecordSize(std::string vName) ;
+
+    std::string
+      getTypeStr(nc_type);
 
 //! Get names of all variables depending on the unlimited dimension.
     std::vector<std::string>
@@ -538,6 +578,10 @@ void
 //! Return true if string is a valid dimension
     bool
       isDimValid(std::string);
+
+//! Return true if string is a valid dimension
+    bool
+      isEmptyData(std::string);
 
 //! Return true if the type is index compatible
     bool
@@ -947,16 +991,6 @@ private:
       get(std::string name, Type *x, long *counts, long *start=0);
 */
 
-    // Return -1 for empty string, and -2 if
-    // the string-parameter is not a valid variable.
-    // Varid<0 for global attributes
-    int
-      getAttID(std::string aName, std::string vName="")
-         { return getAttID(aName, getVarID(vName) );}
-
-    int
-      getAttID(std::string&, int varid);
-
     void
       getChunking(NcAPI &u, int varid,
          size_t &storage, std::vector<size_t> &chunks);
@@ -983,6 +1017,10 @@ private:
       getDeflate(NcAPI &, int varid,
          int &shuffle, int &deflate, int &level);
 
+    template <typename T>
+    void
+      getDefaultFillValue(nc_type type, T& x);
+
     void
       getEndian(NcAPI &u, int varid, int &endian)
          {endian =u.layout.varEndian[varid] ;}
@@ -994,7 +1032,19 @@ private:
       init(void);
 
     void
-      layoutVarRelatedPushes(void);
+      layoutVarAttPushes(void);
+
+    void
+      layoutVarDataPushes(std::string& vName, nc_type type);
+
+    template <typename Type>
+    void
+      layoutVarDataPushesT(MtrxArr<Type>&, std::string& vName );
+    void
+      layoutVarDataPushesStr(MtrxArr<char*>&, std::string& vName );
+
+    void
+      layoutVarDataPushesVoid(nc_type type);
 
     void
       print_error(std::string method="", std::string message="");

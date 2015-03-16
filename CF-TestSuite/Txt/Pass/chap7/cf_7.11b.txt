@@ -26,10 +26,14 @@ variables:
       lat:long_name = "latitude";
       lat:units = "degrees_north";
       lat:axis = "Y" ;
+      lat:bounds = "lat_bnds" ;
+   float lat_bnds(lat,nv);
    float lon(lon);
       lon:long_name = "longitude";
       lon:units = "degrees_east";
       lon:axis = "X" ;
+      lon:bounds = "lon_bnds" ;
+   float lon_bnds(lon,nv);
 
 // global attributes:
    :comment="Extreme statistics and spell-lengths" ;
@@ -38,8 +42,10 @@ variables:
 data:
 //time="2008-1-16 6:00";
 time=2785.25 ;
-lat=1.,2.;
-lon=1.,2.;
+lat= 1., 2.;
+lon=1., 2.;
+lat_bnds= 0.,1., 1.,2.;
+lon_bnds= 0.,1., 1.,2.;
 
 //climatology_bounds="2007-12-1 6:00", "2008-2-28 6:00";
 climatology_bounds=2739.25, 2828.25 ;

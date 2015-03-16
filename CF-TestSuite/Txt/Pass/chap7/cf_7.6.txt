@@ -1,9 +1,10 @@
 netcdf cf_7.6 {
 dimensions:
    lat=2;
-   lon=3;
+   lon=2;
    maxlen=20;
    ls=2;
+   nv=2;
 
 variables:
    float surface_temperature(lat,lon);
@@ -19,10 +20,14 @@ variables:
       lat:long_name = "latitude";
       lat:units = "degrees_north";
       lat:axis = "Y" ;
+      lat:bounds = "lat_bnds" ;
+   float lat_bnds(lat,nv);
    float lon(lon);
       lon:long_name = "longitude";
       lon:units = "degrees_east";
       lon:axis = "X" ;
+      lon:bounds = "lon_bnds" ;
+   float lon_bnds(lon,nv);
 
 // global attributes:
    :comment="Mean surface temperature over land and sensible heat flux averaged separately over land and sea." ;
@@ -30,6 +35,8 @@ variables:
 
 data:
 land_sea="land","sea";
-lon= 1.,2.,3.;
-lat=1.,2.;
+lon= 1.,2.;
+lat= 1.,2.;
+lat_bnds= 0.,1., 1.,2.;
+lon_bnds= 0.,1., 1.,2.;
 }

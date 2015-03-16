@@ -7,7 +7,7 @@ dimensions:
 variables:
    float temperature(parcel,times) ;
       temperature:long_name="arbitrary temperature" ;
-	     temperature:coordinates = "parcel_name lat lon" ;
+      temperature:coordinates = "parcel_name lat lon" ;
       temperature:comment = "order of dimensions is valid, because times is not unlimited" ;
    float times(times) ;
       times:standard_name="time" ;

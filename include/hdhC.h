@@ -288,6 +288,19 @@ getNonAlpha(std::string);
 std::string
 getNonAlphaNum(std::string);
 
+//! Remove space-separated duplicates
+std::string
+getUniqueString(std::string&);
+
+std::string
+getUniqueString(std::vector<std::string>&);
+
+std::vector<std::string>
+getUniqueVector(std::string&);
+
+std::vector<std::string>
+getUniqueVector(std::vector<std::string>&);
+
 //! Is unsigned char a alphabetic?
 bool
 isAlpha(unsigned char);
@@ -299,6 +312,19 @@ isAlpha(std::string, bool isContains=false);
 
 bool
 isAlphaNum(unsigned char);
+
+template <typename T>
+bool
+isAmong(T&, std::vector<T>& set);
+
+template <typename T>
+bool
+isAmong(T, std::vector<T>& set, bool);  // bool for the compiler
+
+// all==true: the entire sub-set must be found in the set
+template <typename T>
+bool
+isAmong(std::vector<T>& sub, std::vector<T>& set, bool all=false);
 
 //! Is unsigned char a digit?
 /*! If isNumber is true, then also sign and decimal point are accepted.*/
@@ -385,6 +411,12 @@ clearInternalMultipleSpaces(std::string &str );
 //! rermove white spaces and newlines
 std::string
 clearSpaces(std::string &str );
+
+std::string
+sAssign(std::string left, std::string right, bool withSpaces=false) ;
+
+std::string
+sAssign(std::string right, bool withSpaces=false) ;
 
 //! strip off surrounding characters.
 /*! Surrounding ' ' and '\t' are removed, also any character provided

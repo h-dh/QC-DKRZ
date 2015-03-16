@@ -5,6 +5,7 @@ dimensions:
    maxlen=20;
    ls=2;
    height = 1 ;
+   nv=2;
 
 variables:
    char land_sea(ls,maxlen);
@@ -14,14 +15,18 @@ variables:
      height:units = "m" ;
      height:positive = "up" ;
      height:axis = "Z";
+   float lat_bnds(lat,nv);
    float lat(lat) ;
       lat:units = "degrees_north" ;
       lat:standard_name = "latitude" ;
       lat:axis = "Y" ;
+      lat:bounds="lat_bnds";
    float lon(lon) ;
       lon:units = "degrees_east" ;
       lon:standard_name = "longitude" ;
       lon:axis = "X" ;
+      lon:bounds="lon_bnds";
+   float lon_bnds(lon,nv);
 
    float surface_t(ls,height,lat,lon);
       surface_t:long_name = "surface temperature" ;
@@ -30,7 +35,6 @@ variables:
       surface_t:comment = "invalid: type-var height is a coordinate var" ;
 
 // global attributes:
-   :comment="Mean surface temperature over land and sensible heat flux averaged separately over land and sea." ;
    :Conventions = "CF-1.4" ;
 
 data:
@@ -38,4 +42,6 @@ data:
  height = 1.;
  lat=1.,2.;
  lon=1.,2.,3.;
+ lat_bnds = 0.,1., 1.,2.;
+ lon_bnds = 0.,1., 1.,2., 2.,3.;
 }
