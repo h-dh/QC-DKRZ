@@ -301,92 +301,6 @@ CF::captVar(std::string v, bool isColon, bool isBlank)
 }
 
 void
-CF::checkAuxCoordData(Variable& var)
-{
-  struct hdhC::FieldDataMeta fDM;
-
-  int indexFV = -1;
-  int indexInf = -1;
-
-  // all coordinate variables must be strictly monotonic
-  size_t sz ;
-
-  if( var.isUnlimited() )
-  {
-    if( (sz = pIn->nc.getNumOfRecords()) == 0 )
-       return;
-  }
-  else
-    sz = pIn->nc.getRecordSize(var.name);
-
-  if( sz )
-     --sz;
-
-  for( size_t rec=0 ; rec <= sz ; ++rec )
-  {
-    var.getData(pIn->nc, rec);
-
-    var.pDS->clear();
-    var.pDS->add( (void*) var.pMA );
-    fDM = var.pDS->getMeta() ;
-
-    if( fDM.isValid )
-    {
-      if( fDM.fillingValueNum )
-      {
-         indexFV=rec;
-         break;
-      }
-      else if( fDM.infCount || fDM.nanCount )
-      {
-         indexInf=rec;
-         break;
-      }
-      else
-      {
-         if( fDM.max > var.range[1] )
-            var.range[1] = fDM.max;
-         if( fDM.min < var.range[0] )
-            var.range[0] = fDM.min;
-      }
-    }
-  }
-
-  if( indexFV > -1 || indexInf > -1 )
-  {
-    var.range[0] = MAXDOUBLE;
-    var.range[1] = -MAXDOUBLE;
-
-    if( indexFV > -1 && notes->inq(bKey + "12b", var.name) )
-    {
-      std::string capt("auxiliary coordinate " + captVar(var.name));
-      capt += "Data should not have _FillValue";
-      if( sz )
-      {
-        capt += " found in record num=" ;
-        capt += hdhC::itoa(indexFV+1) + "." ;
-      }
-
-      (void) notes->operate(capt) ;
-      notes->setCheckCF_Str( fail );
-    }
-
-    if( indexInf > -1 && notes->inq(bKey + "12a", var.name) )
-    {
-      std::string capt("auxiliary coordinate " + captVar(var.name, false));
-      capt += "contains Inf/NaN";
-      if( sz )
-        capt += " in record num=" + hdhC::itoa(indexInf+1) ;
-
-      (void) notes->operate(capt) ;
-      notes->setCheckCF_Str( fail );
-    }
-  }
-
-  return;
-}
-
-void
 CF::checkCoordVarFillValueAtt(Variable& var)
 {
    bool isF = var.isValidAtt(n_FillValue) ? true : false ;
@@ -417,7 +331,7 @@ CF::checkCoordVarFillValueAtt(Variable& var)
 }
 
 void
-CF::checkCoordVarValues(Variable& var, bool isAuxCoord)
+CF::checkCoordVarValues(Variable& var, bool testMonotony)
 {
   // testAuxCoord=false : check for _FillValue of variables specified
   // in a formula_terms attribute. Note that such a variable may be
@@ -425,7 +339,7 @@ CF::checkCoordVarValues(Variable& var, bool isAuxCoord)
 
   // checks only a meta-data declaration; _FV value present in the data section
   // will be detected below.
-  if( isAuxCoord )
+  if( !isFeatureType )
     checkCoordVarFillValueAtt(var) ;
 
   // no check of an unlimited coord var for efficiency
@@ -456,33 +370,33 @@ CF::checkCoordVarValues(Variable& var, bool isAuxCoord)
   unsigned long long x_ull=0;
 
   if( var.type == NC_BYTE )
-    checkCoordVarValues(var, isAuxCoord, x_sc) ;
+    checkCoordVarValues(var, testMonotony, x_sc) ;
   else if( var.type == NC_CHAR )
-    checkCoordVarValues(var, isAuxCoord, x_c) ;
+    checkCoordVarValues(var, testMonotony, x_c) ;
   else if( var.type == NC_SHORT )
-    checkCoordVarValues(var, isAuxCoord, x_s) ;
+    checkCoordVarValues(var, testMonotony, x_s) ;
   else if( var.type == NC_INT )
-    checkCoordVarValues(var, isAuxCoord, x_i) ;
+    checkCoordVarValues(var, testMonotony, x_i) ;
   else if( var.type == NC_FLOAT )
-    checkCoordVarValues(var, isAuxCoord, x_f) ;
+    checkCoordVarValues(var, testMonotony, x_f) ;
   else if( var.type == NC_DOUBLE )
-    checkCoordVarValues(var, isAuxCoord, x_d) ;
+    checkCoordVarValues(var, testMonotony, x_d) ;
   else if( var.type == NC_UBYTE )
-    checkCoordVarValues(var, isAuxCoord, x_uc) ;
+    checkCoordVarValues(var, testMonotony, x_uc) ;
   else if( var.type == NC_USHORT )
-    checkCoordVarValues(var, isAuxCoord, x_us) ;
+    checkCoordVarValues(var, testMonotony, x_us) ;
   else if( var.type == NC_UINT )
-    checkCoordVarValues(var, isAuxCoord, x_ui) ;
+    checkCoordVarValues(var, testMonotony, x_ui) ;
   else if( var.type == NC_INT64 )
-    checkCoordVarValues(var, isAuxCoord, x_ll) ;
+    checkCoordVarValues(var, testMonotony, x_ll) ;
   else if( var.type == NC_UINT64 )
-    checkCoordVarValues(var, isAuxCoord, x_ull) ;
+    checkCoordVarValues(var, testMonotony, x_ull) ;
 
 /*
   else if( var.type ==  )
   {
      x;
-    checkCoordVarValues(Variable& var, bool isAuxCoord, x) ;
+    checkCoordVarValues(Variable& var, bool testMonotony, x) ;
   }
 */
   return;
@@ -490,7 +404,7 @@ CF::checkCoordVarValues(Variable& var, bool isAuxCoord)
 
 template <typename T>
 void
-CF::checkCoordVarValues(Variable& var, bool isAuxCoord, T x)
+CF::checkCoordVarValues(Variable& var, bool testMonotony, T x)
 {
 // all coordinate variables must be strictly monotonic
   size_t num ;
@@ -516,7 +430,7 @@ CF::checkCoordVarValues(Variable& var, bool isAuxCoord, T x)
         if( notes->inq(bKey + "12g", var.name) )
         {
           std::string capt;
-          if( isAuxCoord )
+          if( testMonotony )
             capt = "coordinate " ;
           else
             capt = "!" + n_formula_terms + blank;
@@ -552,20 +466,23 @@ CF::checkCoordVarValues(Variable& var, bool isAuxCoord, T x)
   if( mv.size() < 2 )
       return;
 
+  if( testMonotony )
+    return;
+
   bool isMonotone=true;
   bool isDifferent=true;
 
   size_t i=0;
 
   // more than a single value
-  double sig;
-  if( !isAuxCoord )
+  if( var.dimName.size() > 1 )
     return;
 
+  double sig;
   for( size_t j=0 ; j < mv.validRangeBegin.size() ; ++j )
   {
     // start at [1], because of the difference below
-    size_t i=mv.validRangeBegin[j] + 1 ;
+    i=mv.validRangeBegin[j] + 1 ;
 
     if( !j )
       sig=(mv[i]-mv[i-1]) / fabs(mv[i]-mv[i-1]);
@@ -575,16 +492,13 @@ CF::checkCoordVarValues(Variable& var, bool isAuxCoord, T x)
       double v0=sig*mv[i-1];
       double v1=sig*mv[i];
 
-      if( isAuxCoord )
-      {
-        if( v1 > v0 )
-          continue;
+      if( v1 > v0 )
+        continue;
 
-        if( v1 < v0 )
-          isMonotone=false;
-        else if( v1 == v0 )
-          isDifferent=false;
-      }
+      if( v1 < v0 )
+        isMonotone=false;
+      else if( v1 == v0 )
+        isDifferent=false;
     }
   }
 
@@ -1029,7 +943,8 @@ CF::finalAtt_axis(void)
 
           if( capt.size() > 7 )
           {
-            if( notes->inq(bKey + "4b", var.name) )
+            if( ! notes->findAnnotation(bKey + "41a", var.name)
+                    && notes->inq(bKey + "4b", var.name) )
             {
               (void) notes->operate(captVar(var.name) + capt) ;
               notes->setCheckCF_Str( fail );
@@ -1206,7 +1121,8 @@ CF::finalAtt_axis(void)
 
           std::string tag(bKey + "5e");
 
-          if( notes->inq(tag, pIn->variable[ix].name) )
+          if( ! notes->findAnnotation(bKey + "41a", pIn->variable[ix].name)
+                  && notes->inq(tag, pIn->variable[ix].name) )
           {
             std::string capt("reco: Horizontal coordinate ");
             capt += captVar(pIn->variable[ix].name, false) ;
@@ -1316,7 +1232,7 @@ void
 CF::finalAtt_coordinates_A(std::vector<size_t>& dv_ix,
   std::vector<size_t>& cv_ix, std::vector<size_t>& acv_ix )
 {
-  // A) Find missing auxiliary coordinate names in the coordinates attribute.
+  // A) Find auxiliary coordinate name missing in the coordinates attribute.
   //    For each aux-var do:
   //    a) get the dim-list
   //    b) for each data var depending on the aux-var-dim-list
@@ -1343,7 +1259,7 @@ CF::finalAtt_coordinates_A(std::vector<size_t>& dv_ix,
 
         if( var_av.dimName.size() )
         {
-          // count number of aux-dims also being data var dims
+          // count number of aux-var dims also being data var dims
           size_t count = 0;
 
           for( size_t i = 0 ; i < var_av.dimName.size() ; ++i )
@@ -1410,7 +1326,7 @@ CF::finalAtt_coordinates_A(std::vector<size_t>& dv_ix,
                         isNotCompressed=false;
               }
 
-              if( isNotCompressed )
+              if( isNotCompressed && !var_av.coord.isCoordVar )
               {
                 if( ! (cFVal > 15 && var_dv.type != NC_INT
                         && var_dv.isValidAtt(n_sample_dimension) ) )
@@ -1422,7 +1338,7 @@ CF::finalAtt_coordinates_A(std::vector<size_t>& dv_ix,
                   {
                     std::string capt("data " + captVar(var_dv.name, no_colon) );
                     capt += "depends on auxiliary coordinate " ;
-                    capt += n_variable + captVal(var_av.name, false);
+                    capt += captVar(var_av.name, false);
                     capt += ", thus requiring " + captAtt(n_coordinates, false);
 
                     (void) notes->operate(capt) ;
@@ -1455,13 +1371,11 @@ CF::finalAtt_coordinates_B(std::vector<size_t>& dv_ix,
 
      for( size_t j=0 ; j < var_dv.dimName.size() ; ++j )
      {
-        size_t i;
-        for( i=0 ; i < pIn->varSz ; ++i )
-          if( pIn->variable[i].name == var_dv.dimName[j] )
-            break;
+        int i;
 
-        if( i == pIn->varSz )
-        {  // a) is given
+        if( (i=pIn->getVarIndex(var_dv.dimName[j])) == -1 )
+        {
+           // a) is given
            if( acv_ix.size() )
            {
              size_t av;
@@ -1482,7 +1396,7 @@ CF::finalAtt_coordinates_B(std::vector<size_t>& dv_ix,
                       {
                         std::string capt("data " + captVar(var_dv.name, no_colon) );
                         capt += "depends on auxiliary coordinate ";
-                        capt += n_variable + captVal(var_av.name, false);
+                        capt += captVar(var_av.name, false);
                         capt += ", thus requiring " + captAtt(n_coordinates,false);
 
                         (void) notes->operate(capt) ;
@@ -1525,7 +1439,6 @@ CF::finalAtt_coordinates_C(std::vector<size_t>& dv_ix,
             std::vector<size_t>& cv_ix, std::vector<size_t>& acv_ix )
 {
   // C) coordinate var must not have coordinates attribute
-  // D) coordinates att contains non-existing variable
   std::string ca_val;
 
   for( size_t ix=0 ; ix < pIn->varSz ; ++ix )
@@ -1552,6 +1465,9 @@ CF::finalAtt_coordinates_C(std::vector<size_t>& dv_ix,
         }
       }
 
+
+      // D) coordinates att contains non-existing variable. This is done in a
+      // method, which is also used for the compress-att.
       std::vector<std::string>& vs = ca_vvs[ca_ix[ix]];
       for( size_t j=0 ; j < vs.size() ; ++j )
       {
@@ -2257,6 +2173,7 @@ CF::initDefaults()
 
   cFVal=14;  // the default for checking
   followRecommendations=false;
+  isFeatureType = false;
   isCF14_timeSeries=false;
   isCheck=false;
 
@@ -2655,6 +2572,9 @@ CF::run(void)
    if( ! chap2_6_1() )
      return false;  // undefined Convention is specified
 
+   if( cFVal > 15 )
+    chap9();  // Discrete Sampling Geometries
+
    // dimensionless vertical coordinate? Could set var.isChecked=true
    chap4_3_2() ;  // preponed to make processing easier
 
@@ -2823,7 +2743,7 @@ CF::scanStdNameTable(ReadLine& ifs, Variable& var, std::string testName)
   std::string line;
   int countRewinds=0;
 
-  while ( true )
+  while ( true ) 
   {
     while( ! ifs.getLine(line) )
     {
@@ -3406,7 +3326,6 @@ CF::chap(void)
    chap6();  // Labels
    chap7();  // Data Representative of Cells
    chap8();  // Reduction of Dataset Size
-   chap9();  // Discrete Sampling Geometries
 
    inqAuxVersusPureCoord();
 
@@ -4457,7 +4376,7 @@ CF::chap3_3(void)
 
         if( !ordCase && !spcCase && !dimlessZ )
         {
-          if( ! notes->findAnnotation(bKey+"432b", var.name)
+          if( ! notes->findAnnotation(bKey+"432e", var.name)
                 && notes->inq(bKey + "33f", var.name) )
           {
             std::string capt(captAtt(var.name, n_units, no_colon));
@@ -5127,6 +5046,8 @@ CF::chap4_1(Variable& var)
 
     if( is && notes->inq(bKey + "41a", var.name) )
     {
+      notes->eraseAnnotation(bKey + "4b", var.name);
+
       std::string capt ;
       if( isValidStdName )
         capt = captAtt(var.name, n_standard_name, no_colon) ;
@@ -5250,7 +5171,7 @@ CF::chap4_3_1(Variable& var)
 
   if( isCheck && units.size() == 0 )
   {
-    if( notes->inq(bKey + "43d", var.name) )
+    if( !var.coord.isZ_DL && notes->inq(bKey + "43d", var.name) )
     {
       std::string capt(captVar(var.name));
       capt += "Parameters indicate Z-coordinate " + n_variable + ", but ";
@@ -5372,10 +5293,15 @@ CF::chap4_3_2(void)
       if( ix[i] != ix[0] )
         is=false;
 
-    if( is && chap4_3_2(pIn->variable[ix[0]], valid_sn, valid_ft,
-                   ft_jx, sn_jx, units_jx) )
+    if( is )
+      chap4_3_2(pIn->variable[ix[0]], valid_sn, valid_ft,
+                   ft_jx, sn_jx, units_jx) ;
+
+    Variable& var = pIn->variable[ix[0]];
+
+    // if FT was not given, but a standard name is compatible to a FT
+    if( is && notes->findAnnotation(bKey+"432a", var.name) )
     {
-      Variable& var = pIn->variable[ix[0]];
       var.coord.isZ    = true;
       var.coord.isZ_DL = true;
       var.isDataVar=false;
@@ -5399,7 +5325,7 @@ CF::chap4_3_2(Variable& var,
   // cross-check of standard_name vs. formula_terms
   if( chap4_3_2_checkSNvsFT(var, valid_sn, valid_ft, valid_sn_ix,
                    att_ft_ix, att_sn_ix, att_units_ix) )
-    return false; // no formula_terms provided
+    return false; // no formula_terms case
 
   // formula_terms by vector of pairs: 1st=key: 2nd=param_varName
   std::vector<std::pair<std::string, std::string> > att_ft_pv ;
@@ -5473,14 +5399,12 @@ CF::chap4_3_2(Variable& var,
 
          // parameter variables should not have any _FillValue within the data body;
          // this is not mentioned in the CF doc.
-         checkCoordVarValues(pIn->variable[i], false); // false: only test for _FillValue
+         checkCoordVarValues(pIn->variable[i], false); // no monotony test
        }
      }
-
-     return true;
   }
 
-  return false;
+  return true;
 }
 
 bool
@@ -6371,16 +6295,18 @@ CF::chap5_1(Variable& var)
   // Coordinate variables: a single dimension and identical name for
   // dimension and variable, e.g. time(time).
 
-  // Note that a dimless vertical coordinate was considered before.
-  if( var.isChecked )
-    return ;
 
   if( var.dimName.size() == 1 && var.dimName[0] == var.name )
   {
      var.coord.isCoordVar=true;
+
+     // Note that a dimless vertical coordinate was considered before.
+     if( var.isChecked )
+       return ;
+
      var.isDataVar=false;
 
-     if( isCheck )
+     if( isCheck && !var.coord.isZ_DL )
        checkCoordVarValues(var) ;
 
      if( var.isValidAtt(n_compress) )
@@ -9029,8 +8955,9 @@ CF::chap8_1(Variable& var)
       if( notes->inq(bKey + "81b", var.name) )
       {
         std::string capt("type of " + captVar(var.name, false));
-        capt += "is different from scale_factor|add_offset," ;
-        capt += " should be int, short or byte" ;
+        capt += "should be int, short or byte, because" ;
+
+        capt += "it is different from the type of scale_factor|add_offset," ;
 
         std::string text(var.name + ":");
         if( attBool[0] )
@@ -9066,7 +8993,7 @@ CF::chap8_1(Variable& var)
          std::string capt("different types between " + n_variable + captVal(var.name));
          capt += " and packing " + n_attribute + "s " ;
          capt += captVal(attStr[0]) + "and" + captVal(attStr[1]) ;
-         capt += ", which have to be double of float";
+         capt += ", which have to be float|double";
 
          std::string text("Found: " + var.name + ":");
          if( attBool[0] )
@@ -9191,9 +9118,25 @@ CF::chap8_2(Variable& var)
   compressVal = var.getAttValue(n_compress, lowerCase);
   x_cmp = compressVal;
 
-  if( var.isCompress && isEvidence )
-      var.isDataVar=false ;
-  else if( var.isCompress  )
+  if( var.isCompress )
+  {
+    if( !isIntType && notes->inq(bKey + "82b", var.name) )
+    {
+      std::string capt(captAtt(var.name, n_compress, no_colon)) ;
+      capt += "is specified, but the " + n_variable;
+      capt += " is not index-type, found";
+      capt += captVal(pIn->nc.getTypeStr(var.type), false) ;
+
+      (void) notes->operate(capt) ;
+      notes->setCheckCF_Str( fail );
+    }
+
+    var.isDataVar=false ;
+  }
+
+  bool isFailed=false;
+
+  if( isCheck && var.isCompress  )
   {
     if(isCheck && !isIntType)
     {
@@ -9207,6 +9150,8 @@ CF::chap8_2(Variable& var)
         (void) notes->operate(capt) ;
         notes->setCheckCF_Str( fail );
       }
+
+      isFailed=true;
     }
 
     for( size_t j=0 ; j < x_cmp.size() ; ++j )
@@ -9221,14 +9166,17 @@ CF::chap8_2(Variable& var)
         if( notes->inq(bKey + "82c", var.name) )
         {
           std::string capt(captAtt(var.name, n_compress, no_colon)) ;
-          capt += "declares a non-existing " + n_dimension ;
+          capt += "names a non-existing " + n_dimension ;
 
           (void) notes->operate(capt) ;
           notes->setCheckCF_Str( fail );
         }
+
+        isFailed=true;
       }
     }
   }
+
   else if( isCheck && isEvidence )
   {
      if( ! ( cFVal > 15
@@ -9244,10 +9192,17 @@ CF::chap8_2(Variable& var)
          (void) notes->operate(capt) ;
          notes->setCheckCF_Str( fail );
        }
+
+       isFailed=true;
      }
   }
 
-  // test for index-range under-|overflow
+  if( isFailed )
+    return;
+
+
+  // test for index-range under-|overflow;
+  // this is only reasonable, when the checks above didn't fail
   if( compressVal.size() )
   {
     // get dimensions
@@ -9311,9 +9266,10 @@ CF::chap8_2(Variable& var)
 
     if(is)
     {
+      if( notes->inq(bKey + "82f", var.name) )
       {
         std::string capt(captVar(var.name)) ;
-        capt += "Compressed index exceeds maximum size of data unit, found index=" ;
+        capt += "Compressed index exceeds maximum size of data points, found index=" ;
         capt += hdhC::itoa(ma_max);
 /*
         for(size_t i=0 ; i < vDims.size() ; ++i )
@@ -9335,6 +9291,10 @@ CF::chap8_2(Variable& var)
 void
 CF::chap9(void)
 {
+  // packed data
+  if( ! notes->inq(bKey + "9", s_empty, "INQ_ONLY" ) )
+    return ;  // checks are selected to be discarded by 'D'
+
   // discrete sampling geometries
   std::vector<std::string> dsg_att;
 
@@ -9365,7 +9325,7 @@ CF::chap9(void)
        if( notes->inq(bKey + "0a") )
        {
          std::string capt("warning: Usage of a CF-1.6 feature in CF-1.4") ;
-         capt += ", found" + captAtt(coll[0], false);
+         capt += ", found " + captAtt(coll[0], false);
          for( size_t i=1 ; i < coll.size() ; ++i )
             capt += ", " + captVal(coll[i],false) ;
 
@@ -9573,6 +9533,8 @@ CF::chap9(void)
         }
       }
     }
+
+    isFeatureType=true;
   }
   else if( guessedFT.size() )
   {
@@ -9613,6 +9575,8 @@ CF::chap9(void)
           (void) notes->operate(capt) ;
           notes->setCheckCF_Str( fail );
         }
+
+        isFeatureType=true;
       }
     }
   }

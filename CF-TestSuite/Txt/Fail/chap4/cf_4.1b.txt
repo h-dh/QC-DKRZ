@@ -1,36 +1,20 @@
 netcdf cf_4.1b {
 dimensions:
-   time = UNLIMITED ; // (3 currently)
-   lat = 2 ;
-   lon = 2 ;
-   p   = 2 ;
+   lat = 3 ;
 
 variables:
+   double var(lat) ;
+      var:units="m" ;
+      var:long_name="data variable";
    float lat(lat) ;
-      lat:axis = "Y" ;
-      lat:units = "degree_north" ;
+      lat:units = "degrees_north" ;
       lat:standard_name = "latitude" ;
-   float lon(lon) ;
-      lon:axis = "X" ;
-      lon:units = "degree_east" ;
-      lon:standard_name = "longitude" ;
-   float p(p) ;
-      p:long_name = "pressure" ;
-      p:units = "hPa" ;
-   double data_var(time,p,lat,lon) ;
-      data_var:long_name = "something heavy" ;
-      data_var:units= "kg" ;
-
-   double time(time) ;
-      time:long_name = "time" ;
-      time:units = "days since 1990-1-1 0:0:0" ;
-      time:comment = "invalid: coordinate variable should not have missing data indicated by the default _FillValue" ;
+      lat:axis = "X";
+      lat:comment = "axis value is not compatible to latitude" ;
 
 // global attributes:
    :Conventions = "CF-1.4" ;
 
 data:
-lat = 10., 20. ;
-lon = 15., 25. ;
-p = 100, 101. ;
+lat = 1., 2., 3.;
 }

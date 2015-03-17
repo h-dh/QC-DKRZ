@@ -407,7 +407,7 @@ QC::entry(void)
      pIn->entry() ;
 
      for( size_t i=0 ; i < pIn->dataVarIndex.size() ; ++i)
-     {
+     
        Variable &var = pIn->variable[pIn->dataVarIndex[i]];
 
        if( var.isNoData )

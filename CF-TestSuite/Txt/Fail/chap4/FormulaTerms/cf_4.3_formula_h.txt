@@ -25,6 +25,9 @@ variables:
       sap:standard_name = "surface_air_pressure" ;
       sap:long_name = "Surface Air Pressure" ;
       sap:units = "Pa" ;
+   double data_var(lev,lat,lon) ;
+       data_var:long_name = "anything" ;
+       data_var:units = "m" ;
 
    float lev(lev) ;
       lev:long_name = "hybrid sigma pressure coordinate" ;

@@ -171,12 +171,12 @@ class CF : public IObj
   std::string
          captVar(std::string v, std::string&, std::string&);
 
-  void   checkAuxCoordData(Variable&) ;
-  void   checkCoordVarValues(Variable&, bool isAuxCoord=true) ;
+  void   checkCoordVarValues(Variable&, bool testMonotony=true) ;
 template <typename T>
   void   checkCoordVarValues(Variable&, bool, T);
   void   checkCoordVarFillValueAtt(Variable&) ;
   void   checkGroupRelation(void);
+
   // variables are dimension of another variable
   bool   checkRelationAsDimension(std::vector<bool>&);
   // a dimension of a variable is shared by another variable
@@ -239,6 +239,7 @@ template <typename T>
   bool isCheck;  // true: perform checks, false: only set variable values
   size_t cFVal;  // e.g. CF-1.6 --> cFVal=16
   bool followRecommendations; // false by default
+  bool isFeatureType;
   std::string cFVersion;
 
   ut_system*   unitSystem;

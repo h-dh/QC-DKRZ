@@ -48,7 +48,7 @@ public:
 
 //! Destructor-
   ~ReadLine();
-  
+
 //! The currently activated stream
   std::ifstream
     *FStream ;
@@ -107,7 +107,7 @@ public:
     getLine( void ){return line;}
 
   bool
-    getLine( std::string & );
+    getLine( std::string& );
 
 //! Get the previous line.
 /*! Between a 'putBackLine' directive and the next reading of a line,
@@ -176,6 +176,10 @@ public:
   void
     rewind(void);
 
+//! Set a breakpoint within a line
+  void
+    setBreakpoint(char b){ breakPoint=b; isBreakPoint=true;}
+
 //! Set filename.
   bool
     setFilename( std::string="" );
@@ -228,11 +232,16 @@ public:
   std::string
     subLine(size_t pos, size_t n){ return line.substr(pos, n);}
 
+//! Unset a breakpoint within a line
+  void
+    unsetBreakpoint(void){ isBreakPoint=false;}
+
 private:
   // Input filenames
   std::string inFile ;
   std::string line ;
   std::string prevLine ;
+  char breakPoint;
   std::vector<char> vSkipChars;
   std::vector<double> val ; //line: converted values
 
@@ -241,6 +250,7 @@ private:
   int    rangeCol ;       // Spalte fuer range Bestimmung
   bool   isRange ;        // true: range wird abgefragt
 
+  bool isBreakPoint;
   bool isClearSurroundingSpaces;
   bool isEof;
   bool isExternalStream;

@@ -50,6 +50,7 @@ ReadLine::init()
   rangeLast = MAXDOUBLE ;
   rangeCol = 0  ;
 
+  isBreakPoint=false;
   isClearSurroundingSpaces = false;
   isEof=false;
   isPutBackLine=false;
@@ -133,6 +134,9 @@ ReadLine::findLine( std::string &rline, std::string &str, int opos )
 
   while( ! (is=readLine()) )
   {
+    if( !isSplit )
+      dismember();
+
      if( opos < 0 )
      {
        if( line.find(str) < std::string::npos )
@@ -193,17 +197,8 @@ ReadLine::getLine( std::string &str0 )
 {
   bool bret = readLine();
 
-  if( isSkipBashComment )
-  {
-     size_t p;
-     if( (p=line.find('#')) < std::string::npos )
-     {
-        if(p)
-          line = line.substr(0,p);
-        else
-          return getLine(str0);
-     }
-  }
+  if( !isSplit )
+    dismember();
 
   if( isSkipCharacter )
   {
@@ -344,17 +339,38 @@ ReadLine::readLine(void)
   prevLine = line;
   line.erase();
 
+  bool skip=false;
+
   // variable number of columns
   while( !(isEof = stream->eof()) )
   {
     cbuf = stream->get();
-    if( cbuf == '\n' || cbuf == '\r' )
+
+    // skip fom #-char to the end of tzhe line
+    if( isSkipBashComment && cbuf == '#' )
+      skip=true;
+    if( skip  && ( cbuf == '\n' || cbuf == '\r' )
     {
       if( (cbuf = stream->peek()) == '\n' )
         cbuf = stream->get();
 
-      if( !isSplit )
-         dismember();
+      return false;
+    }
+
+    if( breakPoint )
+    {
+      // read across lines to the breakpoint
+      if( cbuf == '\n' || cbuf == '\r' )
+       continue;
+
+      if( cbuf == breakPoint )
+        return false ;  // Zeile erfolgreich gelesen
+    }
+    else if( cbuf == '\n' || cbuf == '\r' )
+    {
+      if( (cbuf = stream->peek()) == '\n' )
+        cbuf = stream->get();
+
       return false ;  // Zeile erfolgreich gelesen
     }
 
@@ -376,6 +392,8 @@ ReadLine::readFloat( void )
     // if the begin of a range was searched for, then there was already a readLine
     if( readLine() )
       return true ;
+    else if( !isSplit )
+      dismember();
 
     for( int i=0 ; i < noOfCols ; ++i )
       val.push_back( getValue(i) ) ;
@@ -464,6 +482,8 @@ ReadLine::skipLines( int count )
    {
      if( readLine() )
        return true;  // EOF
+     else if( !isSplit )
+       dismember();
    }
 
    return false ;

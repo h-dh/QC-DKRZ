@@ -1223,39 +1223,25 @@ Annotation::readConf(void)
     notesConf += '/' ;
   notesConf += checkList ;
 
+  ReadLine ifs( notesConf ) ;
+  ifs.skipBashComment();
+  ifs.clearSurroundingSpaces();
+
   // at first, read settings from file
-  std::ifstream ifs(notesConf.c_str(), std::ios::in);
+//  std::ifstream ifs(notesConf.c_str(), std::ios::in);
 
   std::string str0;
 
-  if( !ifs.is_open() )  // file does not exist
+  if( !ifs.isOpen() )  // file does not exist
      return ;
 
   std::string txt;
   BraceOP groups;
 
-  while( getline(ifs, str0) )
+  while( !ifs.getLine(str0) )
   {
-    str0 = hdhC::stripSurrounding(str0 );
-
-    // find and remove comments
-    size_t pos;
-    if( (pos=str0.find('#')) < std::string::npos )
-       str0 = str0.substr(0,pos);
-
-    if( str0.size() == 0 || str0 == "\r" )
+    if( str0.size() == 0 )
       continue;
-
-    txt.clear();
-    if( (pos=str0.find("&")) < std::string::npos )  //divide line
-    {
-      txt=str0.substr(0,pos);
-      str0=str0.substr(pos+1);
-    }
-
-    txt  = hdhC::stripSurrounding( txt );
-    if( txt[txt.size()-1] != '.' )
-      txt += '.' ;
 
     if(str0.find("PERMITTED_FLAG_BEGIN") < std::string::npos)
     {
@@ -1274,7 +1260,7 @@ Annotation::readConf(void)
     size_t pos_x=0;
     if( useAlways.size()
           || (pos_x=str0.find("NOTE_ALWAYS=")) < std::string::npos
-            || (pos=str0.find("NOTE_ALWAYS")) < std::string::npos )
+            || (pos_x=str0.find("NOTE_ALWAYS")) < std::string::npos )
     {
       pos = 12;
       if( pos_x < std::string::npos )
@@ -1310,7 +1296,7 @@ Annotation::readConf(void)
       }
 
       // replace level value by the limitation value
-      pos=0;
+      size_t pos ;
       while( (pos=str0.find("L", pos)) < std::string::npos )
       {
          size_t lval=static_cast<size_t>(
@@ -1322,6 +1308,18 @@ Annotation::readConf(void)
          ++pos; // avoids an infinite loop
       }
     }
+
+    // regular entries my be arbitrarily split across several lines
+    ifs.setBreakPoint('&') ;
+    if( !ifs.getLine(txt) )
+      break;
+
+    ifs.unsetBreakpoint() ;
+    if( !ifs.getLine(str0) )
+      break;
+
+    if( txt.size() && txt[txt.size()-1] != '.' )
+      txt += '.' ;
 
     groups.set( str0 );
     while ( groups.next(str0) )
