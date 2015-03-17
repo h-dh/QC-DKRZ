@@ -2,7 +2,6 @@
 .conf
 test
 Test
-install_configure
 install.log
 local
 bin
