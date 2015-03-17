@@ -162,9 +162,13 @@ public:
   void
     putBackLine();
 
-//! Read next line.
+//! Read next line (external call).
   bool
     readLine(void);
+
+//! Read next line (internal call).
+  bool
+    readLine(bool doSplit);
 
 //! Read line consisting of numbers only.
 /*! Only floats/double must be in the file.
@@ -172,13 +176,16 @@ public:
   bool
     readFloat(void);
 
+  bool
+    readFloat(bool);
+
 //! Set stream to the beginning.
   void
     rewind(void);
 
 //! Set a breakpoint within a line
   void
-    setBreakpoint(char b){ breakPoint=b; isBreakPoint=true;}
+    setBreakpoint(char b){ breakpoint=b; isBreakpoint=true;}
 
 //! Set filename.
   bool
@@ -234,14 +241,14 @@ public:
 
 //! Unset a breakpoint within a line
   void
-    unsetBreakpoint(void){ isBreakPoint=false;}
+    unsetBreakpoint(void){ isBreakpoint=false;}
 
 private:
   // Input filenames
   std::string inFile ;
   std::string line ;
   std::string prevLine ;
-  char breakPoint;
+  char breakpoint;
   std::vector<char> vSkipChars;
   std::vector<double> val ; //line: converted values
 
@@ -250,7 +257,7 @@ private:
   int    rangeCol ;       // Spalte fuer range Bestimmung
   bool   isRange ;        // true: range wird abgefragt
 
-  bool isBreakPoint;
+  bool isBreakpoint;
   bool isClearSurroundingSpaces;
   bool isEof;
   bool isExternalStream;
@@ -259,12 +266,10 @@ private:
   bool isSkipBashComment;
   bool isSkipCharacter;
   bool isSkipWhiteLine;
-  bool isSplit;
   bool isSwappedEof;
 
   int  noOfCols;
 
-  void dismember(void);
   void init(void);
   void swapLine(void); // swaps line and prevLine
 };

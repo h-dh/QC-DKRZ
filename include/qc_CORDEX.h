@@ -232,7 +232,7 @@ class QC : public IObj
              VariableMetaData &tbl_entry);
 
   /*! Close records for time and data.*/
-  void   closeEntry(InFile &);
+  void   closeEntry(void);
 
   //! Make VarMetaData objects.
   void   createVarMetaData(void);

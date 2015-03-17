@@ -1,1 +1,1 @@
-/hdh/hdh/QC-DKRZ/include/qc_CORDEX.h
+/hdh/hdh/QC-DKRZ/include/qc_CMIP5.h

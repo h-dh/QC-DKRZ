@@ -50,7 +50,7 @@ ReadLine::init()
   rangeLast = MAXDOUBLE ;
   rangeCol = 0  ;
 
-  isBreakPoint=false;
+  isBreakpoint=false;
   isClearSurroundingSpaces = false;
   isEof=false;
   isPutBackLine=false;
@@ -103,14 +103,6 @@ ReadLine::disconnect_cin(void)
   return ;
 }
 
-void
-ReadLine::dismember(void)
-{
-  split = line ;
-
-  isSplit=true;
-}
-
 bool
 ReadLine::eof()
 {
@@ -134,9 +126,6 @@ ReadLine::findLine( std::string &rline, std::string &str, int opos )
 
   while( ! (is=readLine()) )
   {
-    if( !isSplit )
-      dismember();
-
      if( opos < 0 )
      {
        if( line.find(str) < std::string::npos )
@@ -161,27 +150,18 @@ ReadLine::findLine( std::string &rline, std::string &str, int opos )
 std::string
 ReadLine::getItem( size_t index)
 {
-   if( !isSplit )
-      dismember();
-
    return split[index] ;
 }
 
 std::vector<std::string>
 ReadLine::getItems( void)
 {
-   if( !isSplit )
-      dismember();
-
    return split.getItems() ;
 }
 
 std::vector<std::string>
 ReadLine::getItems( size_t beg, size_t end )
 {
-   if( !isSplit )
-      dismember();
-
    if( end == 0 )
      end = split.size();
 
@@ -193,12 +173,9 @@ ReadLine::getItems( size_t beg, size_t end )
 }
 
 bool
-ReadLine::getLine( std::string &str0 )
+ReadLine::getLine( std::string &str0)
 {
   bool bret = readLine();
-
-  if( !isSplit )
-    dismember();
 
   if( isSkipCharacter )
   {
@@ -252,9 +229,6 @@ ReadLine::getValues( void )
 double
 ReadLine::getValue( size_t index )
 {
-   if( !isSplit )
-      dismember();
-
    if( isReadFloat )
      return val[index] ;
    else
@@ -264,9 +238,6 @@ ReadLine::getValue( size_t index )
 bool
 ReadLine::getValue( size_t index, double &v )
 {
-   if( !isSplit )
-      dismember();
-
    if( isReadFloat )
      return val[index] ;
    else
@@ -323,6 +294,19 @@ ReadLine::putBackLine(void)
 bool
 ReadLine::readLine(void)
 {
+  bool is=readLine(true) ;
+
+  if( line.size() )
+    split = line;
+  else
+    split.clear();
+
+  return is;
+}
+
+bool
+ReadLine::readLine(bool isVoid)
+{
   // return: true for inStrem->eof()
 
   if( isPutBackLine )
@@ -334,7 +318,6 @@ ReadLine::readLine(void)
   }
 
   char cbuf ;
-  isSplit=false;
 
   prevLine = line;
   line.erase();
@@ -349,21 +332,26 @@ ReadLine::readLine(void)
     // skip fom #-char to the end of tzhe line
     if( isSkipBashComment && cbuf == '#' )
       skip=true;
-    if( skip  && ( cbuf == '\n' || cbuf == '\r' )
+    if( skip )
     {
-      if( (cbuf = stream->peek()) == '\n' )
-        cbuf = stream->get();
+      if(cbuf == '\n' || cbuf == '\r')
+      {
+        if( (cbuf = stream->peek()) == '\n' )
+          cbuf = stream->get();
 
-      return false;
+        return false;
+      }
+
+      continue;
     }
 
-    if( breakPoint )
+    if( isBreakpoint )
     {
       // read across lines to the breakpoint
       if( cbuf == '\n' || cbuf == '\r' )
        continue;
 
-      if( cbuf == breakPoint )
+      if( cbuf == breakpoint )
         return false ;  // Zeile erfolgreich gelesen
     }
     else if( cbuf == '\n' || cbuf == '\r' )
@@ -384,7 +372,20 @@ ReadLine::readLine(void)
 }
 
 bool
-ReadLine::readFloat( void )
+ReadLine::readFloat(void)
+{
+  bool is=readFloat(true);
+
+  if( line.size() )
+    split = line;
+  else
+    split.clear();
+
+  return is;
+}
+
+bool
+ReadLine::readFloat(bool isVoid)
 {
   // Initialisation
   if( ! isReadFloat )
@@ -392,8 +393,6 @@ ReadLine::readFloat( void )
     // if the begin of a range was searched for, then there was already a readLine
     if( readLine() )
       return true ;
-    else if( !isSplit )
-      dismember();
 
     for( int i=0 ; i < noOfCols ; ++i )
       val.push_back( getValue(i) ) ;
@@ -482,8 +481,6 @@ ReadLine::skipLines( int count )
    {
      if( readLine() )
        return true;  // EOF
-     else if( !isSplit )
-       dismember();
    }
 
    return false ;

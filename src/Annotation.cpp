@@ -1226,6 +1226,7 @@ Annotation::readConf(void)
   ReadLine ifs( notesConf ) ;
   ifs.skipBashComment();
   ifs.clearSurroundingSpaces();
+  ifs.setBreakpoint('&');  // wil be toggled
 
   // at first, read settings from file
 //  std::ifstream ifs(notesConf.c_str(), std::ios::in);
@@ -1238,17 +1239,17 @@ Annotation::readConf(void)
   std::string txt;
   BraceOP groups;
 
-  while( !ifs.getLine(str0) )
+  while( !ifs.getLine(txt) )
   {
-    if( str0.size() == 0 )
+    if( txt.size() == 0 )
       continue;
 
-    if(str0.find("PERMITTED_FLAG_BEGIN") < std::string::npos)
+    if(txt.find("PERMITTED_FLAG_BEGIN") < std::string::npos)
     {
        size_t pos;
-       if( (pos=str0.find("=")) < std::string::npos)
+       if( (pos=txt.find("=")) < std::string::npos)
        {
-         Split splt(str0.substr(++pos), ",") ;
+         Split splt(txt.substr(++pos), ",") ;
          for(size_t i=0 ; i< splt.size() ; ++i)
             permittedFlagBegin.push_back(splt[i]);
        }
@@ -1258,9 +1259,10 @@ Annotation::readConf(void)
 
     // one for all
     size_t pos_x=0;
+    size_t pos;
     if( useAlways.size()
-          || (pos_x=str0.find("NOTE_ALWAYS=")) < std::string::npos
-            || (pos_x=str0.find("NOTE_ALWAYS")) < std::string::npos )
+          || (pos_x=txt.find("NOTE_ALWAYS=")) < std::string::npos
+            || (pos=txt.find("NOTE_ALWAYS")) < std::string::npos )
     {
       pos = 12;
       if( pos_x < std::string::npos )
@@ -1269,26 +1271,31 @@ Annotation::readConf(void)
       if( useAlways.size() )
         groups.set(useAlways) ;
       else
-        groups.set(str0.substr(pos+10)) ;  // size of "NOTE_ALWAYS"
+        groups.set(txt.substr(pos+10)) ;  // size of "NOTE_ALWAYS"
 
       // clear previous settings
       options.clear();
       descript.clear();
 
-      while ( groups.next(str0) )
-        setConfVector( txt, str0 ) ;
+      while ( groups.next(txt) )
+        setConfVector( "", txt ) ;
 
       isUseDefault =false;
       break; // leave the while loop
     }
 
+    // regular entries my be arbitrarily split across several lines
+    ifs.unsetBreakpoint() ;
+    ifs.getLine(str0) ;
+    ifs.setBreakpoint('&') ;
+
     if( levelLimit ||
-          str0.find("NOTE_LEVEL_LIMIT") < std::string::npos )
+          txt.find("NOTE_LEVEL_LIMIT") < std::string::npos )
     {
       if( levelLimit == 0 )
       {
-         // insensitive to a leading 'L'
-        levelLimit = static_cast<size_t>( hdhC::string2Double(str0) );
+         // coding for case-insensitive leading 'L'
+        levelLimit = static_cast<size_t>( hdhC::string2Double(txt) );
         levelLimitStr = "L";
         levelLimitStr += hdhC::double2String(levelLimit);
 
@@ -1308,15 +1315,6 @@ Annotation::readConf(void)
          ++pos; // avoids an infinite loop
       }
     }
-
-    // regular entries my be arbitrarily split across several lines
-    ifs.setBreakPoint('&') ;
-    if( !ifs.getLine(txt) )
-      break;
-
-    ifs.unsetBreakpoint() ;
-    if( !ifs.getLine(str0) )
-      break;
 
     if( txt.size() && txt[txt.size()-1] != '.' )
       txt += '.' ;

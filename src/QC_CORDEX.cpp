@@ -3106,7 +3106,7 @@ QC::checkVarTableEntry_units(
 }
 
 void
-QC::closeEntry(InFile &in)
+QC::closeEntry(void)
 {
    // This here is only for the regular QC time series file
    if( isCheckTime )
@@ -3339,7 +3339,7 @@ QC::entry(void)
    }
 
    // the final for this record
-   closeEntry(*pIn);
+   closeEntry();
    return false;
 }
 

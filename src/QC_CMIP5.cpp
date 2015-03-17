@@ -3000,10 +3000,10 @@ QC::createVarMetaData(void)
   // create instances of VariableMetaData. These have been identified
   // previously at the opening of the nc-file and marked as
   // Variable::VariableMeta(Base)::isDataVar == true. The index
-  // of identified targets is stored in the InFile::targetIndex vector.
-  for( size_t i=0 ; i< pIn->targetIndex.size() ; ++i )
+  // of identified targets is stored in the InFile::dataVarIndex vector.
+  for( size_t i=0 ; i< pIn->dataVarIndex.size() ; ++i )
   {
-    Variable &var = pIn->variable[pIn->targetIndex[i]];
+    Variable &var = pIn->variable[pIn->dataVarIndex[i]];
 
     pushBackVarMeDa( &var );  //push next instance
   }
@@ -3053,9 +3053,9 @@ QC::entry(void)
      // read next field
      pIn->entry() ;
 
-     for( size_t i=0 ; i < pIn->targetIndex.size() ; ++i)
+     for( size_t i=0 ; i < pIn->dataVarIndex.size() ; ++i)
      {
-       Variable &var = pIn->variable[pIn->targetIndex[i]];
+       Variable &var = pIn->variable[pIn->dataVarIndex[i]];
 
        if( var.isNoData )
           continue;
