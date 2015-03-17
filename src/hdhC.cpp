@@ -1270,6 +1270,73 @@ getNonAlphaNum(std::string s)
   return t;
 }
 
+std::string
+getUniqueString(std::string& s)
+{
+  std::vector<std::string> vs;
+
+  Split x_s(s) ;
+
+  for( size_t j=0 ; j < x_s.size() ; ++j )
+    vs.push_back(x_s[j]) ;
+
+  std::vector<std::string>vs2(getUniqueVector(vs));
+
+  std::string us;
+  for( size_t j=0 ; j < vs2.size() ; ++j)
+  {
+    if(j)
+      us += " " ;
+    us += vs2[j];
+  }
+
+  return us;
+}
+
+std::string
+getUniqueString(std::vector<std::string>& vs)
+{
+  std::string s;
+
+  for( size_t j=0 ; j < vs.size() ; ++j )
+     if(j)
+       s += vs[j] ;
+
+  return getUniqueString(s);
+}
+
+std::vector<std::string>
+getUniqueVector(std::string& s)
+{
+  std::vector<std::string> vs;
+
+  Split x_s(s) ;
+
+  for( size_t j=0 ; j < x_s.size() ; ++j )
+    vs.push_back(x_s[j]) ;
+
+  return getUniqueVector(vs);
+}
+
+std::vector<std::string>
+getUniqueVector(std::vector<std::string>& vs)
+{
+  std::vector<std::string> uni;
+
+  for( size_t j=0 ; j < vs.size() ; ++j )
+  {
+     size_t u;
+     for( u=0 ; u < uni.size() ; ++u )
+       if( uni[u] == vs[j] )
+          break;
+
+     if( u == uni.size() )
+       uni.push_back(vs[j]);
+   }
+
+  return uni;
+}
+
 bool isAlpha(unsigned char c)
 {
   int i = c ;
@@ -1317,6 +1384,57 @@ bool isAlphaNum(unsigned char c)
     is=true;
 
   return is;
+}
+
+template <typename T>
+bool
+isAmong(T& item, std::vector<T>& set)
+{
+  for(size_t i=0 ; i < set.size() ; ++i )
+    if( item == set[i] )
+      return true ;
+
+  return false;
+}
+
+
+template <typename T>
+bool
+isAmong(T item, std::vector<T>& set, bool is)
+{
+  // note that the bool ist just for the compiler
+  for(size_t i=0 ; i < set.size() ; ++i )
+    if( item == set[i] )
+      return true ;
+
+  return false;
+}
+
+template <typename T>
+bool
+isAmong(std::vector<T>& sub, std::vector<T>& set, bool all)
+{
+  if( set.size() == 0 )
+     return false;
+
+  size_t count=0;
+  for( size_t i=0 ; i < sub.size() ; ++i )
+  {
+    if( isAmong(sub[i], set) )
+    {
+      if( !all )
+        return true;
+
+      ++count;
+    }
+    else if( all )
+      return false;
+  }
+
+  if( count == sub.size() )
+    return true;  // for all==true
+
+  return false ;
 }
 
 bool isDigit(unsigned char c, bool isNumber)
@@ -1802,6 +1920,22 @@ std::string clearSpaces(std::string &str )
       s += str[p] ;
 
   return s ;
+}
+
+std::string sAssign(std::string right, bool withSpaces)
+{
+  if( withSpaces )
+    return "= <" + right + ">" ;
+  else
+    return "=<" + right + ">" ;
+}
+
+std::string sAssign(std::string left, std::string right, bool withSpaces)
+{
+  if( withSpaces )
+    return left + " = <" + right + ">" ;
+  else
+    return left + "=<" + right + ">" ;
 }
 
 std::string stripSurrounding(std::string &str, std::string mode )
