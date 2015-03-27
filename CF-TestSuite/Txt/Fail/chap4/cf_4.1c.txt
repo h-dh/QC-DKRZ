@@ -26,7 +26,7 @@ variables:
       lat:units = "degree_north" ;
       lat:standard_name = "latitude" ;
       lat:_FillValue=999.f ;
-      lat:comment = "invalid: a coordinate variable should not have a _FillValue attribute" ;
+      lat:comment = "a coordinate variable should not have a _FillValue attribute" ;
 
 // global attributes:
    :Conventions = "CF-1.4" ;

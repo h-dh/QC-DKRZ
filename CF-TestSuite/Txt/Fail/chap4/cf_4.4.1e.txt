@@ -13,7 +13,7 @@ variables:
      time:month_lengths = 34, 31, 32, 30, 29, 27, 28, 28, 28, 32, 32, 34 ;
      time:leap_year = 1901 ;
      time:leap_month = 0 ;
-     time:comment ="invalid: leap_month must be in the range of 1 - 12" ;
+     time:comment ="leap_month must be in the range of 1 - 12" ;
 
 // global attributes:
    :Conventions = "CF-1.4" ;

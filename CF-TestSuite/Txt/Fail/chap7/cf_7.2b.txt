@@ -5,22 +5,22 @@ dimensions:
 
 variables:
    float lon(cell) ;
-	     lon:long_name = "longitude" ;
-	     lon:units = "degrees_east" ;
+     lon:long_name = "longitude" ;
+     lon:units = "degrees_east" ;
    float lat(cell) ;
-	     lat:long_name = "latitude" ;
-	     lat:units = "degrees_north" ;
+     lat:long_name = "latitude" ;
+     lat:units = "degrees_north" ;
    float time(time) ;
       time:standard_name = "time" ;
-	     time:long_name = "time" ;
-	     time:units = "days since 1979-01-01 0:0:0" ;
+     time:long_name = "time" ;
+     time:units = "days since 1979-01-01 0:0:0" ;
 
    float ps(time,cell) ;
-      ps:long_name = "pressure" ;
-      ps:units = "Pa" ;
-      ps:coordinates = "lon lat" ;
-      ps:cell_measures = "area: xyz" ;
-      ps:comment = "invalid: undefined variable named by cell_measures" ;
+     ps:long_name = "pressure" ;
+     ps:units = "Pa" ;
+     ps:coordinates = "lon lat" ;
+     ps:cell_measures = "area: xyz" ;
+     ps:comment = "invalid: undefined variable named by cell_measures" ;
 
 // global attributes:
    :comment="Cell areas for a spherical geodesic grid" ;

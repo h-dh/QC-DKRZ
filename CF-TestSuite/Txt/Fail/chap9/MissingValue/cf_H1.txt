@@ -34,7 +34,7 @@ variables:
       alt:positive = "up" ;
       alt:axis = "Z" ;
       alt:_FillValue = 33. ;
-      alt:comment="Violation of _FillValue rule of Chapter 9 for alt data" ;
+      alt:comment="Violation of rules for missing_value of Chapter 9" ;
 
 // global attributes:
    :featureType = "point";

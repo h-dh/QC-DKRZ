@@ -15,7 +15,7 @@ variables:
       t:cell_methods="area: mean time: mean";
       t:units="K";
       t:comment="Note that area without any X-Y axis implies the whole world, by convention";
-      t:comment2="Recommendation: define one size dim-ed variables lon|lat with bounds";
+      t:comment2="Recommendation: define one size dimensioned variables lon|lat with bounds";
 
 // global attributes:
    :comment="Cell-methods when there is no coordinate" ;

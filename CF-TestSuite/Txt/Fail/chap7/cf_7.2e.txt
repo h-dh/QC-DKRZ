@@ -8,29 +8,29 @@ dimensions:
 
 variables:
    float p(p) ;
-      p:units = "Pa" ;
-      p:long_name = "pressure" ;
+     p:units = "Pa" ;
+     p:long_name = "pressure" ;
    float scalar_lon ;
-	     scalar_lon:standard_name = "longitude" ;
-	     scalar_lon:units = "degrees_east" ;
+     scalar_lon:standard_name = "longitude" ;
+     scalar_lon:units = "degrees_east" ;
    float lat(lat) ;
-	     lat:standard_name = "latitude" ;
-	     lat:units = "degrees_north" ;
-       lat:axis = "Y";
+     lat:standard_name = "latitude" ;
+     lat:units = "degrees_north" ;
+     lat:axis = "Y";
    float time(time) ;
       time:standard_name = "time" ;
-	     time:long_name = "time" ;
-	     time:units = "days since 1979-01-01 0:0:0" ;
+     time:long_name = "time" ;
+     time:units = "days since 1979-01-01 0:0:0" ;
    float ps(time,p,lat,lon) ;
-      ps:long_name = "pressure" ;
-      ps:units = "Pa" ;
-      ps:coordinates = "scalar_lon" ;
-      ps:cell_measures = "area: cell_area" ;
+     ps:long_name = "pressure" ;
+     ps:units = "Pa" ;
+     ps:coordinates = "scalar_lon" ;
+     ps:cell_measures = "area: cell_area" ;
 
    float cell_area(lat,lon,z) ;
-      cell_area:long_name = "area of grid cell" ;
-      cell_area:units = "m2";
-      cell_area:comment = "dimension is not a sub-set of ps(time,p,lat,lon)" ;
+     cell_area:long_name = "area of grid cell" ;
+     cell_area:units = "m2";
+     cell_area:comment = "dimension is not a sub-set of ps(time,p,lat,lon)" ;
 
 // global attributes:
    :comment="Cell areas for a spherical geodesic grid" ;

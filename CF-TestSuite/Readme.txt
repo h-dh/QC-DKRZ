@@ -18,9 +18,9 @@ in a script, e.g.:
   for f in *.txt ; do echo $f ; /path/QC-DKRZ/CF-TestSuite/mkNc $f ; done
   mv *.nc /path/QC-DKRZ/CF-TestSuite/Nc/chap2
 
-The generation of file cf_2.5.1b.nc needed additional effort, thus it is
-protected against overwriting.
-(please, look at Txt/Fail/chap2).
+The generation of file Fail/chap2/cf_2.5.1b.nc and Fail/chap4/cf_4.1h.nc
+needed additional effort, thus it is protected against overwriting.
+(please, look at corresponding Readme.txt in /Fail/chap2 and Txt/Fail/chap4, respectively).
 
 The test-suite or parts of it may be executed by:
 /path/QC-DKRZ/scripts/cf-checker -R -F /path/QC-DKRZ/path/QC-DKRZ/CF-TestSuite/Nc/Fail/chap9 

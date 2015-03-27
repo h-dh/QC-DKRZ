@@ -7,8 +7,8 @@ dimensions:
 
 variables:
    float landsoilt(depth,landpoint);
-	    landsoilt:long_name="soil temperature";
-    	landsoilt:units="K";
+     landsoilt:long_name="soil temperature";
+     landsoilt:units="K";
    float depth(depth);
      depth:standard_name = "height" ;
      depth:units = "m";
@@ -23,7 +23,7 @@ variables:
 
    int landpoint(landpoint);
      landpoint:compress="lat height";
-     landpoint:comment="invalid: non-existent dimension height" ;
+     landpoint:comment="non-existent dimension height" ;
 
 // global attributes:
    :comment="" ;

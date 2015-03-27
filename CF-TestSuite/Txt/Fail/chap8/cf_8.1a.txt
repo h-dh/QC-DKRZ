@@ -8,7 +8,7 @@ variables:
      t:long_name = "asdf" ;
      t:scale_factor = 1.d;
      t:add_offset = 0.f;
-     t:comment= "invalid: scaleFactor and add_offset have to be the same type" ;
+     t:comment= "scaleFactor and add_offset should be the same type" ;
 
 // global attributes:
    :comment="packed data" ;

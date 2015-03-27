@@ -7,23 +7,23 @@ dimensions:
 
 variables:
    float lat1(lat1) ;
-	     lat1:long_name = "latitude" ;
-	     lat1:units = "degrees_north" ;
-      lat1:axis = "Y" ;
+     lat1:long_name = "latitude" ;
+     lat1:units = "degrees_north" ;
+     lat1:axis = "Y" ;
    float lat2(lat2) ;
-      lat2:long_name = "latitude" ;
-      lat2:units = "degrees_north" ;
-      lat2:axis = "Y" ;
+     lat2:long_name = "latitude" ;
+     lat2:units = "degrees_north" ;
+     lat2:axis = "Y" ;
    float pres(pres) ;
-	     pres:long_name = "pressure" ;
-	     pres:units = "hPa" ;
+     pres:long_name = "pressure" ;
+     pres:units = "hPa" ;
    double time(time) ;
-	     time:long_name = "time" ;
-	     time:units = "days since 1990-1-1 0:0:0" ;
+     time:long_name = "time" ;
+     time:units = "days since 1990-1-1 0:0:0" ;
 
    float rh(time,pres,lat1,lat2) ;
-      rh:long_name = "relative humidity" ;
-      rh:comment ="invalid: two dimensions for the same Y-direction" ;
+     rh:long_name = "relative humidity" ;
+     rh:comment ="a variable should not have two dimensions for the same Y-direction" ;
 
 // global attributes:
    :comment=" Independent coordinate variables" ;

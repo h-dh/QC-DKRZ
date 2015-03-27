@@ -7,28 +7,28 @@ dimensions:
 
 variables:
    double time(time);
-      time:standard_name = "time" ;
-	     time:climatology="climatology_bounds";
-	     time:units="days since 1960-1-1";
+     time:standard_name = "time" ;
+     time:climatology="climatology_bounds";
+     time:units="days since 1960-1-1";
    double climatology_bounds(time,nv);
    float lat(lat) ;
-      lat:units = "degrees_north" ;
-      lat:standard_name = "latitude" ;
-      lat:axis="Y";
-      lat:bounds="lat_bnds";
+     lat:units = "degrees_north" ;
+     lat:standard_name = "latitude" ;
+     lat:axis="Y";
+     lat:bounds="lat_bnds";
   float lat_bnds(lat,nv);
   float lon(lon) ;
-      lon:units = "degrees_east" ;
-      lon:standard_name = "longitude" ;
-      lon:axis="X";
-      lon:bounds="lon_bnds";
+     lon:units = "degrees_east" ;
+     lon:standard_name = "longitude" ;
+     lon:axis="X";
+     lon:bounds="lon_bnds";
    float lon_bnds(lon,nv);
 
    float T(time,lat,lon);
-      T:long_name="surface air temperature";
-      T:cell_methods="time: mean within days";
-      T:units="K";
-      T:comment = "climatology requires time: .. within .. time: .. over .." ;
+     T:long_name="surface air temperature";
+     T:cell_methods="time: mean within days";
+     T:units="K";
+     T:comment = "climatology requires time: .. within .. time: .. over .." ;
 
 // global attributes:
    :comment="Climatological seasons" ;

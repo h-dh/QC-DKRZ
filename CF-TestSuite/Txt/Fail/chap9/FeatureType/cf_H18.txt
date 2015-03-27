@@ -53,7 +53,7 @@ variables:
       humidity:coordinates = "time lon lat alt" ;
 
 // global attributes:
-   :comment = "timeSeriesProfile" ;
+   :comment = "missing featureType timeSeriesProfile" ;
    :Conventions = "CF-1.6" ;
 
 data:

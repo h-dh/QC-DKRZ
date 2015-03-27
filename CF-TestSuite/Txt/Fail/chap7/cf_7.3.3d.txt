@@ -9,7 +9,7 @@ dimensions:
 
 variables:
    char land_sea(ls,maxlen);
-      land_sea:standard_name="area_type";
+     land_sea:standard_name="area_type";
    float height(height) ;
      height:standard_name = "height" ;
      height:units = "m" ;
@@ -17,22 +17,22 @@ variables:
      height:axis = "Z";
    float lat_bnds(lat,nv);
    float lat(lat) ;
-      lat:units = "degrees_north" ;
-      lat:standard_name = "latitude" ;
-      lat:axis = "Y" ;
-      lat:bounds="lat_bnds";
+     lat:units = "degrees_north" ;
+     lat:standard_name = "latitude" ;
+     lat:axis = "Y" ;
+     lat:bounds="lat_bnds";
    float lon(lon) ;
-      lon:units = "degrees_east" ;
-      lon:standard_name = "longitude" ;
-      lon:axis = "X" ;
-      lon:bounds="lon_bnds";
+     lon:units = "degrees_east" ;
+     lon:standard_name = "longitude" ;
+     lon:axis = "X" ;
+     lon:bounds="lon_bnds";
    float lon_bnds(lon,nv);
 
    float surface_t(ls,height,lat,lon);
-      surface_t:long_name = "surface temperature" ;
-      surface_t:coordinates="height land_sea";
-      surface_t:cell_methods="area: mean where height";
-      surface_t:comment = "invalid: type-var height is a coordinate var" ;
+     surface_t:long_name = "surface temperature" ;
+     surface_t:coordinates="height land_sea";
+     surface_t:cell_methods="area: mean where height";
+     surface_t:comment = "type-var=height in cell_methods is a coordinate variable" ;
 
 // global attributes:
    :Conventions = "CF-1.4" ;

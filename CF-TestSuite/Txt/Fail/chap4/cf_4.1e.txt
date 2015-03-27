@@ -24,7 +24,7 @@ variables:
    float p(p) ;
       p:long_name = "pressure" ;
       p:units = "hPa" ;
-      p:comment = "invalid: data values of a coordinate variable must be different" ;
+      p:comment = "data values of a coordinate variable must be different" ;
 
 // global attributes:
    :Conventions = "CF-1.4" ;

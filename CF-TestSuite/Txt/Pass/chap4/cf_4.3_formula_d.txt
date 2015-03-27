@@ -1,0 +1,96 @@
+netcdf cf_4.3_formula_d {
+dimensions:
+   lev = 3 ;
+   latX = 3 ;
+   lonX = 4 ;
+
+   formula_varY = 3 ;
+   latY = 3 ;
+   lonY = 4 ;
+
+   time = UNLIMITED ;
+
+variables:
+   double time(time) ;
+      time:long_name = "time" ;
+      time:units = "days since 1990-1-1 0:0:0" ;
+
+   double data_varX(time,lev,latX,lonX) ;
+      data_varX:long_name = "anything" ;
+      data_varX:units = "m" ;
+      data_varX:coordinates = "formula_varX" ;
+   double data_varY(time,formula_varY,latX,lonX) ;
+      data_varY:long_name = "anything" ;
+      data_varY:units = "m" ;
+      data_varY:coordinates = "formula_varY" ;
+
+   float latX(latX) ;
+      latX:units = "degrees_north" ;
+      latX:standard_name = "latitude" ;
+      latX:axis="Y" ;
+   float lonX(lonX) ;
+      lonX:units = "degrees_east" ;
+      lonX:standard_name = "longitude" ;
+      lonX:axis="X" ;
+   double varX1(lev) ;
+      varX1:long_name = "vertical coordinate formula term: ap(k)" ;
+      varX1:units = "m" ;
+   double varX2(lev) ;
+      varX2:long_name = "vertical coordinate formula term: a(k)" ;
+   double varX3(time,latX,lonX) ;
+      varX3:long_name = "vertical coordinate formula term: b(k)" ;
+      varX3:units = "m" ;
+   float formula_varX ;
+      formula_varX:long_name = "atmosphere_hybrid_height_coordinate" ;
+      formula_varX:positive = "down" ;
+      formula_varX:standard_name = "atmosphere_hybrid_height_coordinate" ;
+      formula_varX:formula = "z = a + b*orog" ;
+      formula_varX:formula_terms = "a: varX1 b: varX2 orog: varX3" ;
+
+   float latY(latY) ;
+      latY:long_name = "latitude" ;
+      latY:units = "degrees_north" ;
+      latY:standard_name = "latitude" ;
+      latY:axis="Y" ;
+   float lonY(lonY) ;
+      lonY:long_name = "longitude" ;
+      lonY:units = "degrees_east" ;
+      lonY:standard_name = "longitude" ;
+      lonY:axis="X" ;
+   double varY1(formula_varY) ;
+      varY1:long_name = "vertical coordinate formula term: ap(k)" ;
+      varY1:units = "Pa" ;
+   double varY2(formula_varY) ;
+      varY2:long_name = "vertical coordinate formula term: b(k)" ;
+   float varY3(latY, lonY) ;
+      varY3:standard_name = "surface_air_pressure" ;
+      varY3:long_name = "Surface Air Pressure" ;
+      varY3:units = "Pa" ;
+   float formula_varY(formula_varY) ;
+      formula_varY:long_name = "hybrid sigma pressure coordinate" ;
+      formula_varY:positive = "down" ;
+      formula_varY:standard_name = "atmosphere_hybrid_sigma_pressure_coordinate" ;
+      formula_varY:formula = "p = ap + b*ps" ;
+      formula_varY:formula_terms = "ap: varY1 b: varY2 ps: varY3" ;
+
+// global attributes:
+   :Conventions = "CF-1.4" ;
+
+data:
+time  = 1., 2. ;
+
+latX   = 1., 2., 3. ;
+lonX   = 1., 2., 3., 4.;
+varX1  = 1., 2., 3. ;
+varX2  = 1., 2., 3. ;
+varX3  = 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12. ,
+        13., 14., 15., 14., 15., 15., 15., 15., 19., 20., 21., 22. ;
+
+formula_varY = 1, 2, 3;
+latY = 1., 2., 3.;
+lonY = 1., 2., 3., 4.;
+varY1 = 1., 2., 3. ;
+varY2 = 1., 2., 3. ;
+varY3 = 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12. ;
+
+}

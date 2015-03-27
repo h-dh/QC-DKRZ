@@ -10,7 +10,7 @@ variables:
      time:long_name = "time" ;
      time:units = "days since 1-7-15 0:0:0" ;
      time:calendar = "126 kyr B.P." ;
-     time:comment ="invalid: missing attribute month_lengths" ;
+     time:comment ="missing attribute month_lengths" ;
 
 // global attributes:
    :Conventions = "CF-1.4" ;

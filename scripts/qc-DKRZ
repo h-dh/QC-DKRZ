@@ -1350,8 +1350,29 @@ getFilenameBase()
 
   unset fBase
 
-  fileNames=($(find ${PROJECT_DATA}/${subPath} -maxdepth 1 -name "*.nc"))
-  test ${#fileNames[*]} -eq 0
+  if [ ${QUERY_EMPTY_DIR:-f} = t ] ; then
+    if find ${PROJECT_DATA}/${subPath} \
+          -maxdepth 1 -type d -empty | grep -q .  ; then
+      if [ ${YAML:-f} = f ] ; then
+        gNV_log1 $1
+      else
+        y_impact=L2
+        y_caption="empty directory"
+        y_tag=M1
+        y_status=1
+        nextPath=${PROJECT_DATA}/${subPath}
+        gNV_Ylog 'N/A'
+      fi
+
+      return
+    fi
+  fi
+
+  if [ ${QUERY_NON_NC_FILE:-f} = t ] ; then
+    fileNames=($(find ${PROJECT_DATA}/${subPath} -maxdepth 1 ! -type d -name "*"))
+  else
+    fileNames=($(find ${PROJECT_DATA}/${subPath} -maxdepth 1 -name "*.nc"))
+  fi
 
   if [ ${IGNORE_BROKEN_LINKS:-f} = t ] ; then
     for(( j=${#fileNames[*]} - 1 ; j >= 0 ; --j )) ; do
@@ -1533,7 +1554,7 @@ getNextVariable()
   nextPath=${PROJECT_DATA}/${subPath}
 
   # get files with fBase (temporal information added)
-  if [ ${QUERY_ALIEN_FILE:-f} = t ] ; then
+  if [ ${QUERY_NON_NC_FILE:-f} = t ] ; then
     nV_fls=( $( find ${nextPath} -maxdepth 1 -type f -name "*" 2> /dev/null ) )
   else
     nV_fls=( $( find ${nextPath} -maxdepth 1 -name "${1}*.nc" 2> /dev/null ) )
@@ -1541,11 +1562,7 @@ getNextVariable()
   nV_fls=( ${nV_fls[*]#${nextPath}\/} )
 
   if [ ${#nV_fls[*]} -eq 0 ] ; then
-    y_impact=L2
-    y_caption='empty directory'
-    y_tag=M1
-    initLog $1
-
+    # empty dir was trapped before
     nextFile=  # ignore, try next
     return 0
   fi
@@ -1589,19 +1606,8 @@ getNextVariable()
 
       is=t
     elif ! expr match ${nV_fls[l]} "${1}.*\.nc" &> /dev/null ; then
-      if [ ${QUERY_ALIEN_FILE:-f} = t ] ; then
-        local sz=${#1}
-        test ${#nV_fls[l]} -lt ${sz} && sz=${#nV_fls[l]}
-        local cnt=0
-        local ix
-        for(( ix=0 ; ix < sz ; ++ix )) ; do
-          if [ "${nV_fls[l]:ix:1}" != "${1:ix:1}" ] ; then
-            test $((cnt++)) -gt 4 && break
-          fi
-        done
-
-        y_caption="invalid filename, found ${nV_fls[l]:0:ix}..."
-        y_caption="${y_caption}, expected ${1:0:ix}..."
+      if [ ${QUERY_NON_NC_FILE:-f} = t ] ; then
+        y_caption="invalid filename, found ${nV_fls[l]}"
         y_tag=M6
         initLog ${nV_fls[l]}
         unset nV_fls[${l}]
@@ -1906,31 +1912,33 @@ getNextSubPath()
 #trace \
     getFilenameBase
 
-    for(( ix = ${#fBase[*]} - 1 ; ix > -1 ; --ix )) ; do
-      if [ ${#fBase[ix]} -gt 0 ] ; then
-        # apply rules, clearings, and test for qc_note files
-        if \
+    if [ ${#fBase[*]} -gt 0 ] ; then
+      for(( ix = ${#fBase[*]} - 1 ; ix > -1 ; --ix )) ; do
+        if [ ${#fBase[ix]} -gt 0 ] ; then
+          # apply rules, clearings, and test for qc_note files
+          if \
 #trace \
-           testLocks ; then
-           unset fBase[ix]
-           local hasChanged=t
-           continue
+            testLocks ; then
+            unset fBase[ix]
+            local hasChanged=t
+            continue
+          fi
         fi
+      done
+
+      # remove empty items
+      test ${hasChanged:-f} = t && fBase=(${fBase[*]})
+
+      # found unlocked variable (constraint: SHOW_CLEAR=f)
+      mkdir -p ${QC_RESULTS}/data/${subPath}
+
+      if [ ${waitCounter} -gt 0 ] ; then
+        displayStatusLine 51 ''
+        waitCounter=0
       fi
-    done
 
-    # remove empty items
-    test ${hasChanged:-f} = t && fBase=(${fBase[*]})
-
-    # found unlocked variable (constraint: SHOW_CLEAR=f)
-    mkdir -p ${QC_RESULTS}/data/${subPath}
-
-    if [ ${waitCounter} -gt 0 ] ; then
-      displayStatusLine 51 ''
-      waitCounter=0
+      return
     fi
-
-    return
   done
 
   # for EOF case
@@ -2203,6 +2211,13 @@ getSelectedPaths()
       fi
     fi
 
+    if [ ${#entries[*]} -eq 0 -a ${QUERY_EMPTY_DIR:-f} = t ] ; then
+      # an annotation is going to be issued later.
+      # write sub-path with a leading  slash.
+      echo "${prjDataIndex} ${currDir#${basePath}/}" >> $pathListFile
+      break
+    fi
+
     # check for a variable selection (which is also a directory)
     for(( s=0 ; $s < $splCount ; ++s )) ; do
       if expr match "$currDir" ".*${SELECT_PATH_LIST[s]}" &> /dev/null
@@ -2211,6 +2226,10 @@ getSelectedPaths()
         for entry in ${entries[*]} ; do
           # check only netCDF files
           test -d $entry -o ".${entry##*.}" != ".nc" && continue
+
+          if [ ${QUERY_NON_NC_FILE:-f} = f ] ; then
+            test -d $entry -o ".${entry##*.}" != ".nc" && continue
+          fi
 
           e=${entry##*/}
 
@@ -2607,7 +2626,7 @@ initLog()
   sTxt[$((ix++))]="3status: ${y_status:-0}"
   y_status=
 
-  local out=${QC_RESULTS}/data/${subPath}/qc_lock_${nV_fls[0]%.nc}.txt
+  local out=${QC_RESULTS}/data/${subPath}/qc_lock_${1}.txt
   echo "Path: ${nextPath}"                  > $out
   echo "File: ${1}"                        >> $out
   echo "${impact}-${tag}: ${y_caption}" >> $out

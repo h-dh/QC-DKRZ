@@ -162,6 +162,9 @@ public:
       std::vector<size_t*> rec_count;
       std::vector<size_t>  rec_index;
 
+      std::vector<size_t>  prev_rec;
+      std::vector<size_t>  prev_leg;
+
 //! NC4: Compression
       std::vector<int> varShuffle;
       std::vector<int> varDeflate;
@@ -458,11 +461,15 @@ void
     return the default. Whether _FV and/or MV are set is inidicated by the
     return array. */
     std::vector<bool>
-      get_FillValueStr(std::string& vName, std::vector<std::string>& );
+      get_FillValueStr(std::string& vName, std::vector<std::string>& vs )
+         { return get_FillValueStr(getVarID(vName), vs); }
+
+    std::vector<bool>
+      get_FillValueStr(int varid, std::vector<std::string>& ) ;
 
   template <typename T>
-    std::vector<bool>
-      get_FillValue(std::string& vName, std::vector<T>&, bool unique=false );
+    bool
+      get_FillValue(std::string& vName, std::vector<T>&, std::vector<char>* mode=0 );
 
 //! Fletcher32 properties from source for netcdf4
     void
@@ -579,9 +586,13 @@ void
     bool
       isDimValid(std::string);
 
-//! Return true if string is a valid dimension
+//! Return true if data is entirely empty (limited) or for the current record
     bool
       isEmptyData(std::string);
+
+  template <typename T>
+    bool
+      isEmptyData(int varid, T x);
 
 //! Return true if the type is index compatible
     bool
@@ -602,6 +613,8 @@ void
 //! Return true, if variable 'vName' depends on unlimited dimension.
     bool
       isVarUnlimited(std::string vName);
+    bool
+      isVarUnlimited(int varid);
 
 //! Return true, if parameter vName is a valid variable name.
     bool

@@ -23,11 +23,11 @@ variables:
       T:units = "K" ;
       T:coordinates = "lat lon xc yc" ;
 
-	  float lat(yc,xc) ;
+   float lat(yc,xc) ;
       lat:long_name = "latitude" ;
       lat:units = "degrees_north" ;
       lat:axis = "X" ;
-      lat:comment= "invalid: wrong axis value, should be Y" ;
+      lat:comment= "wrong axis value, should be Y" ;
 
 // global attributes:
    :Conventions = "CF-1.6" ;

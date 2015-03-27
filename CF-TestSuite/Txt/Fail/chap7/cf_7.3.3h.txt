@@ -29,7 +29,7 @@ variables:
       t:units="K";
       t:cell_methods="area: mean time: mean within days",
                      "time: mean over days time: mean over years";
-      t:comment="cell_methods: note that netcdf concatenates the strings without a space";
+      t:comment="warning: netcdf concatenates the strings without a space";
 
 // global attributes:
    :Conventions = "CF-1.4" ;

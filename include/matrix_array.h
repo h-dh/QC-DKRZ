@@ -28,24 +28,37 @@ public:
   void copy( const ValueException<T> &g, bool clearCounts=false);
   void disableValueExceptionTest(std::string s);
   void enableValueExceptionTest(std::string s);
-  void enableExceptionValue(T *argv, size_t argc, std::string s="");
-
+  void enableExceptionValue(T *argv, size_t argc,
+          std::vector<char>* mode=0, std::string* s=0)
+          { setExceptionValue(argv, argc, mode, s); }
 template<typename T_in>
   void import( const ValueException<T_in> &g);
 
-  void isInfNaN(bool *is, size_t isSz, size_t isBeg, T* arr, size_t arr_sz);
-  void isInf(bool *is, size_t isBeg, size_t isEnd, T* arr, size_t arr_sz);
-  void isNaN(bool *is, size_t isBeg, size_t isEnd, T* arr, size_t arr_sz);
+  bool testInfNaN(bool *is, size_t isSz, size_t isBeg, T* arr, size_t arr_sz);
+  bool testInf(bool *is, size_t isBeg, size_t isEnd, T* arr, size_t arr_sz);
+  bool testNaN(bool *is, size_t isBeg, size_t isEnd, T* arr, size_t arr_sz);
   void resetExceptionCounts(void);
-  void setExceptionValue(T *argv, size_t argc, std::string &s);
+  void setExceptionValue(T *argv, size_t argc,
+         std::vector<char>* mode=0, std::string* s=0);
   void testValueException( T* arr, size_t arr_sz,
          std::vector<size_t> &validRangeBegin ,
          std::vector<size_t> &validRangeEnd );
+  void testValueModesFull(T* arr, size_t arr_sz,
+         std::vector<size_t> &validRangeBegin ,
+         std::vector<size_t> &validRangeEnd);
+  void testValueModesPoint(T* arr, size_t arr_sz,
+         std::vector<size_t> &validRangeBegin ,
+         std::vector<size_t> &validRangeEnd);
+  void testValueModesPoints(T* arr, size_t arr_sz,
+         std::vector<size_t> &validRangeBegin ,
+         std::vector<size_t> &validRangeEnd);
+
   void updateValueException(bool b)
           { update = b; }
 
   // telling events. Note: inf and NaN are counted separately.
   std::vector<T> exceptionValue;  // user provided exception values
+  std::vector<char> exceptionMode; // '=', '<', '>', 'R' (range R: two values)
   std::vector<size_t> exceptionCount;
   size_t countInf;
   size_t countNaN;
@@ -82,6 +95,7 @@ void
 ValueException<T>::clearExceptionValue(void)
 {
     exceptionValue.clear();
+    exceptionMode.clear();
     exceptionCount.clear();
 
     return;
@@ -91,7 +105,8 @@ template<typename T>
 void
 ValueException<T>::copy( const ValueException<T> &g, bool is)
 {
-    exceptionValue = g.exceptionValue ;
+    exceptionValue  = g.exceptionValue ;
+    exceptionMode   = g.exceptionMode;
     exceptionCount = g.exceptionCount ;
     isValueExceptionTest = g.isValueExceptionTest ;
     countInf  = g.countInf;
@@ -168,39 +183,23 @@ ValueException<T>::enableValueExceptionTest(std::string s)
 }
 
 template<typename T>
-void
-ValueException<T>::enableExceptionValue(T *argv, size_t argc, std::string s)
-{
-    clearExceptionValue();
-
-    // init value exceptions
-    if( argc )
-    {
-      for( size_t i=0 ; i < argc ; ++i )
-      {
-        exceptionValue.push_back( argv[i] );
-        exceptionCount.push_back( 0 );
-      }
-    }
-
-    s += " user" ;
-    enableValueExceptionTest(s);
-
-    return;
-}
-
-template<typename T>
 template<typename T_in>
 void
 ValueException<T>::import( const ValueException<T_in> &g)
 {
     exceptionValue.clear();
+    exceptionMode.clear();
+
     for( size_t i=0 ; i < g.exceptionValue.size() ; ++i )
       exceptionValue.push_back(static_cast<T>(g.exceptionValue[i]) ) ;
+    for( size_t i=0 ; i < g.exceptionValue.size() ; ++i )
+      exceptionMode.push_back(static_cast<T>(g.exceptionMode[i]) ) ;
 
     exceptionCount.clear();
     for( size_t i=0 ; i < g.exceptionCount.size() ; ++i )
       exceptionCount.push_back(g.exceptionCount[i]) ;
+
+    isValueExceptionTest = g.isValueExceptionTest ;
 
     countInf  = g.countInf;
     countNaN  = g.countNaN;
@@ -210,107 +209,134 @@ ValueException<T>::import( const ValueException<T_in> &g)
 }
 
 template<typename T>
-void
-ValueException<T>::isInfNaN(bool *is, size_t isSz, size_t isBeg, T* arr, size_t arr_sz)
+bool
+ValueException<T>::testInfNaN(bool *is, size_t isSz, size_t isBeg,
+    T* arr, size_t arr_sz)
 {
-     size_t isEnd= arr_sz - isBeg ;
-     if( isEnd > isSz )
-       isEnd=isSz ;
+  size_t isEnd= arr_sz - isBeg ;
+  if( isEnd > isSz )
+    isEnd=isSz ;
 
-     for( size_t i=0 ; i < isEnd ; ++i )
-       is[i] = false;  // default for is not INF and not NaN
+  for( size_t i=0 ; i < isEnd ; ++i )
+    is[i] = false;  // default for is not INF and not NaN
 
-     if( isValueExceptionTest["inf"] )
-       isInf(is, isBeg, isEnd, arr, arr_sz);
+  bool entire=false;
+  if( isValueExceptionTest["inf"] )
+    if(testInf(is, isBeg, isEnd, arr, arr_sz))
+       entire=true;
 
-     if( isValueExceptionTest["nan"] )
-       isNaN(is, isBeg, isEnd, arr, arr_sz);
+  if( isValueExceptionTest["nan"] )
+    if(testNaN(is, isBeg, isEnd, arr, arr_sz))
+       entire=true;
 
-     return;
+  return entire;
 }
 
 template<typename T>
-void
-ValueException<T>::isInf(bool *is, size_t isBeg, size_t isEnd, T* arr, size_t arr_sz)
+bool
+ValueException<T>::testInf(bool *is, size_t isBeg, size_t isEnd,
+    T* arr, size_t arr_sz)
 {
-     for( size_t i=0 ; i < isEnd ; ++i )
-     {
-#ifndef XLC
-       if( std::isinf( arr[isBeg+i] ) )
-#else
-       if( isinf( arr[isBeg+i] ) )
-#endif
-       {
-         is[i] = true ;
-         ++countInf;
-       }
-     }
+  size_t count=0;
 
-     return;
+  for( size_t i=0 ; i < isEnd ; ++i )
+  {
+#ifndef XLC
+    if( std::isinf( arr[isBeg+i] ) )
+#else
+    if( isinf( arr[isBeg+i] ) )
+#endif
+    {
+      is[i] = true ;
+      ++count;
+    }
+  }
+
+  countInf += count;
+  return count;
 }
 
 template<typename T>
-void
-ValueException<T>::isNaN(bool *is, size_t isBeg, size_t isEnd, T* arr, size_t arr_sz)
+bool
+ValueException<T>::testNaN(bool *is, size_t isBeg, size_t isEnd,
+    T* arr, size_t arr_sz)
 {
-     // NaN compared to itself equals to false
+  // NaN compared to itself equals to false
 
-     // Hope this is sufficient to prevent aggressive
-     // optimisation; volatile should be avoided, because
-     // this would take values from the central storage.
-//     T *p;
+  // Hope this is sufficient to prevent aggressive
+  // optimisation; volatile should be avoided, because
+  // this would take values from the central storage.
 
-     for( size_t i=0 ; i < isEnd ; ++i )
-     {
+  size_t count=0;
+
+  for( size_t i=0 ; i < isEnd ; ++i )
+  {
 #ifndef XLC
-       if( std::isnan( arr[isBeg + i]) )
+    if( std::isnan( arr[isBeg + i]) )
 #else
-       if( isnan( arr[isBeg + i]) )
+    if( isnan( arr[isBeg + i]) )
 #endif
-       {
-         is[i] = true ;
-         ++countNaN;
-       }
-     }
+    {
+      is[i] = true ;
+      ++count;
+    }
+  }
 
-     return;
+  countNaN += count;
+
+  return count;
 }
 
 template<typename T>
 void
 ValueException<T>::resetExceptionCounts(void)
 {
-     countInf=0;
-     countNaN=0;
+  countInf=0;
+  countNaN=0;
 
-    for( size_t i=0 ; i < exceptionCount.size(); ++i)
-       exceptionCount[i]=0;
+  for( size_t i=0 ; i < exceptionCount.size(); ++i)
+    exceptionCount[i]=0;
 
-     return;
+  return;
 }
 
 template<typename T>
 void
-ValueException<T>::setExceptionValue(T *argv, size_t argc, std::string &s)
+ValueException<T>::setExceptionValue(
+  T *argv, size_t argc, std::vector<char>* mode, std::string* s )
 {
-    // init value exceptions
-    if( argc )
+  // mode: if one of the values in argv is not a single point, but
+  //       means something below, then all items of mode must be given.
+  //       Else by default.
+  //   = exact value
+  //   < all values smaller than value
+  //   > all values greater than value
+  //   R range (two successive items)
+
+  // init value exceptions
+  if( argc )
+  {
+    exceptionValue.clear() ;
+    exceptionMode.clear();
+    exceptionCount.clear();
+
+    for( size_t i=0 ; i < argc ; ++i )
     {
-      exceptionValue.clear() ;
-      exceptionCount.clear();
+      if( mode )
+        exceptionMode.push_back( (*mode)[i] ) ;
+      else
+        exceptionMode.push_back( '=' ) ;
 
-      for( size_t i=0 ; i < argc ; ++i )
-      {
-        exceptionValue.push_back( argv[i] ) ;
-        exceptionCount.push_back( 0 );
-      }
-
-      s += " user";
+      exceptionValue.push_back( argv[i] ) ;
+      exceptionCount.push_back( 0 );
     }
 
-    enableValueExceptionTest(s);
+    *s += " user";
+  }
 
-    return;
+  enableValueExceptionTest(*s);
+
+  return;
 }
 
 template<typename T>
@@ -339,143 +365,369 @@ ValueException<T>::testValueException( T* arr, size_t arr_sz,
      return;
    }
 
-   bool is_valid=true;
-   bool notValid=false;
-   size_t isArrSz=1000;
-   bool *isArr = new bool [isArrSz];
-   size_t i=0;
-   size_t count=0;
+   size_t evSz = exceptionValue.size() ;
 
-   // test first block
-   isInfNaN(isArr, isArrSz, i, arr, arr_sz);
-
-   size_t lim=exceptionValue.size();
-
-   // the algorithm must not start with an invalid value
-   for( ; i < arr_sz ; ++i, ++count)
+   bool isPoints=true;
+   size_t e;
+   for( e=0 ; e < evSz ; ++e )
    {
-     is_valid=true;
-
-     // test block by block
-     if( count == isArrSz )
+     if( exceptionMode[e] != '=' )
      {
-       count=0;
-       isInfNaN(isArr, isArrSz, i, arr, arr_sz);
-     }
-
-     if( isArr[count] )
-       is_valid=false;
-     else
-     {
-       for( size_t j=0 ; j < lim ; ++j )
-       {
-         if( arr[i] == exceptionValue[j] )
-         {
-            ++exceptionCount[j];
-            is_valid=false ;
-         }
-       }
-     }
-
-     if( is_valid )
+       isPoints=false;
        break;
-   }
-
-   if( ! is_valid )
-   {
-      // not a single valid value was found
-      // this range will not start a loop
-      validRangeBegin.push_back( 1 );
-      validRangeEnd.push_back( 0 );
-      return;
-   }
-
-   // regular search
-   for( ; i < arr_sz ; )
-   {
-     // Part I: search the begin of a valid range.
-     for( ; i < arr_sz ; ++i, ++count)
-     {
-       is_valid=true;
-
-       // test block by block
-       if( count == isArrSz )
-       {
-         count=0;
-         isInfNaN(isArr, isArrSz, i, arr, arr_sz);
-       }
-
-       if( isArr[count] )
-         is_valid=false;
-       else
-       {
-         for( size_t j=0 ; j < lim ; ++j )
-         {
-           if( arr[i] == exceptionValue[j] )
-           {
-             ++exceptionCount[j];
-             is_valid=false ;
-           }
-         }
-       }
-
-       if( is_valid )
-       {
-         validRangeBegin.push_back(i);
-         ++i;
-         ++count;
-         break;
-       }
      }
+   }
 
-     // Part II: search the begin of an invalid range.
-     for( ; i < arr_sz ; ++i, ++count)
-     {
-       // test block by block
-       if( count == isArrSz )
-       {
-         count=0;
-         isInfNaN(isArr, isArrSz, i, arr, arr_sz);
-       }
+  // note that there is always a default
+  if( isPoints )
+  {
+    if( e == 1 )
+      testValueModesPoint(arr, arr_sz, validRangeBegin, validRangeEnd) ;
+    else
+      testValueModesPoints(arr, arr_sz, validRangeBegin, validRangeEnd) ;
+  }
+  else
+    testValueModesFull(arr, arr_sz, validRangeBegin, validRangeEnd) ;
 
-       notValid=false;
+   return;
+}
 
-       if( isArr[count] )
-         notValid=true;
-       else
-       {
-         for( size_t j=0 ; j < lim ; ++j )
-         {
-           if( arr[i] == exceptionValue[j] )
-           {
+template<typename T>
+void
+ValueException<T>::testValueModesFull(T* arr, size_t arr_sz,
+         std::vector<size_t> &validRangeBegin ,
+         std::vector<size_t> &validRangeEnd)
+{
+   // valid data points are those which are not INf, NaN, _FillValue
+   bool isValid=true;
+
+   // portions of arr are mapped
+   size_t chunk=1024;
+   size_t stateArrSz= (arr_sz > chunk) ? chunk : arr_sz ;
+   bool *isInfNaN = new bool [stateArrSz];
+
+   size_t in_ix=0;
+   size_t in_count=0;
+   size_t i=0 ;  //arr index
+
+   size_t evSz=exceptionValue.size();
+
+   bool isLeg=false;  // legs of valid data
+
+   while ( in_count < arr_sz )
+   {
+      in_ix=0;
+      in_count += stateArrSz;
+
+      bool isAnyInvalid = testInfNaN(isInfNaN, stateArrSz, i, arr, arr_sz) ;
+
+      for( ; i < arr_sz ; ++i, ++in_ix)
+      {
+        if( in_ix == stateArrSz )
+          break;
+
+        // test Inf and NaN block-wise; return true for any
+        if( isAnyInvalid )
+        {
+          // skip leading invalid data points
+          while( in_ix < in_count && isInfNaN[in_ix] )
+            ++in_ix;
+
+          if( in_ix)
+          {
+            if( in_ix == in_count )
+            {
+              i += in_ix;
+              break;  // no data point found in the entire block, try next
+            }
+
+            if(isLeg)
+            {
+              validRangeEnd.push_back(i);
+              i += in_ix;
+            }
+            else
+            {
+              i += in_ix;
+              validRangeBegin.push_back(i);
+              isLeg=true;
+            }
+          }
+        }
+
+        isValid=true;
+
+        // look for exception values, ranges and min/max lobes
+        for( size_t j=0 ; j < evSz ; ++j )
+        {
+          if( exceptionMode[j] == '=' )
+          {
+            if( arr[i] == exceptionValue[j] )
+            {
               ++exceptionCount[j];
-              notValid=true ;
-           }
-         }
-       }
+              isValid=false ;
+              break;
+            }
+          }
+          else if( exceptionMode[j] == '<' )
+          {
+            if( arr[i] < exceptionValue[j] )
+            {
+              ++exceptionCount[j];
+              isValid=false ;
+              break;
+            }
+          }
+          else if( exceptionMode[j] == '>' )
+          {
+            if( arr[i] > exceptionValue[j] )
+            {
+              ++exceptionCount[j];
+              isValid=false ;
+              break;
+            }
+          }
+          else if( exceptionMode[j] == 'R' )
+          {
+            if( arr[i] < exceptionValue[j] || arr[i] > exceptionValue[j+1] )
+            {
+              ++exceptionCount[j];
+              isValid=false ;
+//              break;
+            }
 
-       if( notValid )
-       {
-         validRangeEnd.push_back(i);
-         ++count;
-         ++i;
-         break;
-       }
-     }
+            break;  // as long as R is the last to check
+          }
+        }
+
+        if( isValid )
+        {
+          if( !isLeg )
+          {
+            validRangeBegin.push_back(i);
+            isLeg=true;
+          }
+        }
+        else if( isLeg )
+        {
+          validRangeEnd.push_back(i);
+          isLeg=false;
+        }
+      }
    }
 
-   delete [] isArr ;
+   delete [] isInfNaN ;
 
-   // Special case: arr[last] is valid and arr[last-1] is not.
-   // The 'close' condition below would be true, thus leading to a fault.
-   if( validRangeBegin.size() == validRangeEnd.size() )
-     return;
-
-   // close the last range
-   if( (is_valid && ! notValid) || (is_valid && notValid) )
-      validRangeEnd.push_back( arr_sz );
-
+  // Special case: arr[last] is valid and arr[last-1] is not.
+  // The 'close' condition below would be true, thus leading to a fault.
+  if( validRangeBegin.size() == validRangeEnd.size() )
     return;
+
+  // close the last range
+  if( isValid && isLeg )
+    validRangeEnd.push_back( arr_sz );
+
+  return ;
+}
+
+template<typename T>
+void
+ValueException<T>::testValueModesPoint(T* arr, size_t arr_sz,
+         std::vector<size_t> &validRangeBegin ,
+         std::vector<size_t> &validRangeEnd)
+{
+   // valid data points are those which are not INf, NaN, _FillValue
+   bool isValid=true;
+
+   // portions of arr are mapped
+   size_t chunk=1024;
+   size_t stateArrSz= (arr_sz > chunk) ? chunk : arr_sz ;
+   bool *isInfNaN = new bool [stateArrSz];
+
+   size_t in_ix=0;
+   size_t in_count=0;
+   size_t i=0 ;  //arr index
+
+   bool isLeg=false;  // legs of valid data
+
+   while ( in_count < arr_sz )
+   {
+      in_ix=0;
+      in_count += stateArrSz;
+
+      bool isAnyInvalid = testInfNaN(isInfNaN, stateArrSz, i, arr, arr_sz) ;
+
+      for( ; i < arr_sz ; ++i, ++in_ix)
+      {
+        if( in_ix == stateArrSz )
+          break;
+
+        // test Inf and NaN block-wise; return true for any
+        if( isAnyInvalid )
+        {
+          // skip leading invalid data points
+          while( in_ix < in_count && isInfNaN[in_ix] )
+            ++in_ix;
+
+          if( in_ix)
+          {
+            if( in_ix == in_count )
+            {
+              i += in_ix;
+              break;  // no data point found in the entire block, try next
+            }
+
+            if(isLeg)
+            {
+              validRangeEnd.push_back(i);
+              i += in_ix;
+            }
+            else
+            {
+              i += in_ix;
+              validRangeBegin.push_back(i);
+              isLeg=true;
+            }
+          }
+        }
+
+        isValid=true;
+
+        // the one and only exception value must be of type '='
+        if( arr[i] == exceptionValue[0] )
+        {
+          ++exceptionCount[0];
+          validRangeEnd.push_back(i);
+          isLeg=false;
+
+          isValid=false ;
+        }
+        else if( !isLeg )
+        {
+          validRangeBegin.push_back(i);
+          isLeg=true;
+        }
+      }
+   }
+
+   delete [] isInfNaN ;
+
+  // Special case: arr[last] is valid and arr[last-1] is not.
+  // The 'close' condition below would be true, thus leading to a fault.
+  if( validRangeBegin.size() == validRangeEnd.size() )
+    return;
+
+  // close the last range
+  if( isValid && isLeg )
+    validRangeEnd.push_back( arr_sz );
+
+  return ;
+}
+
+template<typename T>
+void
+ValueException<T>::testValueModesPoints(T* arr, size_t arr_sz,
+         std::vector<size_t> &validRangeBegin ,
+         std::vector<size_t> &validRangeEnd)
+{
+   // valid data points are those which are not INf, NaN, _FillValue
+   bool isValid=true;
+
+   // portions of arr are mapped
+   size_t chunk=1024;
+   size_t stateArrSz= (arr_sz > chunk) ? chunk : arr_sz ;
+   bool *isInfNaN = new bool [stateArrSz];
+
+   size_t in_ix=0;
+   size_t in_count=0;
+   size_t i=0 ;  //arr index
+
+   size_t evSz=exceptionValue.size();
+
+   bool isLeg=false;  // legs of valid data
+
+   while ( in_count < arr_sz )
+   {
+      in_ix=0;
+      in_count += stateArrSz;
+
+      bool isAnyInvalid = testInfNaN(isInfNaN, stateArrSz, i, arr, arr_sz) ;
+
+      for( ; i < arr_sz ; ++i, ++in_ix)
+      {
+        if( in_ix == stateArrSz )
+          break;
+
+        // test Inf and NaN block-wise; return true for any
+        if( isAnyInvalid )
+        {
+          // skip leading invalid data points
+          while( in_ix < in_count && isInfNaN[in_ix] )
+            ++in_ix;
+
+          if( in_ix)
+          {
+            if( in_ix == in_count )
+            {
+              i += in_ix;
+              break;  // no data point found in the entire block, try next
+            }
+
+            if(isLeg)
+            {
+              validRangeEnd.push_back(i);
+              i += in_ix;
+            }
+            else
+            {
+              i += in_ix;
+              validRangeBegin.push_back(i);
+              isLeg=true;
+            }
+          }
+        }
+
+        isValid=true;
+
+        // all exception values must be of type '='
+        for( size_t j=0 ; j < evSz ; ++j )
+        {
+          if( arr[i] == exceptionValue[j] )
+          {
+            ++exceptionCount[j];
+            isValid=false ;
+            break;
+          }
+        }
+
+        if( isValid )
+        {
+          if( !isLeg )
+          {
+            validRangeBegin.push_back(i);
+            isLeg=true;
+          }
+        }
+        else if( isLeg )
+        {
+          validRangeEnd.push_back(i);
+          isLeg=false;
+        }
+      }
+   }
+
+   delete [] isInfNaN ;
+
+  // Special case: arr[last] is valid and arr[last-1] is not.
+  // The 'close' condition below would be true, thus leading to a fault.
+  if( validRangeBegin.size() == validRangeEnd.size() )
+    return;
+
+  // close the last range
+  if( isValid && isLeg )
+    validRangeEnd.push_back( arr_sz );
+
+  return ;
 }
 
 // the MArep class
@@ -768,7 +1020,8 @@ public:
   virtual bool isValid(size_t i0, size_t i1) =0;
   virtual bool isValid(size_t i0, size_t i1, size_t i2) =0;
 
-  virtual void setExceptionValue(void* p=0, size_t sz=0, std::string s="") =0;
+  virtual void setExceptionValue(void* p=0, size_t sz=0,
+                  std::vector<char>* m=0, std::string* s=0) =0;
 
 };
 
@@ -940,6 +1193,8 @@ public:
   size_t index(size_t i0)
             {return i0;}
 
+  bool   initValExceptUpdate(void);
+
   //! Get the state of the data representation
   /*! Return value is false if a data value pointed to by index(es)
       is Inf, NaN, or a user-defined exception value (filling data).
@@ -976,14 +1231,16 @@ public:
       e.g. string="inf NaN" enables both. Number sz user-defined
       exception values (a.k.a. missingValue, _FillValue)
       are stored in array vE.*/
-  void    setExceptionValue(void* p=0, size_t sz=0, std::string s="")
-            { valExp->setExceptionValue(
-                  reinterpret_cast<T*>(p), sz, s);}
+  void    setExceptionValue(void* p=0, size_t sz=0,
+            std::vector<char>* m=0, std::string* s=0)
+            { valExp->setExceptionValue(reinterpret_cast<T*>(p), sz, m, s);}
 
-  void    setExceptionValue(T *vE, size_t sz, std::string s="")
-            { valExp->setExceptionValue(vE, sz, s);}
+  void    setExceptionValue(T *vE, size_t sz,
+            std::vector<char>* m=0, std::string* s=0)
+            { valExp->setExceptionValue(vE, sz, m, s);}
 
-  void    setExceptionValue(std::vector<T> vE, std::string s="");
+  void    setExceptionValue(std::vector<T> vE,
+            std::vector<char>* mode=0, std::string* s=0);
 
   //! Get size of data.
   size_t  size(void) const { return rep->arr_sz;}
@@ -1134,7 +1391,7 @@ MtrxArr<T>::operator=( const MtrxArr<T> &g)
   arr=rep->arr;
 
   // get exception values
-  if( valExp->update )
+  if( initValExceptUpdate() )
   {
     valExp->copy( *g.valExp );
 
@@ -1867,6 +2124,15 @@ MtrxArr<T>::getExceptionValue(std::vector<T> &g, size_t i)
 
 template<typename T>
 bool
+MtrxArr<T>::initValExceptUpdate(void)
+{
+  bool is=valExp->update;
+  valExp->update=false;
+  return is;
+}
+
+template<typename T>
+bool
 MtrxArr<T>::isValid(void)
 {
   // Note: the entire data set is invalid if vRE[0] == 0.
@@ -2012,7 +2278,8 @@ MtrxArr<T>::resize(std::vector<size_t> &d)
 
 template<typename T>
 void
-MtrxArr<T>::setExceptionValue(std::vector<T> e, std::string s)
+MtrxArr<T>::setExceptionValue(std::vector<T> e, std::vector<char>* m,
+    std::string* s)
 {
   size_t sz = e.size();
 
@@ -2022,13 +2289,13 @@ MtrxArr<T>::setExceptionValue(std::vector<T> e, std::string s)
     for( size_t i=0 ; i < sz ; ++i )
       tmpArr[i] = e[i];
 
-    setExceptionValue(tmpArr, sz, s);
+    setExceptionValue(tmpArr, sz, m, s);
     delete [] tmpArr;
   }
   else
   {
     T* p=0;
-    setExceptionValue(p, 0, s);
+    setExceptionValue(p, 0, m, s);
   }
 
   return;

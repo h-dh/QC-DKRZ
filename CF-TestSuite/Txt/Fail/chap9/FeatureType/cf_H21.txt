@@ -49,7 +49,7 @@ variables:
       humidity:coordinates = "time lon lat alt" ;
 
 // global attributes:
-   :comment = "trajectoryProfile" ;
+   :comment = "missing featureType trajectoryProfile" ;
    :Conventions = "CF-1.6" ;
 
 }

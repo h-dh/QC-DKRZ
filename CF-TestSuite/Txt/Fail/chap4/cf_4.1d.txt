@@ -25,7 +25,7 @@ variables:
       lon:axis = "X" ;
       lon:units = "degree_east" ;
       lon:standard_name = "longitude" ;
-      lon:comment = "invalid: data of a coordinate variable must be monotonic" ;
+      lon:comment = "data of a coordinate variable is not monotonic" ;
 
 // global attributes:
    :Conventions = "CF-1.4" ;

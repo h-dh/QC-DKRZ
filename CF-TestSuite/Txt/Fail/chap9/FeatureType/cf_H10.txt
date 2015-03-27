@@ -51,7 +51,7 @@ variables:
       humidity:coordinates = "time lon lat z" ;
 
 // global attributes:
-   :comment = "profile" ;
+   :comment = "missing featureType profile" ;
    :Conventions = "CF-1.6" ;
 
 data:

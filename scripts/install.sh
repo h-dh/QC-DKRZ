@@ -585,7 +585,8 @@ projectLinks()
        "$( ls -l $p/$qDest 2> /dev/null | awk '{print $NF}' )" = "$p/$qTarget" \
      && return
 
-  ln -sf $p/$qTarget $p/$qDest
+  \rm $p/$qDest
+  ln -f $p/$qTarget $p/$qDest
 
   return
 }

@@ -10,7 +10,7 @@ variables:
    float height(h) ;
       height:standard_name = "height" ;
       height:units= "m" ;
-      height:comment = "invalid: missing attribute=positive" ;
+      height:comment = "missing attribute=positive" ;
 
 // global attributes:
    :Conventions = "CF-1.4" ;

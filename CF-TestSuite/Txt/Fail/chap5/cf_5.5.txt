@@ -4,23 +4,23 @@ dimensions:
 
 variables:
    double time(time) ;
-	     time:long_name = "time" ;
-	     time:units = "days since 1970-01-01 00:00:00" ;
+     time:long_name = "time" ;
+     time:units = "days since 1970-01-01 00:00:00" ;
    float lon(time) ;
-      lon:units = "degrees_east" ;
-	     lon:long_name = "longitude" ;
+     lon:units = "degrees_east" ;
+     lon:long_name = "longitude" ;
    float lat(time) ;
-	     lat:long_name = "latitude" ;
-	     lat:units = "degrees_north" ;
+     lat:long_name = "latitude" ;
+     lat:units = "degrees_north" ;
    float O3(time) ;
-      O3:long_name = "ozone concentration" ;
-      O3:units = "1e-9" ;
-      O3:coordinates = "lon lat z" ;
+     O3:long_name = "ozone concentration" ;
+     O3:units = "1e-9" ;
+     O3:coordinates = "lon lat z" ;
 
    float z(time) ;
-      z:standard_name = "height" ;
-      z:units = "km" ;
-      z:comment = "invalid: auxiliary vertical variable without positive attribute" ;
+     z:standard_name = "height" ;
+     z:units = "km" ;
+     z:comment = "auxiliary vertical variable dependent on units=km requires a positive attribute" ;
 
 // global attributes:
    :comment="Trajectories" ;

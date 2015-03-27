@@ -7,28 +7,28 @@ dimensions:
 
 variables:
    float time(time);
-      time:standard_name = "time" ;
-	     time:units="days since 1990-01-01 00:00:00";
-	     time:bounds="time_bnds";
+     time:standard_name = "time" ;
+     time:units="days since 1990-01-01 00:00:00";
+     time:bounds="time_bnds";
    float time_bnds(time,nv);
    float lat(lat) ;
-      lat:units = "degrees_north" ;
-      lat:standard_name = "latitude" ;
-      lat:axis = "Y" ;
-      lat:bounds="lat_bnds";
+     lat:units = "degrees_north" ;
+     lat:standard_name = "latitude" ;
+     lat:axis = "Y" ;
+     lat:bounds="lat_bnds";
    float lat_bnds(lat,nv);
    float lon(lon) ;
-      lon:units = "degrees_east" ;
-      lon:standard_name = "longitude" ;
-      lon:axis = "X" ;
-      lon:bounds="lon_bnds";
+     lon:units = "degrees_east" ;
+     lon:standard_name = "longitude" ;
+     lon:axis = "X" ;
+     lon:bounds="lon_bnds";
    float lon_bnds(lon,nv);
 
    float TS_var(time,lat,lon);
-      TS_var:long_name="surface air temperature variance";
-      TS_var:units="K2";
-      TS_var:cell_methods="area: mean time: variance (interval: 1 hr comment:)" ;
-      TS_var:comment = "invalid: missing text after comment:" ;
+     TS_var:long_name="surface air temperature variance";
+     TS_var:units="K2";
+     TS_var:cell_methods="area: mean time: variance (interval: 1 hr comment:)" ;
+     TS_var:comment = "missing text after <comment:> in cell_methods" ;
 
 // global attributes:
    :comment="Surface air temperature variance" ;

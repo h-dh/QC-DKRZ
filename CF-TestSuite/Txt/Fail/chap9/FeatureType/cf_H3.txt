@@ -47,6 +47,6 @@ variables:
       temp:_FillValue = -999.9 ;
 
 // global attributes:
-   :comment = "timeSeries" ;
+   :comment = "missing featureType timeSeries" ;
    :Conventions = "CF-1.6" ;
 }

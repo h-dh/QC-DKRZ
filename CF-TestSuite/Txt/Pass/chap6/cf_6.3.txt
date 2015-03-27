@@ -6,14 +6,14 @@ dimensions:
 variables:
    float xwind(sigma,lat);
       xwind:long_name="wind";
-	     xwind:coordinates="model_level";
+      xwind:coordinates="model_level";
    float sigma(sigma); // physical height coordinate
-	     sigma:long_name="sigma";
-	     sigma:positive="down";
+      sigma:long_name="sigma";
+      sigma:positive="down";
       sigma:units="Pa";
    int model_level(sigma); // model level number at each height
-	     model_level:long_name="model level number";
-	     model_level:positive="up";
+      model_level:long_name="model level number";
+      model_level:positive="up";
       model_level:units = "1" ;
 
 // global attributes:

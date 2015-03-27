@@ -401,14 +401,14 @@ QC::createVarMetaData(void)
 bool
 QC::entry(void)
 {
-  if( isCheckData )
+   if( isCheckData )
    {
      // read next field
      pIn->entry() ;
 
      for( size_t i=0 ; i < pIn->dataVarIndex.size() ; ++i)
-     
-       Variable &var = pIn->variable[pIn->dataVarIndex[i]];
+     {
+       Variable& var = pIn->variable[ pIn->dataVarIndex[i] ];
 
        if( var.isNoData )
           continue;

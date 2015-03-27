@@ -23,16 +23,15 @@ variables:
       alt:units = "m" ;
       alt:positive = "up" ;
       alt:axis = "Z" ;
-
-   float humidity(obs) ;
-      humidity:standard_name = "specific_humidity" ;
-      humidity:coordinates = "lat lon alt" ;
-      humidity:comment = "Invalid: missing auxiliary coordinate time" ;
-
    float temp(obs) ;
       temp:standard_name = "air_temperature" ;
       temp:units = "Celsius" ;
       temp:coordinates = "time lat lon alt" ;
+
+   float humidity(obs) ;
+      humidity:standard_name = "specific_humidity" ;
+      humidity:coordinates = "lat lon alt" ;
+      humidity:comment = "missing auxiliary coordinate time" ;
 
 // global attributes:
    :featureType = "point";

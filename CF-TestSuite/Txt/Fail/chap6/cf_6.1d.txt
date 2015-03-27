@@ -7,20 +7,20 @@ dimensions:
 
 variables:
    float n_heat_transport(time,lat,lbl);
-	     n_heat_transport:units="W";
-	     n_heat_transport:coordinates="geo_region";
-	     n_heat_transport:standard_name="northward_ocean_heat_transport";
+     n_heat_transport:units="W";
+     n_heat_transport:coordinates="geo_region";
+     n_heat_transport:standard_name="northward_ocean_heat_transport";
    double time(time) ;
-	     time:long_name = "time" ;
-	     time:units = "days since 1990-1-1 0:0:0" ;
+     time:long_name = "time" ;
+     time:units = "days since 1990-1-1 0:0:0" ;
    float lat(lat) ;
-	     lat:long_name = "latitude" ;
-	     lat:units = "degrees_north" ;
-      lat:axis = "Y" ;
+     lat:long_name = "latitude" ;
+     lat:units = "degrees_north" ;
+     lat:axis = "Y" ;
 
    char geo_region(lbl,strlen) ;
-      geo_region:standard_name = "region" ;
-      geo_region:comment = "s_n=region requires names from cf-standardized-region-names" ;
+     geo_region:standard_name = "region" ;
+     geo_region:comment = "standard_name=region requires names from cf-standardized-region-names" ;
 
 // global attributes:
    :comment="Northward heat transport in Atlantic Ocean" ;

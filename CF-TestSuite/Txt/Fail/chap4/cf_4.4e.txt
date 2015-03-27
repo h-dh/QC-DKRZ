@@ -8,7 +8,7 @@ variables:
       var:long_name="data variable";
    double time(time) ;
      time:standard_name = "time" ;
-     time:comment ="invalid: missing units" ;
+     time:comment ="missing units" ;
 
 // global attributes:
    :Conventions = "CF-1.4" ;

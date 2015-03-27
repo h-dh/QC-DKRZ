@@ -26,7 +26,7 @@ variables:
       surface_t:long_name = "surface temperature" ;
       surface_t:coordinates="land_sea";
       surface_t:cell_methods="area: mean land";
-      surface_t:comment = "invalid: missing key-word where" ;
+      surface_t:comment = "missing key-word <where> in cell_methods" ;
 
 // global attributes:
    :Conventions = "CF-1.4" ;

@@ -88,7 +88,8 @@ public:
 //! Set mutable layer layout.
   virtual void enableMutableLayerDims(void) =0;
 
-  virtual void enableExceptionValue(void*, size_t , std::string="" ) =0;
+  virtual void enableExceptionValue(void*, size_t ,
+              std::vector<char>* mode=0, std::string* s=0 ) =0;
 
 /*
 //! Error messages are written to a file. Exits immediately.
@@ -378,9 +379,10 @@ the top-most layer, then it is reset to the first one.*/
   void    disableCellShape(void){hasShape=true;}
   void    enableCellShape(void){hasShape=false;}
 
-  void    enableExceptionValue(void* p, size_t sz, std::string s)
+  void    enableExceptionValue(void* p, size_t sz,
+              std::vector<char>* mode=0, std::string* s=0)
               { cellValue.valExp->enableExceptionValue
-                    (reinterpret_cast<T*>(p), sz, s );}
+                    (reinterpret_cast<T*>(p), sz, mode, s );}
 
 //! Mutable layer layout.
   void    enableMutableLayerDims(void) {isImmutableLayer=false;}

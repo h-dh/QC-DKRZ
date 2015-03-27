@@ -11,7 +11,7 @@ variables:
       height:positive= "up" ;
       height:units= "m" ;
       height:axis= "z" ;
-      height:comment = "invalid: axis not allowed because of auxiliary coordinate" ;
+      height:comment = "axis is not allowed because height is an auxiliary coordinate" ;
 
 // global attributes:
    :Conventions = "CF-1.4" ;

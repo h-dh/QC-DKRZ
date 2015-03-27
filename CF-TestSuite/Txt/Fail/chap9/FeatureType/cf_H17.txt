@@ -27,7 +27,7 @@ variables:
       pressure:axis = "Z" ;
 
 // global attributes:
-   :comment = "timeSeriesProfile" ;
+   :comment="Time series of profiles from a set of locations stored in an orthogonal multidimensional array representation." ;
    :Conventions = "CF-1.6" ;
 
 data:

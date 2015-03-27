@@ -65,14 +65,14 @@ class CF : public IObj
   void   chap3_5_reco(void);    // description of data
 
   void   chap4(void);                  // Coordinate Types
-  void   chap4(Variable&);      // Coordinate Types
+  bool   chap4(Variable&);      // Coordinate Types
   void   chap4_reco(void);      // coordinate types
   bool   chap4_1(Variable&);    // lat/lon coordinate
   bool   chap4_3(Variable&);    // vertical coordinate
   bool   chap4_3_1(Variable&);  // vertical dimensional coord
   void   chap4_3_2(void);       // vertical dimensionless coord
   bool   chap4_3_2(Variable&, std::vector<std::string>&, std::vector<std::string>&,
-                   int ft_jx, int sn_jx, int units_jx);
+                   int ft_jx, int sn_jx);
   // check of standard_name vs. formula_terms (case: dimless vertical coord)
   bool   chap4_3_2_checkSNvsFT( Variable& var,
             std::vector<std::string>& valid_sn,
@@ -88,7 +88,7 @@ class CF : public IObj
   void   chap4_3_2_verify_FT(Variable&, int, std::string &reqFormTerms,
             int att_ft_ix, std::vector<std::string> &fTerms,
             std::vector<std::pair<std::string, std::string> >& p_found_ft);
-  void   chap4_4(Variable&);    // time
+  bool   chap4_4(Variable&);    // time
   void   chap4_4a_reco(Variable&);   // ref time 0
   void   chap4_4b_reco(void);   // year and month
   bool   chap4_4_1(Variable&);  // calendar
@@ -111,13 +111,13 @@ class CF : public IObj
   void   chap7(void);    // cells
   void   chap7_3_inqBounds(Variable&,  std::vector<std::string>& name,
             std::vector<std::string>& method, bool );
-  bool   chap7_cellMethods_Comment(std::string&, Variable&) ;
-  bool   chap7_cellMethods_Method(std::string&, Variable&) ;
-  bool   chap7_cellMethods_Name(std::string&, Variable&) ;
   void   chap7_1(void);  // pertains to both boundaries and climatologies
   void   chap7_1_reco(Variable&);   // cell boundaries
   void   chap7_2(void);  // cell measure
   void   chap7_3(void);  // cell methods
+  bool   chap7_3_cellMethods_Comment(std::string&, Variable&) ;
+  bool   chap7_3_cellMethods_Method(std::string&, Variable&) ;
+  bool   chap7_3_cellMethods_Name(std::string&, Variable&) ;
   void   chap7_3b_reco(Variable&, std::vector<std::string> &dim );
   bool   chap7_3_3(std::string& method, Variable&, std::string mode) ;
   bool   chap7_3_4a(std::string&) ;
@@ -171,10 +171,10 @@ class CF : public IObj
   std::string
          captVar(std::string v, std::string&, std::string&);
 
-  void   checkCoordVarValues(Variable&, bool testMonotony=true) ;
+  void   checkCoordinateValues(Variable&, bool testMonotony=true) ;
 template <typename T>
-  void   checkCoordVarValues(Variable&, bool, T);
-  void   checkCoordVarFillValueAtt(Variable&) ;
+  void   checkCoordinateValues(Variable&, bool, T);
+  void   checkCoordinateFillValueAtt(Variable&) ;
   void   checkGroupRelation(void);
 
   // variables are dimension of another variable

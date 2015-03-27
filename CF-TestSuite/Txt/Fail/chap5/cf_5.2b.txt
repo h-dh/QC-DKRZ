@@ -19,15 +19,15 @@ variables:
    float p(p) ;
       p:long_name = "pressure level" ;
       p:units = "hPa" ;
-	  float lon(yc,xc) ;
+   float lon(yc,xc) ;
       lon:long_name = "longitude" ;
       lon:units = "degrees_east" ;
 
-	  float lat(yc,xc) ;
+   float lat(yc,xc) ;
       lat:long_name = "latitude" ;
       lat:units = "degrees_north" ;
       lat:coordinates = "yc xc" ;
-      lat:comment = "invalid: attribute coordinates must not appear here" ;
+      lat:comment = "attribute coordinates must not appear in auxiliary coordinates" ;
 
 // global attributes:
    :comment="Two-dimensional coordinate variables" ;

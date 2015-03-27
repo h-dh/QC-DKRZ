@@ -30,7 +30,7 @@ variables:
       alt:axis = "Z" ;
    char station_name(station, name_strlen) ;
       station_name:long_name = "station name" ;
-      station_name:comment = "recommendation: provide attribute cf_role" ;
+      station_name:comment = "recommendation: provision of attribute cf_role" ;
 
 // global attributes:
    :featureType = "timeSeries";

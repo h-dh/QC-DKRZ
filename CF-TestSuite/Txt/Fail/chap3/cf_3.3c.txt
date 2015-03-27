@@ -6,7 +6,7 @@ variables:
    float q1(time);
       q1:standard_name = "specific_humidity standard_error status_flag";
       q1:units = "g/g";
-      q1:comment ="standard name: too many modifiers" ;
+      q1:comment ="standard name has too many modifiers" ;
 
 // global attributes:
    :Conventions = "CF-1.4" ;

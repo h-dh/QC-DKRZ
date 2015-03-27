@@ -4,17 +4,17 @@ dimensions:
 
 variables:
    double var ;
-      var:units="m" ;
-      var:long_name="data variable";
-      var:coordinates="lat";
+     var:units="m" ;
+     var:long_name="data variable";
+     var:coordinates="lat";
    float lat;
-    	 lat:standard_name = "latitude";
-	     lat:units = "degrees_north";
-	     lat:bounds = "lat_bnds";
+     lat:standard_name = "latitude";
+     lat:units = "degrees_north";
+     lat:bounds = "lat_bnds";
 
    float lat_bnds(nv);
-      lat_bnds:standard_name = "longitude";
-      lat_bnds:comment = "different standard_name compared to lat" ;
+     lat_bnds:standard_name = "longitude";
+     lat_bnds:comment = "different standard_name compared to lat" ;
 
 // global attributes:
    :comment="Cells in a non-rectangular grid" ;

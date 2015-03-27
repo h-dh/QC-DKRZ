@@ -39,7 +39,7 @@ variables:
       NO3:coordinates = "time lon lat z" ;
 
 // global attributes:
-   :comment = "trajectory" ;
+   :comment = "missing featureType trajectory" ;
    :Conventions = "CF-1.6" ;
 
 data:

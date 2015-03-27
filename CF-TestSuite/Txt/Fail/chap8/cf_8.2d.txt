@@ -7,7 +7,7 @@ dimensions:
 
 variables:
    float landsoilt(depth,landpoint);
-	    landsoilt:long_name="soil temperature";
+     landsoilt:long_name="soil temperature";
      landsoilt:units="K";
    float depth(depth);
      depth:standard_name = "height" ;

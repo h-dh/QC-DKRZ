@@ -8,7 +8,7 @@ CPPx  =  check_CORDEX_standard-table.x convert_CF-standard-names.x \
          getNC_att.x getStatus.x syncFiles.x testValidNC.x
 
 UTIL_SOURCE = hdhC.cpp ReadLine.cpp Split.cpp Statistics.cpp GetOpt_hdh.cpp
-UTIL_HEADER = hdhC.h readline.h split.h statistics.h getopt_hdh.h
+UTIL_HEADER = hdhC.h matrix_array.h readline.h split.h statistics.h getopt_hdh.h
 
 BASE_SOURCE = Annotation.cpp Base.cpp BraceOP.cpp Date.cpp \
    InFile.cpp NcAPI.cpp TimeControl.cpp Variable.cpp

@@ -273,7 +273,7 @@ Variable::inqDataVar(void)
           && ! pIn->variable[pIn->varSz].isValidAtt("featureType") )
       indication_DV += 10 ;
 */
-  
+
     // look for attributes which should be asssociated only
     // to data varriables, although we know real files better
     if( isValidAtt("axis") )
@@ -537,8 +537,9 @@ Variable::setDefaultException(T v, void *vmv)
 
    if( isInfNan )
    {
-     pGM->enableExceptionValue( (void*) &v, 1, "inf nan") ;
-     mv->valExp->enableExceptionValue( &v, 1, "inf nan") ;
+     std::string s("inf nan");
+     pGM->enableExceptionValue( (void*) &v, 1, 0, &s) ;
+     mv->valExp->enableExceptionValue( &v, 1, 0, &s) ;
    }
    else
    {
@@ -564,8 +565,9 @@ Variable::setExceptions( T* v, MtrxArr<T> *mv)
 
     if( isInfNan )
     {
-      mv->valExp->enableExceptionValue( v, 1, "inf nan") ;
-      pGM->enableExceptionValue( (void*)v, 1, "inf nan") ;
+      std::string s("inf nan");
+      mv->valExp->enableExceptionValue( v, 1, 0, &s) ;
+      pGM->enableExceptionValue( (void*)v, 1, 0, &s) ;
     }
     else
     {
@@ -577,8 +579,9 @@ Variable::setExceptions( T* v, MtrxArr<T> *mv)
   }
   else if( isInfNan )
   {
-    mv->valExp->enableExceptionValue( 0, 0, "inf nan") ;
-    pGM->enableExceptionValue( (void*)0, 0, "inf nan") ;
+    std::string s("inf nan");
+    mv->valExp->enableExceptionValue( 0, 0, 0, &s) ;
+    pGM->enableExceptionValue( (void*)0, 0, 0, &s) ;
   }
 
 /*

@@ -31,7 +31,7 @@ variables:
    char station_name(station, name_strlen) ;
       station_name:long_name = "station name" ;
       station_name:cf_role = "timeseries";
-      station_name:comment = "Invalid: misspelled cf_role value" ;
+      station_name:comment = "value of cf_role is misspelled" ;
 
 // global attributes:
    :featureType = "timeSeries";

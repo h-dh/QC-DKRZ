@@ -26,7 +26,7 @@ variables:
       asdf:long_name = "surface temperature" ;
       asdf:coordinates="land_sea";
       asdf:cell_methods="area: mean where land_sea over land_sea";
-      asdf:comment ="invalid: over typevar: 1st dim of land_sea must not exceed one" ;
+      asdf:comment ="<over> typevar=<land_sea>: 1st dim of land_sea must not exceed one" ;
 
 // global attributes:
    :Conventions = "CF-1.4" ;

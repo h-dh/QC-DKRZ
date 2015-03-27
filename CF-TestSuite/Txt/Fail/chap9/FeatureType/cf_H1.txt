@@ -34,6 +34,6 @@ variables:
       temp:coordinates = "time lat lon alt" ;
 
 // global attributes:
-   :comment = "point";
+   :comment = "missing featureType point";
    :Conventions = "CF-1.6" ;
 }

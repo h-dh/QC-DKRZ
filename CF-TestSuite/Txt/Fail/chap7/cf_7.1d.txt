@@ -6,19 +6,19 @@ dimensions:
 
 variables:
    float lat(jmax,imax);
-    	 lat:long_name = "latitude";
-	     lat:units = "degrees_north";
-	     lat:bounds = "lat_bnds";
+     lat:long_name = "latitude";
+     lat:units = "degrees_north";
+     lat:bounds = "lat_bnds";
    float lon(jmax,imax);
-	     lon:long_name = "longitude";
-	     lon:units = "degrees_east";
+     lon:long_name = "longitude";
+     lon:units = "degrees_east";
    double T(imax,jmax);
-       T:units="K";
-       T:long_name="temperature";
-       T:coordinates="lat lon";
+     T:units="K";
+     T:long_name="temperature";
+     T:coordinates="lat lon";
 
    float lat_bnds(imax,jmax,nv);
-      lat_bnds:comment = "different sub-set of dimensions which is swapped" ;
+     lat_bnds:comment = "different sub-set of dimensions which is swapped" ;
 
 // global attributes:
    :comment="Cells in a non-rectangular grid" ;

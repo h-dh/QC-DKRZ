@@ -9,7 +9,7 @@ variables:
    double time(time) ;
      time:long_name = "time" ;
      time:units = "days 1990-1-1 0:0:0" ;
-     time:comment = "invalid: missing key-word since" ;
+     time:comment = "missing key-word=since in units" ;
 
 // global attributes:
    :Conventions = "CF-1.4" ;

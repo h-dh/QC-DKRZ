@@ -31,7 +31,7 @@ variables:
       lev:standard_name = "atmosphere_hybrid_sigma_pressure_coordinate" ;
       lev:formula = "p = ap + b*ps" ;
       lev:formula_terms = "ap: ap b: b ps: sap" ;
-      lev:comment="Reco: deprecated unitslevel" ;
+      lev:comment="Reco: deprecated units" ;
 
 // global attributes:
    :comment="Atmosphere sigma coordinate" ;

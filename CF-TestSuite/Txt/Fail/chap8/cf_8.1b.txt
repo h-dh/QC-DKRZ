@@ -6,9 +6,9 @@ dimensions:
 variables:
    float t(lat,lon);
      t:long_name = "asdf" ;
-   	 t:scale_factor = 1.d;
+     t:scale_factor = 1.d;
      t:add_offset = 0.d;
-     t:comment= "invalid: scaleFactor and add_offset must type float or double" ;
+     t:comment= "scaleFactor and add_offset must be type float or double" ;
 
 // global attributes:
    :comment="packed data" ;

@@ -27,7 +27,7 @@ variables:
    char land_sea(ls,maxlen);
       land_sea:standard_name="air_pressure";
       land_sea:units = "Pa" ;
-      land_sea:comment = "invalid: standard_name must be area_type" ;
+      land_sea:comment = "standard_name must be area_type" ;
 
 // global attributes:
    :Conventions = "CF-1.4" ;

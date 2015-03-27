@@ -11,7 +11,7 @@ variables:
      time:units = "days since 1-1-1 0:0:0" ;
      time:calendar = "126 kyr B.P." ;
      time:month_lengths = 31 ;
-     time:comment ="invalid: month-lengths requires 12 elements" ;
+     time:comment ="month-lengths requires 12 elements" ;
 
 // global attributes:
    :Conventions = "CF-1.4" ;

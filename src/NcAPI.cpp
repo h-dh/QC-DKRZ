@@ -2647,6 +2647,9 @@ NcAPI::getData(int varid, size_t rec, size_t leg)
       status = nc_get_vara_schar(ncid, varid,
                 layout.rec_start[varid], curr_count,
                   rec_val_schar[varid].arr );
+
+      if( !status )
+        rec_val_schar[varid].testValueException();
     }
     break;
     case NC_CHAR:
@@ -2657,6 +2660,9 @@ NcAPI::getData(int varid, size_t rec, size_t leg)
       status = nc_get_vara_text(ncid, varid,
                 layout.rec_start[varid], curr_count,
                   rec_val_text[varid].arr );
+
+      if( !status )
+        rec_val_text[varid].testValueException();
     }
     break;
     case NC_SHORT:
@@ -2667,6 +2673,9 @@ NcAPI::getData(int varid, size_t rec, size_t leg)
       status = nc_get_vara_short(ncid, varid,
                 layout.rec_start[varid], curr_count,
                   rec_val_short[varid].arr );
+
+      if( !status )
+        rec_val_short[varid].testValueException();
     }
     break;
     case NC_INT:
@@ -2677,6 +2686,9 @@ NcAPI::getData(int varid, size_t rec, size_t leg)
       status = nc_get_vara_int(ncid, varid,
                 layout.rec_start[varid], curr_count,
                   rec_val_int[varid].arr );
+
+      if( !status )
+        rec_val_int[varid].testValueException();
     }
     break;
     case NC_FLOAT:
@@ -2687,6 +2699,9 @@ NcAPI::getData(int varid, size_t rec, size_t leg)
       status = nc_get_vara_float(ncid, varid,
                 layout.rec_start[varid], curr_count,
                   rec_val_float[varid].arr );
+
+      if( !status )
+        rec_val_float[varid].testValueException();
     }
     break;
     case NC_DOUBLE:
@@ -2697,6 +2712,9 @@ NcAPI::getData(int varid, size_t rec, size_t leg)
       status = nc_get_vara_double(ncid, varid,
                 layout.rec_start[varid], curr_count,
                   rec_val_double[varid].arr );
+
+      if( !status )
+        rec_val_double[varid].testValueException();
     }
     break;
     case NC_UBYTE:
@@ -2707,6 +2725,9 @@ NcAPI::getData(int varid, size_t rec, size_t leg)
       status = nc_get_vara_uchar(ncid, varid,
                 layout.rec_start[varid], curr_count,
                   rec_val_uchar[varid].arr );
+
+      if( !status )
+        rec_val_uchar[varid].testValueException();
     }
     break;
     case NC_USHORT:
@@ -2717,6 +2738,9 @@ NcAPI::getData(int varid, size_t rec, size_t leg)
       status = nc_get_vara_ushort(ncid, varid,
                 layout.rec_start[varid], curr_count,
                   rec_val_ushort[varid].arr );
+
+      if( !status )
+        rec_val_ushort[varid].testValueException();
     }
     break;
     case NC_UINT:
@@ -2727,6 +2751,9 @@ NcAPI::getData(int varid, size_t rec, size_t leg)
       status = nc_get_vara_uint(ncid, varid,
                 layout.rec_start[varid], curr_count,
                   rec_val_uint[varid].arr );
+
+      if( !status )
+        rec_val_uint[varid].testValueException();
     }
     break;
     case NC_UINT64:
@@ -2737,6 +2764,9 @@ NcAPI::getData(int varid, size_t rec, size_t leg)
       status = nc_get_vara_ulonglong(ncid, varid,
                 layout.rec_start[varid], curr_count,
                   rec_val_ulonglong[varid].arr );
+
+      if( !status )
+        rec_val_ulonglong[varid].testValueException();
     }
     break;
     case NC_INT64:
@@ -2747,6 +2777,9 @@ NcAPI::getData(int varid, size_t rec, size_t leg)
       status = nc_get_vara_longlong(ncid, varid,
                 layout.rec_start[varid], curr_count,
                   rec_val_longlong[varid].arr );
+
+      if( !status )
+        rec_val_longlong[varid].testValueException();
     }
     break;
     case NC_STRING:
@@ -2761,8 +2794,10 @@ NcAPI::getData(int varid, size_t rec, size_t leg)
       status = nc_get_vara_string(ncid, varid,
                 layout.rec_start[varid], curr_count,
                   rec_val_string[varid].arr );
+
+//      if( !status )
+//      rec_val_string.testValueException();
     }
-    break;
   }
 
   if(status)
@@ -2815,8 +2850,13 @@ NcAPI::getData(MtrxArr<ToT> &to, int varid, size_t rec, size_t leg)
     return rv;
 
   // Note: getData allocates memory pointed by rec_val_'type'
-  (void) getData(varid, rec, leg);
+  if( layout.prev_rec[varid] != rec || layout.prev_leg[varid] != leg )
+  {
+    (void) getData(varid, rec, leg);
 
+    layout.prev_rec[varid] = rec ;
+    layout.prev_leg[varid] = leg ;
+  }
   // Note: is already in data mode
 
   switch ( layout.varType[varid] )
@@ -2877,7 +2917,7 @@ NcAPI::getData(MtrxArr<ToT> &to, int varid, size_t rec, size_t leg)
     break;
   }
 
-  to.testValueException();
+//  to.testValueException();
 
   rv=to[0];
   return rv;
@@ -3103,7 +3143,7 @@ NcAPI::getDimSize(std::string dName)
 }
 
 std::vector<bool>
-NcAPI::get_FillValueStr(std::string& vName, std::vector<std::string>& fV)
+NcAPI::get_FillValueStr(int vid, std::vector<std::string>& fV)
 {
     // Get fill values
     // If no attribute defined fill-value is available, then _FV and/or MV
@@ -3112,21 +3152,20 @@ NcAPI::get_FillValueStr(std::string& vName, std::vector<std::string>& fV)
    fV.clear();
 
    std::vector<bool> isR;
-   isR.push_back(false);
-   isR.push_back(false);
-   isR.push_back(false);
-
-   fV.push_back("");
-   fV.push_back("");
-   fV.push_back("");
-
-   nc_type type;
-
-   int vid;
-   if( (vid=getVarID(vName)) > -1 )
-     type = layout.varType[vid];
-   else
+   if( vid < 0 )
      return isR;
+
+   std::string vName(layout.varidMap[vid]);
+
+   isR.push_back(false);
+   isR.push_back(false);
+   isR.push_back(false);
+
+   fV.push_back("");
+   fV.push_back("");
+   fV.push_back("");
+
+   nc_type type = layout.varType[vid];
 
    std::string str_FV("_FillValue");
    std::string str_MV("missing_value");
@@ -3183,38 +3222,51 @@ NcAPI::get_FillValueStr(std::string& vName, std::vector<std::string>& fV)
 }
 
 template <typename T>
-std::vector<bool>
-NcAPI::get_FillValue(std::string& vName, std::vector<T>& fV, bool unique)
+bool
+NcAPI::get_FillValue(std::string& vName,
+   std::vector<T>& fV, std::vector<char>* mode)
 {
     // Get fill values
     // If no attribute defined fill-value is available, then _FV and/or MV
     // will return the default. This is also indicated by a false return value.
 
    fV.clear();
+   mode->clear();
 
-   std::vector<bool> isR;
-   isR.push_back(false);
-   isR.push_back(false);
-   isR.push_back(false);
-
+   bool isR=false;
    nc_type type;
 
    int vid;
    if( (vid=getVarID(vName)) > -1 )
      type = layout.varType[vid];
    else
+   {
+     mode=0;
      return isR;
+   }
 
    std::string str_FV("_FillValue");
    std::string str_MV("missing_value");
+   std::string str_VN("valid_min");
+   std::string str_VX("valid_max");
+   std::string str_VR("valid_range");
 
    int aid_FV = getAttID(str_FV, vid);
    int aid_MV = getAttID(str_MV, vid);
+   int aid_VN = getAttID(str_VN, vid);
+   int aid_VX = getAttID(str_VX, vid);
+   int aid_VR = getAttID(str_VR, vid);
 
    bool is=false;
    if( aid_FV > -1 && getAttType(str_FV, vName) != type )
      is=true;
    if( aid_MV > -1 && getAttType(str_MV, vName) != type )
+     is=true;
+   if( aid_VN > -1 && getAttType(str_VN, vName) != type )
+     is=true;
+   if( aid_VX > -1 && getAttType(str_VX, vName) != type )
+     is=true;
+   if( aid_VR > -1 && getAttType(str_VR, vName) != type )
      is=true;
 
    if( is )
@@ -3227,45 +3279,62 @@ NcAPI::get_FillValue(std::string& vName, std::vector<T>& fV, bool unique)
      checkType.push_back("meta");
 
      exceptionHandling(key, capt, "", checkType);
+     mode=0;
      return isR;
    }
-   else
-     is=false;
 
    T x;
    getDefaultFillValue(type, x);
    fV.push_back(x);
-   if( !unique )
-   {
-     fV.push_back(x); // preset with default
-     fV.push_back(x); // -"-
-   }
-
-   isR[2] = true;
+   mode->push_back('=');
 
    if( aid_FV > -1 )
    {
-      std::vector<char> vc;
-      getAttValues(vc, str_FV, vName) ;
-      if(unique && vc[0] != fV[0] )
-        fV.push_back(vc[0]);
-      else
-        fV[0] = vc[0];
-
-      isR[0]=true;
+      std::vector<T> vv;
+      getAttValues(vv, str_FV, vName) ;
+      fV.push_back(vv[0]);
+      mode->push_back('=');
+      isR=true;
    }
 
    if( aid_MV > -1 )
    {
-      std::vector<char> vc;
-      getAttValues(vc, str_MV, vName) ;
-      if(unique && vc[0] != fV[0] && vc[0] != fV[1])
-        fV.push_back(vc[0]);
-      else
-        fV[1] = vc[0];
-
-      isR[1]=true;
+      std::vector<T> vv;
+      getAttValues(vv, str_MV, vName) ;
+      fV.push_back(vv[0]);
+      mode->push_back('=');
+      isR=true;
    }
+
+   if( aid_VN > -1 )
+   {
+      std::vector<T> vv;
+      getAttValues(vv, str_VN, vName) ;
+      fV.push_back(vv[0]);
+      mode->push_back('<');
+      isR=true;
+   }
+
+   if( aid_VX > -1 )
+   {
+      std::vector<T> vv;
+      getAttValues(vv, str_VX, vName) ;
+      fV.push_back(vv[0]);
+      mode->push_back('>');
+      isR=true;
+   }
+
+   if( aid_VR > -1 )
+   {
+      std::vector<T> vv;
+      getAttValues(vv, str_VR, vName) ;
+      fV.push_back(vv[0]);
+      fV.push_back(vv[1]);
+      mode->push_back('R');
+      mode->push_back('R');
+      isR=true;
+   }
+
 
    return isR;
 }
@@ -4136,9 +4205,73 @@ NcAPI::isEmptyData(std::string vName)
   if( layout.noData[varid] )
     return true;
 
-  bool is=true;
+  if( layout.varTypeMap[vName] == NC_FLOAT )
+  {
+     float x=0.;
+     return isEmptyData(varid, x);
+  }
+  if( layout.varTypeMap[vName] == NC_DOUBLE )
+  {
+     double x=0.;
+     return isEmptyData(varid, x);
+  }
+  if( layout.varTypeMap[vName] == NC_INT )
+  {
+     int x=0;
+     return isEmptyData(varid, x);
+  }
+  if( layout.varTypeMap[vName] == NC_CHAR )
+  {
+     char x=0;
+     return isEmptyData(varid, x);
+  }
+  if( layout.varTypeMap[vName] == NC_BYTE )
+  {
+     signed char x=0;
+     return isEmptyData(varid, x);
+  }
+  if( layout.varTypeMap[vName] == NC_SHORT )
+  {
+     short x=0;
+     return isEmptyData(varid, x);
+  }
+  if( layout.varTypeMap[vName] == NC_UBYTE )
+  {
+     unsigned char x=0;
+     return isEmptyData(varid, x);
+  }
+  if( layout.varTypeMap[vName] == NC_USHORT )
+  {
+     unsigned short x=0;
+     return isEmptyData(varid, x);
+  }
+  if( layout.varTypeMap[vName] == NC_UINT )
+  {
+     unsigned int x=0;
+     return isEmptyData(varid, x);
+  }
+  if( layout.varTypeMap[vName] == NC_INT64 )
+  {
+     long long x=0;
+     return isEmptyData(varid, x);
+  }
+  if( layout.varTypeMap[vName] == NC_UINT64 )
+  {
+     unsigned long long x=0;
+     return isEmptyData(varid, x);
+  }
 
-  if( isVarUnlimited(vName) )
+  return false ;
+}
+
+template <typename T>
+bool
+NcAPI::isEmptyData(int varid, T x)
+{
+  bool is=true;
+  std::string vName(layout.varidMap[varid]);
+
+  if( isVarUnlimited(varid) )
   {
     if( getNumOfRecords() )
       is = false;
@@ -4180,7 +4313,7 @@ NcAPI::isEmptyData(std::string vName)
                   rec_val_text[varid].arr );
 
         std::vector<std::string> fV;
-        std::vector<bool> isFV( get_FillValueStr(vName, fV) );
+        std::vector<bool> isFV( get_FillValueStr(varid, fV) );
 
         for(size_t i=0 ; i < simpleCount ; ++i )
         {
@@ -4215,7 +4348,7 @@ NcAPI::isEmptyData(std::string vName)
                   rec_val_string[varid].arr );
 
         std::vector<std::string> fV;
-        std::vector<bool> isFV( get_FillValueStr(vName, fV) );
+        std::vector<bool> isFV( get_FillValueStr(varid, fV) );
 
         for(size_t i=0 ; i < simpleCount ; ++i )
         {
@@ -4239,17 +4372,11 @@ NcAPI::isEmptyData(std::string vName)
     }
     else
     {
-      MtrxArr<double> ma;
-      getData(ma, vName );
+      MtrxArr<T> ma;
+      getData(ma, varid );
 
-      for(long unsigned int k=0 ; k < ma.validRangeBegin.size() ; k++ )
-      {
-        for(size_t i=ma.validRangeBegin[k] ; i < ma.validRangeEnd[k] ; ++i)
-        {
-          is = false ;
-          break;
-        }
-      }
+      if( ma.validRangeBegin.size() )
+        is=false;
     }
   }
 
@@ -4296,6 +4423,15 @@ NcAPI::isVarUnlimited(std::string vName)
     if( layout.varNames[i] == vName )
       if( hasEffVarUnlimitedDim[i] )
          return true;
+
+  return false;
+}
+
+bool
+NcAPI::isVarUnlimited(int varid)
+{
+  if( hasEffVarUnlimitedDim[varid] )
+    return true;
 
   return false;
 }
@@ -4400,6 +4536,9 @@ NcAPI::layoutVarDataPushes(std::string& vName, nc_type type)
     layoutVarDataPushesStr(rec_val_string.back(), vName);
   }
 
+  layout.prev_rec.push_back( std::string::npos ) ;
+  layout.prev_leg.push_back( std::string::npos ) ;
+
   // push_back with zero to stay in sync with varid indexes
   layoutVarDataPushesVoid(type);
 
@@ -4413,7 +4552,8 @@ NcAPI::layoutVarDataPushesStr(MtrxArr<char*>& ma, std::string& vName)
 
   std::vector<char*> fMV;
   fMV.push_back(p);
-  ma.setExceptionValue(fMV, "inf NaN");
+  std::string s("inf NaN");
+  ma.setExceptionValue(fMV, 0,  &s);
 
   return;
 }
@@ -4423,9 +4563,12 @@ void
 NcAPI::layoutVarDataPushesT(MtrxArr<T>& ma, std::string& vName)
 {
   std::vector<T> fMV;
+  std::vector<char> mode;
 
-  (void) get_FillValue(vName, fMV, true) ;
-  ma.setExceptionValue(fMV, "inf NaN");
+  // could return p_mode==0
+  (void) get_FillValue(vName, fMV, &mode) ;
+  std::string s("inf NaN");
+  ma.setExceptionValue(fMV, &mode, &s);
 
   return;
 }

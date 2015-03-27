@@ -6,4 +6,4 @@ ln -sf Inquiry_fnct/inquiry_true.cpp inquiry_fnct.cpp
 ln -sf ModifyNc_fnct/writeTime.cpp modify_fnct.cpp
 
 
-QC-0.4.1/bin/modifyNc.x  -m cf_4.1b.nc
+QC-0.4.1/bin/modifyNc.x  -m cf_4.1h.nc

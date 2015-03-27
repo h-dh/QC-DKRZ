@@ -26,7 +26,7 @@ variables:
       surface_t:long_name = "surface temperature" ;
       surface_t:coordinates="land_sea";
       surface_t:cell_methods="area: mean where not_land";
-      surface_t:comment = "invalid type=not_land" ;
+      surface_t:comment = "invalid type=not_land in cell_methods" ;
 
 // global attributes:
    :Conventions = "CF-1.4" ;

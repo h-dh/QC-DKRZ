@@ -5,13 +5,13 @@ dimensions:
 
 variables:
    float lat(lat) ;
-      lat:units = "degrees_north" ;
-      lat:standard_name = "latitude" ;
-      lat:axis="Y";
+     lat:units = "degrees_north" ;
+     lat:standard_name = "latitude" ;
+     lat:axis="Y";
    float lon(lon) ;
-      lon:units = "degrees_east" ;
-      lon:standard_name = "longitude" ;
-      lon:axis="X";
+     lon:units = "degrees_east" ;
+     lon:standard_name = "longitude" ;
+     lon:axis="X";
 
    int t(lat,lon);
      t:long_name = "asdf" ;
@@ -20,7 +20,7 @@ variables:
      t:valid_range = 10.d, 20.d ;
      t:valid_min = 10.d ;
      t:valid_max = 20.d ;
-     t:comment= "invalid: variable and valid_min, max, range have to be the same type" ;
+     t:comment= "variable and valid_min/max/range have to be the same type" ;
 
 // global attributes:
    :comment="packed data" ;
