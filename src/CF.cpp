@@ -427,8 +427,7 @@ CF::checkCoordinateValues(Variable& var, bool testMonotony, T x)
 
   if( mv.validRangeBegin.size() )
   {
-    // note: mv.size() is number of array members
-    //       mv. [vRB, mv.vRE[:  first contiguous stride without _FV
+    // note: [mv.vRB, mv.vRE[:  first contiguous stride without _FV
     // take into account that data may begin/end with _FV
     int i=-1;
     // a single stride
@@ -444,33 +443,69 @@ CF::checkCoordinateValues(Variable& var, bool testMonotony, T x)
         std::string capt;
         if( testMonotony )
           capt = "coordinate " ;
-        else
-          capt = "!" + n_formula_terms + blank;
 
-        capt += captVar(var.name, false) + "should not ";
+        capt += captVar(var.name, false) + "should not have ";
+/*
         if( var.isValidAtt(n_FillValue) )
           capt += "have " + n_FillValue ;
         else if( var.isValidAtt(n_missing_value) )
           capt += "have " + n_missing_value ;
         else
         {
+*/
+          int ct=0;
           for(size_t e=0 ; e < mv.valExp->exceptionCount.size() ; ++e)
           {
             if( mv.valExp->exceptionCount[e] )
             {
+              if(ct++)
+                capt += ", ";
+              else
+                capt += "<" ;
+
               if( mv.valExp->exceptionMode[e] == '=')
-                capt += "have default " + n_FillValue ;
+              {
+                if( var.isValidAtt(n_FillValue) )
+                  capt += n_FillValue ;
+                else if( var.isValidAtt(n_missing_value) )
+                  capt += n_missing_value ;
+                else
+                  capt += "default " + n_FillValue ;
+              }
+
               else if( mv.valExp->exceptionMode[e] == '<')
                 capt += "fall below " + n_valid_min ;
               else if( mv.valExp->exceptionMode[e] == '>')
                 capt += "exceed " + n_valid_max ;
               else if( mv.valExp->exceptionMode[e] == 'R')
-                capt += "exceed " + n_valid_range ;
+                capt += "be out of " + n_valid_range ;
+
+            }
+
+            if( mv.valExp->countInf )
+            {
+              if(ct++)
+                capt += ", ";
+              else
+                capt += "<" ;
+              capt += "Inf" ;
+            }
+
+            if( mv.valExp->countNaN )
+            {
+              if(ct++)
+                capt += ", ";
+              else
+                capt += "<" ;
+              capt += "NaN" ;
             }
           }
-        }
 
-        capt += ", found at index=" ;
+          if(ct)
+            capt += ">" ;
+//        }
+
+        capt += ", found first at index=" ;
         capt += hdhC::itoa(i) ;
 
         (void) notes->operate(capt) ;

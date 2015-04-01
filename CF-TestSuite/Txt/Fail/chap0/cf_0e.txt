@@ -1,4 +1,4 @@
-netcdf cf_0a {
+netcdf cf_0e {
 dimensions:
    lat = 1;
    lon = 2;
