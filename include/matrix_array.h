@@ -406,7 +406,6 @@ ValueException<T>::testValueModesFull(T* arr, size_t arr_sz,
    size_t stateArrSz= (arr_sz > chunk) ? chunk : arr_sz ;
    bool *isInfNaN = new bool [stateArrSz];
 
-   size_t in_ix=0;
    size_t in_count=0;
    size_t i=0 ;  //arr index
 
@@ -416,42 +415,36 @@ ValueException<T>::testValueModesFull(T* arr, size_t arr_sz,
 
    while ( in_count < arr_sz )
    {
-      in_ix=0;
       in_count += stateArrSz;
 
       bool isAnyInvalid = testInfNaN(isInfNaN, stateArrSz, i, arr, arr_sz) ;
 
-      for( ; i < arr_sz ; ++i, ++in_ix)
+      for( ; i < arr_sz ; ++i)
       {
-        if( in_ix == stateArrSz )
+        if( i == stateArrSz )
           break;
 
         // test Inf and NaN block-wise; return true for any
         if( isAnyInvalid )
         {
           // skip leading invalid data points
-          while( in_ix < in_count && isInfNaN[in_ix] )
-            ++in_ix;
-
-          if( in_ix)
+          if( isInfNaN[i] && isLeg )
           {
-            if( in_ix == in_count )
-            {
-              i += in_ix;
-              break;  // no data point found in the entire block, try next
-            }
+            validRangeEnd.push_back(i++);  // note for i==0: isLeg=false
+            isLeg=false;
+          }
 
-            if(isLeg)
-            {
-              validRangeEnd.push_back(i);
-              i += in_ix;
-            }
-            else
-            {
-              i += in_ix;
-              validRangeBegin.push_back(i);
-              isLeg=true;
-            }
+          while( i < in_count && isInfNaN[i] )
+            ++i;
+
+          if( i == in_count )
+            break;  // no data point found in the entire block, try next
+
+          if(!isLeg)
+          {
+            validRangeBegin.push_back(i);
+            isLeg=true;
+            continue;
           }
         }
 
@@ -629,7 +622,6 @@ ValueException<T>::testValueModesPoints(T* arr, size_t arr_sz,
    size_t stateArrSz= (arr_sz > chunk) ? chunk : arr_sz ;
    bool *isInfNaN = new bool [stateArrSz];
 
-   size_t in_ix=0;
    size_t in_count=0;
    size_t i=0 ;  //arr index
 
@@ -637,44 +629,38 @@ ValueException<T>::testValueModesPoints(T* arr, size_t arr_sz,
 
    bool isLeg=false;  // legs of valid data
 
-   while ( in_count < arr_sz )
+   while ( i < arr_sz )
    {
-      in_ix=0;
       in_count += stateArrSz;
 
       bool isAnyInvalid = testInfNaN(isInfNaN, stateArrSz, i, arr, arr_sz) ;
 
-      for( ; i < arr_sz ; ++i, ++in_ix)
+      for( ; i < arr_sz ; ++i)
       {
-        if( in_ix == stateArrSz )
+        if( i == stateArrSz )
           break;
 
         // test Inf and NaN block-wise; return true for any
         if( isAnyInvalid )
         {
           // skip leading invalid data points
-          while( in_ix < in_count && isInfNaN[in_ix] )
-            ++in_ix;
-
-          if( in_ix)
+          if( isInfNaN[i] && isLeg )
           {
-            if( in_ix == in_count )
-            {
-              i += in_ix;
-              break;  // no data point found in the entire block, try next
-            }
+            validRangeEnd.push_back(i++);  // note for i==0: isLeg=false
+            isLeg=false;
+          }
 
-            if(isLeg)
-            {
-              validRangeEnd.push_back(i);
-              i += in_ix;
-            }
-            else
-            {
-              i += in_ix;
-              validRangeBegin.push_back(i);
-              isLeg=true;
-            }
+          while( i < in_count && isInfNaN[i] )
+            ++i;
+
+          if( i == in_count )
+            break;  // no data point found in the entire block, try next
+
+          if(!isLeg)
+          {
+            validRangeBegin.push_back(i);
+            isLeg=true;
+            continue;
           }
         }
 
