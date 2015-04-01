@@ -1,4 +1,4 @@
-netcdf cf_H2b {
+netcdf cf_9.5a {
 dimensions:
    station = 2 ; // measurement locations
    time = UNLIMITED ;
@@ -31,7 +31,7 @@ variables:
    char station_name(station, name_strlen) ;
       station_name:long_name = "station name" ;
       station_name:cf_role = "profile_id";
-      station_name:comment = "Invalid: mismatch of cf_role and featureType" ;
+      station_name:comment = "cf_role is not compatible to featureType" ;
 
 // global attributes:
    :featureType = "timeSeries";

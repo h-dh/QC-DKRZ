@@ -2614,15 +2614,24 @@ NcAPI::getData(int varid, size_t rec, size_t leg)
   std::vector<size_t> dim ;
   size_t* curr_count = new size_t [rank] ;
 
-  for( size_t i=0 ; i < rank ; ++i)
-  {
-    dim.push_back(layout.rec_count[varid][i]);
-    curr_count[i] = layout.rec_count[varid][i] ;
-  }
-
   // scalar defined as a 0-dimensional variable
   if( rank == 0 )
     dim.push_back(1);
+  else
+  {
+    for( size_t i=0 ; i < rank ; ++i)
+    {
+      dim.push_back(layout.rec_count[varid][i]);
+      curr_count[i] = layout.rec_count[varid][i] ;
+    }
+
+    if( rank == 1 )
+    {
+      size_t n;
+      if( (n=getDimSize(layout.varDimNames[varid][0] )) < leg )
+        leg=n ;
+    }
+  }
 
   if( leg > rec )
      dim[0] = curr_count[0] = leg;
@@ -3108,6 +3117,16 @@ NcAPI::getDefaultFillValue(nc_type type, T& x)
    return;
 }
 
+int
+NcAPI::getDimID(std::string dName)
+{
+  //get dimensions of a variable
+  if( layout.dimMap.count(dName) == 0 )
+     return -1 ;
+
+  return layout.dimMap[dName];
+}
+
 std::vector<std::string>
 NcAPI::getDimNames(std::string vName)
 {
@@ -3125,21 +3144,12 @@ NcAPI::getDimNames(std::string vName)
 }
 
 int
-NcAPI::getDimSize(std::string dName)
-
+NcAPI::getDimSize(int d)
 {
-  int isz=-1;
+  if( d < 0 || d >= static_cast<int>(layout.dimNames.size()) )
+     return -1;
 
-  for( size_t j=0 ; j < layout.dimNames.size() ; ++j)
-  {
-     if( dName == layout.dimNames[j] )
-     {
-        isz = layout.dimSize[j] ;
-        break;
-     }
-  }
-
-  return isz;
+  return layout.dimSize[d];
 }
 
 std::vector<bool>

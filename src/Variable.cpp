@@ -127,14 +127,26 @@ Variable::getAttValue(std::string aName, bool forceLowerCase)
   return s ;
 }
 
+template<typename T>
+void
+Variable::getData(MtrxArr<T>& ma, int rec, int leg )
+{
+  if( leg < 0 )
+    return;
+
+  (void) pNc->getData(ma, name, rec,leg) ;
+  return;
+}
+
 bool
-Variable::getData(NcAPI &nc, int rec, int leg )
+Variable::getData(int rec, int leg )
 {
   // prevent unlimited variables to get data beyond
   // available records; also if the data section is totally empty
+
   if( isNoData )
     return true;
-  else if( isUnlimited() && ! nc.getNumOfRecords(name) )
+  else if( isUnlimited() && ! pNc->getNumOfRecords(name) )
   {
     isNoData=true;
     return true;
@@ -146,58 +158,58 @@ Variable::getData(NcAPI &nc, int rec, int leg )
   {
     case NC_CHAR:   // signed char
     {
-      is=nc.getData(*mvCHAR, name, rec, leg);
+      is=pNc->getData(*mvCHAR, name, rec, leg);
     }
     break;
     case NC_BYTE:   // signed char
     {
-      is=nc.getData(*mvBYTE, name, rec, leg);
+      is=pNc->getData(*mvBYTE, name, rec, leg);
     }
     break;
     case NC_SHORT:  // short
     {
-      is=nc.getData(*mvSHORT, name, rec, leg);
+      is=pNc->getData(*mvSHORT, name, rec, leg);
     }
     break;
     case NC_INT:    // int
     {
-      is=nc.getData(*mvINT, name, rec, leg);
+      is=pNc->getData(*mvINT, name, rec, leg);
     }
     break;
     case NC_FLOAT:  // float
     {
-      is=nc.getData(*mvFLOAT, name, rec, leg);
+      is=pNc->getData(*mvFLOAT, name, rec, leg);
     }
     break;
     case NC_DOUBLE: // double
     {
-      is=nc.getData(*mvDOUBLE, name, rec, leg);
+      is=pNc->getData(*mvDOUBLE, name, rec, leg);
     }
     break;
 #ifdef NC4
     case NC_UBYTE:  // unsigned char
     {
-      is=nc.getData(*mvUBYTE, name, rec, leg);
+      is=pNc->getData(*mvUBYTE, name, rec, leg);
     }
     break;
     case NC_USHORT: // unsigned short
     {
-      is=nc.getData(*mvUSHORT, name, rec, leg);
+      is=pNc->getData(*mvUSHORT, name, rec, leg);
     }
     break;
     case NC_INT64:  // long long
     {
-      is=nc.getData(*mvINT64, name, rec, leg);
+      is=pNc->getData(*mvINT64, name, rec, leg);
     }
     break;
     case NC_UINT:   // unsigned int
     {
-      is=nc.getData(*mvUINT, name, rec, leg);
+      is=pNc->getData(*mvUINT, name, rec, leg);
     }
     break;
     case NC_UINT64: // unsigned long long
     {
-      is=nc.getData(*mvUINT64, name, rec, leg);
+      is=pNc->getData(*mvUINT64, name, rec, leg);
     }
     break;
 //    case NC_STRING:

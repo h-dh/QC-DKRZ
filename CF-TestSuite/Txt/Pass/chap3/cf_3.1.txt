@@ -12,4 +12,7 @@ variables:
 // global attributes:
    :comment="Use of standard_name" ;
    :Conventions = "CF-1.4" ;
+
+data:
+  psl=1., 2., 3., 4., 5., 6.;
 }

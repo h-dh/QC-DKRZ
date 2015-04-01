@@ -45,5 +45,11 @@ variables:
    :Conventions = "CF-1.6" ;
 
 data:
-time = 1., 2., 3. ;
+  time = 1., 2., 3. ;
+  lon = 0.;
+  lat = 1.;
+  alt = 2.;
+  station_name = "only one" ;
+  humidity = 1., 2., 3. ;
+  temp = 1., 2., 3. ;
 }

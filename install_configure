@@ -8,20 +8,20 @@ CC="/usr/bin/gcc"
 CXX="/usr/bin/g++"
 
 # C compiler options
-CFLAGS="-O2 -Wall"
+CFLAGS="-g -Wall"
 
 # C++ compiler options
-CXXFLAGS="-O2 -Wall -D NC4"
+CXXFLAGS="-g -Wall -D NC4"
 
-# Path to libraries (netcdf4 and related, uuid, udunits).
+# Path to NetcCDF libraries.
 # Prefix of '-L' may be skipped.
-# e.g. LIB=/path/local/lib:/path/local/lib64
+LIB=/hdh/local/lib:/hdh/local/lib64
 
-# Path to header files (netcdf4 and related, uuid, udunits).
+# Path to NetCDF header files.
 # Prefix of '-I' may be skipped.
-# e.g. INCLUDE=/path/local/include
+INCLUDE=/hdh/local/include
 
 # path to place QC executables.
 # Default: path/QC-0.4.1/bin
 # If the path is relative, then the default is extended.
-#BIN=/path/QC-0.4.1/bin
+#BIN=/hdh/hdh/QC-0.4.1/bin

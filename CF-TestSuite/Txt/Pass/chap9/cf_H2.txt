@@ -36,4 +36,12 @@ variables:
    :featureType = "timeSeries";
    :comment="Timeseries with common element times in a time coordinate variable using the orthogonal multidimensional array representation." ;
    :Conventions = "CF-1.6" ;
+
+data:
+  humidity = 1., 2., 3., 4. ;
+  time = 1., 2. ;
+  lon = 1., 2.;
+  lat = 1., 2.;
+  alt = 1., 2. ;
+  station_name = "one", "two" ;
 }

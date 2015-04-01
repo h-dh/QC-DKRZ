@@ -493,7 +493,6 @@ ValueException<T>::testValueModesFull(T* arr, size_t arr_sz,
             {
               ++exceptionCount[j];
               isValid=false ;
-//              break;
             }
 
             break;  // as long as R is the last to check
@@ -537,9 +536,8 @@ ValueException<T>::testValueModesPoint(T* arr, size_t arr_sz,
          std::vector<size_t> &validRangeEnd)
 {
    // valid data points are those which are not INf, NaN, _FillValue
-   bool isValid=true;
 
-   // portions of arr are mapped
+  // portions of arr are mapped
    size_t chunk=1024;
    size_t stateArrSz= (arr_sz > chunk) ? chunk : arr_sz ;
    bool *isInfNaN = new bool [stateArrSz];
@@ -591,16 +589,16 @@ ValueException<T>::testValueModesPoint(T* arr, size_t arr_sz,
           }
         }
 
-        isValid=true;
-
         // the one and only exception value must be of type '='
         if( arr[i] == exceptionValue[0] )
         {
           ++exceptionCount[0];
-          validRangeEnd.push_back(i);
-          isLeg=false;
 
-          isValid=false ;
+          if( isLeg )
+          {
+            validRangeEnd.push_back(i);
+            isLeg=false;
+          }
         }
         else if( !isLeg )
         {
@@ -618,7 +616,7 @@ ValueException<T>::testValueModesPoint(T* arr, size_t arr_sz,
     return;
 
   // close the last range
-  if( isValid && isLeg )
+  if( isLeg )
     validRangeEnd.push_back( arr_sz );
 
   return ;
@@ -1391,13 +1389,13 @@ MtrxArr<T>::operator=( const MtrxArr<T> &g)
   arr=rep->arr;
 
   // get exception values
-  if( initValExceptUpdate() )
-  {
+//  if( initValExceptUpdate() )
+//  {
     valExp->copy( *g.valExp );
 
     validRangeBegin=g.validRangeBegin;
     validRangeEnd=g.validRangeEnd;
-  }
+//  }
 //  else
 //    testValueException();
 

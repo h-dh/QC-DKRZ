@@ -19,26 +19,29 @@ variables:
       lon:units = "degrees_east" ;
       lon:standard_name = "longitude" ;
    float temp(y, x) ;
-	     temp:long_name = "temperature" ;
-	     temp:units = "K" ;
-	     temp:coordinates = "lat lon" ;
-	     temp:grid_mapping = "crs" ;
+      temp:long_name = "temperature" ;
+      temp:units = "K" ;
+      temp:coordinates = "lat lon" ;
+      temp:grid_mapping = "crs" ;
    int crs ;
-	     crs:grid_mapping_name = "transverse_mercator";
-	     crs:semi_major_axis = 6377563.396 ;
-	     crs:semi_minor_axis = 6356256.910 ;
-	     crs:inverse_flattening = 299.3249646 ;
-	     crs:latitude_of_projection_origin = 49.0 ;
-	     crs:longitude_of_projection_origin = -2.0 ;
-	     crs:false_easting = 400000.0 ;
-	     crs:false_northing = -100000.0 ;
-       crs:scale_factor_at_projection_origin = 0.9996012717 ;
+      crs:grid_mapping_name = "transverse_mercator";
+      crs:semi_major_axis = 6377563.396 ;
+      crs:semi_minor_axis = 6356256.910 ;
+      crs:inverse_flattening = 299.3249646 ;
+      crs:latitude_of_projection_origin = 49.0 ;
+      crs:longitude_of_projection_origin = -2.0 ;
+      crs:false_easting = 400000.0 ;
+      crs:false_northing = -100000.0 ;
+      crs:scale_factor_at_projection_origin = 0.9996012717 ;
 
 // global attributes:
    :comment="British National Grid" ;
    :Conventions = "CF-1.4" ;
 
 data:
-y = 1., 2.;
-x = 1., 2., 3.;
+  y = 1., 2.;
+  x = 1., 2., 3.;
+  lat = 1., 2., 3., 4., 5., 6. ;
+  lon = 1., 2., 3., 4., 5., 6. ;
+  temp = 1., 2., 3., 4., 5., 6. ;
 }

@@ -4,9 +4,9 @@ dimensions:
 
 variables:
    double time(time) ;
-    	 time:long_name = "time" ;
-	     time:units = "days since 1-7-15 0:0:0" ;
-	     time:calendar = "none" ;
+      time:long_name = "time" ;
+      time:units = "days since 1-7-15 0:0:0" ;
+      time:calendar = "none" ;
       time:leap_month = 1 ;
       time:comment ="valid: leap_month is ignored" ;
 

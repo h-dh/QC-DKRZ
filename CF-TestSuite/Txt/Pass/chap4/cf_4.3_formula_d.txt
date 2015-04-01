@@ -1,12 +1,12 @@
 netcdf cf_4.3_formula_d {
 dimensions:
-   lev = 3 ;
-   latX = 3 ;
-   lonX = 4 ;
+   lev = 2 ;
+   latX = 2 ;
+   lonX = 3 ;
 
-   formula_varY = 3 ;
-   latY = 3 ;
-   lonY = 4 ;
+   formula_varY = 2 ;
+   latY = 2 ;
+   lonY = 2 ;
 
    time = UNLIMITED ;
 
@@ -79,18 +79,17 @@ variables:
 data:
 time  = 1., 2. ;
 
-latX   = 1., 2., 3. ;
-lonX   = 1., 2., 3., 4.;
-varX1  = 1., 2., 3. ;
-varX2  = 1., 2., 3. ;
-varX3  = 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12. ,
-        13., 14., 15., 14., 15., 15., 15., 15., 19., 20., 21., 22. ;
+latX   = 1., 2. ;
+lonX   = 1., 2., 3.;
+varX1  = 1., 2. ;
+varX2  = 1., 2. ;
+varX3  = 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12. ;
 
-formula_varY = 1, 2, 3;
-latY = 1., 2., 3.;
-lonY = 1., 2., 3., 4.;
-varY1 = 1., 2., 3. ;
-varY2 = 1., 2., 3. ;
-varY3 = 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12. ;
+formula_varY = 1, 2;
+latY = 1., 2.;
+lonY = 1., 2.;
+varY1 = 1., 2. ;
+varY2 = 1., 2. ;
+varY3 = 1., 2., 3., 4.;
 
 }

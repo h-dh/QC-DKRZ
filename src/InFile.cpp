@@ -149,7 +149,7 @@ InFile::entry(void)
     if( currRec && var.isFixed )
       continue;
 
-    var.getData(nc, currRec);
+    var.getData(currRec);
   }
 
   // Only used in notes, when excluding records is enabled
@@ -206,12 +206,12 @@ InFile::getData( int rec )
   if( rec == 0 )
   {
     for( size_t i=0 ; i < variable.size() ; ++i)
-      variable[i].getData(nc, rec);
+      variable[i].getData(rec);
     return;
   }
 
   for( size_t i=0 ; i < dataVarIndex.size() ; ++i)
-    variable[i].getData(nc, rec);
+    variable[i].getData(rec);
   return;
 }
 
@@ -220,7 +220,7 @@ InFile::getData( int rec, std::string name )
 {
   for( size_t i=0 ; i < variable.size() ; ++i)
     if( name == variable[i].name )
-       variable[i].getData(nc, rec);
+       variable[i].getData(rec);
   return;
 }
 
@@ -443,7 +443,7 @@ InFile::getVariable(void)
     Variable &var = variable[i] ;
 
     var.pIn = this;
-    
+
     // names of the dimensions
     ds = nc.getDimNames( var.name );
 

@@ -4,10 +4,10 @@ dimensions:
 
 variables:
    double time(time) ;
-    	 time:long_name = "time" ;
-	     time:units = "days since 1-1-1 0:0:0" ;
-	     time:calendar = "126 kyr B.P." ;
-	     time:month_lengths = 34, 31, 32, 30, 29, 27, 28, 28, 28, 32, 32, 34 ;
+      time:long_name = "time" ;
+      time:units = "days since 1-1-1 0:0:0" ;
+      time:calendar = "126 kyr B.P." ;
+      time:month_lengths = 34, 31, 32, 30, 29, 27, 28, 28, 28, 32, 32, 34 ;
 
 // global attributes:
    :comment="Paleoclimate time axis" ;

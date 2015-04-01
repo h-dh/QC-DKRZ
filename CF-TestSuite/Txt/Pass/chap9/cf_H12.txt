@@ -50,4 +50,13 @@ variables:
    :comment="Trajectories recording atmospheric composition in the incomplete multidimensional array representation." ;
    :Conventions = "CF-1.6" ;
 
+data:
+  trajectory="one", "two", "three";
+  trajectory_info=100, 200;
+  time=1., 2., 3., 4., 5., 6.;
+  lon=1., 2., 3., 4., 5., 6.;
+  lat=1., 2., 3., 4., 5., 6.;
+  z=1., 2., 3., 4., 5., 6.;
+  O3=1., 2., 3., 4., 5., 6.;
+  NO3=1., 2., 3., 4., 5., 6.;
 }

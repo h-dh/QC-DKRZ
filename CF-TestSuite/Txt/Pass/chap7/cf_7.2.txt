@@ -6,17 +6,25 @@ dimensions:
 
 variables:
    float lat(jmax,imax);
-    	 lat:long_name = "latitude";
-	     lat:units = "degrees_north";
-	     lat:bounds = "lat_bnds";
+      lat:long_name = "latitude";
+      lat:units = "degrees_north";
+      lat:bounds = "lat_bnds";
    float lon(jmax,imax);
-	     lon:long_name = "longitude";
-	     lon:units = "degrees_east";
-	     lon:bounds = "lon_bnds";
+      lon:long_name = "longitude";
+      lon:units = "degrees_east";
+      lon:bounds = "lon_bnds";
    float lat_bnds(jmax,imax,nv);
    float lon_bnds(jmax,imax,nv);
 
 // global attributes:
    :comment="Cells in a non-rectangular grid" ;
    :Conventions = "CF-1.4" ;
+
+data:
+  lat = 1., 2., 3., 4., 5., 6. ;
+  lon = 1., 2., 3., 4., 5., 6. ;
+  lat_bnds = 0.,1., 1.,2., 2.,3. ,
+             3.,4., 4.,5., 5.,6. ;
+  lon_bnds = 0.,1., 1.,2., 2.,3. ,
+             3.,4., 4.,5., 5.,6. ;
 }

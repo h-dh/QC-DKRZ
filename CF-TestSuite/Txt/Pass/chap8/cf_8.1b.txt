@@ -7,11 +7,11 @@ dimensions:
 
 variables:
    int landpoint(landpoint);
-      landpoint:long_name = "compressed lat_lon index" ;
-    	 landpoint:compress="lat lon";
+     landpoint:long_name = "compressed lat_lon index" ;
+     landpoint:compress="lat lon";
    float landsoilt(landpoint,depth);
-	     landsoilt:long_name="soil temperature";
-    	 landsoilt:units="K";
+     landsoilt:long_name="soil temperature";
+     landsoilt:units="K";
    float depth(depth);
      depth:standard_name = "height" ;
      depth:units = "m";
@@ -31,8 +31,9 @@ variables:
    :Conventions = "CF-1.4" ;
 
 data:
- landpoint=1, 4, 9;
- depth = 1., 2., 3., 4.;
- lat = 1., 2., 3.;
- lon = 1., 2., 3., 4.;
+  landpoint=1, 4, 9;
+  landsoilt=1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12. ;
+  depth = 1., 2., 3., 4.;
+  lat = 1., 2., 3.;
+  lon = 1., 2., 3., 4.;
 }

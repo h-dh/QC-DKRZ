@@ -31,9 +31,11 @@ variables:
    :Conventions = "CF-1.4" ;
 
 data:
-lon= 1.,2.;
-lat=1.,2.;
-lat_bnds= 0.,1., 1.,2.;
-lon_bnds= 0.,1., 1.,2.;
+  sea_ice_thickness = 1., 2., 3., 4. ;
+  snow_thickness = 1., 2., 3., 4. ;
+  lon= 1., 2.;
+  lat= 1., 2.;
+  lat_bnds= 0.,1., 1.,2.;
+  lon_bnds= 0.,1., 1.,2.;
 }
 

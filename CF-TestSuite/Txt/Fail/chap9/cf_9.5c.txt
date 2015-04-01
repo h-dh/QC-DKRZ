@@ -1,4 +1,4 @@
-netcdf cf_H2c {
+netcdf cf_9.5c {
 dimensions:
    station = 2 ; // measurement locations
    time = UNLIMITED ;
@@ -30,7 +30,8 @@ variables:
       alt:axis = "Z" ;
    char station_name(station, name_strlen) ;
       station_name:long_name = "station name" ;
-      station_name:comment = "recommendation: provision of attribute cf_role" ;
+      station_name:cf_role = "timeseries";
+      station_name:comment = "value of cf_role is misspelled" ;
 
 // global attributes:
    :featureType = "timeSeries";

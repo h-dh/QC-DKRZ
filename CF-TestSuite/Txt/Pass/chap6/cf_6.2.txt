@@ -1,7 +1,7 @@
 netcdf cf_6.2 {
 dimensions:
    time = 2 ;
-   lat = 5 ;
+   lat = 3 ;
    lbl = 1 ;
    strlen = 64 ;
 
@@ -25,7 +25,8 @@ variables:
    :Conventions = "CF-1.4" ;
 
 data:
+  n_heat_transport = 1., 2., 3., 4., 5., 6. ;
   geo_region = "atlantic_ocean" ;
-  lat = 10., 20., 30., 40., 50. ;
+  lat = 10., 20., 30. ;
   time = 1., 2.;
 }

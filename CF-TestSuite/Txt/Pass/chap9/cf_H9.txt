@@ -52,5 +52,12 @@ variables:
    :Conventions = "CF-1.6" ;
 
 data:
-z = 1., 2. ;
+  profile = 1;
+  time = 1.;
+  lon = 1.;
+  lat = 1.;
+  z = 1., 2. ;
+  pressure = 1., 2. ;
+  temperature = 1., 2. ;
+  humidity = 1., 2. ;
 }
