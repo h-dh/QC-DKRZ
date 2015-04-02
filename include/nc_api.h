@@ -441,6 +441,9 @@ void
          { getDeflate( u, u.getVarID(vName), shuffle, deflate, level); }
 
 //! Get names of dimension.
+    int
+      getDimID(std::string);
+
 /*! If the variable parameter is empty, all dimension names are returned.
     Else, only those the variable is depending on.*/
     std::vector<std::string>
@@ -449,7 +452,11 @@ void
 //! Get the size of given dimension.
 /*! If dName is invalid, a value of -1 is returned.*/
     int
-      getDimSize(std::string dName);
+      getDimSize(int dimID);
+
+    int
+      getDimSize(std::string dName)
+         { return getDimSize(getDimID(dName)); }
 
 //! Endian properties from source for netcdf4
     void
@@ -1017,7 +1024,10 @@ private:
     void*
       getData(int varid, size_t rec, size_t leg=0);
 
-//    Access data by a MtrxArr object.
+//! Access of a record by a MtrxArr object.
+/*! A slice at the rec-th index of the unlimited dimension.
+    If the variable holds 1-D data and leg > rec, then get the leg.
+    Having leg > arr-size is safe. */
     template <typename ToT>
     ToT
       getData(MtrxArr<ToT> &x, int varid, size_t rec=0, size_t leg=0);

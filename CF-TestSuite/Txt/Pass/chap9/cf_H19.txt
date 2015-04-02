@@ -2,7 +2,7 @@ netcdf cf_H19 {
 dimensions:
    obs = UNLIMITED ;
    profile = 2 ;
-   station = 4;
+   station = 2;
    name_strlen = 23 ;
 
 variables:
@@ -70,5 +70,17 @@ variables:
    :Conventions = "CF-1.6" ;
 
 data:
-profile=1, 2;
+  lon = 1., 2.;
+  lat = 2., 3.;
+  alt=1., 2.;
+  station_name="one", "two";
+  station_info= 1, 2;
+  profile=1,2;
+  time=1.,2.;
+  station_index=2,1;
+  row_size=2,4;
+  z=1.,2.,3., 4.,5.,6.;
+  pressure=1.,2.,3., 4.,5.,6.;
+  temperature=1.,2.,3., 4.,5.,6.;
+  humidity=1.,2.,3., 4.,5.,6.;
 }

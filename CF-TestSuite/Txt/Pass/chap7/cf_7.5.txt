@@ -40,4 +40,5 @@ data:
  lat= 0.;
  lon_bnds=0.,360.;
  lat_bnds=-90.,90.;
+ TS_var = 1. ;
 }

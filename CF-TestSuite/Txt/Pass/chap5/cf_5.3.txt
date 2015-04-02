@@ -23,5 +23,8 @@ variables:
    :Conventions = "CF-1.4" ;
 
 data:
-rgrid=  1, 2, 3, 4;
+  PS=  1, 2, 3, 4;
+  lon=  1, 2, 3, 4;
+  lat=  1, 2, 3, 4;
+  rgrid=  1, 2, 3, 4;
 }

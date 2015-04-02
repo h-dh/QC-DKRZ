@@ -162,16 +162,16 @@ CF::captAtt(std::string v, std::string a,
 {
   bool isColon=true;
   bool isBlank=true;
-  bool isAsIs=true;
+  bool isLower=true;
 
   if( m1 == no_colon || m2 == no_colon || m3 == no_colon )
      isColon=false;
   if( m1 == no_blank || m2 == no_blank || m3 == no_blank )
      isBlank=false;
   if( m1 == s_upper || m2 == s_upper || m3 == s_upper )
-     isAsIs=false;
+     isLower=false;
 
-  return captAtt(v, a, isColon, isBlank, isAsIs );
+  return captAtt(v, a, isColon, isBlank, isLower );
 }
 
 std::string
@@ -179,7 +179,7 @@ CF::captAtt(std::string v, std::string a, std::string& m1, std::string& m2)
 {
   bool isColon=true;
   bool isBlank=true;
-  bool isAsIs=true;
+  bool isLower=true;
 
   if( m1 == no_colon || m2 == no_colon )
      isColon=false;
@@ -188,9 +188,9 @@ CF::captAtt(std::string v, std::string a, std::string& m1, std::string& m2)
   if( m1 == no_blank || m2 == no_blank )
      isBlank=false;
   if( m1 == s_upper || m2 == s_upper )
-     isAsIs=false;
+     isLower=false;
 
-  return captAtt(v, a, isColon, isBlank, isAsIs );
+  return captAtt(v, a, isColon, isBlank, isLower );
 }
 
 std::string
@@ -198,24 +198,24 @@ CF::captAtt(std::string v, std::string a, std::string& m1)
 {
   bool isColon=true;
   bool isBlank=true;
-  bool isAsIs=true;
+  bool isLower=true;
 
   if( m1 == no_colon )
      isColon=false;
   if( m1 == no_blank )
      isBlank=false;
   if( m1 == s_upper )
-     isAsIs=false;
+     isLower=false;
 
-  return captAtt(v, a, isColon, isBlank, isAsIs );
+  return captAtt(v, a, isColon, isBlank, isLower );
 }
 
 std::string
-CF::captAtt(std::string v, std::string a, bool isColon, bool isBlank, bool isAsIs)
+CF::captAtt(std::string v, std::string a, bool isColon, bool isBlank, bool isLower)
 {
   std::string s;
 
-  if( isAsIs )
+  if( isLower )
   {
     if( v.size() )
       s = n_attribute + " <" + v + ">:" + a ;
@@ -415,6 +415,10 @@ CF::checkCoordinateValues(Variable& var, bool testMonotony, T x)
 
   if( var.isUnlimited() )
   {
+    // if e.g. a check of time(time) is post-poned
+    if( var.coord.isCoordVar && notes->inq(bKey + "12g", var.name) )
+      return;
+
     if( (num = pIn->nc.getNumOfRecords()) )
       pIn->nc.getData(mv, var.name, 0, num );
   }
@@ -423,8 +427,7 @@ CF::checkCoordinateValues(Variable& var, bool testMonotony, T x)
 
   if( mv.validRangeBegin.size() )
   {
-    // note: mv.size() is number of array members
-    //       mv. [vRB, mv.vRE[:  first contiguous stride without _FV
+    // note: [mv.vRB, mv.vRE[:  first contiguous stride without _FV
     // take into account that data may begin/end with _FV
     int i=-1;
     // a single stride
@@ -440,33 +443,69 @@ CF::checkCoordinateValues(Variable& var, bool testMonotony, T x)
         std::string capt;
         if( testMonotony )
           capt = "coordinate " ;
-        else
-          capt = "!" + n_formula_terms + blank;
 
-        capt += captVar(var.name, false) + "should not ";
+        capt += captVar(var.name, false) + "should not have ";
+/*
         if( var.isValidAtt(n_FillValue) )
           capt += "have " + n_FillValue ;
         else if( var.isValidAtt(n_missing_value) )
           capt += "have " + n_missing_value ;
         else
         {
+*/
+          int ct=0;
           for(size_t e=0 ; e < mv.valExp->exceptionCount.size() ; ++e)
           {
             if( mv.valExp->exceptionCount[e] )
             {
+              if(ct++)
+                capt += ", ";
+              else
+                capt += "<" ;
+
               if( mv.valExp->exceptionMode[e] == '=')
-                capt += "have default " + n_FillValue ;
+              {
+                if( var.isValidAtt(n_FillValue) )
+                  capt += n_FillValue ;
+                else if( var.isValidAtt(n_missing_value) )
+                  capt += n_missing_value ;
+                else
+                  capt += "default " + n_FillValue ;
+              }
+
               else if( mv.valExp->exceptionMode[e] == '<')
                 capt += "fall below " + n_valid_min ;
               else if( mv.valExp->exceptionMode[e] == '>')
                 capt += "exceed " + n_valid_max ;
               else if( mv.valExp->exceptionMode[e] == 'R')
-                capt += "exceed " + n_valid_range ;
+                capt += "be out of " + n_valid_range ;
+
+            }
+
+            if( mv.valExp->countInf )
+            {
+              if(ct++)
+                capt += ", ";
+              else
+                capt += "<" ;
+              capt += "Inf" ;
+            }
+
+            if( mv.valExp->countNaN )
+            {
+              if(ct++)
+                capt += ", ";
+              else
+                capt += "<" ;
+              capt += "NaN" ;
             }
           }
-        }
 
-        capt += ", found at index=" ;
+          if(ct)
+            capt += ">" ;
+//        }
+
+        capt += ", found first at index=" ;
         capt += hdhC::itoa(i) ;
 
         (void) notes->operate(capt) ;
@@ -9361,12 +9400,12 @@ CF::chap9(void)
     return ;  // checks are selected to be discarded by 'D'
 
   // discrete sampling geometries
-  std::vector<std::string> dsg_att;
+  std::vector<std::string*> dsg_att;
 
-  dsg_att.push_back(n_featureType);
-  dsg_att.push_back(n_cf_role);
-  dsg_att.push_back(n_instance_dimension);
-  dsg_att.push_back(n_sample_dimension);
+  dsg_att.push_back(&n_featureType);
+  dsg_att.push_back(&n_cf_role);
+  dsg_att.push_back(&n_instance_dimension);
+  dsg_att.push_back(&n_sample_dimension);
 
   if( cFVal < 16 )
   {
@@ -9377,10 +9416,10 @@ CF::chap9(void)
       Variable& var = pIn->variable[i] ;
       for( size_t j=0 ; j < dsg_att.size() ; ++j )
       {
-         if( var.isValidAtt(dsg_att[j]) )
+         if( var.isValidAtt(*(dsg_att[j])) )
          {
-            if( !hdhC::isAmong(dsg_att[j], coll) )
-               coll.push_back(dsg_att[j]) ;
+            if( !hdhC::isAmong(*(dsg_att[j]), coll) )
+               coll.push_back(*(dsg_att[j])) ;
          }
       }
     }
@@ -9401,10 +9440,6 @@ CF::chap9(void)
 
     return;
   }
-
-  size_t cf_role=1;
-  size_t instance_dim=2;
-  size_t sample_dim=3;
 
   // checks are performed for case insensitivity.
   std::vector<std::string> validFT_vs;
@@ -9429,11 +9464,11 @@ CF::chap9(void)
   // which are confusing when global
   for( size_t i=1 ; i < dsg_att.size() ; ++i )
   {
-     if( glob.isValidAtt(dsg_att[i]) )
+     if( glob.isValidAtt(*(dsg_att[i])) )
      {
         if( notes->inq(bKey + "9c", n_global) )
         {
-          std::string capt("warning: Value " + captVal(dsg_att[i])) ;
+          std::string capt("warning: Value " + captVal(*(dsg_att[i]))) ;
           capt += "should not be a global" + n_attribute;
 
           (void) notes->operate(capt) ;
@@ -9442,30 +9477,23 @@ CF::chap9(void)
      }
   }
 
+  // to be used below
+  std::vector<int> xyzt_ix;
+  std::vector<size_t> dv_ix;
+  chap9_getSepVars(xyzt_ix, dv_ix);
+
+  // check n_instance_dimension properties
+  chap9_3_2_sample_dimension(dv_ix);
+
   // scan variables for occurrences of attribute cf_role attribute,
-  // sample_dimension, and instance_dimension
-  std::vector<std::pair<int, int> > vp_cf_role_ix;
-  std::vector<std::pair<int, int> > vp_sample_dim_ix;
-  std::vector<std::pair<int, int> > vp_instance_dim_ix;
-
-  for( size_t i=0 ; i < pIn->varSz ; ++i )
-  {
-    Variable& var = pIn->variable[i] ;
-
-    int j=-1;
-    if( (j=var.getAttIndex(dsg_att[instance_dim])) > -1 )
-      vp_instance_dim_ix.push_back( std::pair<int, int>(static_cast<int>(i),j ) );
-
-    if( (j=var.getAttIndex(dsg_att[sample_dim])) > -1 )
-      vp_sample_dim_ix.push_back( std::pair<int, int>(static_cast<int>(i),j ) );
-  }
+  // sample_dimension
 
   std::vector<std::string> vs_cr;
   vs_cr.push_back("timeseries_id") ;
   vs_cr.push_back("profile_id") ;
   vs_cr.push_back("trajectory_id") ;
 
-  int count=0;
+  std::vector<std::pair<int, int> > vp_cf_role_ix;
 
   for( size_t i=0 ; i < pIn->varSz ; ++i )
   {
@@ -9473,13 +9501,11 @@ CF::chap9(void)
     Variable& var = pIn->variable[i] ;
 
     int j=-1;
-    if( (j=var.getAttIndex(dsg_att[cf_role])) > -1 )
+    if( (j=var.getAttIndex(n_cf_role)) > -1 )
     {
       vp_cf_role_ix.push_back( std::pair<int, int>(static_cast<int>(i),j ) );
 
-      if( hdhC::isAmong(var.attValue[j][0], vs_cr) )
-        ++count;
-      else
+      if( !hdhC::isAmong(var.attValue[j][0], vs_cr) )
       {
         if( notes->inq(bKey + "9e", var.name) )
         {
@@ -9494,7 +9520,6 @@ CF::chap9(void)
             {
                var.attValue[j][0] += "_id" ;
                capt += ", missing trailing _id " ;
-               ++count;
                break;
             }
           }
@@ -9508,10 +9533,6 @@ CF::chap9(void)
   }
 
   // infer the featureType by the layout
-  std::vector<int> xyzt_ix;
-  std::vector<size_t> dv_ix;
-  chap9_getSepVars(xyzt_ix, dv_ix);
-
   std::vector<std::string> guessedFT(
       chap9_guessFeatureType(validFT_vs, xyzt_ix, dv_ix) );
 
@@ -9563,38 +9584,79 @@ CF::chap9(void)
       }
     }
 
-    // compare to guess FT
+    // compare to a guessed FT
     if( isFeatureType && guessedFT.size() )
     {
-      for( size_t i=0 ; i < vs_featureType.size() ; ++i )
+      size_t i;
+      bool is=true;
+      for( i=0 ; i < vs_featureType.size() ; ++i )
       {
         size_t j;
-        for( j=0 ; j < guessedFT.size() ; ++j )
-          if( guessedFT[j].find(vs_featureType[i]) < std::string::npos )
-            break;
+        size_t sz = guessedFT.size() ;
 
-        if( j == guessedFT.size() )
+        for( j=0 ; j< sz ; ++j )
         {
-          if( notes->inq(bKey + "9g", n_global) )
+          if( guessedFT[j].find(vs_featureType[i]) < std::string::npos )
           {
-            std::string capt("mismatch between provided ");
-            capt += captAtt("featureType",false) ;
+            is=false;
+            break;
+          }
+        }
+
+        if( j == sz )
+        {
+          for( j=0 ; j < sz ; ++j )
+          {
+            if( vs_featureType[i].find(guessedFT[j]) < std::string::npos )
+            {
+              is=false;
+              break;
+            }
+          }
+        }
+
+        if(is)
+          break;
+      }
+
+      if( is )
+      {
+        if( notes->inq(bKey + "9g", n_global) )
+        {
+          std::string capt("mismatch between provided ");
+          if( vs_featureType.size() == 1 )
+          {
+            capt += captAtt(n_featureType,false) ;
             capt += hdhC::sAssign(vs_featureType[0]) ;
-            capt += " and " ;
-            if( guessedFT.size() > 1 )
-              capt += "ambiguous " ;
-            capt += "guess <";
-            for( size_t i=0 ; i < guessedFT.size() ; ++i )
+          }
+          else
+          {
+            capt += captAtt(n_featureType) ;
+            for( size_t i=0 ; i < vs_featureType.size() ; ++i )
             {
               if(i)
                 capt += ",";
-              capt += guessedFT[i];
+              else
+                capt += "<";
+
+              capt += vs_featureType[i];
             }
             capt += ">";
-
-            (void) notes->operate(capt) ;
-            notes->setCheckCF_Str( fail );
           }
+          capt += " and " ;
+          if( guessedFT.size() > 1 )
+            capt += "ambiguous " ;
+          capt += "guessed <";
+          for( size_t i=0 ; i < guessedFT.size() ; ++i )
+          {
+            if(i)
+              capt += ",";
+            capt += guessedFT[i];
+          }
+          capt += ">";
+
+          (void) notes->operate(capt) ;
+          notes->setCheckCF_Str( fail );
         }
       }
     }
@@ -9643,6 +9705,10 @@ CF::chap9(void)
       }
     }
   }
+
+
+  // missing value
+  chap9_MV(xyzt_ix, dv_ix) ;
 
   return;
 }
@@ -9892,6 +9958,88 @@ CF::chap9_horizontal(std::vector<int>& xyzt_ix)
 }
 
 bool
+CF::chap9_MV(std::vector<int>& xyzt_ix, std::vector<size_t>& dv_ix)
+{
+  // dv_ix.size() > 0 was checked before
+
+  bool is=true;
+  std::string dName;
+  for( size_t i=0 ; i < dv_ix.size() ; ++i )
+  {
+    Variable& var = pIn->variable[dv_ix[i]] ;
+
+    if( var.isScalar && var.isLabel )
+      continue;
+
+    if(i==0)
+    {
+      if(var.dimName.size() != 1 )
+      {
+        is=true;
+        break;
+      }
+
+      dName = var.dimName[0] ;
+      continue;
+    }
+
+    if( !(var.dimName.size() == 1 && dName == var.dimName[0]) )
+    {
+      is=false;
+      break;
+    }
+  }
+
+  // horizontal and time
+  if( is )
+  {
+    int x_ix = xyzt_ix[0] ;
+    int z_ix = xyzt_ix[2] ;
+    int t_ix = xyzt_ix[3] ;
+
+    if( x_ix > -1 )
+      if( !( pIn->variable[x_ix].dimName.size() == 1
+                &&  pIn->variable[x_ix].dimName[0] == dName ) )
+       is=false ;
+
+    if( z_ix > -1 )
+      if( !( pIn->variable[z_ix].dimName.size() == 1
+                &&  pIn->variable[z_ix].dimName[0] == dName ) )
+       is=false;
+
+    if( t_ix > -1 )
+      if( !( pIn->variable[t_ix].dimName.size() == 1
+                &&  pIn->variable[t_ix].dimName[0] == dName ) )
+       is=false;
+  }
+
+  if(is)
+  {
+    for(size_t i=0 ; i < pIn->varSz ; ++i )
+    {
+      if( pIn->variable[i].isValidAtt(n_cf_role) )
+      {
+        is=false;
+        break;
+      }
+
+      if( pIn->variable[i].isValidAtt(n_instance_dimension) )
+      {
+        is=false;
+        break;
+      }
+      if( pIn->variable[i].isValidAtt(n_sample_dimension) )
+      {
+        is=false;
+        break;
+      }
+    }
+  }
+
+  return is;
+}
+
+bool
 CF::chap9_orthoMultDimArray(Variable& var, std::vector<int>& xyzt_ix)
 {
   // characteristics of OMDA:
@@ -10076,6 +10224,177 @@ CF::chap9_profile(std::vector<int>& xyzt_ix, std::vector<size_t>& dv_ix)
   }
 
   return true;
+}
+
+void
+CF::chap9_3_2_sample_dimension(std::vector<size_t>& dv_ix)
+{
+  std::vector<size_t> vs_sd_ix;
+
+  // scan for attribute sample_dimension
+  for( size_t i=0 ; i < pIn->varSz ; ++i )
+  {
+    Variable& var = pIn->variable[i];
+
+    int j=-1;
+    if( (j=var.getAttIndex(n_sample_dimension)) > -1 )
+    {
+      if( !pIn->nc.isIndexType(var.name) )
+      {
+        if( notes->inq(bKey + "932f", var.name) )
+        {
+          std::string capt(captVar(var.name));
+          capt += captAtt(n_sample_dimension) ;
+          capt += "is only allowed for index variables";
+
+          (void) notes->operate(capt) ;
+          notes->setCheckCF_Str( fail );
+        }
+
+        continue ;
+      }
+
+      if( var.dimName.size() != 1 )
+      {
+        if( notes->inq(bKey + "932a", var.name) )
+        {
+          std::string capt(captVar(var.name, no_colon));
+          capt += "with " + captAtt(n_sample_dimension, s_lower) ;
+          capt += "should not have multiple dimensions, found";
+          capt += captVal(var.getDimNameStr()) ;
+
+          (void) notes->operate(capt) ;
+          notes->setCheckCF_Str( fail );
+        }
+
+        continue ;
+      }
+
+      vs_sd_ix.push_back(i);
+
+      // does the dimension named by sample_dimension exist?
+      int dSz ;
+      if( (dSz=pIn->nc.getDimSize( var.attValue[j][0])) < 0 )
+      {
+        if( notes->inq(bKey + "932b", var.name) )
+        {
+          std::string capt(captVar(var.name));
+          capt += "with " + captAtt(n_sample_dimension) ;
+          capt += hdhC::sAssign(var.attValue[j][0]) ;
+          capt += "does not match any dimension";
+
+          (void) notes->operate(capt) ;
+          notes->setCheckCF_Str( fail );
+        }
+
+        continue;
+      }
+
+      // does the sum of values of the sample_dim variable match
+      // the dimenision indicated by the attribute
+      MtrxArr<int> ma;
+      var.getData(ma, 0, pIn->nc.getDimSize(var.dimName[0]));
+      int sum=0;
+      if( ma.validRangeBegin.size() == 1 )
+      {
+        for(size_t i=ma.validRangeBegin[0] ; i < ma.validRangeEnd[0] ; ++i )
+          sum += ma[i] ;
+
+        if( sum != dSz )
+        {
+          if( notes->inq(bKey + "932d", var.name) )
+          {
+            std::string capt(captVar(var.name + " with " + n_sample_dimension)) ;
+            capt += "the sum of data values=" + hdhC::itoa(sum);
+
+            if( sum > dSz )
+              capt += " over";
+            else
+              capt += " under";
+
+            capt += "-determines " + n_dimension ;
+            capt += captVal(var.attValue[j][0] + "=" + hdhC::itoa(dSz)) ;
+
+            (void) notes->operate(capt) ;
+            notes->setCheckCF_Str( fail );
+          }
+        }
+      }
+      else if( notes->inq(bKey + "932c", var.name) )
+      {
+        std::string capt(captVar(var.name, no_colon));
+        capt += "with " +  captAtt(n_sample_dimension, false);
+        if(ma.validRangeBegin.size() )
+          capt += " must not have missing values";
+        else
+          capt += " must have data" ;
+
+        (void) notes->operate(capt) ;
+        notes->setCheckCF_Str( fail );
+      }
+    }
+  }
+
+  // Any missing sample_dimension attribute?
+  // All data variables have to depend on only a single dim, which
+  // would be the one stated by a missed sample_dimension attribute.
+  std::string name;
+  for( size_t i=0 ; i < dv_ix.size() ; ++i )
+  {
+    Variable& var_i = pIn->variable[i] ;
+    if( var_i.dimName.size() != 1 )
+      return;
+
+    if(i==0)
+      name = pIn->variable[0].dimName[0];
+
+    if(i && var_i.dimName[0] != name)
+      return;
+  }
+
+  std::vector<int> vs_dSz;
+
+  for( size_t i=0 ; i < pIn->varSz ; ++i )
+  {
+    // trivial: the variable must not have a sampe_dimension att
+    if( hdhC::isAmong(i, vs_sd_ix) )
+      continue ;
+
+    Variable& var = pIn->variable[i] ;
+
+    // the variable of a missed att must be index type.
+    if( var.dimName.size() == 1 && pIn->nc.isIndexType(var.name) )
+    {
+      // the sum of values must match the dimension of the data variables
+
+      // the size of the dimension whose name would be assign to sample_dimension
+      int dSz = pIn->nc.getDimSize(name) ;
+
+      MtrxArr<int> ma;
+
+      var.getData(ma, 0, pIn->nc.getDimSize(var.dimName[0]));
+      int sum=0;
+      if( ma.validRangeBegin.size() )
+      {
+        for(size_t j=ma.validRangeBegin[0] ; j < ma.validRangeEnd[0] ; ++j )
+          sum += ma[j] ;
+
+        if( sum == dSz && notes->inq(bKey + "932e", var.name) )
+        {
+          std::string capt("warning for " + captVar(var.name));
+          capt += "the sum of values" ;
+          capt += hdhC::sAssign(hdhC::itoa(dSz)) ;
+          capt += " of an indexing variable indicates a missing " ;
+          capt += captAtt(n_sample_dimension, false);
+
+          (void) notes->operate(capt) ;
+          notes->setCheckCF_Str( fail );
+        }
+      }
+    }
+  }
+
+  return ;
 }
 
 bool

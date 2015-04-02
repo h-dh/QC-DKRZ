@@ -1,6 +1,6 @@
 netcdf cf_4.4a {
 dimensions:
-   time = UNLIMITED ; // (10 currently)
+   time = UNLIMITED ;
 
 variables:
    double time(time) ;

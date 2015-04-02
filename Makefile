@@ -5,7 +5,7 @@
 
 Cx    =  diskUsage.x fModTime.x  unixTime.x
 CPPx  =  check_CORDEX_standard-table.x convert_CF-standard-names.x \
-         getNC_att.x getStatus.x syncFiles.x testValidNC.x
+         getNC_att.x getStatus.x modifyNc.x syncFiles.x testValidNC.x
 
 UTIL_SOURCE = hdhC.cpp ReadLine.cpp Split.cpp Statistics.cpp GetOpt_hdh.cpp
 UTIL_HEADER = hdhC.h matrix_array.h readline.h split.h statistics.h getopt_hdh.h
@@ -66,3 +66,10 @@ cf-checker.x: cF_main.cpp CF.cpp $(BASE_SOURCE) ${BASE_SOURCE} $(QC_HEADER) $(UT
 	$(CXX) $(CXXFLAGS) -o cf-checker.x $(QC_PATH)/src/cF_main.cpp \
            -I $(QC_PATH)/include $(INCLUDE) \
            $(LIB) $(LIBDL) -ludunits2 -lnetcdf -lhdf5_hl -lhdf5 -lz
+
+ModifyNc: modifyNc.x
+
+modifyNc.x: modifyNc.cpp modify_nc.h modify_fnct.cpp inquiry_fnct.cpp $(BASE_SOURCE) $(UTIL_SOURCE) $(UTIL_HEADER)
+	$(CXX) $(CXXFLAGS) -o modifyNc.x $(QC_PATH)/src/modifyNc.cpp \
+           -I $(QC_PATH)/include $(INCLUDE) \
+           $(LIB) $(LIBDL) -lnetcdf -lhdf5_hl -lhdf5 -lz -luuid

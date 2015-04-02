@@ -2,7 +2,7 @@ netcdf cf_5.2 {
 dimensions:
    xc = 2 ;
    yc = 3 ;
-   lev = 4 ;
+   lev = 2 ;
 
 variables:
    float T(lev,yc,xc) ;
@@ -32,7 +32,10 @@ variables:
    :Conventions = "CF-1.4" ;
 
 data:
-xc = 1., 2.;
-yc = 1., 2., 3.;
-lev = 1., 2., 3., 4.;
+  T = 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12 ;
+  xc = 1., 2.;
+  yc = 1., 2., 3.;
+  lev = 1., 2.;
+  lat = 1., 2., 3., 4., 5., 6. ;
+  lon = 1., 2., 3., 4., 5., 6. ;
 }

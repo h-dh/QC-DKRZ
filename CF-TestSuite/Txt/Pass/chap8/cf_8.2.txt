@@ -10,7 +10,7 @@ variables:
    float salinity(time,oceanpoint);
      salinity:long_name = "salinity" ;
    int oceanpoint(oceanpoint);
-    	 oceanpoint:compress="depth lat lon";
+     oceanpoint:compress="depth lat lon";
 
    float depth(depth);
      depth:standard_name = "height" ;
@@ -34,9 +34,10 @@ variables:
    :Conventions = "CF-1.4" ;
 
 data:
-time= 1., 2.;
-depth = 1., 2., 3., 4.;
-lat = -60., 0., 60.;
-lon = 0., 90., 180., 270.;
-oceanpoint = 1, 6, 11;
+  salinity = 1., 2., 3., 4., 5., 6.;
+  time= 1., 2.;
+  depth = 1., 2., 3., 4.;
+  lat = -60., 0., 60.;
+  lon = 0., 90., 180., 270.;
+  oceanpoint = 1, 6, 11;
 }

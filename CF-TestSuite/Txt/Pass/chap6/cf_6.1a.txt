@@ -26,8 +26,10 @@ variables:
    :Conventions = "CF-1.4" ;
 
 data:
-
-times= 1., 2., 3. ;
-parcel_name= "1hPa", "500hPa" ;
+  times= 1., 2., 3. ;
+  lon = 1., 2., 3., 4., 5., 6. ;
+  lat = 1., 2., 3., 4., 5., 6. ;
+  parcel_name= "1hPa", "500hPa" ;
+  rh = 1., 2., 3., 4., 5., 6. ;
 }
 

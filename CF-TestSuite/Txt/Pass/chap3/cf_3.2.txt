@@ -1,6 +1,6 @@
 netcdf cf_3.2 {
 dimensions:
-   time = UNLIMITED; // (10 currently)
+   time = UNLIMITED;
 
 variables:
    float q(time);
@@ -17,4 +17,9 @@ variables:
 // global attributes:
    :comment="Instrument data" ;
    :Conventions = "CF-1.4" ;
+
+data:
+  q=1.,2.;
+  q_error_limit=1., 2.;
+  q_detection_limit=1., 2.;
 }

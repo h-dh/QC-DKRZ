@@ -142,7 +142,9 @@ class Variable : public VariableMeta
   bool isCoordinate(void)
          {return coord.isAny || coord.isX || coord.isY || coord.isZ || coord.isT ;}
   int  getCoordinateType(void);  // X: 0, Y: 1, Z: 2, T: 3, any: 4, none: -1
-  bool getData(NcAPI &, int rec, int leg=0);
+  template<typename T>
+  void getData(MtrxArr<T>&, int rec, int leg=0);
+  bool getData(int rec, int leg=0);
   std::string
        getDimNameStr(bool isWithVar=false, char sep=',');
   int  getVarIndex(){ return id ;}

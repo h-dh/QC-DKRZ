@@ -1,6 +1,6 @@
 netcdf cf_3.4 {
 dimensions:
-   time = UNLIMITED ; // (10 currently)
+   time = UNLIMITED ;
    depth = 1 ;
    lat = 2 ;
    lon = 3 ;
@@ -16,4 +16,8 @@ variables:
 // global attributes:
    :comment=" A flag variable, using flag_masks" ;
    :Conventions = "CF-1.4" ;
+
+data:
+  sensor_status_qc= 1b,2b,3b,4b,5b,6b,
+                    1b,2b,3b,4b,5b,6b;
 }

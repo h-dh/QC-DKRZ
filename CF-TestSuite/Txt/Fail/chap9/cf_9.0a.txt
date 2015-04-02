@@ -1,4 +1,4 @@
-netcdf cf_H1b {
+netcdf cf_9.0a {
 dimensions:
    obs = 2 ;
 

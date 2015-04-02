@@ -1,6 +1,6 @@
 netcdf cf_H14 {
 dimensions:
-   obs = 2 ;
+   obs = 12 ;
    trjctry = 3 ;
    name_strlen = 23 ;
 
@@ -50,4 +50,13 @@ variables:
    :comment="Trajectories recording atmospheric composition in the contiguous ragged array representation." ;
    :Conventions = "CF-1.6" ;
 
+data:
+  trajectory="one", "two", "three";
+  rowSize=3, 5, 4;
+  time=1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12.;
+  lon=1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12.;
+  lat=1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12.;
+  z=1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12.;
+  O3=1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12.;
+  NO3=1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12.;
 }

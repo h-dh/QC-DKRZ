@@ -49,4 +49,13 @@ variables:
    :comment="Trajectories recording atmospheric composition in the indexed ragged array representation." ;
    :Conventions = "CF-1.6" ;
 
+data:
+  trajectory="one", "two";
+  trajectory_index= 1,2,1;
+  time=1., 2., 3.;
+  lon=1., 2., 3.;
+  lat=1., 2., 3.;
+  z=1., 2., 3.;
+  O3=1., 2., 3.;
+  NO3=1., 2., 3.;
 }

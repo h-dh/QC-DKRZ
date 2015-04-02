@@ -1,7 +1,7 @@
 netcdf cf_H17 {
 dimensions:
    station = 2 ; // measurement locations
-   pressure = 5 ; // pressure levels
+   pressure = 3 ; // pressure levels
    time = UNLIMITED ;
 
 variables:
@@ -32,6 +32,10 @@ variables:
    :Conventions = "CF-1.6" ;
 
 data:
-time = 1., 2., 3. ;
-pressure = 1., 2., 3., 4., 5.;
+  humidity=1., 2., 3., 4., 5., 6.,
+            1., 2., 3., 4., 5., 6.;
+  time = 1., 2., 3. ;
+  lon=1.,2.;
+  lat = 1., 2.;
+  pressure = 1., 2., 3.;
 }

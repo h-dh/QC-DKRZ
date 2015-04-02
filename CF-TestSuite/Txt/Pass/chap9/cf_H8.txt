@@ -53,6 +53,12 @@ variables:
    :Conventions = "CF-1.6" ;
 
 data:
-z = 1., 2. ;
-profile = 1.,2.,3.;
+  profile = 1,2,3;
+  time = 1.,2.,3.;
+  lon = 1.,2.,3.;
+  lat = 1.,2.,3.;
+  z = 1., 2. ;
+  pressure = 0.,1., 2.,3., 4.,5. ;
+  temperature = 0.,1., 2.,3., 4.,5. ;
+  humidity = 0.,1., 2.,3., 4.,5. ;
 }

@@ -49,4 +49,14 @@ variables:
    :comment="Timeseries of station data in the indexed ragged array representation." ;
    :Conventions = "CF-1.6" ;
 
+data:
+  time = 1., 2., 3. ;
+  lon = 1., 2. ;
+  lat = 1., 2. ;
+  alt = 1., 2. ;
+  station_name = "one", "two" ;
+  station_info = 0, 1 ;
+  stationIndex = 0, 1, 0 ;
+  humidity = 1., 2., 3. ;
+  temp = 1., 2., 3. ;
 }

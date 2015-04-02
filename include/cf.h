@@ -130,6 +130,7 @@ class CF : public IObj
   void   chap8_2(Variable&);  // compression by gathering (scal_factor, offset)
 
   void   chap9(void);    // discrete sampling geometries (CF-1.6)
+  void   chap9_3_2_sample_dimension(std::vector<size_t>& dv_ix);
   void   chap9_featureType(std::vector<std::string> &validFeatureType,
             std::vector<std::string> &featureType) ;
   void   chap9_getSepVars(std::vector<int>& xyzt_ix, std::vector<size_t>& dv_ix);
@@ -137,6 +138,7 @@ class CF : public IObj
          chap9_guessFeatureType(std::vector<std::string> &featureType,
            std::vector<int>& xyzt_ix, std::vector<size_t>& dv_ix) ;
   bool   chap9_horizontal(std::vector<int>& xyzt_ix);
+  bool   chap9_MV(std::vector<int>& xyzt_ix, std::vector<size_t>& dv_ix);
   bool   chap9_orthoMultDimArray(Variable&, std::vector<int>& xyzt_ix);
   bool   chap9_point(std::vector<int>& xyzt_ix, std::vector<size_t>& dv_ix);
   bool   chap9_profile(std::vector<int>& xyzt_ix, std::vector<size_t>& dv_ix);
@@ -150,7 +152,7 @@ class CF : public IObj
 
   std::string
          captAtt(std::string v, std::string a,
-                 bool colon=true, bool blank=true, bool caseAsIs=true);
+                 bool colon=true, bool blank=true, bool isLower=false);
   std::string
          captAtt(std::string a, bool is_blank=true);
   std::string
@@ -295,6 +297,7 @@ template <typename T>
   std::string no_colon;
   std::string s_empty;
   std::string s_upper;
+  std::string s_lower;
 
   static const bool lowerCase = true;
   std::string bKey;
