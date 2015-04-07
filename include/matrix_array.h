@@ -62,6 +62,8 @@ template<typename T_in>
   std::vector<size_t> exceptionCount;
   size_t countInf;
   size_t countNaN;
+  int firstInf_ix;
+  int firstNaN_ix;
 
   // permitted values: 'inf', 'NaN', or 'user'
   std::map<std::string, bool> isValueExceptionTest;
@@ -81,6 +83,8 @@ ValueException<T>::ValueException()
     isValueExceptionTest["user"]=false;
     isValueExceptionTest["none"]=true;
 
+    firstInf_ix=-1;
+    firstNaN_ix=-1;
     update = true;
   }
 
@@ -111,6 +115,8 @@ ValueException<T>::copy( const ValueException<T> &g, bool is)
     isValueExceptionTest = g.isValueExceptionTest ;
     countInf  = g.countInf;
     countNaN  = g.countNaN;
+    firstInf_ix = g.firstInf_ix;
+    firstNaN_ix = g.firstNaN_ix;
 
     if( is )
     {
@@ -118,6 +124,8 @@ ValueException<T>::copy( const ValueException<T> &g, bool is)
         exceptionCount[i] = 0 ;
       countInf  = 0;
       countNaN  = 0;
+      firstInf_ix = -1;
+      firstNaN_ix = -1;
     }
 
     return;
@@ -203,88 +211,11 @@ ValueException<T>::import( const ValueException<T_in> &g)
 
     countInf  = g.countInf;
     countNaN  = g.countNaN;
+    firstInf_ix  = g.firstInf_ix;
+    firstNaN_ix  = g.firstNaN_ix;
 
     update = g.update;
     return;
-}
-
-template<typename T>
-bool
-ValueException<T>::testInfNaN(bool *is, size_t isSz, size_t isBeg,
-    T* arr, size_t arr_sz)
-{
-  size_t isEnd= arr_sz - isBeg ;
-  if( isEnd > isSz )
-    isEnd=isSz ;
-
-  for( size_t i=0 ; i < isEnd ; ++i )
-    is[i] = false;  // default for is not Inf and not NaN
-
-  bool entire=false;
-  if( isValueExceptionTest["inf"] )
-    if(testInf(is, isBeg, isEnd, arr, arr_sz))
-       entire=true;
-
-  if( isValueExceptionTest["nan"] )
-    if(testNaN(is, isBeg, isEnd, arr, arr_sz))
-       entire=true;
-
-  return entire;
-}
-
-template<typename T>
-bool
-ValueException<T>::testInf(bool *is, size_t isBeg, size_t isEnd,
-    T* arr, size_t arr_sz)
-{
-  size_t count=0;
-
-  for( size_t i=0 ; i < isEnd ; ++i )
-  {
-#ifndef XLC
-    if( std::isinf( arr[isBeg+i] ) )
-#else
-    if( isinf( arr[isBeg+i] ) )
-#endif
-    {
-      is[i] = true ;
-      ++count;
-    }
-  }
-
-  countInf += count;
-  return count;
-}
-
-template<typename T>
-bool
-ValueException<T>::testNaN(bool *is, size_t isBeg, size_t isEnd,
-    T* arr, size_t arr_sz)
-{
-  // NaN compared to itself equals to false
-
-  // Hope this is sufficient to prevent aggressive
-  // optimisation; volatile should be avoided, because
-  // this would take values from the central storage.
-
-  size_t count=0;
-
-  for( size_t i=0 ; i < isEnd ; ++i )
-  {
-#ifndef XLC
-    if( std::isnan( arr[isBeg + i]) )
-#else
-    if( isnan( arr[isBeg + i]) )
-#endif
-    {
-      is[i] = true ;
-      ++count;
-    }
-  }
-
-  countNaN += count;
-
-  return count;
 }
 
 template<typename T>
@@ -337,6 +268,90 @@ ValueException<T>::setExceptionValue(
   enableValueExceptionTest(*s);
 
   return;
+}
+
+template<typename T>
+bool
+ValueException<T>::testInfNaN(bool *is, size_t isSz, size_t isBeg,
+    T* arr, size_t arr_sz)
+{
+  size_t isEnd= arr_sz - isBeg ;
+  if( isEnd > isSz )
+    isEnd=isSz ;
+
+  for( size_t i=0 ; i < isEnd ; ++i )
+    is[i] = false;  // default for is not Inf and not NaN
+
+  bool entire=false;
+  if( isValueExceptionTest["inf"] )
+    if(testInf(is, isBeg, isEnd, arr, arr_sz))
+       entire=true;
+
+  if( isValueExceptionTest["nan"] )
+    if(testNaN(is, isBeg, isEnd, arr, arr_sz))
+       entire=true;
+
+  return entire;
+}
+
+template<typename T>
+bool
+ValueException<T>::testInf(bool *is, size_t isBeg, size_t isEnd,
+    T* arr, size_t arr_sz)
+{
+  size_t count=0;
+
+  for( size_t i=0 ; i < isEnd ; ++i )
+  {
+#ifndef XLC
+    if( std::isinf( arr[isBeg+i] ) )
+#else
+    if( isinf( arr[isBeg+i] ) )
+#endif
+    {
+      is[i] = true ;
+      if( firstInf_ix < 0 )
+        firstInf_ix = isBeg+i;
+
+      ++count;
+    }
+  }
+
+  countInf += count;
+  return count;
+}
+
+template<typename T>
+bool
+ValueException<T>::testNaN(bool *is, size_t isBeg, size_t isEnd,
+    T* arr, size_t arr_sz)
+{
+  // NaN compared to itself equals to false
+
+  // Hope this is sufficient to prevent aggressive
+  // optimisation; volatile should be avoided, because
+  // this would take values from the central storage.
+
+  size_t count=0;
+
+  for( size_t i=0 ; i < isEnd ; ++i )
+  {
+#ifndef XLC
+    if( std::isnan( arr[isBeg + i]) )
+#else
+    if( isnan( arr[isBeg + i]) )
+#endif
+    {
+      is[i] = true ;
+      if( firstNaN_ix < 0 )
+        firstNaN_ix = isBeg+i;
+      ++count;
+    }
+  }
+
+  countNaN += count;
+
+  return count;
 }
 
 template<typename T>
@@ -739,6 +754,7 @@ public:
   T* arr;       // pointer to data
   size_t counter; // number of references
   std::vector<size_t> dim; // dimensions' sizes
+  std::vector<size_t> dimProduct;
   size_t arr_sz;
 
   T** m2D;    //matrix access; initialised at 1st call
@@ -795,7 +811,7 @@ MArep<T>::assign( const T *p, std::vector<size_t> *d)
       return;
     }
 
-    if( d )  // dimensions are passed
+    if( d->size() )  // dimensions are passed
     {
       getDim(*d);
       size_t tmp_sz=getSize();
@@ -807,7 +823,6 @@ MArep<T>::assign( const T *p, std::vector<size_t> *d)
         resize(arr_sz);
         clearM();
       }
-
     }
 //    else:  dimensions of *this must fit
 
@@ -887,6 +902,19 @@ MArep<T>::getDim(std::vector<size_t> &d_in)
     for(size_t i=0 ; i < d_in.size() ; ++i)
       if( d_in[i] > 1 )
         dim.push_back(d_in[i]);
+
+    // Product of dimensions. Purpose: conversion of
+    // array index to matrix indices and vice versa.
+    // for 0-based indices:
+    // index = i0 +i1*D0 + i2*D0*D1 + i3*D0*D1*D2 + ...
+    dimProduct.clear();
+    dimProduct.push_back(1);
+
+    for( size_t i=1 ; i < dim.size() ; ++i )
+    {
+      size_t j=i-1;
+      dimProduct.push_back( dimProduct[j] * dim[j] );
+    }
 
     return ;
 }
@@ -1057,7 +1085,7 @@ public:
   ~MtrxArr() {clear();}
 
 //  struct ValueException;  // check validity of data
-  ValueException<T> *valExp;
+  ValueException<T> *valExcp;
 
 //! Subscription operator.
 /*! Note: This is for a 1D array.*/
@@ -1096,8 +1124,7 @@ public:
   //! Indirect indexing.
   MtrxArr<T> operator[]( const MtrxArr<size_t> &p );
 
-  void        addCounter(int i)
-                 { rep->counter += i; }
+  void       addCounter(int i) { rep->counter += i; }
 
   //! Assignment of an array.
   template<typename T_in> // with type conversion
@@ -1108,8 +1135,7 @@ public:
   void    assign( const T_in *p, size_t nx=0, size_t ny=0, size_t nz=0);
 
   //! get the starting address [with off set].
-  T*      begin(size_t offSet=0)
-        { return arr + offSet; }
+  T*      begin(size_t offSet=0) { return arr + offSet; }
 
   //! clear local allocations (not the for the reference).
   void    clear(void);
@@ -1120,24 +1146,25 @@ public:
       combination. Testing is enabled by default for all.*/
   void    disableValueExceptionTest(std::string s="");
   void    disableValueExceptionUpdate(bool b=false)
-             { valExp->update = b; }
+             { valExcp->update = b; }
 
   void    enableValueExceptionTest(std::string s="", std::string add="")
-             { valExp->enableValueExceptionTest(s); }
+             { valExcp->enableValueExceptionTest(s); }
 
   void    enableValueExceptionUpdate(bool b=true)
-             { valExp->update = b; }
+             { valExcp->update = b; }
 
   void    exceptionError(std::string str);
 
   void    frame( const MtrxArr<T> &g, size_t beg, size_t sz=0);
 
   //! Get value at given index(es).
-  /*! For valarray, external arry, and matrix notation (2D, and 3-D).*/
+  /*! For external arry and matrix notation (2D, and 3-D).*/
+  T       get(std::vector<size_t>& vs) { return arr[ index(vs) ] ;}
   T       get(size_t i0, size_t i1, size_t i2)
-            {return *(arr +(i0 * rep->dim[1]+i1) * rep->dim[2] + i2 ) ;}
+            {return *(arr +i0+i1*rep->dimProduct[1]+i2*rep->dimProduct[2] ) ;}
   T       get(size_t i0, size_t i1)
-            {return *(arr + i0 * rep->dim[1] + i1);}
+            {return *(arr + i0 + i1*rep->dim[0]);}
   T       get(size_t i0)
             {return arr[i0];}
 
@@ -1155,19 +1182,18 @@ public:
   void    getExceptionValue(std::vector<T> &, size_t);
 
   T ** const
-          getM(void)
-         { return rep->getM(); }
+          getM(void) { return rep->getM(); }
 
   //! Get number of rows.
-  size_t  getRowSize(void)
-         { return rep->dim.size() > 0 ? rep->dim[0] : 0 ;}
+  size_t  getRowSize(void) { return rep->dim.size() > 0 ? rep->dim[0] : 0 ;}
 
   //! Get value at given index(es).
-  /*! For valarray, external arry, and matrix notation (2D, and 3-D).*/
+  /*! For external arry and matrix notation (2D, and 3-D).*/
+  size_t index(std::vector<size_t>&);
   size_t index(size_t i0, size_t i1, size_t i2)
-            {return (i0*rep->dim[1]+i1) * rep->dim[2] + i2  ;}
+            {return i0 + i1*rep->dim[0]+i2*rep->dimProduct[2] ;}
   size_t index(size_t i0, size_t i1)
-            {return i0 * rep->dim[1] + i1;}
+            {return i0 + i1*rep->dim[0];}
   size_t index(size_t i0)
             {return i0;}
 
@@ -1190,17 +1216,11 @@ public:
   void    link( const T *p, bool keepShape=false);
 
   //! Put value at given index(es).
-  /*! For valarray, external arry, and matrix notation (2D, and 3-D).*/
-  void     put(T val, size_t i0,
-               size_t i1=UINT_MAX, size_t i2=UINT_MAX);
+  /*! For external arry and matrix notation (2D, and 3-D).*/
+  void    put(T val, std::vector<size_t>&);
+  void    put(T val, size_t i0, size_t i1=0, size_t i2=0);
 
-  //! Put value at given index(es).
-  /*! For valarray, external arry, and matrix notation (2D, and 3-D).
-      No testing of inf etc. .*/
-  void    put(bool b, T val, size_t i0,
-              size_t i1=UINT_MAX, size_t i2=UINT_MAX);
-
-  //! Resize valarray and matrix.
+  //! Resize matrix.
   void    resize(size_t nx, size_t ny=0, size_t nz=0);
   void    resize(std::vector<size_t>&d);
 
@@ -1211,11 +1231,11 @@ public:
       are stored in array vE.*/
   void    setExceptionValue(void* p=0, size_t sz=0,
             std::vector<char>* m=0, std::string* s=0)
-            { valExp->setExceptionValue(reinterpret_cast<T*>(p), sz, m, s);}
+            { valExcp->setExceptionValue(reinterpret_cast<T*>(p), sz, m, s);}
 
   void    setExceptionValue(T *vE, size_t sz,
             std::vector<char>* m=0, std::string* s=0)
-            { valExp->setExceptionValue(vE, sz, m, s);}
+            { valExcp->setExceptionValue(vE, sz, m, s);}
 
   void    setExceptionValue(std::vector<T> vE,
             std::vector<char>* mode=0, std::string* s=0);
@@ -1224,7 +1244,7 @@ public:
   size_t  size(void) const { return rep->arr_sz;}
 
   void    testValueException(void)
-             { valExp->testValueException(rep->arr, rep->arr_sz,
+             { valExcp->testValueException(rep->arr, rep->arr_sz,
                validRangeBegin, validRangeEnd); }
 
   T *arr ;  // points to &rep->(*pva)[0]
@@ -1241,7 +1261,7 @@ MtrxArr<T>::MtrxArr()
 {
   std::vector<size_t> t;
   zero = static_cast<T>( 0 );
-  valExp = new ValueException<T> ;
+  valExcp = new ValueException<T> ;
 
   rep = new MArep<T>(0, t );  // t with size()==0
 
@@ -1256,7 +1276,7 @@ template<typename T>
 MtrxArr<T>::MtrxArr(const MtrxArr<T> &ma)
 {
   zero = static_cast<T>( 0 );
-  valExp = new ValueException<T> ;
+  valExcp = new ValueException<T> ;
 
   ma.rep->counter++;
   rep=ma.rep;
@@ -1264,7 +1284,7 @@ MtrxArr<T>::MtrxArr(const MtrxArr<T> &ma)
   rep->dim=ma.rep->dim;
   arr=rep->arr;
 
-  valExp->copy( *ma.valExp );
+  valExcp->copy( *ma.valExcp );
 }
 
 // Construct for a given shape without assignment
@@ -1272,7 +1292,7 @@ template<typename T>
 MtrxArr<T>::MtrxArr(size_t nx, size_t ny, size_t nz)
 {
   zero = static_cast<T>( 0 );
-  valExp = new ValueException<T> ;
+  valExcp = new ValueException<T> ;
   rep=0;
 
   std::vector<size_t> t;
@@ -1289,7 +1309,7 @@ template<typename T>
 MtrxArr<T>::MtrxArr(const T *p, size_t nx, size_t ny, size_t nz)
 {
   zero = static_cast<T>( 0 );
-  valExp = new ValueException<T> ;
+  valExcp = new ValueException<T> ;
   rep=0;
 
   std::vector<size_t> t;
@@ -1309,7 +1329,7 @@ template<typename T>
 MtrxArr<T>::MtrxArr(std::vector<size_t> &d)
 {
   zero = static_cast<T>( 0 );
-  valExp = new ValueException<T> ;
+  valExcp = new ValueException<T> ;
   rep=0;
   rep = new MArep<T>(0, d );
   arr=rep->arr;
@@ -1319,7 +1339,7 @@ template<typename T>
 MtrxArr<T>::MtrxArr(const T *p, std::vector<size_t> t)
 {
   zero = static_cast<T>( 0 );
-  valExp = new ValueException<T> ;
+  valExcp = new ValueException<T> ;
   rep=0;
   rep = new MArep<T>(p, t );
   arr=rep->arr;
@@ -1371,7 +1391,7 @@ MtrxArr<T>::operator=( const MtrxArr<T> &g)
   // get exception values
 //  if( initValExceptUpdate() )
 //  {
-    valExp->copy( *g.valExp );
+    valExcp->copy( *g.valExcp );
 
     validRangeBegin=g.validRangeBegin;
     validRangeEnd=g.validRangeEnd;
@@ -1419,9 +1439,9 @@ MtrxArr<T>::operator=( const MtrxArr<T_in> &g)
 
   assign(g.arr, g.getDimensions() );
 
-  if( valExp && valExp->update )
+  if( valExcp && valExcp->update )
   {
-    valExp->import( *g.valExp );
+    valExcp->import( *g.valExcp );
 
     validRangeBegin=g.validRangeBegin;
     validRangeEnd=g.validRangeEnd;
@@ -1918,8 +1938,8 @@ MtrxArr<T>::clear(void)
   if( (--rep->counter) == 0 )
     delete rep; // clears if no longer referenced
 
-  if( static_cast<bool>(valExp) )
-    delete valExp ;
+  if( static_cast<bool>(valExcp) )
+    delete valExcp ;
 }
 
 template<typename T>
@@ -2000,10 +2020,10 @@ MtrxArr<T>::frame( const MtrxArr<T> &g, size_t beg, size_t sz)
   }
 
   // determine exception value counts of the frame
-  if( g.valExp  )
+  if( g.valExcp  )
   {
     // no exception value provided
-    if( ! g.valExp->exceptionValue.size() )
+    if( ! g.valExcp->exceptionValue.size() )
       return;
 
     lim=validRangeBegin.size();
@@ -2012,16 +2032,16 @@ MtrxArr<T>::frame( const MtrxArr<T> &g, size_t beg, size_t sz)
 
     if( sz )
     {
-      if( ! valExp->exceptionCount.size() )
+      if( ! valExcp->exceptionCount.size() )
       {
-         if( g.valExp->exceptionCount.size() )
-            valExp->copy( *g.valExp, true );
+         if( g.valExcp->exceptionCount.size() )
+            valExcp->copy( *g.valExcp, true );
       }
 
-      valExp->exceptionCount[0] = sz ;
+      valExcp->exceptionCount[0] = sz ;
     }
     else
-      valExp->exceptionCount[0] = 0 ;
+      valExcp->exceptionCount[0] = 0 ;
   }
 
   return ;
@@ -2033,44 +2053,44 @@ MtrxArr<T>::getExceptionCount(size_t i)
 {
   // special: indicates the index of user exception counts
 
-  if( valExp->exceptionCount.size() <= i )
+  if( valExcp->exceptionCount.size() <= i )
     return 0;
 
-  return valExp->exceptionCount[i] ;
+  return valExcp->exceptionCount[i] ;
 }
 
 template<typename T>
 size_t
 MtrxArr<T>::getExceptionCount(std::string s)
 {
-  if( valExp->exceptionCount.size() == 0 )
+  if( valExcp->exceptionCount.size() == 0 )
     return 0;
 
   size_t count=0;
 
   if( s == "all" )
   {
-    for( size_t i=0 ; i < valExp->exceptionCount.size() ; ++i )
-      count += valExp->exceptionCount[i];
+    for( size_t i=0 ; i < valExcp->exceptionCount.size() ; ++i )
+      count += valExcp->exceptionCount[i];
 
-    count += valExp->countInf;
-    count += valExp->countNaN;
+    count += valExcp->countInf;
+    count += valExcp->countNaN;
 
     return count;
   }
 
   if( s == "user" )
   {
-    for( size_t i=0 ; i < valExp->exceptionCount.size() ; ++i )
-      count += valExp->exceptionCount[i];
+    for( size_t i=0 ; i < valExcp->exceptionCount.size() ; ++i )
+      count += valExcp->exceptionCount[i];
     return count;
   }
 
   if( s == "inf" )
-    return valExp->countInf ;
+    return valExcp->countInf ;
 
   if( s == "nan" )
-    return valExp->countNaN ;
+    return valExcp->countNaN ;
 
   return count;
 }
@@ -2085,7 +2105,7 @@ MtrxArr<T>::getExceptionValue(void* p, size_t i)
     return;
   }
 
-  for( i=0 ; i < valExp->exceptionValue.size() ; ++i )
+  for( i=0 ; i < valExcp->exceptionValue.size() ; ++i )
     getExceptionValue(p, i);
 
   return ;
@@ -2095,17 +2115,31 @@ template<typename T>
 void
 MtrxArr<T>::getExceptionValue(std::vector<T> &g, size_t i)
 {
-  g[i] = valExp->exceptionValue[i];
+  g[i] = valExcp->exceptionValue[i];
 
   return ;
+}
+
+template<typename T>
+size_t
+MtrxArr<T>::index(std::vector<size_t>& indices)
+{
+  if( indices.size() == 0 )
+    return 0;
+
+  size_t index=indices[0];
+  for( size_t i=1 ; i < indices.size() ; ++i)
+    index += indices[i] * rep->dimProduct[i] ;
+
+  return index;
 }
 
 template<typename T>
 bool
 MtrxArr<T>::initValExceptUpdate(void)
 {
-  bool is=valExp->update;
-  valExp->update=false;
+  bool is=valExcp->update;
+  valExcp->update=false;
   return is;
 }
 
@@ -2174,14 +2208,7 @@ MtrxArr<T>::put(T val, size_t i0, size_t i1, size_t i2)
   if( ! arr )  // no data
     return ;  // ToDo: error handling
 
-  size_t ii;
-
-  if( i1 == UINT_MAX  )        // 1-D
-    ii=i0;
-  else if( i2 == UINT_MAX )   // 2-D
-    ii=i0*rep->dim[1] + i1;
-  else                        // 3-D
-    ii=(i0*rep->dim[1]+i1) * rep->dim[2] + i2 ;
+  size_t ii = index(i0, i1, i2);
 
   bool is=false;
 
@@ -2190,42 +2217,11 @@ MtrxArr<T>::put(T val, size_t i0, size_t i1, size_t i2)
       || arr[ii] != arr[ii] )
     is = true;
 
-  // test next value
-  if( val == std::numeric_limits<T>::infinity() || val != val )
-    is = true;
-
   // now, set the value
   arr[ii]=val;
 
   if( is )
     testValueException();
-
-  return;
-}
-
-template<typename T>
-void
-MtrxArr<T>::put(bool b, T val, size_t i0, size_t i1, size_t i2)
-{
-  // Put value at given index(es).
-  // For internal and external array and matrix notation (2D, and 3-D).
-
-  // Omit exception tests
-
-  if( ! arr )  // no data
-    return ;
-
-  size_t ii;
-
-  if( i1 == UINT_MAX  )        // 1-D
-    ii=i0;
-  else if( i2 == UINT_MAX )   // 2-D
-    ii=i0*rep->dim[1] + i1;
-  else                        // 3-D
-    ii=(i0*rep->dim[1]+i1) * rep->dim[2] + i2 ;
-
-  // now, set the value
-  arr[ii]=val;
 
   return;
 }
