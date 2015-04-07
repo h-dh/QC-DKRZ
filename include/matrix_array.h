@@ -1187,8 +1187,11 @@ public:
   //! Get number of rows.
   size_t  getRowSize(void) { return rep->dim.size() > 0 ? rep->dim[0] : 0 ;}
 
+  //! Get value matrix indices at given array index.
+  std::vector<size_t>
+         indices(size_t);
+
   //! Get value at given index(es).
-  /*! For external arry and matrix notation (2D, and 3-D).*/
   size_t index(std::vector<size_t>&);
   size_t index(size_t i0, size_t i1, size_t i2)
             {return i0 + i1*rep->dim[0]+i2*rep->dimProduct[2] ;}
@@ -2118,6 +2121,38 @@ MtrxArr<T>::getExceptionValue(std::vector<T> &g, size_t i)
   g[i] = valExcp->exceptionValue[i];
 
   return ;
+}
+
+template<typename T>
+std::vector<size_t>
+MtrxArr<T>::indices(size_t index)
+{
+  size_t sz = rep->dim.size() ;
+
+  // initiate with a size appropriate to the dimensions
+  std::vector<size_t> ixs(sz);
+
+  if( sz == 0
+        || index >= (rep->dim[sz-1] * rep->dimProduct[sz-1]) )
+  {
+    ixs.clear();
+    return ixs;  // no error handling
+  }
+
+  if( index < rep->dim[0] )
+    ixs[0] = index ;
+  else
+  {
+    size_t l=sz ;
+    do
+    {
+      --l ;
+      ixs[l] = index / rep->dimProduct[l] ;
+      index -= ixs[l] * rep->dimProduct[l] ;
+    } while( l ) ;
+  }
+  
+  return ixs ;
 }
 
 template<typename T>
