@@ -908,12 +908,13 @@ MArep<T>::getDim(std::vector<size_t> &d_in)
     // for 0-based indices:
     // index = i0 +i1*D0 + i2*D0*D1 + i3*D0*D1*D2 + ...
     dimProduct.clear();
-    dimProduct.push_back(1);
 
-    for( size_t i=1 ; i < dim.size() ; ++i )
+    for( size_t i=0 ; i < dim.size() ; ++i )
     {
-      size_t j=i-1;
-      dimProduct.push_back( dimProduct[j] * dim[j] );
+      dimProduct.push_back(1);
+
+      for( size_t j=i+1 ; j < dim.size() ; ++j )
+        dimProduct[i] *= dim[j] ;
     }
 
     return ;
@@ -1057,10 +1058,6 @@ public:
 template<typename T>
 class MtrxArr : public MtrxArrB
 {
-  // representation
-  MArep<T> *rep;
-
-
   struct ExceptionStruct
   {
      std::ofstream *ofsError;
@@ -1083,6 +1080,9 @@ public:
   MtrxArr(std::vector<size_t> &dim);
   MtrxArr(const T*, std::vector<size_t> dim);
   ~MtrxArr() {clear();}
+
+  // representation
+  MArep<T> *rep;
 
 //  struct ValueException;  // check validity of data
   ValueException<T> *valExcp;
@@ -1190,6 +1190,10 @@ public:
   //! Get value matrix indices at given array index.
   std::vector<size_t>
          indices(size_t);
+
+  // String representation of indices
+  std::string
+         indicesStr(size_t);
 
   //! Get value at given index(es).
   size_t index(std::vector<size_t>&);
@@ -2132,8 +2136,11 @@ MtrxArr<T>::indices(size_t index)
   // initiate with a size appropriate to the dimensions
   std::vector<size_t> ixs(sz);
 
-  if( sz == 0
-        || index >= (rep->dim[sz-1] * rep->dimProduct[sz-1]) )
+  size_t mx = 1 ;
+  for( size_t i=0 ; i < rep->dim.size() ; ++i )
+    mx *= rep->dim[i] ;
+
+  if( sz == 0 || index >= mx )
   {
     ixs.clear();
     return ixs;  // no error handling
@@ -2143,16 +2150,34 @@ MtrxArr<T>::indices(size_t index)
     ixs[0] = index ;
   else
   {
-    size_t l=sz ;
-    do
+    for( size_t l=0 ; l < rep->dim.size() ; ++l )
     {
-      --l ;
       ixs[l] = index / rep->dimProduct[l] ;
       index -= ixs[l] * rep->dimProduct[l] ;
-    } while( l ) ;
+    }
   }
-  
+
   return ixs ;
+}
+
+template<typename T>
+std::string
+MtrxArr<T>::indicesStr(size_t index)
+{
+  std::string str("(");
+
+  std::vector<size_t> ix( indices(index) );
+
+  for( size_t i=0 ; i < ix.size() ; ++i )
+  {
+    if(i)
+      str += ", " ;
+    str += hdhC::itoa(ix[i]) ;
+  }
+
+  str += ")" ;
+
+  return str;
 }
 
 template<typename T>
