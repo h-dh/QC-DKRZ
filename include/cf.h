@@ -78,7 +78,7 @@ class CF : public IObj
             std::vector<std::string>& valid_sn,
             std::vector<std::string>& valid_ft,
             int& valid_sn_ix,
-            int& ft_ix, int& sn_ix, int& units_ix );
+            int& ft_ix, int& sn_ix, std::string& units );
   void   chap4_3_2_deprecatedUnits(Variable&, std::string &units);
   void   chap4_3_2_getParamVars( Variable&,
             std::vector<std::string>& valid_sn,
@@ -130,7 +130,6 @@ class CF : public IObj
   void   chap8_2(Variable&);  // compression by gathering (scal_factor, offset)
 
   void   chap9(void);    // discrete sampling geometries (CF-1.6)
-  void   chap9_3_2_sample_dimension(std::vector<size_t>& dv_ix);
   void   chap9_featureType(std::vector<std::string> &validFeatureType,
             std::vector<std::string> &featureType) ;
   void   chap9_getSepVars(std::vector<int>& xyzt_ix, std::vector<size_t>& dv_ix);
@@ -138,10 +137,11 @@ class CF : public IObj
          chap9_guessFeatureType(std::vector<std::string> &featureType,
            std::vector<int>& xyzt_ix, std::vector<size_t>& dv_ix) ;
   bool   chap9_horizontal(std::vector<int>& xyzt_ix);
-  bool   chap9_MV(std::vector<int>& xyzt_ix, std::vector<size_t>& dv_ix);
+  void   chap9_MV(std::vector<size_t>& dv_ix);
   bool   chap9_orthoMultDimArray(Variable&, std::vector<int>& xyzt_ix);
   bool   chap9_point(std::vector<int>& xyzt_ix, std::vector<size_t>& dv_ix);
   bool   chap9_profile(std::vector<int>& xyzt_ix, std::vector<size_t>& dv_ix);
+  void   chap9_sample_dimension(std::vector<size_t>& dv_ix);
   bool   chap9_timeSeries(std::vector<int>& xyzt_ix, std::vector<size_t>& dv_ix);
   bool   chap9_timeSeriesProfile(std::vector<int>& xyzt_ix, std::vector<size_t>& dv_ix);
   bool   chap9_trajectory(std::vector<int>& xyzt_ix, std::vector<size_t>& dv_ix);
@@ -152,7 +152,7 @@ class CF : public IObj
 
   std::string
          captAtt(std::string v, std::string a,
-                 bool colon=true, bool blank=true, bool isLower=false);
+                 bool colon=true, bool blank=true, bool isUpper=false);
   std::string
          captAtt(std::string a, bool is_blank=true);
   std::string
@@ -186,7 +186,6 @@ template <typename T>
   bool   checkRelationCF16(std::vector<bool>&);
   bool   checkRelationScalar(std::vector<bool>&);
   void   checkSN_Modifier(Variable &);
-  int    countDataVarIndications(Variable&);
   bool   cmpUnits( std::string s, std::string ref);
   void   enableCheck(void){isCheck=true;}
   int    finally(int eCode=0);
@@ -203,17 +202,17 @@ template <typename T>
   void   final_dataVar(void);
   void   findAmbiguousCoords(void);
   bool   findLabel(Variable&);
-  bool   findCellMeasures(Variable&);
+  void   findCellMeasures(Variable&);
   void   getAssociatedGroups(void);
   void   getDims(void);
   std::vector<std::string>
          // mode: "key", "arg", "1st", "2nd". tail=last char of key
          getKeyWordArgs(std::string&, std::string mode="arg", char tail='\0');
   void   getSN_TableEntry(void);
+  void   getVarStateEvidences(Variable&);
   void   hasBounds(Variable&);
   void   initDefaults(void);
   void   inqAuxVersusPureCoord(void);
-  bool   inqDataVar(Variable&);
   bool   isBounds(Variable&);
   bool   isChap6_labelSubstAuxCoord(Variable& coord_aux, std::vector<std::string>& ca);
   bool   isChap9_specialLabel(Variable& label, Variable& var);
@@ -223,7 +222,7 @@ template <typename T>
   bool   isLongitude(void);
   bool   isXYZinCoordAtt(bool withT=false);
   bool   parseUnits( std::string s);
-  void   pre_dataVar(Variable&);
+  void   postAnnotations(void);
 
   bool   run(void);
   bool   scanStdNameTable(std::vector<int>& zx);
@@ -255,6 +254,7 @@ template <typename T>
   int         compressIx;
 
   // a few names of attributes used throughout the checks
+  std::string n_ancillary_variables;
   std::string n_area;
   std::string n_attribute;
   std::string n_axis;
@@ -265,10 +265,13 @@ template <typename T>
   std::string n_cf_role;
   std::string n_climatology;
   std::string n_compress;
+  std::string n_Conventions;
   std::string n_coordinates;
   std::string n_dimension;
-  std::string n_FillValue;
   std::string n_featureType;
+  std::string n_FillValue;
+  std::string n_flag_masks;
+  std::string n_flag_values;
   std::string n_formula_terms;
   std::string n_global;
   std::string n_grid_latitude;
@@ -282,6 +285,8 @@ template <typename T>
   std::string n_longitude;
   std::string n_missing_value;
   std::string n_month_lengths;
+  std::string n_NC_GLOBAL;
+  std::string n_number_of_observations;
   std::string n_positive;
   std::string n_standard_name;
   std::string n_sample_dimension;
@@ -302,6 +307,7 @@ template <typename T>
   static const bool lowerCase = true;
   std::string bKey;
   std::string fail;
+  std::string NO_MT;
 
   std::vector<std::string>        associatedGroups;
   static std::vector<std::string> attName;
@@ -310,7 +316,7 @@ template <typename T>
   std::vector<size_t>             effDims_ix;
   std::vector<size_t>             varRepDims_ix;
 
-  // properties of coordiante attributes
+  // properties of coordinates attributes
   std::vector<std::pair<int, int> > ca_pij;
   std::vector<int> ca_ix; // ca_vx[i] points to var_ix, def.: -1
   std::vector<std::vector<std::string> > ca_vvs ;

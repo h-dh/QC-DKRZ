@@ -11,6 +11,5 @@ variables:
       psl-1:comment = "invalid use of hyphen in variable name" ;
 
 // global attributes:
-   :comment="naming convention" ;
    :Conventions = "CF-1.4" ;
 }

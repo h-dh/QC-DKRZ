@@ -25,7 +25,6 @@ variables:
      cell_area:comment = "units are required for a measure variable" ;
 
 // global attributes:
-   :comment="Cell areas for a spherical geodesic grid" ;
    :Conventions = "CF-1.4" ;
 
 data:

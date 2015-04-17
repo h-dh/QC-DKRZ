@@ -20,10 +20,9 @@ variables:
    float z(time) ;
      z:standard_name = "height" ;
      z:units = "km" ;
-     z:comment = "auxiliary vertical variable dependent on units=km requires a positive attribute" ;
+     z:comment = "missing positive attribute" ;
 
 // global attributes:
-   :comment="Trajectories" ;
    :Conventions = "CF-1.4" ;
 
 data:

@@ -26,7 +26,6 @@ variables:
      landpoint:comment="warning for FORTRAN: C index convention" ;
 
 // global attributes:
-   :comment="" ;
    :Conventions = "CF-1.4" ;
 
 data:

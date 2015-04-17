@@ -36,7 +36,7 @@ variables:
       lev:positive = "down" ;
       lev:units = "1";
       lev:formula_terms = "ap: var1 b: var2 ps: var3" ;
-      lev:comment = "invalid: missing standard_name" ;
+      lev:comment = "missing standard_name" ;
 
 // global attributes:
    :Conventions = "CF-1.4" ;

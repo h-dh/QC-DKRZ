@@ -30,7 +30,6 @@ variables:
       lat:comment = "attribute coordinates must not appear in auxiliary coordinates" ;
 
 // global attributes:
-   :comment="Two-dimensional coordinate variables" ;
    :Conventions = "CF-1.4" ;
 
 data:

@@ -442,7 +442,9 @@ std::string double2String( double z, std::string flag)
 
   std::ostringstream ostr(std::ios::app);
 
-  if( isSci )
+  double z_abs(fabs(z));
+
+  if( isSci || z_abs > 100000. || (z_abs > 0.0 && z_abs < 0.000001) )
     ostr.setf(std::ios::scientific, std::ios::floatfield);
   else
     ostr.setf(std::ios::fixed, std::ios::floatfield);

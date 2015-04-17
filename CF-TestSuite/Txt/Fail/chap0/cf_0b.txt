@@ -19,7 +19,7 @@ variables:
       PSL:standard_name = "air_pressure_at_sea_level" ;
 
 // global attributes:
-   :comment="warning: dimension lev is never used" ;
+   :comment = "warning: dimension lev is never used" ;
    :Conventions = "CF-1.4" ;
 
 data:

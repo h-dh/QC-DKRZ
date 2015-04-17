@@ -16,9 +16,6 @@ variables:
   float lev(lev) ;
      lev:long_name = "pressure level" ;
      lev:units = "hPa" ;
-  float lon(yc,xc) ;
-     lon:long_name = "longitude" ;
-     lon:units = "degrees_east" ;
   float lat(yc,xc) ;
      lat:long_name = "latitude" ;
      lat:units = "degrees_north" ;
@@ -26,10 +23,9 @@ variables:
   float T(lev,yc,xc) ;
      T:long_name = "temperature" ;
      T:units = "K" ;
-     T:comment = "a coordinates attribute=<lat lon> is required";
+     T:comment = "a coordinates attribute=<lat> is required";
 
 // global attributes:
-   :comment="Two-dimensional coordinate variables" ;
    :Conventions = "CF-1.4" ;
 
 data:
@@ -37,5 +33,4 @@ xc = 1., 2.;
 yc = 1., 2., 3.;
 lev = 1., 2., 3., 4.;
 lat = 1., 2., 3., 4., 5., 6.;
-lon = 1., 2., 3., 4., 5., 6.;
 }

@@ -397,7 +397,7 @@ QC::checkCoordinatesAtt(void)
   {
     Variable &var = pIn->variable[i];
 
-    if( var.isDataVar )
+    if( var.isDATA )
       for(size_t i=0 ; i < rqAuxC.size() ; ++i )
         checkCoordinatesAtt(var, rqAuxC[i]);
   }
@@ -1590,7 +1590,7 @@ QC::domainFindTableTypeByRange(
 
    for(size_t i=0 ; i < pIn->varSz ; ++i )
    {
-      if( pIn->variable[i].isDataVar )
+      if( pIn->variable[i].isDATA )
       {
          for(size_t j=0 ; j < pIn->variable[i].dimName.size() ; ++j )
          {
@@ -3150,7 +3150,7 @@ QC::createVarMetaData(void)
 
   // create instances of VariableMetaData. These have been identified
   // previously at the opening of the nc-file and marked as
-  // Variable::VariableMeta(Base)::isDataVar == true. The index
+  // Variable::VariableMeta(Base)::isDATA == true. The index
   // of identified targets is stored in vector in.dataVarIndex.
 
   bool is=true;

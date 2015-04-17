@@ -51,16 +51,17 @@ variables:
       humidity:coordinates = "time lon lat z" ;
 
 // global attributes:
-   :comment = "missing featureType profile" ;
+   :comment="missing featureType profile" ;
    :Conventions = "CF-1.6" ;
 
 data:
-profile=1.,2.;
-data:
-profile=1.,2.;
-z=1., 2., 3., 4., 5.;
-pressure=1., 2., 3., 4., 5.;
-temperature=1., 2., 3., 4., 5.;
-humidity=1., 2., 3., 4., 5.;
-rowSize= 3, 2 ;
+  profile=1,2;
+  time=1., 2.;
+  lon=1., 2.;
+  lat=1., 2.;
+  rowSize=3,2;
+  z=1., 2., 3., 4., 5.;
+  pressure=1., 2., 3., 4., 5.;
+  temperature=1., 2., 3., 4., 5.;
+  humidity=1., 2., 3., 4., 5.;
 }

@@ -13,6 +13,5 @@ variables:
       psl:comment = "warning: _FillValue within valid_range" ;
 
 // global attributes:
-   :comment="variables" ;
    :Conventions = "CF-1.4" ;
 }

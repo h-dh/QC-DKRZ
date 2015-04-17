@@ -14,8 +14,8 @@ doit()
 
   local ncDir=${initPWD}/Nc/$1/$2
 
-  # clear nc-files int Txt which will not be re-processed
-  \rm -f *.nc
+  # clear nc-files in Txt which will not be re-processed
+  \rm  *.nc 2> /dev/null
 
    # clear all Nc files, but write-protected ones
   if [ -d ${ncDir}  ] ; then

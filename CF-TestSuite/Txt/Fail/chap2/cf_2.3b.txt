@@ -10,6 +10,5 @@ variables:
       _psl:comment = "invalid leading underscore in variable name" ;
 
 // global attributes:
-   :comment="naming convention" ;
    :Conventions = "CF-1.4" ;
 }

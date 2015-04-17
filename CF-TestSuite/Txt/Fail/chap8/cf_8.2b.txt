@@ -26,7 +26,6 @@ variables:
      landpoint:comment="non-existent dimension height" ;
 
 // global attributes:
-   :comment="" ;
    :Conventions = "CF-1.4" ;
 
 data:

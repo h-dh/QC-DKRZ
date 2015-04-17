@@ -26,7 +26,6 @@ variables:
      landpoint:comment = "type of landpoint must be int" ;
 
 // global attributes:
-   :comment="" ;
    :Conventions = "CF-1.4" ;
 
 data:

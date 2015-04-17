@@ -3,12 +3,15 @@
 VariableMeta::VariableMeta()
 {
   // preset some members
+  isAUX=false;
+  isDATA=false;
+
+  countAux = countData = 0;
+
   isArithmeticMean=false;
-  isAux=false;
   isChecked=false;
   isClimatology=false;
   isCompress=false;
-  isDataVar=true;
   isDescreteSamplingGeom=false;
   isExcluded=false;
   isFixed=false;
@@ -26,13 +29,17 @@ VariableMeta::VariableMeta()
   is_1st_rotX=true;
   is_1st_rotY=true;
 
-  isUnlimited_=-1;
+  coord.indication_X=0;
+  coord.indication_Y=0;
+  coord.indication_Z=0;
+  coord.indication_T=0;
+
   indication_DV=0;
+
+  isUnlimited_=-1;
 
   range[0]=MAXDOUBLE;
   range[1]=-MAXDOUBLE;
-
-  indication_DV=0;
 
   clearCoord();
 }
@@ -47,11 +54,21 @@ VariableMeta::clearCoord(void)
   coord.isZ=false;
   coord.isZ_DL=false;
   coord.isT=false;
-  coord.indication_X=0;
-  coord.indication_Y=0;
-  coord.indication_Z=0;
-  coord.indication_T=0;
 
+  return;
+}
+
+void
+Variable::addDataCount(int i)
+{
+  countData += i ;
+  return;
+}
+
+void
+Variable::addAuxCount(int i)
+{
+  countAux += i ;
   return;
 }
 
@@ -265,68 +282,6 @@ Variable::getCoordinateType(void)
 }
 
 bool
-Variable::inqDataVar(void)
-{
-  if( isDataVar )
-    return isDataVar;
-
-  if( boundsOf.size() )
-      --indication_DV ;
-
-//    return (isDataVar=false) ;  // bounds are associated to coordinates
-  if( isCoordinate() )
-      --indication_DV ;
-
-//  return (isDataVar=false) ;
-
-
-  /*
-    if( dimName.size() > 2
-          && ! pIn->variable[pIn->varSz].isValidAtt("featureType") )
-      indication_DV += 10 ;
-*/
-
-    // look for attributes which should be asssociated only
-    // to data varriables, although we know real files better
-    if( isValidAtt("axis") )
-      --indication_DV ;
-    if( isValidAtt("bounds") )
-      --indication_DV ;
-    if( isValidAtt("cell_measures") )
-      ++indication_DV ;
-    if( isValidAtt("cell_methods") )
-      ++indication_DV ;
-    if( isValidAtt("cf_role") )
-      --indication_DV ;
-    if( isValidAtt("climatology") )
-      --indication_DV ;
-    if( isValidAtt("coordinates") )
-      ++indication_DV ;
-    if( isValidAtt("FillValue") || isValidAtt("missing_value") )
-      ++indication_DV ;
-    if( isValidAtt("positive") )
-      --indication_DV ;
-    if( isValidAtt("grid_mapping") )
-      ++indication_DV ;
-    if( isValidAtt("ancilliary_variables") )
-      ++indication_DV ;
-    if( isValidAtt("flag_values") )
-      ++indication_DV ;
-    if( isValidAtt("flag_masks") )
-      ++indication_DV ;
-
-    if( indication_DV < 1 )
-      isDataVar = false;
-    else
-    {
-      clearCoord();
-      isDataVar = true;
-    }
-
-  return isDataVar;
-}
-
-bool
 Variable::isUnlimited(void)
 {
    if( isUnlimited_ > -1 )
@@ -526,15 +481,15 @@ Variable::makeObj(bool is)
 }
 
 void
-Variable::push_aux(std::string& name)
+Variable::push_aux(std::string& vName)
 {
    size_t i;
    for( i=0 ; i < aux.size() ; ++i )
-     if( aux[i] == name )
+     if( aux[i] == vName )
        break;
 
    if( i == aux.size() )
-     aux.push_back(name);
+     aux.push_back(vName);
 
    return;
 }
@@ -551,12 +506,12 @@ Variable::setDefaultException(T v, void *vmv)
    {
      std::string s("inf nan");
      pGM->enableExceptionValue( (void*) &v, 1, 0, &s) ;
-     mv->valExp->enableExceptionValue( &v, 1, 0, &s) ;
+     mv->valExcp->enableExceptionValue( &v, 1, 0, &s) ;
    }
    else
    {
      pGM->enableExceptionValue( (void*) &v, 1) ;
-     mv->valExp->enableExceptionValue( &v, 1) ;
+     mv->valExcp->enableExceptionValue( &v, 1) ;
    }
 
    return;
@@ -578,12 +533,12 @@ Variable::setExceptions( T* v, MtrxArr<T> *mv)
     if( isInfNan )
     {
       std::string s("inf nan");
-      mv->valExp->enableExceptionValue( v, 1, 0, &s) ;
+      mv->valExcp->enableExceptionValue( v, 1, 0, &s) ;
       pGM->enableExceptionValue( (void*)v, 1, 0, &s) ;
     }
     else
     {
-      mv->valExp->enableExceptionValue( v, 1) ;
+      mv->valExcp->enableExceptionValue( v, 1) ;
       pGM->enableExceptionValue( (void*)v, 1) ;
     }
 
@@ -592,7 +547,7 @@ Variable::setExceptions( T* v, MtrxArr<T> *mv)
   else if( isInfNan )
   {
     std::string s("inf nan");
-    mv->valExp->enableExceptionValue( 0, 0, 0, &s) ;
+    mv->valExcp->enableExceptionValue( 0, 0, 0, &s) ;
     pGM->enableExceptionValue( (void*)0, 0, 0, &s) ;
   }
 

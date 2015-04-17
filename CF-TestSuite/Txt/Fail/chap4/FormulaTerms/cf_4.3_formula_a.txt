@@ -35,7 +35,7 @@ variables:
       lev:long_name = "atmosphere_hybrid_height_coordinate" ;
       lev:positive = "down" ;
       lev:standard_name = "atmosphere_hybrid_sigma_pressure_coordinate" ;
-      lev:comment = "invalid: missing formula_terms attribute." ;
+      lev:comment = "missing formula_terms attribute." ;
 
 // global attributes:
    :Conventions = "CF-1.4" ;

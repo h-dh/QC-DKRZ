@@ -381,7 +381,7 @@ the top-most layer, then it is reset to the first one.*/
 
   void    enableExceptionValue(void* p, size_t sz,
               std::vector<char>* mode=0, std::string* s=0)
-              { cellValue.valExp->enableExceptionValue
+              { cellValue.valExcp->enableExceptionValue
                     (reinterpret_cast<T*>(p), sz, mode, s );}
 
 //! Mutable layer layout.

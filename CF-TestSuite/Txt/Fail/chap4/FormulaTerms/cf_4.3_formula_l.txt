@@ -37,7 +37,7 @@ variables:
    double var2(lev) ;
       var2:long_name = "vertical coordinate formula term: b(k)" ;
       var2:units = "Pa" ;
-      var2:comment = "invalid: must be dimensionless" ;
+      var2:comment = "dimensionless is required" ;
 
 // global attributes:
    :Conventions = "CF-1.4" ;

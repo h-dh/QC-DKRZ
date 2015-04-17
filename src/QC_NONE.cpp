@@ -350,7 +350,7 @@ QC::createVarMetaData(void)
 
   // create instances of VariableMetaData:375. These have been identified
   // previously at the opening of the nc-file and marked as
-  // Variable::VariableMeta(Base)::isDataVar == true. The index
+  // Variable::VariableMeta(Base)::isDATA == true. The index
   // of identified targets is stored in vector in.dataVarIndex.
 
   for( size_t i=0 ; i < pIn->dataVarIndex.size() ; ++i )

@@ -25,7 +25,6 @@ variables:
      maxtemp:comment = "invalid method=value" ;
 
 // global attributes:
-   :comment="Methods applied to a time series" ;
    :Conventions = "CF-1.4" ;
 
 data:

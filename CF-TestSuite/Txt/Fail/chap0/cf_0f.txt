@@ -20,7 +20,7 @@ variables:
       lon:axis="X" ;
 
 // global attributes:
-   :comment = "no data variable is available" ;
+   :comment = "no data variable in the file" ;
    :Conventions = "CF-1.4" ;
 
 data:

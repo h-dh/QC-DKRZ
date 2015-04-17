@@ -1756,7 +1756,7 @@ QC::checkMetaData(InFile &in)
   // from the previous instance.
   for( size_t i=0 ; i < varMeDa.size() ; ++i )
   {
-    if( varMeDa[i].var->isDataVar )
+    if( varMeDa[i].var->isDATA )
     {
       getMIP_table(varMeDa[i]) ;
       setVarMetaData(varMeDa[i]);
@@ -2999,7 +2999,7 @@ QC::createVarMetaData(void)
 
   // create instances of VariableMetaData. These have been identified
   // previously at the opening of the nc-file and marked as
-  // Variable::VariableMeta(Base)::isDataVar == true. The index
+  // Variable::VariableMeta(Base)::isDATA == true. The index
   // of identified targets is stored in the InFile::dataVarIndex vector.
   for( size_t i=0 ; i< pIn->dataVarIndex.size() ; ++i )
   {

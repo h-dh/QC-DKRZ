@@ -28,7 +28,6 @@ variables:
       time:comment = "climatology attribute is missing" ;
 
 // global attributes:
-   :comment="Climatological seasons" ;
    :Conventions = "CF-1.4" ;
 
 data:

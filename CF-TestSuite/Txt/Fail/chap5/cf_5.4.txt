@@ -24,7 +24,6 @@ variables:
      pressure:comment = "standard_name attribute is recommended for coordinate variables";
 
 // global attributes:
-   :comment="Timeseries of station data" ;
    :Conventions = "CF-1.4" ;
 
 data:

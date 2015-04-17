@@ -3,10 +3,11 @@ dimensions:
    time = UNLIMITED ;
 
 variables:
-   float q(time);
-      q:standard_name = "specific_humidity number_of_observations";
-      q:units = "g/g";
-      q:comment ="modifier=number_of_observations requires units=1" ;
+   float q3(time);
+      q3:standard_name = "specific_humidity";
+      q3:units = "g/g";
+      q3:amip = "abcd" ;
+      q3:comment ="amip is not CF compatible" ;
 
 // global attributes:
    :Conventions = "CF-1.4" ;

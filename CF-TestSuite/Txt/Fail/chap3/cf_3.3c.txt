@@ -3,10 +3,10 @@ dimensions:
    time = UNLIMITED ;
 
 variables:
-   float q1(time);
-      q1:standard_name = "specific_humidity standard_error status_flag";
-      q1:units = "g/g";
-      q1:comment ="standard name has too many modifiers" ;
+   float q0(time);
+      q0:standard_name = "specific humidity standard_error";
+      q0:units = "g/g";
+      q0:comment ="standard_name with a valid modifier contains blanks" ;
 
 // global attributes:
    :Conventions = "CF-1.4" ;

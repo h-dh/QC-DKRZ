@@ -3,11 +3,10 @@ dimensions:
    time = UNLIMITED ;
 
 variables:
-   float q3(time);
-      q3:standard_name = "specific_humidity";
-      q3:units = "g/g";
-      q3:amip = "abcd" ;
-      q3:comment ="amip is not CF compatible" ;
+   float q1(time);
+      q1:standard_name = "specific_humidity standard_error status_flag";
+      q1:units = "g/g";
+      q1:comment ="standard name with too many modifiers" ;
 
 // global attributes:
    :Conventions = "CF-1.4" ;

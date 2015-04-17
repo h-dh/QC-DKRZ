@@ -14,11 +14,10 @@ variables:
       t:long_name="surface air temperature";
       t:cell_methods="area: mean time: mean";
       t:units="K";
-      t:comment="Note that area without any X-Y axis implies the whole world, by convention";
-      t:comment2="Recommendation: define one size dimensioned variables lon|lat with bounds";
+      t:note="area: without X-Y axis variables implies the whole world, by convention";
+      t:comment="Reco: define one size dimensioned variables lon|lat with bounds";
 
 // global attributes:
-   :comment="Cell-methods when there is no coordinate" ;
    :Conventions = "CF-1.4" ;
 
 data:

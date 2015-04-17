@@ -31,7 +31,6 @@ variables:
      T:comment = "invalid: axis=X for both variables xc and lon";
 
 // global attributes:
-   :comment="Two-dimensional coordinate variables" ;
    :Conventions = "CF-1.6" ;
 
 data:

@@ -25,10 +25,9 @@ variables:
 
    double climatology_bounds(time,nv);
      climatology_bounds:_FillValue = 0;
-     climatology_bounds:comment = "FillValue not allowed" ;
+     climatology_bounds:comment = "attribute _FillValue is not allowed" ;
 
 // global attributes:
-   :comment="Climatological seasons" ;
    :Conventions = "CF-1.4" ;
 
 data:

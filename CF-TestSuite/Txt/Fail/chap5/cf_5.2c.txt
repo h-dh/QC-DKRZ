@@ -30,7 +30,6 @@ variables:
      T:comment = "missing auxiliary coordinate=lat in the coordinates attribute";
 
 // global attributes:
-   :comment="Two-dimensional coordinate variables" ;
    :Conventions = "CF-1.4" ;
 
 data:

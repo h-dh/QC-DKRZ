@@ -10,6 +10,6 @@ variables:
 
 // global attributes:
    :featureType = "timeSeries";
-   :comment="warning: featureType is CF-1.6" ;
+   :comment = "warning: featureType is only allowed for CF-1.6" ;
    :Conventions = "CF-1.4" ;
 }

@@ -2,7 +2,7 @@ netcdf cf_H16 {
 dimensions:
    station = 2 ;
    profile = 3 ;
-   z = 4 ;
+   z = 2 ;
    name_strlen = 23 ;
 
 variables:
@@ -54,7 +54,22 @@ variables:
       humidity:coordinates = "time lon lat alt" ;
 
 // global attributes:
-   :comment = "missing featureType timeSeriesProfile" ;
+   :comment="missing featureType timeSeriesProfile" ;
    :Conventions = "CF-1.6" ;
 
+data:
+  lon=1.,2.;
+  lat=1.,2.;
+  station_name= "one", "two";
+  station_info=100, 200;
+
+  alt=1.,2., 3.,4., 5.,6.,
+      1.,2., 3.,4., 5.,6.;
+  time = 1., 2., 3., 4., 5., 6.;
+  pressure=1.,2., 3.,4., 5.,6.,
+      1.,2., 3.,4., 5.,6.;
+  temperature=1.,2., 3.,4., 5.,6.,
+      1.,2., 3.,4., 5.,6.;
+  humidity=1.,2., 3.,4., 5.,6.,
+      1.,2., 3.,4., 5.,6.;
 }

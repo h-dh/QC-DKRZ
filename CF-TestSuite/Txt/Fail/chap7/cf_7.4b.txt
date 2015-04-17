@@ -27,7 +27,6 @@ variables:
      T:comment = "expected <time: mean within days time: mean over days>" ;
 
 // global attributes:
-   :comment="Climatological seasons" ;
    :Conventions = "CF-1.4" ;
 
 data:

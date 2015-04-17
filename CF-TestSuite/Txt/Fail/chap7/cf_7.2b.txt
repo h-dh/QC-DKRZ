@@ -23,7 +23,6 @@ variables:
      ps:comment = "invalid: undefined variable named by cell_measures" ;
 
 // global attributes:
-   :comment="Cell areas for a spherical geodesic grid" ;
    :Conventions = "CF-1.4" ;
 
 data:

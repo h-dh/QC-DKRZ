@@ -31,9 +31,17 @@ variables:
    char station_name(station, name_strlen) ;
       station_name:long_name = "station name" ;
       station_name:cf_role = "profile_id";
-      station_name:comment = "cf_role is not compatible to featureType" ;
+      station_name:comment = "cf_role is not compatible with featureType" ;
 
 // global attributes:
    :featureType = "timeSeries";
    :Conventions = "CF-1.6" ;
+
+data:
+  humidity = 1.,2., 3.,2., 2.,1. ;
+  time = 1.,2.,3.;
+  lon = 1.,2.;
+  lat = 1.,2.;
+  alt = 1.,2.;
+  station_name = "one", "two";
 }

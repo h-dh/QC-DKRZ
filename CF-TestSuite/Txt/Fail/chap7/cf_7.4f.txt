@@ -25,10 +25,9 @@ variables:
 
    double climatology_bounds(time,nv);
      climatology_bounds:units="days since 2060-1-1";
-     climatology_bounds:comment = "units must be compatible to time:units" ;
+     climatology_bounds:comment = "units must be compatible with time:units" ;
 
 // global attributes:
-   :comment="Climatological seasons" ;
    :Conventions = "CF-1.4" ;
 
 data:

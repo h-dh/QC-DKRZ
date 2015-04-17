@@ -21,7 +21,6 @@ variables:
      lat_bnds:comment = "different sub-set of dimensions which is swapped" ;
 
 // global attributes:
-   :comment="Cells in a non-rectangular grid" ;
    :Conventions = "CF-1.4" ;
 
 data:

@@ -37,7 +37,7 @@ variables:
       lev:units = "m";
       lev:standard_name = "atmosphere_hybrid_sigma_pressure_coordinate" ;
       lev:formula_terms = "ap: var1 b: var2 ps: var3" ;
-      lev:comment = "invalid: units must be dimensionless or of a deprecated value." ;
+      lev:comment = "units must be dimensionless or of a deprecated value." ;
 
 // global attributes:
    :Conventions = "CF-1.4" ;

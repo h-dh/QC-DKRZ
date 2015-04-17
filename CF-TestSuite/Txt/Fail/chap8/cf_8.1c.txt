@@ -23,7 +23,6 @@ variables:
      t:comment= "variable and valid_min/max/range have to be the same type" ;
 
 // global attributes:
-   :comment="packed data" ;
    :Conventions = "CF-1.4" ;
 
 data:
