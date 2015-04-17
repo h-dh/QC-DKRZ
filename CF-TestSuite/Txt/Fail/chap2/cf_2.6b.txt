@@ -10,6 +10,6 @@ variables:
 	     psl:standard_name = "air_pressure_at_sea_level" ;
 
 // global attributes:
-   :comment="misspelled Conventions attribute name" ;
    :convention = "CF-1.4" ;
+   :comment="misspelled attribute name" ;
 }

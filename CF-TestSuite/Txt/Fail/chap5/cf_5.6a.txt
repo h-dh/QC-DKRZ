@@ -36,7 +36,6 @@ variables:
      T:comment = "missing attribute coordinates" ;
 
 // global attributes:
-   :comment="Rotated pole grid" ;
    :Conventions = "CF-1.4" ;
 
 data:

@@ -2395,6 +2395,9 @@ init()
   QC_EXEC_HOSTS=( ${QC_EXEC_HOSTS//,/ } )
   NUM_EXEC_THREADS=( ${NUM_EXEC_THREADS//,/ } )
 
+  # set defaults
+  test ${ZOMBIE_LIMIT:-f} = f && ZOMBIE_LIMIT=3600
+
   # shut down any console messaging
   if [ ${QUIET:-f} = t ] ; then
     CLOSED_TTY=t
@@ -4370,7 +4373,7 @@ wait_fnct()
            isAnyAlive=t
            sleep 1
 
-           if [ ${isTERM:-f} = t -o $((count++)) -gt 1000 ] ; then
+           if [ ${isTERM:-f} = t -o $((count++)) -gt ${ZOMBIE_LIMIT} ] ; then
              # kill immediately of after a while
              kill -TERM ${nF_PID[i]} &> /dev/null
              wait ${nF_PID[i]} &> /dev/null

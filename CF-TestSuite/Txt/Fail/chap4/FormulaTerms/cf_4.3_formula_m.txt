@@ -27,15 +27,18 @@ variables:
    double data_var(time,lev,lat,lon) ;
        data_var:long_name = "anything" ;
        data_var:units = "m" ;
-   double var1(lev) ;
-      var1:long_name = "vertical coordinate formula term: ap(k)" ;
-      var1:units = "Pa" ;
-
    float lev(lev) ;
       lev:long_name = "atmosphere_hybrid_height_coordinate" ;
       lev:positive = "down" ;
+      lev:units = "1";
       lev:standard_name = "atmosphere_hybrid_sigma_pressure_coordinate" ;
-      lev:comment = "invalid: missing formula_terms attribute." ;
+      lev:formula_terms = "ap: var1 b: var2 ps: var3" ;
+
+   double var1(lev) ;
+      var1:long_name = "vertical coordinate formula term: ap(k)" ;
+      var1:units = "Pa" ;
+      var1:formula_terms = "ap: var1 b: var2 ps: var3" ;
+      var1:comment = "misplaced formula_terms attributes." ;
 
 // global attributes:
    :Conventions = "CF-1.4" ;
@@ -44,7 +47,6 @@ data:
 time  = 1., 2. ;
 lat   = 1., 2., 3. ;
 lon   = 1., 2., 3., 4.;
-lev   = 1., 2., 3. ;
 var1  = 1., 2., 3. ;
 var2  = 1., 2., 3. ;
 var3  = 1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12. ,

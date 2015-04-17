@@ -36,7 +36,6 @@ variables:
      rlat:comment = "missing standard_name" ;
 
 // global attributes:
-   :comment="Rotated pole grid" ;
    :Conventions = "CF-1.4" ;
 
 data:

@@ -387,7 +387,8 @@ finally()
      # clear current results
      \rm -f *
      if [ ${isDeadLocked:-f} = t ] ; then
-       echo "killed after running 1000s" > qc_lock_${name}.txt
+       echo "killed after reaching the ZOMBIE_LIMIT=${ZOMBIE_LIMIT}s" \
+            > qc_lock_${name}.txt
      fi
   fi
 
@@ -586,6 +587,7 @@ init()
 {
   # set a default
   test -c "$TTY" && echo HOSTNAME=${HOSTNAME}
+  test ${ZOMBIE_LIMIT:-f} = f && ZOMBIE_LIMIT=3600
 
   PARENT_EXP_ID=none
   PARENT_EXP_RIP=none
@@ -1918,8 +1920,11 @@ wait_fnct()
       # there is still an active job for this filenameBase
       sleep 1
 
-      if [ $((count++)) -gt 1000 ] ; then
-        # kill after a while
+      if [ $((count++)) -gt ${ZOMBIE_LIMIT} ] ; then
+        # terminate too long running, stalled processing
+        formatText "ZOMBIE_LIMIT=${ZOMBIE_LIMIT}s was reached: STOP"
+        sendEMail
+
         isDeadLocked=t
         terminate # exit
       fi

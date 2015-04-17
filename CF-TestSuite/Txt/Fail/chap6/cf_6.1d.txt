@@ -23,7 +23,7 @@ variables:
      geo_region:comment = "standard_name=region requires names from cf-standardized-region-names" ;
 
 // global attributes:
-   :comment="Northward heat transport in Atlantic Ocean" ;
+   :note="Northward heat transport in Atlantic Ocean" ;
    :Conventions = "CF-1.4" ;
 
 data:

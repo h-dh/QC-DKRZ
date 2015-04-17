@@ -11,9 +11,8 @@ variables:
       psl:valid_range = 0.f, 30.f ;
       psl:valid_max = 30.f;
       psl:valid_min = -1.0f ;
-      psl:comment = "warning: valid_range(min) equals not valid_min" ;
+      psl:comment = "warning: valid_range(min) does not equal valid_min" ;
 
 // global attributes:
-   :comment="variables" ;
    :Conventions = "CF-1.4" ;
 }

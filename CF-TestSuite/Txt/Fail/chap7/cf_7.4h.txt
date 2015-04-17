@@ -29,7 +29,6 @@ variables:
       T:comment = "climatology may only be attached to the time coordinate variable" ;
 
 // global attributes:
-   :comment="Climatological seasons" ;
    :Conventions = "CF-1.4" ;
 
 data:

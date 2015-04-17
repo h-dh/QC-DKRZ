@@ -16,10 +16,9 @@ variables:
    float lon ;
       lon:standard_name = "longitude" ;
       lon:units = "degrees_east" ;
-      lon:comment="Strongly recommended: do not use a dimension name as name of a scalar coordiante variable" ;
+      lon:comment="Strongly recommended: do not use a dimension name as name of a scalar coordinate variable" ;
 
 // global attributes:
-   :comment=" Independent coordinate variables" ;
    :Conventions = "CF-1.4" ;
 
 data:

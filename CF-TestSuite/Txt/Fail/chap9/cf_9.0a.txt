@@ -31,7 +31,7 @@ variables:
    float humidity(obs) ;
       humidity:standard_name = "specific_humidity" ;
       humidity:coordinates = "lat lon alt" ;
-      humidity:comment = "missing auxiliary coordinate time" ;
+      humidity:comment = "auxiliary time is missing in coordinates" ;
 
 // global attributes:
    :featureType = "point";

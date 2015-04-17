@@ -26,10 +26,9 @@ variables:
      lon:long_name = "longitude" ;
      lon:units = "degrees_east" ;
      lon:axis = "X" ;
-     lon:comment = "CF-1.4: axis attribute for auxiliary coordinate variable lon";
+     lon:comment = "CF-1.4: axis attribute for auxiliary coordinate variable lon is not allowed";
 
 // global attributes:
-   :comment="Two-dimensional coordinate variables" ;
    :Conventions = "CF-1.4" ;
 
 data:

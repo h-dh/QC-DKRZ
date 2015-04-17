@@ -11,6 +11,5 @@ variables:
      t:comment= "scaleFactor and add_offset must be type float or double" ;
 
 // global attributes:
-   :comment="packed data" ;
    :Conventions = "CF-1.4" ;
 }

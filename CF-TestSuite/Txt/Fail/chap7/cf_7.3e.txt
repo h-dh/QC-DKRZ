@@ -33,10 +33,9 @@ variables:
      T2:long_name = "temperature";
      T2:units = "K";
      T2:cell_methods = "time: mean area: mean";
-     T2:comment = "Reco for area:, i.e. lon: lat:, no bounds attached to lon" ;
+     T2:comment = "Reco for area:-variables should have attached bounds-variables" ;
 
 // global attributes:
-   :comment="Methods applied to a time series" ;
    :Conventions = "CF-1.4" ;
 
 data:

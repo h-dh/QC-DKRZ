@@ -25,7 +25,7 @@ variables:
       lat:units = "degree_north" ;
       lat:standard_name = "latitude" ;
       lat:valid_range = -90.f, 90.f ;
-      lat:comment = "a data point exceeds valid_range, possibly _FillValue" ;
+      lat:comment = "data of a coordinate variable must not exceed valid_range" ;
 
 // global attributes:
    :Conventions = "CF-1.4" ;

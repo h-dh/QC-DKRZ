@@ -31,7 +31,6 @@ variables:
       TS_var:comment = "invalid cell_methods: missing a value of unit hr" ;
 
 // global attributes:
-   :comment="Surface air temperature variance" ;
    :Conventions = "CF-1.4" ;
 
 data:

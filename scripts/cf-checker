@@ -16,6 +16,7 @@ descript()
   echo " --debug"
   echo " --help"
   echo " --param-file-only"
+  echo " --with-comments"
   echo " netCDF-file(s)"
 
   exit
@@ -209,6 +210,11 @@ for(( i=0 ; i < ${#fs[*]} ; ++i )) ; do
 
   param="$(echo -e $param)"
   $qPath/bin/cf-checker.x ${param}
+
+  if [ ${isTestSuite:-f} = t ] && echo ${fs[i]} | grep -q Fail ; then
+    asdf="$(ncdump -h ${fs[i]} | grep :comment[^[:digit:]])"
+    echo -e "${asdf#*:}\n"
+  fi
 done
 
 echo "========================================"

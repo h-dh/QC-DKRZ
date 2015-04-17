@@ -37,7 +37,7 @@ variables:
       lev:units = "1";
       lev:standard_name = "atmosphere_hybrid_sigma_pressure_coordinate" ;
       lev:f_t = "ap: var1 b: var2 ps: var3" ;
-      lev:comment = "invalid: a different attribute name instead of formula_terms" ;
+      lev:comment = "a different attribute name instead of formula_terms" ;
 
 // global attributes:
    :Conventions = "CF-1.4" ;

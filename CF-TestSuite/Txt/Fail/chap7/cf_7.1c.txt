@@ -15,6 +15,5 @@ variables:
      lat_bnds:comment = "missing vertices-dimension " ;
 
 // global attributes:
-   :comment="Cells in a non-rectangular grid" ;
    :Conventions = "CF-1.4" ;
 }

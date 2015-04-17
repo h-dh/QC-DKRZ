@@ -29,7 +29,6 @@ variables:
    double var2(lev) ;
       var2:long_name = "vertical coordinate formula term: b(k)" ;
       var2:units = "1" ;
-      var2:comment = "invalid: must not have units=m" ;
    double data_var(time,lev,lat,lon) ;
        data_var:long_name = "anything" ;
        data_var:units = "m" ;
@@ -38,7 +37,7 @@ variables:
       var3:long_name = "vertical coordinate formula term: ps" ;
       var3:units = "Pa" ;
       var3:_FillValue = "999.5" ;
-      var3:comment = "_FillValue is not allowed for a FT-auxiliary variable" ;
+      var3:comment = "_FillValue is not allowed for a formula_terms-auxiliary variable" ;
 
 // global attributes:
    :Conventions = "CF-1.4" ;

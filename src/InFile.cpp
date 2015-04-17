@@ -374,14 +374,14 @@ InFile::getVariableMeta(Variable &var)
         nc.getAttValues(av, var.attName[i], t );
         for( size_t j=0 ; j < av.size() ; ++j )
           vs.push_back( hdhC::double2String
-             ( static_cast<double>(av[j]), "p=5|adj,s" ) );
+             ( static_cast<double>(av[j]), "p=5|adj" ) );
      }
      else if( a_id == NC_DOUBLE )
      {
         std::vector<double> av;
         nc.getAttValues(av, var.attName[i], t );
         for( size_t j=0 ; j < av.size() ; ++j )
-          vs.push_back( hdhC::double2String( av[j], "p=5|adj,s" ) );
+          vs.push_back( hdhC::double2String( av[j], "p=5|adj" ) );
      }
 
      if( ! vs.size() )
@@ -475,7 +475,7 @@ InFile::getVariable(void)
        isTime=true ;
        timeName=variable[i].name;
     }
-    else if( variable[i].isDataVar )
+    else if( variable[i].isDATA )
     {
       if( ! variable[i].isUnlimited() )
         variable[i].isFixed = true;

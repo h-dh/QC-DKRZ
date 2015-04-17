@@ -26,7 +26,6 @@ variables:
      xwind:comment ="recommendation: lat should have an axis attribute" ;
 
 // global attributes:
-   :comment=" Independent coordinate variables" ;
    :Conventions = "CF-1.4" ;
 
 data:

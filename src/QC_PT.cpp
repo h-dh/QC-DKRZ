@@ -467,7 +467,7 @@ ProjectTable::checkType(Variable &var, std::string &s)
    // test the type of the variable
    std::string annotTxt;
 
-   if( var.isDataVar )
+   if( var.isDATA )
    {
      if( var.type != NC_FLOAT )
      {
@@ -562,7 +562,7 @@ ProjectTable::getAtts(Variable &var, std::string &s)
    }
 
    // get checksum of values
-   if( ! ( var.isUnlimited() || var.isDataVar) )
+   if( ! ( var.isUnlimited() || var.isDATA) )
      getValues(var, s);
 
    return;
@@ -599,7 +599,7 @@ ProjectTable::getMetaData(Variable &dataVar, std::string &md)
   // get meta-data of auxiliaries
   for( size_t i=0 ; i < pIn->varSz ; ++i )
   {
-    if( pIn->variable[i].isDataVar )
+    if( pIn->variable[i].isDATA )
        continue;
 
     md += "\n  aux=" ;

@@ -48,19 +48,17 @@ variables:
    int rowSize(profile) ;
       rowSize:long_name = "number of obs for this profile " ;
       rowSize:sample_dimension = "obs" ;
-      rowSize:comment:"overdetermined sum of values compared to obs";
+      rowSize:comment = "overdetermined index: sum of values is greater than obs";
 
 // global attributes:
-   :comment = "missing featureType profile" ;
+   :featureType = "profile" ;
    :Conventions = "CF-1.6" ;
 
 data:
-profile=1.,2.;
-data:
-profile=1.,2.;
-z=1., 2., 3., 4., 5.;
-pressure=1., 2., 3., 4., 5.;
-temperature=1., 2., 3., 4., 5.;
-humidity=1., 2., 3., 4., 5.;
-rowSize= 3, 3 ;
+  profile=1,2;
+  z=1., 2., 3., 4., 5.;
+  pressure=1., 2., 3., 4., 5.;
+  temperature=1., 2., 3., 4., 5.;
+  humidity=1., 2., 3., 4., 5.;
+  rowSize= 3, 3 ;
 }

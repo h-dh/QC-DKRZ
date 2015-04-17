@@ -32,7 +32,6 @@ variables:
      maxtemp:comment = "recommended: replacement of lon: lat: by area:" ;
 
 // global attributes:
-   :comment="Methods applied to a time series" ;
    :Conventions = "CF-1.4" ;
 
 data:

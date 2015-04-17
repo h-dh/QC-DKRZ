@@ -11,6 +11,5 @@ variables:
       ipsl:comment = " _FillValue and variable must not be of different types" ;
 
 // global attributes:
-   :comment="variables" ;
    :Conventions = "CF-1.4" ;
 }

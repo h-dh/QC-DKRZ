@@ -3191,14 +3191,14 @@ NcAPI::get_FillValueStr(int vid, std::vector<std::string>& fV)
 
    if( is )
    {
-     std::string key="NC_3_12";
-     std::string capt("types of variable and ");
+     std::string key="NC_3_12" ;
+     std::string capt("types of variable <" + vName + "> and ");
      capt += str_FV + "/" + str_MV + " do not match" ;
 
      std::vector<std::string> checkType;
      checkType.push_back("meta");
 
-     exceptionHandling(key, capt, "", checkType);
+     exceptionHandling(key, capt, "", checkType, vName);
      return isR;
    }
 
@@ -3282,13 +3282,13 @@ NcAPI::get_FillValue(std::string& vName,
    if( is )
    {
      std::string key="NC_3_12";
-     std::string capt("types of variable and ");
+     std::string capt("types of variable <" + vName + "> and ");
      capt += str_FV + "/" + str_MV + " do not match" ;
 
      std::vector<std::string> checkType;
      checkType.push_back("meta");
 
-     exceptionHandling(key, capt, "", checkType);
+     exceptionHandling(key, capt, "", checkType, vName);
      mode=0;
      return isR;
    }
@@ -4997,8 +4997,11 @@ NcAPI::setAtt(int varid, std::string aName, T *arr, size_t len)
 
    if(status)
    {
-     std::string key("NC_3_12");
-     std::string capt("Could not put attribute value.") ;
+     std::string vName(getVarnameFromVarID(varid));
+
+     std::string key("NC_3_2");
+     std::string capt("Attribute <" + vName + ">:" + aName) ;
+     capt += ": Could not put attribute value." ;
 
      std::string text("variable=");
      text += getVarnameFromVarID(varid);
@@ -5008,7 +5011,7 @@ NcAPI::setAtt(int varid, std::string aName, T *arr, size_t len)
      std::vector<std::string> checkType;
      checkType.push_back("meta");
 
-     exceptionHandling(key, capt, text, checkType, getVarnameFromVarID(varid));
+     exceptionHandling(key, capt, text, checkType, vName);
    }
 
    // keep layout adjusted

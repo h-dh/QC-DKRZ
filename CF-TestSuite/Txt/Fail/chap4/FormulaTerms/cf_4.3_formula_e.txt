@@ -31,13 +31,13 @@ variables:
       data_var:coordinates = "formula_var" ;
 
    float formula_var ;
-      formula_var:long_name = "atmosphere_hybrid_height_coordinate" ;
-      formula_var:positive = "down" ;
       formula_var:standard_name = "atmosphere_hybrid_sigma_pressure_coordinate" ;
+      formula_var:positive = "down" ;
       formula_var:formula = "z = a + b*orog" ;
       formula_var:formula_terms = "a: var1 b: var2 orog: var3" ;
-      formula_var:comment = "CF never stated that this kind of variable should always be non-scalar" ;
-      formula_var:comment2 = "invalid: standard_name and formula_terms do not match" ;
+      formula_var:comment0 = "CF never stated that this kind of variable should always be non-scalar" ;
+      formula_var:comment1 = "valid would be: atmosphere_hybrid_height_coordinate" ;
+      formula_var:comment = "standard_name and formula_terms do not match" ;
 
 // global attributes:
    :Conventions = "CF-1.4" ;

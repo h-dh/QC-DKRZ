@@ -31,7 +31,6 @@ variables:
      TS_var:comment = "missing text after <comment:> in cell_methods" ;
 
 // global attributes:
-   :comment="Surface air temperature variance" ;
    :Conventions = "CF-1.4" ;
 
 data:

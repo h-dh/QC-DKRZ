@@ -8,7 +8,7 @@ variables:
       PSL:long_name = "mean sea level pressure" ;
       PSL:units = "" ;
       PSL:standard_name = "air_pressure_at_sea_level" ;
-      PSL:comment = "empty attribute" ;
+      PSL:comment = "empty attribute units" ;
 
 // global attributes:
    :Conventions = "CF-1.4" ;

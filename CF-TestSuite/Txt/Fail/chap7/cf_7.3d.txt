@@ -22,10 +22,9 @@ variables:
      maxtemp:long_name = "temperature";
      maxtemp:units = "K";
      maxtemp:cell_methods = "mean";
-     maxtemp:comment = "missing name=<dim:> in cell_methods" ;
+     maxtemp:comment = "missing name: in cell_methods" ;
 
 // global attributes:
-   :comment="Methods applied to a time series" ;
    :Conventions = "CF-1.4" ;
 
 data:

@@ -8,9 +8,8 @@ variables:
       psl_1:_any = "user-defined attribute" ;
       psl_1:units = "hPa" ;
       psl_1:standard_name = "air_pressure_at_sea_level" ;
-      psl_1:comment = "invalid attribute name=_long_name" ;
+      psl_1:comment = "invalid attribute name=_any" ;
 
 // global attributes:
-   :comment="naming convention" ;
    :Conventions = "CF-1.4" ;
 }

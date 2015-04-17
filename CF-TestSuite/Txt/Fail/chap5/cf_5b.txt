@@ -23,10 +23,9 @@ variables:
 
    float rh(time,pres,lat1,lat2) ;
      rh:long_name = "relative humidity" ;
-     rh:comment ="a variable should not have two dimensions for the same Y-direction" ;
+     rh:comment ="a variable should not depend on two dimensions for the same direction" ;
 
 // global attributes:
-   :comment=" Independent coordinate variables" ;
    :Conventions = "CF-1.4" ;
 
 data:

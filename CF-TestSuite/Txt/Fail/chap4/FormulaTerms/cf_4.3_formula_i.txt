@@ -37,7 +37,7 @@ variables:
    double var1(lev) ;
       var1:long_name = "vertical coordinate formula term: ap(k)" ;
       var1:units = "m" ;
-      var1:comment = "invalid: must have units=Pa" ;
+      var1:comment = "must be units=Pa" ;
 
 // global attributes:
    :Conventions = "CF-1.4" ;

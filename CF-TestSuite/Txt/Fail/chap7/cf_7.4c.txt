@@ -27,7 +27,6 @@ variables:
      T:comment = "climatology requires <time: .. within .. time: .. over ..>" ;
 
 // global attributes:
-   :comment="Climatological seasons" ;
    :Conventions = "CF-1.4" ;
 
 data:

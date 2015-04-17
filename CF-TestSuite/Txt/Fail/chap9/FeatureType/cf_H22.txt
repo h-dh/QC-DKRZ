@@ -56,9 +56,18 @@ variables:
       humidity:coordinates = "time lon lat z" ;
 
 // global attributes:
-   :comment = "missing featureType trajectoryProfile" ;
+   :comment="missing featureType trajectoryProfile" ;
    :Conventions = "CF-1.6" ;
 
 data:
-trajectory = 1, 2, 3;
+  trajectory = 1, 2, 3;
+  time=1.,2.;
+  lon=1.,2.;
+  lat=1.,2.;
+  row_size=3.,2.;
+
+  z=1.,2.,3.,4.,5.;
+  pressure=1.,2.,3.,4.,5.;
+  temperature=1.,2.,3.,4.,5.;
+  humidity=1.,2.,3.,4.,5.;
 }

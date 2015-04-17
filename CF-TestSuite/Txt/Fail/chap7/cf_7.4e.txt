@@ -28,7 +28,6 @@ variables:
      time:comment = "invalid: climatology_bounds variable is not present" ;
 
 // global attributes:
-   :comment="Climatological seasons" ;
    :Conventions = "CF-1.4" ;
 
 data:

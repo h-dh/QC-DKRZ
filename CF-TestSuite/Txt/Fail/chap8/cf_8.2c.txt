@@ -26,7 +26,6 @@ variables:
      landpoint:comment="index stored in data exceeds allowed maximum" ;
 
 // global attributes:
-   :comment="" ;
    :Conventions = "CF-1.4" ;
 
 data:

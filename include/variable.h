@@ -74,19 +74,23 @@ class VariableMeta
      bool isZ;
      bool isZ_DL;  //dimensionless coord
 
-     int  indication_X;  // each evidence increments the value by 1
+     int  indication_X;
      int  indication_Y;
      int  indication_Z;
      int  indication_T;
   };
   Coordinates coord;
 
+  bool isDATA;
+  bool isAUX;
+  int   countData;
+  int   countAux;
+  int  indication_DV;
+
   bool isArithmeticMean; // externally set
-  bool isAux;
   bool isChecked;
   bool isClimatology;
   bool isCompress;
-  bool isDataVar;
   bool isDescreteSamplingGeom;
   bool isExcluded;
   bool isFixed;  // isTime==false && isDataVar==true
@@ -98,7 +102,6 @@ class VariableMeta
   bool isScalar;
   int  isUnlimited_;  // access by isUnlimited() method
   bool isVoid;
-  int  indication_DV;  // data variable
 
   bool is_1st_X;  // one-time switches in units_lon_lat()
   bool is_1st_Y;
@@ -126,6 +129,8 @@ class Variable : public VariableMeta
 {
   public:
 
+  void addDataCount(int i=1) ;
+  void addAuxCount(int i=1) ;
   void clear(void);
 
   template<typename T>
@@ -139,8 +144,6 @@ class Variable : public VariableMeta
   // forceLowerCase==true will return the value always as lower-case
   std::string
        getAttValue(std::string, bool forceLowerCase=false);
-  bool isCoordinate(void)
-         {return coord.isAny || coord.isX || coord.isY || coord.isZ || coord.isT ;}
   int  getCoordinateType(void);  // X: 0, Y: 1, Z: 2, T: 3, any: 4, none: -1
   template<typename T>
   void getData(MtrxArr<T>&, int rec, int leg=0);
@@ -148,7 +151,10 @@ class Variable : public VariableMeta
   std::string
        getDimNameStr(bool isWithVar=false, char sep=',');
   int  getVarIndex(){ return id ;}
-  bool inqDataVar(void);
+  bool isAuxiliary(void) { return (countAux > countData ) ? true : false ;}
+  bool isCoordinate(void)
+         {return coord.isAny || coord.isX || coord.isY || coord.isZ || coord.isT ;}
+  bool isDataVar(void) { return (countData > countAux ) ? true : false ;}
   bool isUnlimited(void) ;
   bool isValidAtt(std::string s, bool tryLowerCase=true);
   bool isValidAtt(std::string s, std::string sub_str);

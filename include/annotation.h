@@ -66,6 +66,8 @@ class Annotation : public IObj
   void eraseAnnotation( std::string str, std::string name="") ;
   bool findAnnotation(std::string tag, std::string name="");
   bool findIndex(std::string &key, bool only=false);
+  std::vector<std::string>
+       getAnnotation(std::string tag);
   std::string
        getCheckResults(void);
   int  getExitValue(void);
@@ -78,7 +80,7 @@ class Annotation : public IObj
       then a default is applied. 'mode' is composed of strings
       'INQ_ONLY' and 'NO_MT', separated by '|' if both are set. \n
       INQ_ONLY for simulation without triggering an action \n
-      NO_MT    disables the application of multiple identical tags \n
+      NO_MT    disables multiple identical tags \n
       NO_TXT   disable the default text from the check-list table.
       */
   bool inq( std::string flag, std::string var_name="", std::string mode="");
@@ -145,12 +147,13 @@ class Annotation : public IObj
   bool   isExit[5];
   size_t numOfExits;
 
-  private:
+//  private:
   std::string checkList;
 
   // map flags, caption and text
   std::map<std::string, std::string> mp;
   std::map<std::string, std::string> mp_capt;
+  std::map<std::string, std::string> mp_lev;
   std::map<std::string, int> mp_count;
   std::map<std::string, std::string> mp_txt;
 

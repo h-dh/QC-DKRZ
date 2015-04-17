@@ -76,9 +76,9 @@ Statistics<T>::add(T val_1, T val_2)
     ostr << "Statistics::add()"
          << " dim=2 required, but dim = " << dim ;
     exceptionError( ostr.str() );
-    exit(1); 
+    exit(1);
   }
-    
+
   T val[2];
   val[0]=val_1;
   val[1]=val_2;
@@ -86,7 +86,7 @@ Statistics<T>::add(T val_1, T val_2)
   for( size_t idx=0 ; idx < dim ; ++idx)
   {
     T *x = &val;
-   
+
     if( isEnableFillingValue && testFillingValue(*x, idx) )
     {
       ++exceptionCount;
@@ -104,9 +104,9 @@ Statistics<T>::add(T val_1, T val_2)
     if( dVal > sampleMax )
        sampleMax = dVal ;
   }
-    
+
   multiSumCrossProduct[0] += val_1 * val_2  ;
-  
+
   return;
 }
 */
@@ -138,10 +138,10 @@ template <typename T>
 void
 Statistics<T>::add(T const **val, size_t nRow, size_t nCol )
 {
-  // test for filling value in called method 
+  // test for filling value in called method
   for( size_t k=0 ; k < nRow ; k++ )
     add(val[k], nCol);
-  
+
   return;
 }
 
@@ -151,7 +151,7 @@ Statistics<T>::add(const std::vector<T>& val )
 {
   size_t sz=val.size();
 
-  // test for filling value in called method 
+  // test for filling value in called method
   for( size_t k=0 ; k < sz ; k++ )
     add(val[k]) ;
 
@@ -165,8 +165,8 @@ Statistics<T>::add(MtrxArr<T> &v)
   if( checkMA_FillValue )
   {
      // init value exception testing
-     for( size_t i=0 ; i < v.valExp->exceptionValue.size() ; ++i )
-       exceptionValue.push_back( v.valExp->exceptionValue[i] ) ;
+     for( size_t i=0 ; i < v.valExcp->exceptionValue.size() ; ++i )
+       exceptionValue.push_back( v.valExcp->exceptionValue[i] ) ;
 
      //note: get counts only one by one
      exceptionCount.clear(); // was set in init()
@@ -235,12 +235,12 @@ Statistics<T>::addWeighted(T val, W weight)
 
   double x = val;
   x *= weight;
-   
+
   ++sampleSize ;
   sampleSum += x ;
   sampleSumOfSquares += x * val ;
   sampleTotalWeight += weight;
-  sampleTotalSquareWeight += weight*weight;  
+  sampleTotalSquareWeight += weight*weight;
 
   double dVal = static_cast<double>( val );
 
@@ -257,10 +257,10 @@ template <typename W>
 void
 Statistics<T>::addWeighted(size_t sz, const T *v, const W *w)
 {
-  // test for filling value in called method 
+  // test for filling value in called method
   for( size_t k=0 ; k < sz ; k++ )
     addWeighted(v[k], w[k]);
-  
+
   return;
 }
 
@@ -272,8 +272,8 @@ Statistics<T>::addWeighted(MtrxArr<T> &v, MtrxArr<W> &w)
   if( checkMA_FillValue )
   {
      // init value exception testing
-     for( size_t i=0 ; i < v.valExp->exceptionValue.size() ; ++i )
-       exceptionValue.push_back( v.valExp->exceptionValue[i] ) ;
+     for( size_t i=0 ; i < v.valExcp->exceptionValue.size() ; ++i )
+       exceptionValue.push_back( v.valExcp->exceptionValue[i] ) ;
 
      //note: get counts only one by one
      exceptionCount.clear(); // was set in init()
@@ -302,12 +302,12 @@ Statistics<T>::addWeighted(MtrxArr<T> &v, MtrxArr<W> &w)
        double weight = static_cast<double>( w[i] );
 
        double x = val * weight;
-   
+
        ++sampleSize ;
        sampleSum += x ;
        sampleSumOfSquares += x * val ;
        sampleTotalWeight += weight;
-       sampleTotalSquareWeight += weight*weight;  
+       sampleTotalSquareWeight += weight*weight;
 
        if( val < sampleMin )
           sampleMin = val;
@@ -326,10 +326,10 @@ Statistics<T>::addWeighted(const std::vector<T>& v,const std::vector<W>& w)
 {
   size_t sz=v.size();
 
-  // test for filling value in called method 
+  // test for filling value in called method
   for( size_t k=0 ; k < sz ; k++ )
     addWeighted(v[k], w[k]);
-  
+
   return;
 }
 
@@ -344,9 +344,9 @@ Statistics<T>::clear(void)
   sampleVariance=0. ;
   sampleSumOfSquares=0. ;
   sampleSum=0. ;
-  
+
   initMinMaxTest( static_cast<T> (0));
-  
+
   sampleTotalWeight=0.;
   sampleTotalSquareWeight=0.;
 
@@ -458,9 +458,9 @@ Statistics<T>::getSampleAverage( double *a )
 
   if( sampleTotalWeight == 0. )
     sTW =  static_cast<double>(sampleSize) ;
-  
+
   *a = sampleAverage = sampleSum / sTW ;
-    
+
   return true;
 }
 
@@ -593,9 +593,9 @@ Statistics<T>::getSampleStdDev( double *s )
       *s = exceptionValue[0] ;
     return false;
   }
-    
+
   *s = sampleStdDev=sqrt(v);
-  
+
   return true ;
 }
 
@@ -604,16 +604,16 @@ bool
 Statistics<T>::getSampleStdErr( double *e )
 {
   double v;
-  
+
   if( ! getSampleVariance( &v ) )
   {
     if( exceptionValue.size() )
       *e = exceptionValue[0] ;
     return false;
   }
-    
+
   sampleStdErr = v / sqrt(static_cast<double>(sampleSize) ) ;
-      
+
   return true ;
 }
 
@@ -701,16 +701,16 @@ Statistics<T>::getSampleVarianceEqual( double *v )
       *v = exceptionValue[0] ;
     return false;
   }
-  
+
   double x = static_cast<double>(sampleSize) ;
 
-  sampleVariance = 
+  sampleVariance =
          (sampleSumOfSquares - sampleSum*sampleSum/x)/(x-1.) ;
-  
-  
+
+
   if( sampleVariance < 0. && fabs(sampleVariance) < EQUALITY_TOLERANCE )
     sampleVariance = 0.;  // tolerates numerical noise
-  
+
   *v = sampleVariance ;
 
   return true ;
@@ -723,14 +723,14 @@ Statistics<T>::getSampleVarianceWeight( double *v )
   if( sampleSize == 1 )
     return false;
 
-  sampleVariance = 
+  sampleVariance =
          ( sampleSumOfSquares * sampleTotalWeight
           - sampleSum*sampleSum )
-         / (sampleTotalWeight*sampleTotalWeight -sampleTotalSquareWeight); 
-    
+         / (sampleTotalWeight*sampleTotalWeight -sampleTotalSquareWeight);
+
   if( sampleVariance < 0. && fabs(sampleVariance) < EQUALITY_TOLERANCE )
     sampleVariance = 0.;  // tolerates numerical noise
-  
+
   *v = sampleVariance ;
 
   return true ;
@@ -749,7 +749,7 @@ Statistics<T>::init(void)
 
   isEnableFillingValue = false ;
   exceptionCount.push_back( 0 );
-    
+
   return ;
 }
 
@@ -809,7 +809,7 @@ Statistics<T>::initMinMaxTest( T x)
      sampleMin=INT64_MAX;
      sampleMax=INT64_MIN;
   }
- 
+
   return;
 }
 

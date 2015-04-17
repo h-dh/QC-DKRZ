@@ -17,13 +17,13 @@ variables:
    char parcel_name(parcel,max_len_parcel_name) ;
 
    float rh(parcel,times) ;
-      rh:comment2 = "ordering of dimensions is valid, because times is not unlimited" ;
       rh:long_name = "relative humidity" ;
       rh:coordinates = "lat lon" ;
+      rh:note = "ordering of dimensions is valid, because times is not unlimited" ;
       rh:comment = "label parcel_name is missing in coordinates" ;
 
 // global attributes:
-   :comment="Strictness of Chap6 (CF-1.4) is ignored in Appendix H (CF-1.6)" ;
+   :note="Strictness of Chap6 (CF-1.4) is ignored in Appendix H (CF-1.6)" ;
    :Conventions = "CF-1.4" ;
 
 data:

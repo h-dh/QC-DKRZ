@@ -203,38 +203,35 @@ Annotation::eraseAnnotation(std::string str, std::string name)
   // Note: composition: level-flag.
   std::map<std::string, std::string>::iterator it;
 
-  bool any=true;
-
   if( name.size() )
-  {
-     str += "_" + name ;
-     any=false;
-  }
+    str += "_" + name ;
 
   for( it=mp.begin() ; it != mp.end() ; ++it )
   {
-    size_t sz, pos ;
-
-    if( (pos=it->first.find('|')) < std::string::npos )
-      sz=pos;
-    else
-      sz = str.size();
-
-    if( (pos=it->first.find('-')) == std::string::npos )
-      pos=0;
-    else
-      ++pos;
-
-    if( (any && it->first.find(str,pos) < std::string::npos )
-           || ( it->first.substr(pos,sz-pos+1) == str ) )
-    {
-      // flag found
+    // flag found
+    if( str == it->first.substr(0,str.size()) )
       mp_count[it->first] = 0;
-      break;
-    }
   }
 
   return;
+}
+
+bool
+Annotation::findAnnotation(std::string str, std::string name)
+{
+  if ( mp.begin() == mp.end() )
+    return false;
+
+  if( name.size() )
+     str += "_" + name ;
+
+  std::map<std::string, std::string>::iterator it;
+
+  for( it=mp.begin() ; it != mp.end() ; ++it )
+    if( str == it->first.substr(0,str.size()) )
+      return true;
+
+  return false;
 }
 
 bool
@@ -339,35 +336,31 @@ Annotation::findIndex(std::string &key, bool isOnly)
   return false;
 }
 
-bool
-Annotation::findAnnotation(std::string s, std::string name)
+std::vector<std::string>
+Annotation::getAnnotation(std::string tag)
 {
-  if ( mp.begin() == mp.end() )
-    return false;
+  std::vector<std::string> vs;
 
-  if( name.size() )
-     s += "_" + name ;
+  if ( mp.begin() == mp.end() )
+    return vs;
+
+  std::string str;
 
   std::map<std::string, std::string>::iterator it;
 
   for( it=mp.begin() ; it != mp.end() ; ++it )
   {
-    size_t sz, pos;
-    if( (pos=it->first.find('|')) < std::string::npos )
-      sz=pos;
-    else
-      sz = s.size();
+    size_t sz;
+    if( (sz=it->first.find('|')) == std::string::npos )
+      sz = it->first.size();
 
-    if( (pos=it->first.find('-')) == std::string::npos )
-      pos=0;
-    else
-      ++pos;
+    str = it->first.substr(0,sz) ;
 
-    if( s == it->first.substr(pos,sz-pos) )
-         return true;
+    if( str.find(tag) < std::string::npos )
+       vs.push_back(str);
   }
 
-  return false;
+  return vs;
 }
 
 std::string
@@ -572,15 +565,9 @@ Annotation::operate(std::string headline,
 {
    bool isReturn=false;
 
-   std::string tag;
-   if( level[currIndex].size() )
-     tag = level[currIndex] + "-" ;  //pre-pend grade
-   tag += code[currIndex] ;
-
-   std::string tag0(tag);
-
+   std::string tag(code[currIndex]) ;
    if( currName.size() )
-      tag += "_" + currName ;
+      tag  += "_" + currName ;
 
    if( isMultipleTags )
    {
@@ -591,21 +578,13 @@ Annotation::operate(std::string headline,
 
    if( mp.count(tag) == 0 )
    {
-     mp[tag] = tag0 ;
+     mp[tag] = code[currIndex] ;
+     mp_lev[tag] = level[currIndex] ;
 
      if( headline.size() )
-     {
-/*
-       if( headline[0] != '!' )
-         mp_capt[tag] = toupper(headline[0]) ;
-       mp_capt[tag] += headline.substr(1);
-*/
        mp_capt[tag] = headline;
-     }
-     else if( text[currIndex].size() )
-       mp_capt[tag] = text[currIndex];
      else
-       mp_capt[tag] = "";
+       mp_capt[tag] = text[currIndex];
    }
 
    if( mp_count.count(tag) == 0 )
@@ -645,7 +624,7 @@ Annotation::operate(std::string headline,
 
 
    // a caption only for the 'classical' output into the QC_RESULTS DRS
-   std::string capt(tag0);
+   std::string capt(code[currIndex]);
    capt += ": ";
    capt += mp_capt[tag] ;
 
@@ -998,8 +977,8 @@ Annotation::printFlags(void)
 
   for( it=mp.begin() ; it != mp.end() ; ++it )
   {
-    std::string f=it->first;
-    std::string s=it->second;
+    const std::string& f=it->first;
+    const std::string& s=it->second;
 
     if( mp_count[f] == 0 )
        continue;  // overruled by another one, so skip
@@ -1008,6 +987,9 @@ Annotation::printFlags(void)
 
     if( ! isDisplay )
       out = "FLAG-BEG" ;
+
+    if( mp_lev[f].size() )
+      out += mp_lev[f] + '-' ;
 
     out += s;
     out += ':' ;
@@ -1020,21 +1002,21 @@ Annotation::printFlags(void)
          out += ' ';
 
       // remove surrounding blanks
-      s = hdhC::stripSurrounding(mp_capt[f]);
+      std::string str(hdhC::stripSurrounding(mp_capt[f]));
 
       // convert the first char of the caption to upper case.
-      if( s[0] == '!' ) // suppression
-        out += s.substr(1);
+      if( str[0] == '!' ) // suppression
+        out += str.substr(1);
       else
       {
-        s[0] = toupper(s[0]);
-        out += s;
+        str[0] = toupper(str[0]);
+        out += str;
       }
     }
 
     // any account for accumulated 'R' flags?
     // Still the caption.
-    if( f[0] == 'R' )
+    if( s[0] == 'R' )
     {
        out += " (total: " ;
        out += mp_count[f] ;
