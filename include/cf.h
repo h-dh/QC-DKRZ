@@ -66,7 +66,6 @@ class CF : public IObj
 
   void   chap4(void);                  // Coordinate Types
   bool   chap4(Variable&);      // Coordinate Types
-  void   chap4_reco(void);      // coordinate types
   bool   chap4_1(Variable&);    // lat/lon coordinate
   bool   chap4_3(Variable&);    // vertical coordinate
   bool   chap4_3_1(Variable&);  // vertical dimensional coord
@@ -90,7 +89,6 @@ class CF : public IObj
             std::vector<std::pair<std::string, std::string> >& p_found_ft);
   bool   chap4_4(Variable&);    // time
   void   chap4_4a_reco(Variable&);   // ref time 0
-  void   chap4_4b_reco(void);   // year and month
   bool   chap4_4_1(Variable&);  // calendar
 
   void   chap5(void);    // Coordinate Systems
@@ -151,10 +149,9 @@ class CF : public IObj
   void   attributeSpellCheck(void);
 
   std::string
-         captAtt(std::string v, std::string a,
-                 bool colon=true, bool blank=true, bool isUpper=false);
+         captAtt(std::string a);
   std::string
-         captAtt(std::string a, bool is_blank=true);
+         captAtt(std::string v, std::string a);
   std::string
          captAtt(std::string v, std::string a, std::string&);
   std::string
@@ -162,6 +159,8 @@ class CF : public IObj
   std::string
          captAtt(std::string v, std::string a,
                  std::string&, std::string&, std::string&);
+  std::string
+         captAtt(std::string& v, std::string& a, bool colon, bool blank, bool isUpper);
 
   std::string
          captVal(std::string v, bool trailingBlank=true);
@@ -173,7 +172,7 @@ class CF : public IObj
   std::string
          captVar(std::string v, std::string&, std::string&);
 
-  void   checkCoordinateValues(Variable&, bool testMonotony=true) ;
+  void   checkCoordinateValues(Variable&, bool isFormTermAux=false) ;
 template <typename T>
   void   checkCoordinateValues(Variable&, bool, T);
   void   checkCoordinateFillValueAtt(Variable&) ;
@@ -216,6 +215,7 @@ template <typename T>
   bool   isBounds(Variable&);
   bool   isChap6_labelSubstAuxCoord(Variable& coord_aux, std::vector<std::string>& ca);
   bool   isChap9_specialLabel(Variable& label, Variable& var);
+  bool   isCompressAux(Variable&);
   bool   isCompressEvidence(Variable&, bool*) ; // bool* for int-type
 //  bool   isCompliant(void){ return isCF;}
   bool   isLatitude(void);

@@ -28,10 +28,10 @@ variables:
       lat:units = "degrees_north" ;
       lat:axis = "X" ;
       lat:comment= "wrong axis value, should be Y" ;
-      lat:note="CF <1.6: axis is not allowed" ;
+      lat:note="CF <v1.6: axis is not allowed" ;
 
 // global attributes:
-   :comment2="looks like a stationary set of profiles" ;
+   :note="looks like a stationary set of profiles" ;
    :Conventions = "CF-1.6" ;
 
 data:

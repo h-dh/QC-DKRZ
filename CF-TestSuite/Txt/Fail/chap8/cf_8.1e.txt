@@ -1,0 +1,18 @@
+netcdf cf_8.1d {
+dimensions:
+   lat=2;
+   lon=3;
+
+variables:
+   int t(lat,lon);
+     t:long_name = "asdf" ;
+     t:scale_factor = 1.f;
+     t:add_offset = 0.f;
+     t:comment= "reco: the variable should not be type int if sF|ao are float" ;
+
+// global attributes:
+   :Conventions = "CF-1.4" ;
+
+data:
+  t = 1.,  2., 3., 4., 5., 6.;
+}

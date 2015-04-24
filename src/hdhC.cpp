@@ -1924,17 +1924,17 @@ std::string clearSpaces(std::string &str )
   return s ;
 }
 
-std::string sAssign(std::string right, bool withSpaces)
+std::string sAssign(std::string right)
 {
-  if( withSpaces )
+  if( right.size() > 10 )
     return "= <" + right + ">" ;
   else
     return "=<" + right + ">" ;
 }
 
-std::string sAssign(std::string left, std::string right, bool withSpaces)
+std::string sAssign(std::string left, std::string right)
 {
-  if( withSpaces )
+  if( right.size() > 10 )
     return left + " = <" + right + ">" ;
   else
     return left + "=<" + right + ">" ;

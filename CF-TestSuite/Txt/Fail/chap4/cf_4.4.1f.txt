@@ -1,0 +1,22 @@
+netcdf cf_4.4.1e {
+dimensions:
+   time = UNLIMITED ; // (3 currently)
+
+variables:
+   double var(time) ;
+      var:units="m" ;
+      var:long_name="data variable";
+   double time(time) ;
+     time:long_name = "time" ;
+     time:units = "days since 1-1-1 0:0:0" ;
+     time:calendar = "126 kyr B.P." ;
+     time:month_lengths = 34, 31, 32, 30, 29, 27, 28, 28, 28, 32, 32, 34 ;
+     time:leap_month = 1 ;
+     time:comment ="leap_month should not be given without leap_year" ;
+
+// global attributes:
+   :Conventions = "CF-1.4" ;
+
+data:
+time = 0., 1., 2. ;
+}

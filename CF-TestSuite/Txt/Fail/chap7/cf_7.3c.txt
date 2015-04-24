@@ -21,8 +21,8 @@ variables:
    float maxtemp(time,station);
      maxtemp:long_name = "temperature";
      maxtemp:units = "K";
-     maxtemp:cell_methods = "time: value";
-     maxtemp:comment = "invalid method=value" ;
+     maxtemp:cell_methods = "time: today";
+     maxtemp:comment = "invalid method=today" ;
 
 // global attributes:
    :Conventions = "CF-1.4" ;

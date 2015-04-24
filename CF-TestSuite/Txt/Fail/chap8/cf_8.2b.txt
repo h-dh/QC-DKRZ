@@ -22,7 +22,7 @@ variables:
      lon:units = "degrees_east";
 
    int landpoint(landpoint);
-     landpoint:compress="lat height";
+     landpoint:compress="lat lon height";
      landpoint:comment="non-existent dimension height" ;
 
 // global attributes:

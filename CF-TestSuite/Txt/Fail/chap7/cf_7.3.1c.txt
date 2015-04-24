@@ -1,0 +1,45 @@
+netcdf cf_7.3.1c {
+dimensions:
+   time = UNLIMITED; // (5 currently)
+   station = 2;
+   lat=2;
+   lon=3;
+   nv=2;
+
+variables:
+   double time(time);
+     time:standard_name = "time" ;
+     time:long_name = "time";
+     time:units = "h since 1998-4-19 6:0:0";
+   float lat(lat) ;
+     lat:units = "degrees_north" ;
+     lat:standard_name = "latitude" ;
+     lat:axis = "Y" ;
+     lat:bounds="lat_bnds";
+   float lat_bnds(lat,nv);
+   float lon(lon) ;
+     lon:units = "degrees_east" ;
+     lon:standard_name = "longitude" ;
+     lon:axis = "X" ;
+     lon:bounds="lon_bnds";
+   float lon_bnds(lon,nv);
+
+   float maxtemp(time,station);
+     maxtemp:long_name = "temperature";
+     maxtemp:units = "K";
+     maxtemp:coordinates = "lat lon" ;
+     maxtemp:cell_methods = "area:",
+                            "mean";
+     maxtemp:comment="warning: netcdf concatenates the strings without a space";
+     maxtemp:note=" a blank in front of mean amends this";
+
+// global attributes:
+   :Conventions = "CF-1.4" ;
+
+data:
+  time = 0., 12., 24., 36., 48.;
+  lat = 1., 2.;
+  lon = 1., 2., 3.;
+  lat_bnds = 0.,1., 1.,2.;
+  lon_bnds = 0.,1., 1.,2., 2.,3.;
+}

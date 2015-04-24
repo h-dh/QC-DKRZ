@@ -1,0 +1,25 @@
+netcdf cf_4.3e {
+dimensions:
+  h = 2 ;
+  lat = 1 ;
+  lon = 2;
+
+variables:
+   float T(lat,lon,h) ;
+      T:long_name = "temperature" ;
+      T:units = "K" ;
+
+   float h(h) ;
+      h:standard_name = "height" ;
+      h:units= "m" ;
+      h:positive = "upward" ;
+      h:comment = "positive with invalid value" ;
+
+
+// global attributes:
+   :Conventions = "CF-1.4" ;
+
+data:
+h = 1., 2.;
+T=100., 200., 300., 200.;
+}

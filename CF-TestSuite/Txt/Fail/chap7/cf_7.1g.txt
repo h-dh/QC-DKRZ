@@ -1,0 +1,29 @@
+netcdf cf_7.1g {
+dimensions:
+   lat = 2;
+   nv = 2; // number of vertices
+   strlen=20;
+
+variables:
+   float lat(lat);
+     lat:long_name = "latitude";
+     lat:units = "degrees_north";
+     lat:axis = "Y";
+     lat:bounds = "lat_bnds";
+   double T(lat);
+     T:units="K";
+     T:long_name="temperature";
+
+   char lat_bnds(lat,nv, strlen);
+     lat_bnds:comment = "bounds must be numeric type" ;
+
+// global attributes:
+   :Conventions = "CF-1.4" ;
+
+data:
+  T=1.,2.;
+  lat = 45., -45. ;
+  lat_bnds="equator", "north_pole",
+           "equator", "south_pole";
+
+}

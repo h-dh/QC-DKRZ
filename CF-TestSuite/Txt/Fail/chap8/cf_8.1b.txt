@@ -8,7 +8,7 @@ variables:
      t:long_name = "asdf" ;
      t:scale_factor = 1.d;
      t:add_offset = 0.d;
-     t:comment= "scaleFactor and add_offset must be type float or double" ;
+     t:comment= "type of t must be int|short|byte, because sF and ao are of different type" ;
 
 // global attributes:
    :Conventions = "CF-1.4" ;
