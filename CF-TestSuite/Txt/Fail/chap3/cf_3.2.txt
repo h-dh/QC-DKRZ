@@ -15,4 +15,5 @@ variables:
 
 data:
 lev = 1., 2.;
+var = 0., 1.;
 }

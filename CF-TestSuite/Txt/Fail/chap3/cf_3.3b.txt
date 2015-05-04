@@ -10,4 +10,7 @@ variables:
 
 // global attributes:
    :Conventions = "CF-1.4" ;
+
+data:
+  q0 = 1., 2.;
 }

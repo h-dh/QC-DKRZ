@@ -24,8 +24,8 @@ variables:
    double time(time) ;
       time:long_name = "time" ;
       time:units = "days since 1990-1-1 0:0:0" ;
-      time:comment="a coordiante variable must not have default _FillValue";
-      time:comment2="instructions to enable this failure in Readme.txt";
+      time:comment="a coordinate variable must not have default _FillValue";
+      time:note="instructions to enable this failure in Readme.txt";
 // global attributes:
    :Conventions = "CF-1.4" ;
 

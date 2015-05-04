@@ -1,0 +1,18 @@
+netcdf cf_2.5.1d {
+dimensions:
+   lat = 2;
+   lon = 3;
+
+variables:
+   float psl(lat,lon) ;
+      psl:long_name = "mean sea level pressure" ;
+      psl:units = "hPa" ;
+      psl:standard_name = "air_pressure_at_sea_level" ;
+      psl:missing_value = 25.f ;
+      psl:valid_range = 0.f, 20.f ;
+      psl:comment = "reco for CF-1.4: name of missing_value is deprecated" ;
+      psl:note = "this recommendation is only for CF-1.4" ;
+
+// global attributes:
+   :Conventions = "CF-1.4" ;
+}

@@ -1,4 +1,4 @@
-netcdf cf_6.1c {
+netcdf cf_6.1d {
 dimensions:
    time = 2 ;
    lat = 5 ;

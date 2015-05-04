@@ -1,0 +1,37 @@
+netcdf cf_6.1f {
+dimensions:
+   parcel = 2 ; // number of trajectories
+   times = 2 ;
+   max_len_parcel_name = 5 ; // max length of trajectory name
+   rlon=2;
+   rlat=2;
+
+variables:
+   float times(times) ;
+      times:standard_name = "time" ;
+      times:units="days since 1961-1-1";
+   float lon(parcel,times) ;
+      lon:standard_name = "longitude";
+      lon:units= "degrees_east" ;
+   float lat(parcel,times) ;
+      lat:standard_name = "latitude";
+      lat:units= "degrees_north" ;
+   char parcel_name(parcel,max_len_parcel_name) ;
+
+   float rh(times, rlon, rlat) ;
+      rh:long_name = "relative humidity" ;
+      rh:coordinates = "parcel_name lat lon" ;
+      rh:comment = "leading dim of non-scalar label parcel_name must match a dim of the data var." ;
+
+// global attributes:
+   :note="Strictness of Chap6 (CF-1.4) is ignored in Appendix H (CF-1.6)" ;
+   :Conventions = "CF-1.4" ;
+
+data:
+  times= 1., 2. ;
+  lat= 1., 2., 3., 4., 5., 6.;
+  lon= 1., 2., 3., 4., 5., 6.;
+  parcel_name= "asdf", "bsdf" ;
+  rh = 1., 2., 3., 4., 5., 6., 7., 8.;
+}
+

@@ -823,7 +823,10 @@ Annotation::parse(void)
         }
 
         // only variables
-        vars.push_back( str0 );
+        if( str0.substr(0,4) == "var=" )
+          vars.push_back( str0.substr(4) );
+        else
+          vars.push_back( str0 );
      }
 
      // any variable specified? No? Then, set '*' for all variables

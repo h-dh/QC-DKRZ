@@ -34,7 +34,7 @@ variables:
    float Temperature(time, y, x);
       Temperature:units = "K";
       Temperature:long_name = "Temperature @ surface";
-      Temperature:missing_value = 9999.0f;
+      Temperature:_FillValue = 9999.0f;
       Temperature:coordinates = "lat lon";
       Temperature:grid_mapping = "Lambert_Conformal";
 

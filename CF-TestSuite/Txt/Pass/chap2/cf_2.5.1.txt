@@ -13,7 +13,7 @@ variables:
 
 // global attributes:
    :comment="variables" ;
-   :Conventions = "CF-1.4" ;
+   :Conventions = "CF-1.5" ;
 
 data:
   psl=1., 2., 3., 4., 5., 6.;

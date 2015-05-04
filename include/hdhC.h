@@ -413,10 +413,10 @@ std::string
 clearSpaces(std::string &str );
 
 std::string
-sAssign(std::string left, std::string right, bool withSpaces=false) ;
+sAssign(std::string lvalue, std::string rvalue) ;
 
 std::string
-sAssign(std::string right, bool withSpaces=false) ;
+sAssign(std::string rvalue) ;
 
 //! strip off surrounding characters.
 /*! Surrounding ' ' and '\t' are removed, also any character provided

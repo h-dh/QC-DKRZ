@@ -1,0 +1,61 @@
+netcdf cf_932a {
+dimensions:
+   station = 2 ;
+   obs = 3 ;
+   name_strlen = 23 ;
+
+variables:
+   float lon(station) ;
+      lon:standard_name = "longitude" ;
+      lon:long_name = "station longitude" ;
+      lon:units = "degrees_east" ;
+      lon:axis = "X" ;
+   float lat(station) ;
+      lat:standard_name = "latitude" ;
+      lat:long_name = "station latitude" ;
+      lat:units = "degrees_north" ;
+      lat:axis = "Y" ;
+   float alt(station) ;
+      alt:long_name = "vertical distance above the surface" ;
+      alt:standard_name = "height" ;
+      alt:units = "m" ;
+      alt:positive = "up" ;
+      alt:axis = "Z" ;
+   char station_name(station, name_strlen) ;
+      station_name:long_name = "station name" ;
+      station_name:cf_role = "timeseries_id" ;
+   int station_info(station) ;
+      station_info:long_name = "some kind of station info" ;
+
+   double time(obs) ;
+      time:standard_name = "time" ;
+      time:long_name = "time of measurement" ;
+      time:units = "days since 1970-01-01 00:00:00" ;
+   float humidity(obs) ;
+      humidity:standard_name = "specific_humidity" ;
+      humidity:coordinates = "time lat lon alt" ;
+      humidity:_FillValue = -999.9 ;
+   float temp(obs) ;
+      temp:standard_name = "air_temperature" ;
+      temp:units = "Celsius" ;
+      temp:coordinates = "time lat lon alt" ;
+      temp:_FillValue = -999.9 ;
+
+   int row_size(station) ;
+      row_size:long_name = "number of observations for this station " ;
+      row_size:sample_dimension = "obs" ;
+      row_size:comment="Variable with sample_dimension attribute must have data";
+
+// global attributes:
+   :featureType = "timeSeries" ;
+   :Conventions = "CF-1.6" ;
+
+data:
+  time = 1., 2., 3. ;
+  lon = 1., 2. ;
+  lat = 1., 2. ;
+  alt = 1., 2. ;
+  station_name = "one", "two" ;
+  humidity = 1., 2., 3. ;
+  temp = 1., 2., 3. ;
+}
