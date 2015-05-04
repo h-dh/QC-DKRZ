@@ -1,0 +1,52 @@
+#! /bin/bash
+
+asdf=$(pwd)
+asdf=${asdf#*QC-DKRZ/}
+
+if [ "${asdf}" != test ] ; then
+  echo "please, cd to QC-DKRZ/test"
+  exit
+fi
+
+while read line ; do
+
+  test "${line:0:1}" = '#' && continue
+
+  for(( i=0 ; i < ${#line} ; ++i )) ; do
+    if [ "${line:i:3}" = 'CF_' ] ; then
+      for(( j=i ; j < ${#line} ; ++j )) ; do
+        test "${line:j:1}" = ',' && break
+      done
+
+      table[${#table[*]}]=${line:i:$((j-i))}
+      break
+    fi
+  done
+
+done < /hdh/hdh/QC-DKRZ/tables/projects/CF/CF_check-list.conf
+
+while read line ; do
+
+  test "${line:0:1}" = '#' && continue
+
+  for(( i=0 ; i < ${#line} ; ++i )) ; do
+    if [ "${line:i:3}" = 'CF_' ] ; then
+      for(( j=i ; j < ${#line} ; ++j )) ; do
+        test "${line:j:1}" = ':' && break
+      done
+
+      fail[${#fail[*]}]=${line:i:$((j-i))}
+      break
+    fi
+  done
+
+done < z_test_cf_fail.txt
+
+for t in ${table[*]} ; do
+  for f in ${fail[*]} ; do
+    test $f = $t && continue 2
+  done
+
+echo ${t}
+done
+

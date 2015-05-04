@@ -1,0 +1,163 @@
+#! /bin/bash
+
+getPath()
+{
+  # Note: each executable invoked on a bash command-line
+  # gets its name in parameter $0, which is available
+  # in functions.
+
+  if [ ${#qPath} -eq 0 ] ; then
+    # init
+    if [ ${0:0:1} = '/' ] ; then
+      qPath=${0%/*}
+    else
+      qPath=$(pwd)/${0%/*}
+    fi
+
+    xName=${0##*/}
+  fi
+
+  if [ -h $qPath/$xName ] ; then
+
+    qPath=$(ls -l $qPath/${xName} | awk  '{print $(NF)}')
+    xName=${qPath##*/}
+    qPath=${qPath%/*}
+
+    getPath
+
+  else
+
+    # resolve .. and .
+    local arr=( ${qPath//\// } )
+
+    # any //, ., or .. in the middle of the path?
+    local i j sz
+    sz=${#arr[*]}
+
+    for(( i=1 ; i < sz ; ++i )) ; do
+      j=$((i-1))
+
+      if [ "${arr[i]}" = '/' -a "${arr[j]}" = '/' ] ; then
+        unset arr[j]
+      elif [ "${arr[i]}" = '.' ] ; then
+        unset arr[i]
+      elif [ "${arr[i]}" = '..' ] ; then
+        while [ ${#arr[j]} -eq 0 ] ; do
+          j=$((j-1))
+        done
+        unset arr[j]
+        unset arr[i]
+      fi
+    done
+
+    # get rid of empty items
+    arr=( ${arr[*]} )
+
+    sz=${#arr[*]}
+    qPath=
+
+    for(( i=0 ; i < sz ; ++i )) ; do
+      qPath=${qPath}/${arr[i]}
+    done
+
+  fi
+
+  local tmp
+  while [ "${qPath}" != "${qPath%/*}" ] ; do
+    tmp=${qPath##*/}
+    test ${tmp:0:3} = 'QC-' && return
+
+    qPath=${qPath%/*}
+  done
+
+  local str
+  str="\nThis script was executed from out-side of the QC package."
+  str="${str}\nIt was probably copied or hard-linked. Please, use a"
+  str="${str}\nsymbolic link, or call it directly from /path/QC-package/scripts,"
+  str="${str}\nor use option -x."
+
+  echo -e "${str}"
+
+  exit
+}
+
+run()
+{
+  # $1: Fail | Pass
+  # $2: chapX[/...]
+
+  if [ $# -ne 2 ] ; then
+    echo 'function run() failed'
+    exit
+  fi
+
+  cd $2
+
+  local ncDir=${initPWD}/Nc/$1/$2
+
+  # clear nc-files in Txt which will not be re-processed
+  \rm  *.nc 2> /dev/null
+
+   # clear all Nc files, but write-protected ones
+  if [ -d ${ncDir}  ] ; then
+    for f in ${ncDir}/*.nc ; do
+       test -w $f && \rm $f
+    done
+  fi
+
+  fs=( $( ls *.txt 2> /dev/null) )
+
+  if [ ${#fs[*]} -gt 0 ] ; then
+    test ! -d ${ncDir} && mkdir -p ${ncDir}
+
+    for f in ${fs[*]} ; do
+      test $f = Readme.txt && continue
+
+      echo "$d/$2 $f"
+      ${initPWD}/scripts/mkNc $f
+    done
+
+    for f in *.nc ; do
+       # preserve write-protected files
+      test -f $ncDir/${f##*/} && test ! -w $ncDir/${f##*/} && continue
+
+      mv $f $ncDir
+    done
+  fi
+
+  cd - &> /dev/null
+
+  return
+}
+
+
+#### main ##
+getPath
+cd $qPath/CF-TestSuite
+
+# make all nc-files of the CF Test Suite
+initPWD=$(pwd)
+
+test ${initPWD##*/} != CF-TestSuite && exit
+
+for d in Pass Fail ; do
+
+  cd ${initPWD}/Txt/$d
+
+  chap=( $( ls -d chap* ) )
+
+  for c in ${chap[*]} ; do
+
+    cd ${initPWD}/Txt/$d
+    oPwd=$(pwd)
+
+    # descend into dir tree starting at chapX
+    dirs=( $( find $c -type d ) )
+
+    for dir in ${dirs[*]} ; do
+      test -d ${dir} && run $d ${dir}
+    done
+
+  done
+
+done

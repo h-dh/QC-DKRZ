@@ -9709,14 +9709,13 @@ CF::chap9(void)
           capt += " and " ;
           if( guessedFT.size() > 1 )
             capt += "ambiguous " ;
-          capt += "guessed <";
+          capt += "guess: ";
           for( size_t i=0 ; i < guessedFT.size() ; ++i )
           {
             if(i)
               capt += ",";
             capt += guessedFT[i];
           }
-          capt += ">";
 
           (void) notes->operate(capt) ;
           notes->setCheckCF_Str( fail );
@@ -9748,7 +9747,7 @@ CF::chap9(void)
         if( notes->inq(bKey + "9i", n_global, NO_MT) )
         {
           std::string capt("suspecting missing " );
-          capt += captAtt(n_featureType, no_colon) ;
+          capt += captAtt(n_featureType, no_colon, no_blank) ;
           capt += ", " ;
           if( guessedFT.size() > 1 )
             capt += "ambiguous " ;
