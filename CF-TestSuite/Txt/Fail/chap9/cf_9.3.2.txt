@@ -3,7 +3,6 @@ dimensions:
    station = 2 ;
    obs = 3 ;
    name_strlen = 23 ;
-   nv=2;
 
 variables:
    float lon(station) ;
@@ -42,10 +41,10 @@ variables:
       temp:coordinates = "time lat lon alt" ;
       temp:_FillValue = -999.9 ;
 
-   int row_size(station,nv) ;
+   int row_size(station) ;
       row_size:long_name = "number of observations for this station " ;
-      row_size:sample_dimension = "oops" ;
-      row_size:comment="sample_dimension has to name an existing dimension";
+      row_size:sample_dimension = "obs" ;
+      row_size:comment="Variable with sample_dimension attribute must have data";
 
 // global attributes:
    :featureType = "timeSeries" ;
@@ -57,7 +56,6 @@ data:
   lat = 1., 2. ;
   alt = 1., 2. ;
   station_name = "one", "two" ;
-  row_size=2,1;
   humidity = 1., 2., 3. ;
   temp = 1., 2., 3. ;
 }
