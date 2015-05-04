@@ -1,0 +1,109 @@
+#! /bin/bash
+
+getPath()
+{
+  # Note: each executable invoked on a bash command-line
+  # gets its name in parameter $0, which is available
+  # in functions.
+
+  if [ ${#qPath} -eq 0 ] ; then
+    # init
+    if [ ${0:0:1} = '/' ] ; then
+      qPath=${0%/*}
+    else
+      qPath=$(pwd)/${0%/*}
+    fi
+
+    xName=${0##*/}
+  fi
+
+  if [ -h $qPath/$xName ] ; then
+
+    qPath=$(ls -l $qPath/${xName} | awk  '{print $(NF)}')
+    xName=${qPath##*/}
+    qPath=${qPath%/*}
+
+    getPath
+
+  else
+
+    # resolve .. and .
+    local arr=( ${qPath//\// } )
+
+    # any //, ., or .. in the middle of the path?
+    local i j sz
+    sz=${#arr[*]}
+
+    for(( i=1 ; i < sz ; ++i )) ; do
+      j=$((i-1))
+
+      if [ "${arr[i]}" = '/' -a "${arr[j]}" = '/' ] ; then
+        unset arr[j]
+      elif [ "${arr[i]}" = '.' ] ; then
+        unset arr[i]
+      elif [ "${arr[i]}" = '..' ] ; then
+        while [ ${#arr[j]} -eq 0 ] ; do
+          j=$((j-1))
+        done
+        unset arr[j]
+        unset arr[i]
+      fi
+    done
+
+    # get rid of empty items
+    arr=( ${arr[*]} )
+
+    sz=${#arr[*]}
+    qPath=
+
+    for(( i=0 ; i < sz ; ++i )) ; do
+      qPath=${qPath}/${arr[i]}
+    done
+
+  fi
+
+  local tmp
+  while [ "${qPath}" != "${qPath%/*}" ] ; do
+    tmp=${qPath##*/}
+    test ${tmp:0:3} = 'QC-' && return
+
+    qPath=${qPath%/*}
+  done
+
+  if [ ${#xPath} -gt 0 ] ; then
+    echo -e "\nPlease, check option -x; found ${xPath}."
+  else
+    local str
+    str="\nThis script was executed from out-side of the QC package."
+    str="${str}\nIt was probably copied or hard-linked. Please, use a"
+    str="${str}\nsymbolic link, or call it directly from /path/QC-package/scripts,"
+    str="${str}\nor use option -x."
+
+    echo -e "${str}"
+  fi
+
+  exit
+}
+
+# main
+
+test $# -eq 0 && exit
+
+getPath
+
+declare -a my_args
+
+for a in $* ; do
+  if [ ${a:0:1} = '-' ] ; then
+    my_args=( ${my_args[*]} $a )
+  else
+    f=$( find ${qPath}/CF-TestSuite -name "${a%.*}.nc" )
+    if [ ${#f} -gt 0 ] ; then
+      file=$f
+    else
+      my_args=( ${my_args[*]} $a )
+    fi
+  fi
+done
+
+ncdump ${my_args[*]} ${file%.*}.nc
