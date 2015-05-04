@@ -1,7 +1,8 @@
-QC-DKRZ
+QA-DKRZ
 =======
 
-Quality and CF checker of meta-data in climate data sets (netCDF files)
+Quality Assurance checker of meta-data in climate data sets (netCDF files) for
+CF Conformance and CMIP5 and CORDEX project conventions.
 
 A brief overview and installation guide is given at
 
