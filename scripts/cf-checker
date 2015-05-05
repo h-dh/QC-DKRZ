@@ -148,6 +148,10 @@ shift $(( $OPTIND - 1 ))
 
 getPath
 
+cd $qPath
+./install CF &> /dev/null
+cd - &> /dev/null
+
 # files
 if [ ${isTestSuite:-f} = t ] ; then
   # only these fomr the set of test files
