@@ -1,17 +1,17 @@
-QC_Time::QC_Time()
+QA_Time::QA_Time()
 {
   initDefaults();
 }
 
 /*
-QC_Time::~QC_Time()
+QA_Time::~QA_Time()
 {
  ;
 }
 */
 
 void
-QC_Time::applyOptions(std::vector<std::string> &optStr)
+QA_Time::applyOptions(std::vector<std::string> &optStr)
 {
   for( size_t i=0 ; i < optStr.size() ; ++i)
   {
@@ -88,7 +88,7 @@ QC_Time::applyOptions(std::vector<std::string> &optStr)
 }
 
 void
-QC_Time::finally(NcAPI *nc)
+QA_Time::finally(NcAPI *nc)
 {
   timeOutputBuffer.flush();
   sharedRecordFlag.flush();
@@ -129,7 +129,7 @@ QC_Time::finally(NcAPI *nc)
     // the time step is twice as long.
     double tmp;
 
-    if( pQC->currQcRec == 1 )  // due to the final loop increment
+    if( pQA->currQcRec == 1 )  // due to the final loop increment
     {
       referenceTimeStep *= 2. ;
       tmp=2.*currTimeStep;
@@ -147,7 +147,7 @@ QC_Time::finally(NcAPI *nc)
 }
 
 Date
-QC_Time::getDate(std::string id, std::string bound)
+QA_Time::getDate(std::string id, std::string bound)
 {
   if( bound.size() == 0 )
   {
@@ -218,7 +218,7 @@ QC_Time::getDate(std::string id, std::string bound)
 }
 
 void
-QC_Time::getDRSformattedDateRange(std::vector<Date> &period,
+QA_Time::getDRSformattedDateRange(std::vector<Date> &period,
        std::vector<std::string> &sd)
 {
   std::vector<std::string> iso;
@@ -323,7 +323,7 @@ QC_Time::getDRSformattedDateRange(std::vector<Date> &period,
 }
 
 bool
-QC_Time::getTimeBounds(double *b, size_t curr)
+QA_Time::getTimeBounds(double *b, size_t curr)
 {
   std::string name_bnds;
 
@@ -362,20 +362,20 @@ QC_Time::getTimeBounds(double *b, size_t curr)
 }
 
 void
-QC_Time::init(InFile *p, Annotation *n, QC *q)
+QA_Time::init(InFile *p, Annotation *n, QA *q)
 {
    pIn = p;
-   pQC = q;
+   pQA = q;
    notes = n;
 
    time=pIn->timeName;
 
    timeInputBuffer.init(pIn);
 
-   timeOutputBuffer.initBuffer(pQC->nc, pQC->currQcRec);
+   timeOutputBuffer.initBuffer(pQA->nc, pQA->currQcRec);
    timeOutputBuffer.setName(time);
 
-   sharedRecordFlag.initBuffer(pQC->nc, pQC->currQcRec);
+   sharedRecordFlag.initBuffer(pQA->nc, pQA->currQcRec);
    sharedRecordFlag.setName( time + "_flag" );
 
    // set date to a reference time
@@ -398,11 +398,11 @@ QC_Time::init(InFile *p, Annotation *n, QC *q)
 }
 
 void
-QC_Time::initDefaults(void)
+QA_Time::initDefaults(void)
 {
    notes=0;
    pIn=0;
-   pQC=0;
+   pQA=0;
 
    currTimeStep=0 ;
    prevTimeValue=MAXDOUBLE;
@@ -442,7 +442,7 @@ QC_Time::initDefaults(void)
 }
 
 bool
-QC_Time::initTimeAbsolute(std::string &units)
+QA_Time::initTimeAbsolute(std::string &units)
 {
   size_t i;
   for( i=0 ; i < pIn->variable.size() ; ++i)
@@ -574,7 +574,7 @@ QC_Time::initTimeAbsolute(std::string &units)
 }
 
 bool
-QC_Time::initTimeRelative(std::string &units)
+QA_Time::initTimeRelative(std::string &units)
 {
    size_t i;
    for( i=0 ; i < pIn->variable.size() ; ++i)
@@ -644,7 +644,7 @@ QC_Time::initTimeRelative(std::string &units)
      else
      {
        // a) from time:units and :frequency
-       std::string freq( pQC->getFrequency() );
+       std::string freq( pQA->getFrequency() );
        if( freq.size() && refDate.getUnits() == "day" )
        {
          if( freq == "3hr" )
@@ -690,7 +690,7 @@ QC_Time::initTimeRelative(std::string &units)
 }
 
 void
-QC_Time::initResumeSession(void)
+QA_Time::initResumeSession(void)
 {
    // this method may be used for two different purposes. First,
    // resuming within the same experiment. Second, continuation
@@ -700,22 +700,22 @@ QC_Time::initResumeSession(void)
 
    // Simple continuation.
    // Note: this fails, if the previous file has a
-   //       different reference date AND the QC resumes the
+   //       different reference date AND the QA resumes the
    //       current file after an error.
-   pQC->nc->getAttValues( dv, "last_time", time);
+   pQA->nc->getAttValues( dv, "last_time", time);
    prevTimeValue=dv[0];
 
-   pQC->nc->getAttValues( dv, "last_time_bnd_0", time);
+   pQA->nc->getAttValues( dv, "last_time_bnd_0", time);
    prevTimeBoundsValue[0]=dv[0];
 
-   pQC->nc->getAttValues( dv, "last_time_bnd_1", time);
+   pQA->nc->getAttValues( dv, "last_time_bnd_1", time);
    prevTimeBoundsValue[1]=dv[0];
 
-   pQC->nc->getAttValues( dv, "last_time_step", time + "_step");
+   pQA->nc->getAttValues( dv, "last_time_step", time + "_step");
    referenceTimeStep=dv[0];
 
    // case: two different reference dates are effective.
-   std::string tu_0(pQC->nc->getAttString("units", time));
+   std::string tu_0(pQA->nc->getAttString("units", time));
    std::string tu_1(pIn->nc.getAttString("units", time));
    if( ! (tu_0 == tu_1 ) )
    {
@@ -731,20 +731,20 @@ QC_Time::initResumeSession(void)
 
         // adjust all time values of the current file to
         // the reference date of the first chunk, which is
-        // stored in the qc-nc file
+        // stored in the qa-nc file
         refTimeDelay= d_x0.getSince( d_x1 );
       }
    }
 
    // get internal values
    isTimeBounds =
-     static_cast<bool>(pQC->nc->getAttValue("isTimeBoundsTest", time));
+     static_cast<bool>(pQA->nc->getAttValue("isTimeBoundsTest", time));
 
    return;
 }
 
 void
-QC_Time::initTimeTable(std::string id_1st, std::string id_2nd)
+QA_Time::initTimeTable(std::string id_1st, std::string id_2nd)
 {
    if( timeTableMode == NONE )
      return;
@@ -759,7 +759,7 @@ QC_Time::initTimeTable(std::string id_1st, std::string id_2nd)
       tt_id += id_2nd ;
    }
 
-   // is called from QC::init()
+   // is called from QA::init()
    std::string str(tablePath);  // includes trailing '/' or is empty
    str += timeTable ;
 
@@ -912,7 +912,7 @@ QC_Time::initTimeTable(std::string id_1st, std::string id_2nd)
          if( notes->operate(capt, ostr.str()) )
          {
            notes->setCheckTimeStr(fail);
-           pQC->setExit( notes->getExitValue() ) ;
+           pQA->setExit( notes->getExitValue() ) ;
          }
        }
      }
@@ -922,7 +922,7 @@ QC_Time::initTimeTable(std::string id_1st, std::string id_2nd)
 }
 
 bool
-QC_Time::parseTimeTable(size_t rec)
+QA_Time::parseTimeTable(size_t rec)
 {
    if( timeTableMode == NONE )
      return false;
@@ -981,7 +981,7 @@ QC_Time::parseTimeTable(size_t rec)
           if( notes->operate(capt, ostr.str()) )
           {
             notes->setCheckTimeStr(fail);
-            pQC->setExit( notes->getExitValue() ) ;
+            pQA->setExit( notes->getExitValue() ) ;
           }
         }
      }
@@ -1022,7 +1022,7 @@ QC_Time::parseTimeTable(size_t rec)
          if( notes->operate(capt, ostr.str()) )
          {
             notes->setCheckTimeStr(fail);
-            pQC->setExit( notes->getExitValue() ) ;
+            pQA->setExit( notes->getExitValue() ) ;
          }
        }
      }
@@ -1058,7 +1058,7 @@ QC_Time::parseTimeTable(size_t rec)
          if( notes->operate(capt, ostr.str()) )
          {
             notes->setCheckTimeStr(fail);
-            pQC->setExit( notes->getExitValue() ) ;
+            pQA->setExit( notes->getExitValue() ) ;
          }
        }
 
@@ -1082,7 +1082,7 @@ QC_Time::parseTimeTable(size_t rec)
 
 
 void
-QC_Time::openQcNcContrib(NcAPI *nc)
+QA_Time::openQcNcContrib(NcAPI *nc)
 {
    // dimensions
    nc->defineDim("time");
@@ -1130,7 +1130,7 @@ QC_Time::openQcNcContrib(NcAPI *nc)
 }
 
 void
-QC_Time::setNextFlushBeg(size_t r)
+QA_Time::setNextFlushBeg(size_t r)
 {
    nextFlushBeg=r;
    sharedRecordFlag.setNextFlushBeg(r);
@@ -1140,7 +1140,7 @@ QC_Time::setNextFlushBeg(size_t r)
 }
 
 void
-QC_Time::setTable(std::string &p, std::string t)
+QA_Time::setTable(std::string &p, std::string t)
 {
   tablePath=p;
 
@@ -1151,9 +1151,9 @@ QC_Time::setTable(std::string &p, std::string t)
 }
 
 bool
-QC_Time::sync(bool isCheckData, bool enablePostProc )
+QA_Time::sync(bool isCheckData, bool enablePostProc )
 {
-  // Synchronise the in-file and the qc-netCDF file.
+  // Synchronise the in-file and the qa-netCDF file.
   // Failure: call setExit(error_code).
 
   // return value: true for isNoProgress
@@ -1161,9 +1161,9 @@ QC_Time::sync(bool isCheckData, bool enablePostProc )
   // num of recs in current data file
   size_t inRecNum = pIn->nc.getNumOfRecords() ;
 
-  // Any records available in the qc-ncfile?
-  size_t qcRecNum;
-  if( (qcRecNum=pQC->nc->getNumOfRecords() ) == 0 )
+  // Any records available in the qa-ncfile?
+  size_t qaRecNum;
+  if( (qaRecNum=pQA->nc->getNumOfRecords() ) == 0 )
   {
     // for a file with fixed variable(s)
     if( ! enablePostProc )
@@ -1172,28 +1172,28 @@ QC_Time::sync(bool isCheckData, bool enablePostProc )
 
   // get last time value from the previous file
   std::vector<double> dv;
-  pQC->nc->getAttValues( dv, "last_time", pIn->timeName);
-  double qc_t=dv[0];
+  pQA->nc->getAttValues( dv, "last_time", pIn->timeName);
+  double qa_t=dv[0];
 
   double inTime=0.;
 
   // Now, the sync-loop situations:
-  // a) a previous QC worked on a complete infile and the
+  // a) a previous QA worked on a complete infile and the
   //    time continues in a new infile.
-  // b) a previous QC worked on an infile that was extended
+  // b) a previous QA worked on an infile that was extended
   //    in the meanwhile.
 
-  // Note: QC always continues a previous session
+  // Note: QA always continues a previous session
 
   for( size_t inRec=0 ; inRec < inRecNum ; ++inRec )
   {
     inTime = timeInputBuffer.getTimeValue(inRec, refTimeDelay) ;
 
-    if( qc_t == inTime )
+    if( qa_t == inTime )
     {
       if( (inRec+1) == inRecNum )
       {
-        //nothing has changed since the last QC
+        //nothing has changed since the last QA
         if( ! enablePostProc )
           return true;
       }
@@ -1208,7 +1208,7 @@ QC_Time::sync(bool isCheckData, bool enablePostProc )
     }
 
     // case a)
-    if( qc_t < inTime )
+    if( qa_t < inTime )
       return false ;  // the usual case
   }
 
@@ -1220,7 +1220,7 @@ QC_Time::sync(bool isCheckData, bool enablePostProc )
      std::string capt("renewal of a file?") ;
 
      std::ostringstream ostr(std::ios::app);
-     ostr << "\nlast time of previous QC=" << qc_t;
+     ostr << "\nlast time of previous QA=" << qa_t;
      ostr << "\nfirst time in file=" << inTime;
 
      if( notes->operate(capt, ostr.str()) )
@@ -1229,7 +1229,7 @@ QC_Time::sync(bool isCheckData, bool enablePostProc )
        notes->setCheckTimeStr(fail);
        notes->setCheckDataStr(fail);
 
-       pQC->setExit( notes->getExitValue() ) ;
+       pQA->setExit( notes->getExitValue() ) ;
      }
   }
 
@@ -1237,7 +1237,7 @@ QC_Time::sync(bool isCheckData, bool enablePostProc )
 }
 
 void
-QC_Time::testTimeBounds(NcAPI &nc)
+QA_Time::testTimeBounds(NcAPI &nc)
 {
   // check time bounds
   if( timeTableMode == DISABLE )
@@ -1454,7 +1454,7 @@ QC_Time::testTimeBounds(NcAPI &nc)
 }
 
 void
-QC_Time::testDate(NcAPI &nc)
+QA_Time::testDate(NcAPI &nc)
 {
   currTimeValue = timeInputBuffer.getTimeValue(pIn->currRec, refTimeDelay) ;
 
@@ -1475,7 +1475,7 @@ QC_Time::testDate(NcAPI &nc)
 }
 
 bool
-QC_Time::testTimeStep(void)
+QA_Time::testTimeStep(void)
 {
   // returns true, if an error was detected.
 
@@ -1562,7 +1562,7 @@ QC_Time::testTimeStep(void)
         notes->setCheckTimeStr( fail );
         notes->setCheckDataStr( fail );
 
-        pQC->setExit( notes->getExitValue() ) ;
+        pQA->setExit( notes->getExitValue() ) ;
       }
     }
 
@@ -1623,7 +1623,7 @@ QC_Time::testTimeStep(void)
       {
          notes->setCheckTimeStr( fail );
 
-         pQC->setExit( notes->getExitValue() ) ;
+         pQA->setExit( notes->getExitValue() ) ;
       }
     }
 
@@ -1708,7 +1708,7 @@ QC_Time::testTimeStep(void)
       {
         notes->setCheckTimeStr(fail);
 
-        pQC->setExit( notes->getExitValue() ) ;
+        pQA->setExit( notes->getExitValue() ) ;
       }
     }
 
@@ -1980,7 +1980,7 @@ TimeOutputBuffer::setName(std::string nm)
 void
 TimeOutputBuffer::store(double val, double step)
 {
-   // flush collected qc results to the qc-results netCDF file
+   // flush collected qa results to the qa-results netCDF file
    if( bufferCount == maxBufferSize )
      flush();  // resets countTime, too
 

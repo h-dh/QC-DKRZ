@@ -1,8 +1,5 @@
-// Designed for the float type. Arbitrary template
-// functionality is a TODO
 
-
-#include "qc_main.h"
+#include "qa_main.h"
 
 // All sources are included for the shipping version.
 // ------------------
@@ -30,10 +27,10 @@
 #include "Oper.cpp"
 #include "OutFile.cpp"
 #include "Parse.cpp"
-#include "QC_data.cpp"
-#include "QC_time.cpp"
-#include "QC_PT.cpp"
-#include "QC.cpp"
+#include "QA_data.cpp"
+#include "QA_time.cpp"
+#include "QA_PT.cpp"
+#include "QA.cpp"
 #include "TimeControl.cpp"
 
 // ------------------
@@ -98,18 +95,18 @@ bool entry(std::vector<IObj*> &vIObj)
 
   size_t i=0;
 
-  // there will be only a single InFile for the QC
+  // there will be only a single InFile for the QA
   InFile *pin = 0;
 
 //  ####### the LOOP ###############
 
 // preparation: rules for vIObj pointers
 // 1) InFile obj must be the first
-// 2) QC the second, if available
-// 3) if QC available, remove InFile from loop
-//    (in::entry() is called in QC::entry())
+// 2) QA the second, if available
+// 3) if QA available, remove InFile from loop
+//    (in::entry() is called in QA::entry())
   std::vector<IObj*> loopObj;
-  size_t objLoopBeg=0;  //index to point eventually to the QC object
+  size_t objLoopBeg=0;  //index to point eventually to the QA object
 
   // identify the objects (in, CF) which are not executed in a loop below
   for( i=0 ; i < vIObj.size() ; ++i )
@@ -118,7 +115,7 @@ bool entry(std::vector<IObj*> &vIObj)
       // there will be only a single InFile
       pin = static_cast<InFile*>(vIObj[i]);
 
-    else if( vIObj[i]->getObjName() == "QC")
+    else if( vIObj[i]->getObjName() == "QA")
       loopObj.push_back(vIObj[i]);
   }
 
@@ -139,7 +136,7 @@ bool entry(std::vector<IObj*> &vIObj)
     // according to polymorphism (abstract classes).
     // Note: In context of the Quality Control: the first object
     // relates to the netCDF input file (InFile), then there must be
-    // a QC object to conduct the quality control. Objects may be
+    // a QA object to conduct the quality control. Objects may be
     // given for the calculation of frequency distributions,
     // depending on the selections in the configuration.
     // (Time control is imbedded in the InFile object).
@@ -159,7 +156,7 @@ finally(IObjContainer &ioc)
 {
   int retVal=0;
 
-  if( ioc.qC[0].isProgress() )
+  if( ioc.qA[0].isProgress() )
   {
     for( size_t i=0 ; i < ioc.fDI.size() ; ++i)
       ioc.fDI[i].finally();
@@ -173,13 +170,13 @@ finally(IObjContainer &ioc)
       }
     }
 
-    for( size_t i=0 ; i < ioc.qC.size() ; ++i)
+    for( size_t i=0 ; i < ioc.qA.size() ; ++i)
     {
-      if( &ioc.qC[i] )
+      if( &ioc.qA[i] )
       {
-        int rV = ioc.qC[i].notes->getExitValue();
+        int rV = ioc.qA[i].notes->getExitValue();
         retVal = ( retVal > rV ) ? retVal : rV ;
-        retVal = ioc.qC[i].finally( retVal );
+        retVal = ioc.qA[i].finally( retVal );
       }
     }
 
@@ -233,7 +230,7 @@ finally(IObjContainer &ioc)
     out += "CHECK-END";  // mark of the end of an output line
     std::cout << out << std::endl;
 
-    if( ioc.qC.size() == 0 )
+    if( ioc.qA.size() == 0 )
       std::cout << "STATUS-BEG" << retVal << "STATUS-END";
 
     // distinguish from a sytem crash (segmentation error)
@@ -369,8 +366,8 @@ makeObject(std::vector<std::vector<std::string> > &list, IObjContainer &ioc)
       instantiateObject(ioc.op, name, id,  param, ioc );
     else if( name == "OUT" )
       instantiateObject(ioc.out, name, id,  param, ioc );
-    else if( name == "QC" )
-      instantiateObject(ioc.qC, name, id,  param, ioc );
+    else if( name == "QA" )
+      instantiateObject(ioc.qA, name, id,  param, ioc );
     else if( name == "TC" )
       instantiateObject(ioc.tC, name, id,  param, ioc );
   }
@@ -390,8 +387,8 @@ makeObject(std::vector<std::vector<std::string> > &list, IObjContainer &ioc)
     ioc.vIObj.push_back( &(ioc.op[i]) );
   for( size_t i=0 ; i < ioc.out.size() ; ++i )
     ioc.vIObj.push_back( &(ioc.out[i]) );
-  for( size_t i=0 ; i < ioc.qC.size() ; ++i )
-    ioc.vIObj.push_back( &(ioc.qC[i]) );
+  for( size_t i=0 ; i < ioc.qA.size() ; ++i )
+    ioc.vIObj.push_back( &(ioc.qA[i]) );
   for( size_t i=0 ; i < ioc.tC.size() ; ++i )
     ioc.vIObj.push_back( &(ioc.tC[i]) );
 
@@ -442,7 +439,7 @@ parseOptions(int argc, char *org_argv[], IObjContainer &ioc)
       InFile::help();
 //      Oper::help();
 //      OutFile::help();
-      QC::help();
+      QA::help();
 //      TimeControl::help();
       exit(1);
     }
@@ -754,9 +751,9 @@ setObjProperties(std::vector<std::vector<std::string> > &list, IObjContainer &io
       ;
     else if( name == "OUT" )
       ;
-    else if( name == "QC" )
+    else if( name == "QA" )
     {
-      QC *p = dynamic_cast<QC*>(ip);
+      QA *p = dynamic_cast<QA*>(ip);
       p->setTablePath(::TABLE_PATH);
     }
     else if( name == "TC" )
@@ -772,7 +769,7 @@ updateIn(std::vector<InFile> &in)
   // init once for each single file or
   // build filenames from pattern and sync with date
 
-/* not in the QC context
+/* not in the QA context
   for( size_t j=0 ; j < in.size() ; ++j )
   {
     // Build a filename from date.

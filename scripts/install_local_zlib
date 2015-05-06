@@ -13,11 +13,11 @@ descript()
 
 # ------ main -------
 
-QC_SRC=${0%/*}
-test ${QC_SRC##*/} = scripts && QC_SRC=${QC_SRC%/*}
+QA_SRC=${0%/*}
+test ${QA_SRC##*/} = scripts && QA_SRC=${QA_SRC%/*}
 
-mkdir -p $QC_SRC/local/source
-out=$QC_SRC/local/source/INSTALL_zlib.log
+mkdir -p $QA_SRC/local/source
+out=$QA_SRC/local/source/INSTALL_zlib.log
 
 while getopts hq-: option $* #{args[*]}
 do

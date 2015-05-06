@@ -1,10 +1,10 @@
 #! /bin/bash
 
-##/*! \file qcExecution.h
+##/*! \file qaExecution.h
 ## \brief Script launches checks for particular files
 ##*/
 
-##//! Analysis of output by executable of qc_main.pp
+##//! Analysis of output by executable of qA_main.pp
 
 ##/*!
 ## Annotations are redirected corresponding to configuration settings.
@@ -22,8 +22,8 @@ analyseExec()
   if [ $status -gt 1 -a ${isNormalExecution:-f} = t ] ; then
     local nm=${ncFile##*/}
     nm=${nm%.nc}
-    if [ -e qc_note_${nm}.txt ] ; then
-      mv qc_note_${nm}.txt qc_lock_${nm}.txt
+    if [ -e qa_note_${nm}.txt ] ; then
+      mv qa_note_${nm}.txt qa_lock_${nm}.txt
     fi
   fi
 
@@ -32,7 +32,7 @@ analyseExec()
 
   if [ ${isNormalExecution:-f} = t ] ; then
 
-    # any qc-notifications?
+    # any qa-notifications?
     # nothing to do for 2, 3
     if [ $status -eq 4 ] ; then
 
@@ -65,12 +65,12 @@ However, the check was successful."
 
     s_out="${s_out}\nfile: ${NEXT_FILE}"
     s_out="${s_out}\ndata_path: ${PROJECT_DATA}/${SUB_PATH}"
-    s_out="${s_out}\nresult_path: ${QC_RESULTS}/data/${SUB_PATH}"
+    s_out="${s_out}\nresult_path: ${QA_RESULTS}/data/${SUB_PATH}"
     s_out="${s_out}\n\nTried:\n$(cat param_file_$$.txt)"
 
     local nm=${ncFile##*/}
     nm=${name%.nc}
-    tryCom echo -e "$s_out" >> qc_lock_${nm}.txt
+    tryCom echo -e "$s_out" >> qa_lock_${nm}.txt
 
     isEmailAssigned=t
     isSignalTerm=t  # emergency stop, if not intercepted
@@ -108,10 +108,10 @@ bind_checksum()
      if [ ${CHECKSUM_DIR:0:1} = '/' ] ; then
        cs_table="-p ${CHECKSUM_DIR}"
      else
-       cs_table="-p ${QC_RESULTS}/${CHECKSUM_DIR}"
+       cs_table="-p ${QA_RESULTS}/${CHECKSUM_DIR}"
      fi
   else
-     cs_table="-p ${QC_RESULTS}/cs_table"
+     cs_table="-p ${QA_RESULTS}/cs_table"
   fi
 
   local email
@@ -121,7 +121,7 @@ bind_checksum()
   fi
 
   # calulcate the checksum
-  ${QC_SRC}/scripts/checkSum $type  $force \
+  ${QA_SRC}/scripts/checkSum $type  $force \
       ${CHECKSUM_FILE:+-w}  $email $cs_table \
       ${EXP_NAME:+-x} ${EXP_NAME} \
       -P ${PROJECT_DATA} -S ${SUB_PATH#/} ${fs[*]}
@@ -163,7 +163,7 @@ clearBackUp()
     isClearFdBackUp=t
   else
     # If nothing has changed, then clear back-up.
-    if cmp z_qc_${name}.nc qc_${name}.nc &> /dev/null ; then
+    if cmp z_qa_${name}.nc qa_${name}.nc &> /dev/null ; then
       isClearQcBackUp=t
     fi
     if [ -d Z_fd_${name} ] ; then
@@ -181,14 +181,14 @@ clearBackUp()
   # a rule of thumb mechanism to secure files against corruption,
   # even in case of a system-crash: Part II:
   if [ ${isClearQcBackUp} = t ] ; then
-   \rm -f z_qc_${name}.nc &> /dev/null
+   \rm -f z_qa_${name}.nc &> /dev/null
   fi
   if [ ${isClearFdBackUp} = t -a -d "Z_fd_${name}" ] ; then
     \rm -rf Z_fd_${name}   &> /dev/null
   fi
 }
 
-##//! Close communication with qc-DKRZ
+##//! Close communication with qa-DKRZ
 
 ##/*!
 ## Communication is done by files.
@@ -201,19 +201,19 @@ clearProcPool()
     if [ ${DISTRIBUTED_FS:-f} = f ] ; then
        tryCom mv $PROC_POOL/$PROC_FILE.lock $PROC_POOL/$PROC_FILE.closed
     else
-       tryRemote ssh ${QC_MANAGER_HOST}  \
+       tryRemote ssh ${QA_MANAGER_HOST}  \
          mv $PROC_POOL/$PROC_FILE.lock $PROC_POOL/$PROC_FILE.closed
     fi
   fi
 }
 
-##//! THE QC of a netCDF file
+##//! THE QA of a netCDF file
 
-doTheQC()
+run()
 {
   # this is the ultimately last check
-  if [ "$QC_RESULTS/data/${SUB_PATH}" = "${PROJECT_DATA}$SUB_PATH" ] ; then
-    sTxt[0]="3qcExecution: Path of QC_RESULTS/data/SUB_PATH \
+  if [ "$QA_RESULTS/data/${SUB_PATH}" = "${PROJECT_DATA}$SUB_PATH" ] ; then
+    sTxt[0]="3qaExecution: Path of QA_RESULTS/data/SUB_PATH \
 and PROJECT_DATA/SUB_PATH must not be identical"
     log
 
@@ -222,7 +222,7 @@ and PROJECT_DATA/SUB_PATH must not be identical"
   fi
 
   # destination for results
-  test ${SHOW_CALL:-f} = f && tryCom cd $QC_RESULTS/data/${SUB_PATH}
+  test ${SHOW_CALL:-f} = f && tryCom cd $QA_RESULTS/data/${SUB_PATH}
 
   if [ ! -s ${ncFile} ] ; then  # no file found
     # this might happen, if someone has deleted
@@ -231,7 +231,7 @@ and PROJECT_DATA/SUB_PATH must not be identical"
     str="NetCDF File ${ncFile} not found.\n"
     str="${str}Exit."
 
-    sTxt[0]="3qcExecutor: ${str}"
+    sTxt[0]="3qaExecutor: ${str}"
     log
 
     sendEMail
@@ -257,12 +257,12 @@ and PROJECT_DATA/SUB_PATH must not be identical"
  if [ ${SHOW_CALL:-f} = f ] ; then
    # Note: if the first attempt to write into such a file
    # was interrupted by a system crash, then there is no
-   # back-up file available, but a corrupt qc-nc file.
-   # This has already been tested and cleared by qc-DKRZ.
+   # back-up file available, but a corrupt qa-nc file.
+   # This has already been tested and cleared by qa-DKRZ.
 
    # save backup
-   if [ -e qc_${name}.nc ] ; then
-     tryCom cp -a qc_${name}.nc z_qc_${name}.nc
+   if [ -e qa_${name}.nc ] ; then
+     tryCom cp -a qa_${name}.nc z_qa_${name}.nc
    fi
    if ls fd_* &> /dev/null ; then
      mkdir Z_fd_${name}
@@ -285,7 +285,7 @@ fi
 
  # Be nice: check, whether load is lower than two of the three limits.
  if [ "${WORK_AT_LOW_LOAD:-f}" = 't' ] ; then
-   if [ ${QC_MANAGER_HOST} != $HOSTNAME ] ; then
+   if [ ${QA_MANAGER_HOST} != $HOSTNAME ] ; then
      while : ; do
        upTime=( $(uptime) )
         # for linux and solaris identical
@@ -318,8 +318,8 @@ fi
 #trace \
   analyseExec
 
-  # Exceptions are reported. Also, if error-files of non-QC-objects
-  # are found, these are moved/merged to/with a/the qc_note_...txt.
+  # Exceptions are reported. Also, if error-files of non-QA-objects
+  # are found, these are moved/merged to/with a/the qa_note_...txt.
 #trace \
   reportFindings
 
@@ -388,7 +388,7 @@ finally()
      \rm -f *
      if [ ${isDeadLocked:-f} = t ] ; then
        echo "killed after reaching the ZOMBIE_LIMIT=${ZOMBIE_LIMIT}s" \
-            > qc_lock_${name}.txt
+            > qa_lock_${name}.txt
      fi
   fi
 
@@ -396,7 +396,7 @@ finally()
   clearProcPool
 
   # clear the data path, when empty
-# rmdir -p ${QC_RESULTS}/data/${SUB_PATH} &> /dev/null
+# rmdir -p ${QA_RESULTS}/data/${SUB_PATH} &> /dev/null
 
   if [ ${DEBUG_EXECUTOR:-f} = t ] ; then
     set +x
@@ -424,10 +424,10 @@ formatText()
   # date and host
   local k n N str0 str isWrap
 
-  str0="$( date +'%F %T' ) ${HOSTNAME%%.*}:qcExecutor.${where}"
+  str0="$( date +'%F %T' ) ${HOSTNAME%%.*}:qaExecutor.${where}"
   str0="${str0}\nFile:\t\t${NEXT_FILE}"
   str0="${str0}\nData path:\t$PROJECT_DATA/${SUB_PATH}"
-  str0="${str0}\nQC result path: $QC_RESULTS/data/${SUB_PATH}"
+  str0="${str0}\nQA result path: $QA_RESULTS/data/${SUB_PATH}"
 #  str0="${str0}DRS tree:\t${SUB_PATH#/}\n"
 
   str0="${str0}\n$*"
@@ -566,7 +566,7 @@ getHLEVD()
   is=f
 
   if [ ${sum} -gt 0  ] ; then
-    sTxt[0]="3qcExecution: $outF.nc: outlier above ${HLEVD_THRESHOLD:-1} x sigma"
+    sTxt[0]="3qaExecution: $outF.nc: outlier above ${HLEVD_THRESHOLD:-1} x sigma"
     log
     is=t
   fi
@@ -605,14 +605,14 @@ init()
     return 0
   fi
 
-  # Used for messaging between qc-DKRZ and this executor.
+  # Used for messaging between qa-DKRZ and this executor.
   # PROC_FILE is for locking, shall be removed later.
 
   # lock
   if [ ${DISTRIBUTED_FS:-f} = f ] ; then
      tryCom mv $PROC_POOL/$PROC_FILE $PROC_POOL/$PROC_FILE.lock
   else
-     tryRemote ssh ${QC_MANAGER_HOST} \
+     tryRemote ssh ${QA_MANAGER_HOST} \
        mv $PROC_POOL/$PROC_FILE $PROC_POOL/$PROC_FILE.lock
   fi
 
@@ -635,9 +635,9 @@ init()
 
   PATH=${IMPORTED_PATH}:$PATH
 
-  # Distributed file system?This is the qc-DKRZ host.
+  # Distributed file system?This is the qa-DKRZ host.
   if [ ${DISTRIBUTED_FS:-f} = t ] ; then
-    test ${QC_MANAGER_HOST} = $HOSTNAME && DISTRIBUTED_FS=f
+    test ${QA_MANAGER_HOST} = $HOSTNAME && DISTRIBUTED_FS=f
   fi
 
   # path to the netCDF file
@@ -655,9 +655,9 @@ init()
 
   fName=${NEXT_FILE%.nc}
 
-  # Are the executables in QC_BIN applicable?
+  # Are the executables in QA_BIN applicable?
   if ! unixTime.x &> /dev/null ; then
-    sTxt[${#sTxt[*]}]="text: qcExecutor:\nBinaries are not applicable in  ${IMPORTED_PATH}"
+    sTxt[${#sTxt[*]}]="text: qaExecutor:\nBinaries are not applicable in  ${IMPORTED_PATH}"
 
     log --keep
     sendEMail
@@ -669,7 +669,7 @@ init()
 
   if ! tryCom get_status test -f "${ncFile}" ; then
     sTxt[${#sTxt[*]}]='--standard'
-    sTxt[${#sTxt[*]}]="text: file ${ncFile} not found by qcExecutor."
+    sTxt[${#sTxt[*]}]="text: file ${ncFile} not found by qaExecutor."
 
     log --keep
     sendEMail
@@ -739,7 +739,7 @@ log()
     if [ "${sTxt[i]}" = '--standard' ] ; then
       s_out="${s_out}\n${sp[3]}file: ${NEXT_FILE}"
       s_out="${s_out}\n${sp[3]}data_path: ${PROJECT_DATA}/${SUB_PATH}"
-      s_out="${s_out}\n${sp[3]}result_path: ${QC_RESULTS}/data/${SUB_PATH}"
+      s_out="${s_out}\n${sp[3]}result_path: ${QA_RESULTS}/data/${SUB_PATH}"
       break
     fi
   done
@@ -842,9 +842,9 @@ logTime()
 #    fi
 #  fi
 
-#  if [ ${#qcFnctPID} -gt 0 ] ; then
-#    if  ps -p ${qcFnctPID} -o pid= &> /dev/null  ; then
-#       kill -s TERM ${qcFnctPID}
+#  if [ ${#qaFnctPID} -gt 0 ] ; then
+#    if  ps -p ${qaFnctPID} -o pid= &> /dev/null  ; then
+#       kill -s TERM ${qaFnctPID}
 #    fi
 #  fi
 
@@ -857,7 +857,7 @@ logTime()
 #  exit
 #}
 
-##//! Parse annotations from the qc_main.cpp run on standard output.
+##//! Parse annotations from the qa_main.cpp run on standard output.
 
 parseOutput()
 {
@@ -1068,29 +1068,29 @@ reportFindings()
   # no notification
   test ${#fs[*]} -eq 0 && return
 
-  # gather non-qc_note-file temporarily
+  # gather non-qa_note-file temporarily
   for f in ${fs[*]} ; do
-    test "${f:0:7}" = qc_note  && continue  # skip qc_note... file
-    test "${f:0:7}" = qc_lock  && continue  # skip qc_lock... file
+    test "${f:0:7}" = qa_note  && continue  # skip qa_note... file
+    test "${f:0:7}" = qa_lock  && continue  # skip qa_lock... file
 
-    tryCom cat "$f" >> qc_lock_${nm}.txt
+    tryCom cat "$f" >> qa_lock_${nm}.txt
     tryCom \rm $f
   done
 
-  if [ -e qc_lock_${nm}.txt ] ; then
+  if [ -e qa_lock_${nm}.txt ] ; then
     # mv contents of note file to a lock file, if there is any.
-    tryCom cat qc_lock_${nm}.txt >> qc_note_${nm}.txt
-    tryCom mv qc_note_${nm}.txt qc_lock_${nm}.txt
-    qcExceptionFile="qc_lock_${nm}.txt"
+    tryCom cat qa_lock_${nm}.txt >> qa_note_${nm}.txt
+    tryCom mv qa_note_${nm}.txt qa_lock_${nm}.txt
+    qaExceptionFile="qa_lock_${nm}.txt"
   else
-    test -e qc_note_${nm}.txt && \
-      qcExceptionFile="qc_note_${nm}.txt"
+    test -e qa_note_${nm}.txt && \
+      qaExceptionFile="qa_note_${nm}.txt"
   fi
 
   return
 }
 
-##//! Run the executable of qc_main.cpp
+##//! Run the executable of qa_main.cpp
 
 run()
 {
@@ -1099,7 +1099,7 @@ run()
 
   sessText="run: ${cmdText}\n"
 
-  # +++++++++++++ run the QC executable
+  # +++++++++++++ run the QA executable
   ${cmdText} > out_${name}.txt &
   runPID=$!
   wait_fnct $runPID
@@ -1140,7 +1140,7 @@ sendEMail()
   sp[7]='       '
   sp[8]='        '
 
-  sendSub="QC ${PROJECT} ${EXP_NAME}:"
+  sendSub="QA ${PROJECT} ${EXP_NAME}:"
   if [ ${sendSubject} -gt 0 ] ; then
     sendSub="${sendSub} ${sendSubject}"
   else
@@ -1152,8 +1152,8 @@ $( for(( j=0 ; j < ${#sTxt[*]} ; ++j )) ; do \
       echo -e "${sp[${sTxt[j]:0:1}]}${sTxt[j]}" ; done )
 $( test ${#sendText} -gt 0 && echo -e ${sendText})
 $(echo -e "\n-----------------------------------------------------")
-$(echo -e "\nContents of ${qcExceptionFile}:" )
-$(cat ${qcExceptionFile} )
+$(echo -e "\nContents of ${qaExceptionFile}:" )
+$(cat ${qaExceptionFile} )
 $(echo -e "\n-----------------------------------------------------")
 $(echo -e "\nqC-${PROJECT}.x called with parameter setting:")
 $(cat param_file_$$.txt )
@@ -1162,7 +1162,7 @@ $(cat param_file_$$.txt )
   return
 }
 
-##//! Prepare input paramters of qc_main.cpp
+##//! Prepare input paramters of qa_main.cpp
 
 ##/*!
 ## Note: there is a specific format for the frame-program.
@@ -1200,8 +1200,8 @@ setParameter()
   par_str="${par_str}\n${par}"
 
   # perform a quality check?
-  if [ "${QC:-on}" = 'on' ] ; then
-    set_qc_par # construct directive sequence for QC
+  if [ "${QA:-on}" = 'on' ] ; then
+    set_qa_par # construct directive sequence for QA
     par_str="${par_str}\n${par}"
   fi
 
@@ -1246,7 +1246,7 @@ set_CF_par()
 ##//! Input paramters of the FreqDist class.
 set_fd_par()
 {
-  # construct directive sequence for qC. Called from doTheQC
+  # construct directive sequence for qC. Called from run
   par="FD::0:useAreaWeight"
 
   # output: saved as fd-build-file by default
@@ -1299,7 +1299,7 @@ set_fd_par()
 ##//! Input paramters of the InFile class
 set_IN_par()
 {
-  # construct directive sequence for in. Called from doTheQC
+  # construct directive sequence for in. Called from run
   par=IN::0:CF::0:X::0
 
   test ${ARITHMETIC_MEAN:-f} = t && \
@@ -1321,17 +1321,17 @@ set_IN_par()
   fi
 }
 
-##//! Input paramters of the QC class
+##//! Input paramters of the QA class
 
-set_qc_par()
+set_qa_par()
 {
  local s
  local i tmp
 
- par=QC::0:IN::0:X::0
+ par=QA::0:IN::0:X::0
  s=:
 
- par=${par}":f=qc_$name.nc"
+ par=${par}":f=qa_$name.nc"
 
  if [ ${APPLY_MAXIMUM_DATE_RANGE:-f} = t ] ; then
    par=${par}"${s}"aMDR
@@ -1404,8 +1404,8 @@ set_qc_par()
 # test ${#PROJECT} -gt 0 && \
 #   par=${par}"${s}"project=${PROJECT}
 
- test ${#QC_NCFILE_FLAGS} -gt 0 && \
-   par=${par}"${s}"qNF=${QC_NCFILE_FLAGS}
+ test ${#QA_NCFILE_FLAGS} -gt 0 && \
+   par=${par}"${s}"qNF=${QA_NCFILE_FLAGS}
 
  if [ ${#REPLICATED_RECORD} -gt 0 ] ; then
    # convert array to comma-separated list
@@ -1511,10 +1511,10 @@ set_X_par()
   return
 }
 
-##//! Signal qc-DKRZ to shut down the current session.
+##//! Signal qa-DKRZ to shut down the current session.
 
 ##/*!
-## qc-DKRZ traps for TERM signals. This is an EMERGENY STOP.
+## qa-DKRZ traps for TERM signals. This is an EMERGENY STOP.
 ##*/
 
 signalParent()
@@ -1524,10 +1524,10 @@ signalParent()
      return
    fi
 
-   if [ "${HOSTNAME}" = "${QC_MANAGER_HOST}" ] ; then
+   if [ "${HOSTNAME}" = "${QA_MANAGER_HOST}" ] ; then
      kill -${1} $PAR_PID &> /dev/null
    else
-     ssh ${QC_MANAGER_HOST} kill -${1} $PAR_PID &> /dev/null
+     ssh ${QA_MANAGER_HOST} kill -${1} $PAR_PID &> /dev/null
    fi
 }
 terminate()
@@ -1664,13 +1664,13 @@ traceCalibration()
   local prg
 
   if [ ${HOSTNAME} = surge ] ; then
-    prg="${QC_SRC}/bin/unixTime.x dec"
+    prg="${QA_SRC}/bin/unixTime.x dec"
   elif [ ${HOSTNAME:0:3} = liz ] ; then
-    prg="${QC_SRC}/bin_l/unixTime.x dec"
+    prg="${QA_SRC}/bin_l/unixTime.x dec"
   elif [ ${HOSTNAME:0:4} = pass ] ; then
-    prg="${QC_SRC}/bin_p/unixTime.x dec"
+    prg="${QA_SRC}/bin_p/unixTime.x dec"
   elif [ ${HOSTNAME:0:4} = bliz ] ; then
-    prg="${QC_SRC}/bin_b/unixTime.x dec"
+    prg="${QA_SRC}/bin_b/unixTime.x dec"
   else
     echo "traceCalibration: executable unixTime.x not found"
     exit
@@ -1793,9 +1793,9 @@ tryCom()
   # $*:   command [with args]
 
   # Examples:
-  # 1) tryCom 'eval echo -e qc-DKRZ.${2} >> qwer/qwer'
+  # 1) tryCom 'eval echo -e qa-DKRZ.${2} >> qwer/qwer'
   # 2) for f in $(tryCom ls -d *) ; do ... ; done
-  # 3) tryCom 'eval echo -e qc-DKRZ.${2} >> qwer/qwer'
+  # 3) tryCom 'eval echo -e qa-DKRZ.${2} >> qwer/qwer'
   # There is a dependency on bash's "noglob" setting
 
   local i arg tCStatus
@@ -1852,9 +1852,9 @@ tryCom()
     sendText=$( echo $sendText | sed 's%`%%g' |sed "s%'%%g")
 
     local sendSubject
-    sendSubject="QC: command failed after reattempts"
+    sendSubject="QA: command failed after reattempts"
 
-    sTxt[0]="3qcExecution: command failed after reattempts"
+    sTxt[0]="3qaExecution: command failed after reattempts"
     log
 
     sendEMail
@@ -1866,7 +1866,7 @@ tryCom()
 ##//! Remote command launcher.
 
 ##/*!
-## If qc-DKRZ and qcExecutor run on different hosts.
+## If qa-DKRZ and qaExecutor run on different hosts.
 ## Several commands are passed to this launcher making processing
 ## more robust against interruptions of the file system.
 ##*/
@@ -1882,7 +1882,7 @@ tryRemote()
   fi
 
   # wait until host is reachable
-  while ! callPing ${QC_MANAGER_HOST} ; do
+  while ! callPing ${QA_MANAGER_HOST} ; do
     sleep $(( ++mySleep ))
   done
 
@@ -1897,7 +1897,7 @@ tryRemote()
     else
       if [ "${isNotify:-t}" = 't' ] ; then
         isNotify=f
-        sTxt[0]="3qcExecution: ssh failed for ${host} $*"
+        sTxt[0]="3qaExecution: ssh failed for ${host} $*"
         log
       fi
 
@@ -1940,9 +1940,9 @@ wait_fnct()
 ##//! Write tracking id to a container-file
 
 ##/*!
-## The tracking ID is given by a global attribute in each CMIP5
-## netCDF file. Those of successfully qc-ed sub-temporal files
-## of a given variable are collected in a file in QC_RESULT/PROJECT/data/...DRS-structure
+## The tracking ID is given by a global attribute in each
+## netCDF file. Those of successfully checked sub-temporal files
+## of a given variable are collected in a file in QA_RESULT/PROJECT/data/...DRS-structure
 ##*/
 
 writeTrackingID()
@@ -1994,7 +1994,7 @@ init ; then
 fi
 
 # action: the quality control
-doTheQC
+run
 
 # clear working space and exit
 #trace \

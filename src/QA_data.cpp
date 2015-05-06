@@ -121,7 +121,7 @@ DataOutputBuffer::initBuffer(NcAPI *n, size_t nxt, size_t mx)
 void
 DataOutputBuffer::store(hdhC::FieldData &fA)
 {
-   // flush collected qc results to the qc-results netCDF file
+   // flush collected qa results to the qa-results netCDF file
    if( bufferCount == maxBufferSize )
      flush();  // resets countTime, too
 
@@ -175,7 +175,7 @@ SharedRecordFlag::~SharedRecordFlag()
 void
 SharedRecordFlag::adjustFlag(int num, size_t rec, int erase)
 {
-  // adjust coded error flags written already to qc_<filename>.nc
+  // adjust coded error flags written already to qa_<filename>.nc
   if( nc->getNumOfRecords(name) == 0 )
     return;
 
@@ -266,9 +266,9 @@ SharedRecordFlag::store(void)
 }
 
 
-Outlier::Outlier( QC *p, size_t vi, std::string nm)
+Outlier::Outlier( QA *p, size_t vi, std::string nm)
 {
-  pQC=p;
+  pQA=p;
   vMDix=vi;
   name=nm;
 }
@@ -277,7 +277,7 @@ bool
 Outlier::isSelected(
      std::vector<std::string> &options,
      std::string &vName,
-     bool isQC_enablePostProc, int effDim )
+     bool isQA_enablePostProc, int effDim )
 {
   if( options.size() == 1 && options[0] == "t" )
     return true; // default for all
@@ -297,7 +297,7 @@ Outlier::isSelected(
     {
       if( cvs[i] == "POST" )
       {
-        if( ! isQC_enablePostProc )
+        if( ! isQA_enablePostProc )
          isThis=false ;
       }
       else if( cvs[i] == "no_0-D" && effDim < 1 )
@@ -392,14 +392,14 @@ Outlier::parseOption(std::vector<std::string> &opts)
 }
 
 bool
-Outlier::test(QC_Data *pQCD)
+Outlier::test(QA_Data *pQAD)
 {
   // Acknowledgement: Dr. Andreas Chlond, MPI-M Hamburg, suggested to
   //                  exploit the function N(sigma) as criterion.*/
 
   bool retCode = false;
 
-  if( ! pQC->isCheckData )
+  if( ! pQA->isCheckData )
     return retCode;
 
   std::vector<std::string> names;
@@ -414,20 +414,20 @@ Outlier::test(QC_Data *pQCD)
   double ave[2];
   double sigma[2];
 
-  size_t sampleSize=pQCD->statMin.getSampleSize();
+  size_t sampleSize=pQAD->statMin.getSampleSize();
   if( sampleSize < 2 )
     return retCode;
 
-  if( ! pQCD->statMin.getSampleAverage( &ave[0] ) )
+  if( ! pQAD->statMin.getSampleAverage( &ave[0] ) )
     return retCode;
 
-  if( ! pQCD->statMin.getSampleStdDev( &sigma[0] ) )
+  if( ! pQAD->statMin.getSampleStdDev( &sigma[0] ) )
     return retCode;
 
-  if( ! pQCD->statMax.getSampleAverage( &ave[1] ) )
+  if( ! pQAD->statMax.getSampleAverage( &ave[1] ) )
     return retCode;
 
-  if( ! pQCD->statMax.getSampleStdDev( &sigma[1] ) )
+  if( ! pQAD->statMax.getSampleStdDev( &sigma[1] ) )
     return retCode;
 
   for( size_t i=0 ; i < 2 ; ++i )
@@ -460,7 +460,7 @@ Outlier::test(QC_Data *pQCD)
      outOptPrcnt=0.01;
   }
 
-  // read min / max from the qc-nc file
+  // read min / max from the qa-nc file
   std::vector<std::string> extStr;
   extStr.push_back( "minimum" );
   extStr.push_back( "maximum" );
@@ -474,15 +474,15 @@ Outlier::test(QC_Data *pQCD)
   // do not check all the file, but only the records related to
   // the current sub-temp file
 
-  size_t currRecEnd=pQC->nc->getNumOfRecords();
+  size_t currRecEnd=pQA->nc->getNumOfRecords();
 
   // check outlier only if no time value is missing
-  size_t subTempRecs=pQC->pIn->nc.getNumOfRecords();
+  size_t subTempRecs=pQA->pIn->nc.getNumOfRecords();
   if( currRecEnd < subTempRecs )
     return 0;
 
   size_t prevRecEnd ;
-  if( pQC->enablePostProc )
+  if( pQA->enablePostProc )
     prevRecEnd=0  ;  //forces re-reading of all
   else
     prevRecEnd = currRecEnd - subTempRecs ;
@@ -512,7 +512,7 @@ Outlier::test(QC_Data *pQCD)
     size_t rec=0;
     for( size_t j=prevRecEnd ; j < currRecEnd ; ++j )
     {
-       pQC->nc->getData(mv, names[i] , j );
+       pQA->nc->getData(mv, names[i] , j );
        extr[rec++] = mv[0] ;
     }
 
@@ -633,7 +633,7 @@ Outlier::test(QC_Data *pQCD)
       key += hdhC::itoa(errNum[i]);
       if( notes->inq( key, name, "NO_MT") )
       {
-        pQCD->sharedRecordFlag.currFlag += errNum[i];
+        pQAD->sharedRecordFlag.currFlag += errNum[i];
 
         // fine for absolute and relative Dates
         // search the maximum outlier
@@ -645,20 +645,20 @@ Outlier::test(QC_Data *pQCD)
         outRecMax = outRec[0] ;
         outValMax = outVal[0] ;
 
-        currTime=Base::getTime(*(pQC->nc), outRec[0], "time") ;
+        currTime=Base::getTime(*(pQA->nc), outRec[0], "time") ;
         cTime                 = hdhC::double2String(currTime);
-        pQC->qcTime.currDate   = pQC->qcTime.refDate.getDate( cTime ) ;
-        currDateStrMax        = pQC->qcTime.currDate.getDate();
+        pQA->qaTime.currDate   = pQA->qaTime.refDate.getDate( cTime ) ;
+        currDateStrMax        = pQA->qaTime.currDate.getDate();
 
         for( size_t k=1 ; k < outRec.size() ; ++k )
         {
           if ( outVal[k] < outValMax )
             continue;
 
-          currTime=Base::getTime(*(pQC->nc), outRec[k], "time") ;
+          currTime=Base::getTime(*(pQA->nc), outRec[k], "time") ;
           cTime                 = hdhC::double2String(currTime);
-          pQC->qcTime.currDate   = pQC->qcTime.refDate.getDate( cTime ) ;
-          currDateStrMax        = pQC->qcTime.currDate.getDate();
+          pQA->qaTime.currDate   = pQA->qaTime.refDate.getDate( cTime ) ;
+          currDateStrMax        = pQA->qaTime.currDate.getDate();
 
           outValMax = outVal[k] ;
           outRecMax = outRec[k] ;
@@ -667,7 +667,7 @@ Outlier::test(QC_Data *pQCD)
         std::ostringstream ostr(std::ios::app);
         ostr.setf(std::ios::scientific, std::ios::floatfield);
 
-        if(pQC->varMeDa.size() > 1 )
+        if(pQA->varMeDa.size() > 1 )
           ostr << name << ", ";
         ostr << "rec# ";
 
@@ -679,20 +679,20 @@ Outlier::test(QC_Data *pQCD)
         std::string capt(ostr.str());
 
         ostr.str("");  // clear previous contents
-        ostr << "variable=" << pQC->varMeDa[vMDix].name;
-        ostr << ", " << pQC->varMeDa[vMDix].standardName;
-        ostr << ", units=" << pQC->varMeDa[vMDix].units;
+        ostr << "variable=" << pQA->varMeDa[vMDix].name;
+        ostr << ", " << pQA->varMeDa[vMDix].standardName;
+        ostr << ", units=" << pQA->varMeDa[vMDix].units;
 
         MtrxArr<int> imv;
         for( size_t k=0 ; k < outRec.size() ; ++k )
         {
           // adjust coded flags
-          pQCD->sharedRecordFlag.adjustFlag(errNum[i], outRec[k] ) ;
+          pQAD->sharedRecordFlag.adjustFlag(errNum[i], outRec[k] ) ;
 
-          currTime=Base::getTime(*(pQC->nc), outRec[k], "time") ;
+          currTime=Base::getTime(*(pQA->nc), outRec[k], "time") ;
           cTime               = hdhC::double2String(currTime);
-          pQC->qcTime.currDate = pQC->qcTime.refDate.getDate( cTime ) ;
-          cTime               = pQC->qcTime.currDate.getDate();
+          pQA->qaTime.currDate = pQA->qaTime.refDate.getDate( cTime ) ;
+          cTime               = pQA->qaTime.currDate.getDate();
 
           ostr << "\nrec#=" << outRec[k];
           ostr << ", date=" << cTime;
@@ -702,7 +702,7 @@ Outlier::test(QC_Data *pQCD)
 
         if( (retCode=notes->operate(capt, ostr.str())) )
         {
-          notes->setCheckDataStr(pQC->fail);
+          notes->setCheckDataStr(pQA->fail);
         }
       }
     }
@@ -712,9 +712,9 @@ Outlier::test(QC_Data *pQCD)
 }
 
 
-ReplicatedRecord::ReplicatedRecord( QC *p, size_t i, std::string nm)
+ReplicatedRecord::ReplicatedRecord( QA *p, size_t i, std::string nm)
 {
-  pQC=p;
+  pQA=p;
   vMDix=i;
   name=nm;
 
@@ -726,7 +726,7 @@ bool
 ReplicatedRecord::isSelected(
      std::vector<std::string> &options,
      std::string &vName,
-     bool isQC_enablePostProc, int effDim )
+     bool isQA_enablePostProc, int effDim )
 {
   if( options.size() == 1 && options[0] == "t" )
     return true; // default for all
@@ -746,7 +746,7 @@ ReplicatedRecord::isSelected(
     {
       if( cvs[i] == "POST" )
       {
-        if( ! isQC_enablePostProc )
+        if( ! isQA_enablePostProc )
          isThis=false ;
       }
       else if( cvs[i].substr(0,10) == "clear_bits" )
@@ -800,9 +800,9 @@ ReplicatedRecord::parseOption(std::vector<std::string> &options)
         // enable clearing of the least significant bits for R32 flags
         if( numOfClearBits )
         {
-           pQC->varMeDa[vMDix].var->pDS->enableChecksumWithClearedBits(
+           pQA->varMeDa[vMDix].var->pDS->enableChecksumWithClearedBits(
                  numOfClearBits ) ;
-           pQC->varMeDa[vMDix].qcData.numOfClearedBitsInChecksum = numOfClearBits;
+           pQA->varMeDa[vMDix].qaData.numOfClearedBitsInChecksum = numOfClearBits;
         }
       }
       else if( cvs[i].substr(0,11) == "only_groups" )
@@ -825,9 +825,9 @@ ReplicatedRecord::test(int nRecs, size_t bufferCount, size_t nextFlushBeg,
 {
   // Test for replicated records.
   // Before an array of values (e.g. ave, max ,min)
-  // is flushed to the qc_<filename>.nc file, the values
+  // is flushed to the qa_<filename>.nc file, the values
   // in the array are tested for replicated records in
-  // the priviously written qc_<filename>.nc as well as
+  // the priviously written qa_<filename>.nc as well as
   // in the array itself.*/
   std::string t_checksum;
 
@@ -852,7 +852,7 @@ ReplicatedRecord::test(int nRecs, size_t bufferCount, size_t nextFlushBeg,
   for( size_t j=0 ; j < bufferCount ; ++j )
   {
     int n ;
-    n = pQC->varMeDa[vMDix].qcData.sharedRecordFlag.buffer[j];
+    n = pQA->varMeDa[vMDix].qaData.sharedRecordFlag.buffer[j];
 
     // exclude code numbers 100 and 200
     if( n > 99 && n < 400 )
@@ -865,7 +865,7 @@ ReplicatedRecord::test(int nRecs, size_t bufferCount, size_t nextFlushBeg,
 
   if( ! isFirst )
   { // not for the first sub-temporal file,
-    // search only in the qc_<filename>.nc, when
+    // search only in the qa_<filename>.nc, when
     // values have previously been written
 
 //    int nRecs=static_cast<int>( nc->getNumOfRecords() );
@@ -889,10 +889,10 @@ ReplicatedRecord::test(int nRecs, size_t bufferCount, size_t nextFlushBeg,
       count[0]=sz;
 
       nc_get_vara_int(
-         pQC->nc->getNcid(), pQC->nc->getVarID(t_checksum),
+         pQA->nc->getNcid(), pQA->nc->getVarID(t_checksum),
             start, count, reinterpret_cast<int*>(cs) );
       nc_get_vara_double(
-         pQC->nc->getNcid(), pQC->nc->getVarID("time"), start, count, pTime );
+         pQA->nc->getNcid(), pQA->nc->getVarID("time"), start, count, pTime );
 
       start[0] += sz ;
 
@@ -902,9 +902,9 @@ ReplicatedRecord::test(int nRecs, size_t bufferCount, size_t nextFlushBeg,
           continue;
 
         for( size_t i=0 ; i < sz ; ++i )
-        { // loop over the qc_<filename>.nc file
+        { // loop over the qa_<filename>.nc file
 
-          if( pQC->varMeDa[vMDix].qcData.dataOutputBuffer.checksum[j] == cs[i] )
+          if( pQA->varMeDa[vMDix].qaData.dataOutputBuffer.checksum[j] == cs[i] )
           {
              // we suspect identity.
              // is it a group?
@@ -913,11 +913,11 @@ ReplicatedRecord::test(int nRecs, size_t bufferCount, size_t nextFlushBeg,
              currStatus=1;
 
              while( i < sz && j < bufferCount &&
-                   pQC->varMeDa[vMDix].qcData.dataOutputBuffer.checksum[j] == cs[i] )
+                   pQA->varMeDa[vMDix].qaData.dataOutputBuffer.checksum[j] == cs[i] )
              {  // yes
                 status[j] = 2;
                 currStatus=2;
-                arr_curr_time[j]  = pQC->qcTime.timeOutputBuffer.buffer[j] ;
+                arr_curr_time[j]  = pQA->qaTime.timeOutputBuffer.buffer[j] ;
                 arr_prev_time[j]  = pTime[i] ;
                 arr_curr_index[j] = nextFlushBeg + j;
                 arr_prev_index[j++] = totalIndex + i++;
@@ -926,7 +926,7 @@ ReplicatedRecord::test(int nRecs, size_t bufferCount, size_t nextFlushBeg,
              --i;
              --j;
 
-             arr_curr_time[j0]  = pQC->qcTime.timeOutputBuffer.buffer[j0] ;
+             arr_curr_time[j0]  = pQA->qaTime.timeOutputBuffer.buffer[j0] ;
              arr_prev_time[j0]  = pTime[i0] ;
              arr_curr_index[j0] = nextFlushBeg + j0;
              arr_prev_index[j0] = totalIndex + i0;
@@ -954,8 +954,8 @@ ReplicatedRecord::test(int nRecs, size_t bufferCount, size_t nextFlushBeg,
     if( status[i] )
       continue;
 
-    if( pQC->varMeDa[vMDix].qcData.dataOutputBuffer.checksum[i] ==
-                pQC->varMeDa[vMDix].qcData.dataOutputBuffer.checksum[j] )
+    if( pQA->varMeDa[vMDix].qaData.dataOutputBuffer.checksum[i] ==
+                pQA->varMeDa[vMDix].qaData.dataOutputBuffer.checksum[j] )
     {
        // we suspect identity.
        if( status[j] && status[j] < 3)
@@ -965,11 +965,11 @@ ReplicatedRecord::test(int nRecs, size_t bufferCount, size_t nextFlushBeg,
          size_t j0=j++;
 
          while( i < bufferCount && j < bufferCount &&
-               pQC->varMeDa[vMDix].qcData.dataOutputBuffer.checksum[j]
-                     == pQC->varMeDa[vMDix].qcData.dataOutputBuffer.checksum[i] )
+               pQA->varMeDa[vMDix].qaData.dataOutputBuffer.checksum[j]
+                     == pQA->varMeDa[vMDix].qaData.dataOutputBuffer.checksum[i] )
          {  // yes
-            arr_curr_time[i]  = pQC->qcTime.timeOutputBuffer.buffer[j] ;
-            arr_prev_time[i]  = pQC->qcTime.timeOutputBuffer.buffer[j] ;
+            arr_curr_time[i]  = pQA->qaTime.timeOutputBuffer.buffer[j] ;
+            arr_prev_time[i]  = pQA->qaTime.timeOutputBuffer.buffer[j] ;
             arr_curr_index[i] = arr_curr_index[j];
             arr_prev_index[i] = arr_prev_index[j];
             status[i++] = status[j++];
@@ -992,22 +992,22 @@ ReplicatedRecord::test(int nRecs, size_t bufferCount, size_t nextFlushBeg,
        currStatus=1;
 
        while( i < bufferCount && j < bufferCount &&
-             pQC->varMeDa[vMDix].qcData.dataOutputBuffer.checksum[j]
-                 == pQC->varMeDa[vMDix].qcData.dataOutputBuffer.checksum[i] )
+             pQA->varMeDa[vMDix].qaData.dataOutputBuffer.checksum[j]
+                 == pQA->varMeDa[vMDix].qaData.dataOutputBuffer.checksum[i] )
        {  // yes
           status[i] = 2;
           currStatus=2;
           arr_curr_index[i] = nextFlushBeg + i;
           arr_prev_index[i] = nextFlushBeg + j;
-          arr_curr_time[i]  = pQC->qcTime.timeOutputBuffer.buffer[i] ;
-          arr_prev_time[i++]  = pQC->qcTime.timeOutputBuffer.buffer[j++] ;
+          arr_curr_time[i]  = pQA->qaTime.timeOutputBuffer.buffer[i] ;
+          arr_prev_time[i++]  = pQA->qaTime.timeOutputBuffer.buffer[j++] ;
        }
 
        --i;
        --j;
 
-       arr_curr_time[i0]  = pQC->qcTime.timeOutputBuffer.buffer[i0] ;
-       arr_prev_time[i0]  = pQC->qcTime.timeOutputBuffer.buffer[j0] ;
+       arr_curr_time[i0]  = pQA->qaTime.timeOutputBuffer.buffer[i0] ;
+       arr_prev_time[i0]  = pQA->qaTime.timeOutputBuffer.buffer[j0] ;
        arr_curr_index[i0] = nextFlushBeg + i0;
        arr_prev_index[i0] = nextFlushBeg + j0;
        if( currStatus == 2 )
@@ -1024,7 +1024,7 @@ ReplicatedRecord::test(int nRecs, size_t bufferCount, size_t nextFlushBeg,
   for( size_t i=0 ; i < bufferCount ; ++i )
   {
     if( status[i] && status[i] < 4 )
-      pQC->varMeDa[vMDix].qcData.sharedRecordFlag.buffer[i] += 3200;
+      pQA->varMeDa[vMDix].qaData.sharedRecordFlag.buffer[i] += 3200;
   }
 
   // if we've found replicated records report them
@@ -1054,12 +1054,12 @@ ReplicatedRecord::test(int nRecs, size_t bufferCount, size_t nextFlushBeg,
        {
          range.push_back( hdhC::double2String(arr_prev_index[i] ) );
          range.push_back( hdhC::double2String(arr_curr_index[i] ) );
-         cT  = Base::getTime(*(pQC->nc), arr_prev_index[i], "time");
+         cT  = Base::getTime(*(pQA->nc), arr_prev_index[i], "time");
          sCT = hdhC::double2String(cT) ;
-         range.push_back(pQC->qcTime.refDate.getDate( sCT ) );
-         cT  = Base::getTime(*(pQC->nc), arr_curr_index[i], "time");
+         range.push_back(pQA->qaTime.refDate.getDate( sCT ) );
+         cT  = Base::getTime(*(pQA->nc), arr_curr_index[i], "time");
          sCT = hdhC::double2String(cT) ;
-         range.push_back(pQC->qcTime.refDate.getDate( sCT ) );
+         range.push_back(pQA->qaTime.refDate.getDate( sCT ) );
          isGroup = false;
        }
        else
@@ -1073,12 +1073,12 @@ ReplicatedRecord::test(int nRecs, size_t bufferCount, size_t nextFlushBeg,
        {
          range.push_back( hdhC::double2String(arr_prev_index[i] ) );
          range.push_back( hdhC::double2String(arr_curr_index[i] ) );
-         cT  = Base::getTime(*(pQC->nc), arr_prev_index[i], "time");
+         cT  = Base::getTime(*(pQA->nc), arr_prev_index[i], "time");
          sCT = hdhC::double2String(cT) ;
-         range.push_back(pQC->qcTime.refDate.getDate( sCT ) );
-         cT  = Base::getTime(*(pQC->nc), arr_curr_index[i], "time");
+         range.push_back(pQA->qaTime.refDate.getDate( sCT ) );
+         cT  = Base::getTime(*(pQA->nc), arr_curr_index[i], "time");
          sCT = hdhC::double2String(cT) ;
-         range.push_back(pQC->qcTime.refDate.getDate( sCT ) );
+         range.push_back(pQA->qaTime.refDate.getDate( sCT ) );
        }
 
     }
@@ -1088,12 +1088,12 @@ ReplicatedRecord::test(int nRecs, size_t bufferCount, size_t nextFlushBeg,
        {
          range.push_back( hdhC::double2String(arr_prev_index[i] ) );
          range.push_back( hdhC::double2String(arr_curr_index[i] ) );
-         cT  = Base::getTime(*(pQC->nc), arr_prev_index[i], "time");
+         cT  = Base::getTime(*(pQA->nc), arr_prev_index[i], "time");
          sCT = hdhC::double2String(cT) ;
-         range.push_back(pQC->qcTime.refDate.getDate( sCT ) );
-         cT  = Base::getTime(*(pQC->nc), arr_curr_index[i], "time");
+         range.push_back(pQA->qaTime.refDate.getDate( sCT ) );
+         cT  = Base::getTime(*(pQA->nc), arr_curr_index[i], "time");
          sCT = hdhC::double2String(cT) ;
-         range.push_back(pQC->qcTime.refDate.getDate( sCT ) );
+         range.push_back(pQA->qaTime.refDate.getDate( sCT ) );
          isGroup=true;
        }
 
@@ -1111,12 +1111,12 @@ ReplicatedRecord::test(int nRecs, size_t bufferCount, size_t nextFlushBeg,
     size_t i = bufferCount -1 ;
     range.push_back( hdhC::double2String(arr_prev_index[i-1] ) );
     range.push_back( hdhC::double2String(arr_curr_index[i-1] ) );
-    cT  = Base::getTime(*(pQC->nc), arr_prev_index[i-1], "time");
+    cT  = Base::getTime(*(pQA->nc), arr_prev_index[i-1], "time");
     sCT = hdhC::double2String(cT) ;
-    range.push_back(pQC->qcTime.refDate.getDate( sCT ) );
-    cT  = Base::getTime(*(pQC->nc), arr_curr_index[i-1], "time");
+    range.push_back(pQA->qaTime.refDate.getDate( sCT ) );
+    cT  = Base::getTime(*(pQA->nc), arr_curr_index[i-1], "time");
     sCT = hdhC::double2String(cT) ;
-    range.push_back(pQC->qcTime.refDate.getDate( sCT ) );
+    range.push_back(pQA->qaTime.refDate.getDate( sCT ) );
 
     report(range, isMultiple );
   }
@@ -1162,7 +1162,7 @@ ReplicatedRecord::report(std::vector<std::string> &range, bool isMultiple)
      size_t end = static_cast<size_t>( hdhC::string2Double( range[5] ) );
 
      for( size_t k=beg ; k <= end ; ++k )
-       pQC->varMeDa[vMDix].qcData.sharedRecordFlag.adjustFlag(3200, k ) ;
+       pQA->varMeDa[vMDix].qaData.sharedRecordFlag.adjustFlag(3200, k ) ;
    }
    else
    {
@@ -1175,7 +1175,7 @@ ReplicatedRecord::report(std::vector<std::string> &range, bool isMultiple)
      isIsolated=true;
 
      // adjust coded error flags
-     pQC->varMeDa[vMDix].qcData.sharedRecordFlag.adjustFlag(3200, beg ) ;
+     pQA->varMeDa[vMDix].qaData.sharedRecordFlag.adjustFlag(3200, beg ) ;
    }
 
    std::ostringstream ostr(std::ios::app);
@@ -1183,7 +1183,7 @@ ReplicatedRecord::report(std::vector<std::string> &range, bool isMultiple)
    std::string key("R3200");
    if( notes->inq( key, name, "NO_MT") )
    {
-     pQC->varMeDa[vMDix].qcData.sharedRecordFlag.currFlag += 3200 ;
+     pQA->varMeDa[vMDix].qaData.sharedRecordFlag.currFlag += 3200 ;
 
      if( enableReplicationOnlyGroups )
        capt += "suspicion of replicated group(s) of records" ;
@@ -1219,13 +1219,13 @@ ReplicatedRecord::report(std::vector<std::string> &range, bool isMultiple)
 
      // note: no update of record_flag variable; already done
      (void) notes->operate(capt, ostr.str()) ;
-     notes->setCheckDataStr(pQC->fail);
+     notes->setCheckDataStr(pQA->fail);
    }
 
    return;
 }
 
-QC_Data::QC_Data()
+QA_Data::QA_Data()
 {
    // only used in context of enabled replication test
    allRecordsAreIdentical=true;
@@ -1248,7 +1248,7 @@ QC_Data::QC_Data()
    replicated = 0;
 }
 
-QC_Data::~QC_Data()
+QA_Data::~QA_Data()
 {
    if( replicated )
      delete replicated;
@@ -1258,13 +1258,13 @@ QC_Data::~QC_Data()
 }
 
 void
-QC_Data::applyOptions(bool isPost)
+QA_Data::applyOptions(bool isPost)
 {
    return;
 }
 
 void
-QC_Data::checkFinally(Variable *var)
+QA_Data::checkFinally(Variable *var)
 {
   if( isEntirelyConst && ! var->isScalar )
   {
@@ -1278,7 +1278,7 @@ QC_Data::checkFinally(Variable *var)
        text += name;
 
        if( notes->operate(capt, text) )
-         notes->setCheckDataStr(pQC->fail);
+         notes->setCheckDataStr(pQA->fail);
 
        // erase redundant map entries
        notes->eraseAnnotation("R200");
@@ -1299,7 +1299,7 @@ QC_Data::checkFinally(Variable *var)
        text += name;
 
        if( notes->operate(capt, text) )
-         notes->setCheckDataStr(pQC->fail);
+         notes->setCheckDataStr(pQA->fail);
 
        // erase redundant map entries
        notes->eraseAnnotation("R100");
@@ -1319,7 +1319,7 @@ QC_Data::checkFinally(Variable *var)
         text +=  name;
 
         if( notes->operate(capt, text) )
-          notes->setCheckDataStr(pQC->fail);
+          notes->setCheckDataStr(pQA->fail);
 
         // erase redundant map entries
         notes->eraseAnnotation("R3200");
@@ -1330,7 +1330,7 @@ QC_Data::checkFinally(Variable *var)
 }
 
 void
-QC_Data::disableTests(std::string name)
+QA_Data::disableTests(std::string name)
 {
    if( notes == 0 )
       return;
@@ -1371,7 +1371,7 @@ QC_Data::disableTests(std::string name)
      enableReplicationTest=false;
 
    // note: R6400 will be disabled in the InFile object. This is
-   // invoked by the qcExecutor script.
+   // invoked by the qaExecutor script.
 
    key="60_1";
    if( ! notes->inq( key, name, "INQ_ONLY") )
@@ -1389,9 +1389,9 @@ QC_Data::disableTests(std::string name)
 }
 
 int
-QC_Data::finally(int eCode)
+QA_Data::finally(int eCode)
 {
-  // write pending results to qc-file.nc. Modes are considered there
+  // write pending results to qa-file.nc. Modes are considered there
   flush();
 
   // annotation obj forked by the parent VMD
@@ -1404,7 +1404,7 @@ QC_Data::finally(int eCode)
 }
 
 void
-QC_Data::forkAnnotation(Annotation *n)
+QA_Data::forkAnnotation(Annotation *n)
 {
 //   if( isForkedAnnotation )
 //      delete notes;
@@ -1416,7 +1416,7 @@ QC_Data::forkAnnotation(Annotation *n)
 }
 
 void
-QC_Data::flush(void)
+QA_Data::flush(void)
 {
   if( dataOutputBuffer.min )
   {
@@ -1437,10 +1437,10 @@ QC_Data::flush(void)
      // Test for replicated records.
      if( replicated )
      {
-         int nRecs=static_cast<int>( pQC->nc->getNumOfRecords() );
+         int nRecs=static_cast<int>( pQA->nc->getNumOfRecords() );
 
          replicated->test(nRecs, bufferCount, nextFlushBeg,
-                            pQC->varMeDa.size() > 1 ? true : false,
+                            pQA->varMeDa.size() > 1 ? true : false,
                                        nextFlushBeg ? true : false );
      }
 
@@ -1462,10 +1462,10 @@ QC_Data::flush(void)
 }
 
 void
-QC_Data::init(InFile *in, QC *q, std::string nm)
+QA_Data::init(InFile *in, QA *q, std::string nm)
 {
    pIn = in;
-   pQC =q;
+   pQA =q;
    name = nm;
 
    // apply parsed command-line args
@@ -1481,7 +1481,7 @@ QC_Data::init(InFile *in, QC *q, std::string nm)
 }
 
 void
-QC_Data::initBuffer(NcAPI *nc, size_t nxt, size_t mx)
+QA_Data::initBuffer(NcAPI *nc, size_t nxt, size_t mx)
 {
   maxBufferSize=mx;
   nextFlushBeg=nxt;
@@ -1495,58 +1495,58 @@ QC_Data::initBuffer(NcAPI *nc, size_t nxt, size_t mx)
 }
 
 void
-QC_Data::initResumeSession(void)
+QA_Data::initResumeSession(void)
 {
-  // read data values from the previous QC run
+  // read data values from the previous QA run
   std::vector<double> dv;
   std::string statStr;
   std::string s0;
 
   s0 = name + "_max";
-  pQC->nc->getAttValues( dv, "valid_range", s0);
+  pQA->nc->getAttValues( dv, "valid_range", s0);
   statStr  ="sampleMin=" ;
   statStr += hdhC::double2String( dv[0] );
   statStr +=", sampleMax=" ;
   statStr += hdhC::double2String( dv[1] );
   statStr += ", ";
-  statStr += pQC->nc->getAttString("statistics", s0) ;
+  statStr += pQA->nc->getAttString("statistics", s0) ;
   statMax.setSampleProperties( statStr );
 
   s0 = name + "_min";
-  pQC->nc->getAttValues( dv, "valid_range", s0);
+  pQA->nc->getAttValues( dv, "valid_range", s0);
   statStr  ="sampleMin=" ;
   statStr += hdhC::double2String( dv[0] );
   statStr +=", sampleMax=" ;
   statStr += hdhC::double2String( dv[1] );
   statStr += ", ";
-  statStr += pQC->nc->getAttString("statistics", s0) ;
+  statStr += pQA->nc->getAttString("statistics", s0) ;
   statMin.setSampleProperties( statStr );
 
   s0 = name + "_ave";
-  pQC->nc->getAttValues( dv, "valid_range", s0);
+  pQA->nc->getAttValues( dv, "valid_range", s0);
   statStr  ="sampleMin=" ;
   statStr += hdhC::double2String( dv[0] );
   statStr +=", sampleMax=" ;
   statStr += hdhC::double2String( dv[1] );
   statStr += ", ";
-  statStr += pQC->nc->getAttString("statistics", s0) ;
+  statStr += pQA->nc->getAttString("statistics", s0) ;
   statAve.setSampleProperties( statStr );
 
   s0 = name + "_std_dev";
-  pQC->nc->getAttValues( dv, "valid_range", s0);
+  pQA->nc->getAttValues( dv, "valid_range", s0);
   statStr  ="sampleMin=" ;
   statStr += hdhC::double2String( dv[0] );
   statStr +=", sampleMax=" ;
   statStr += hdhC::double2String( dv[1] );
   statStr += ", ";
-  statStr += pQC->nc->getAttString("statistics", s0) ;
+  statStr += pQA->nc->getAttString("statistics", s0) ;
   statStdDev.setSampleProperties( statStr );
 
   return;
 }
 
 void
-QC_Data::openQcNcContrib(NcAPI *nc, Variable *var)
+QA_Data::openQcNcContrib(NcAPI *nc, Variable *var)
 {
   // a multi-purpose vector
   std::vector<std::string> vs;
@@ -1581,12 +1581,12 @@ QC_Data::openQcNcContrib(NcAPI *nc, Variable *var)
   nc->setAtt(vName, "original_dimensions", str );
   nc->copyAtts(pIn->nc, vName, vName);
 
-  // define qc-variables
+  // define qa-variables
   std::string dimStr;
   if( var->isFixed )
     dimStr = "fixed" ;
   else
-    dimStr = pQC->qcTime.time.c_str() ;
+    dimStr = pQA->qaTime.time.c_str() ;
 
   // different, but derived, varnames
   vs.clear();
@@ -1675,7 +1675,7 @@ QC_Data::openQcNcContrib(NcAPI *nc, Variable *var)
 }
 
 void
-QC_Data::setAnnotation(Annotation *n)
+QA_Data::setAnnotation(Annotation *n)
 {
 //   if( isForkedAnnotation )
 //      delete notes;
@@ -1687,7 +1687,7 @@ QC_Data::setAnnotation(Annotation *n)
 }
 
 void
-QC_Data::setNextFlushBeg(size_t n)
+QA_Data::setNextFlushBeg(size_t n)
 {
    nextFlushBeg=n;
    sharedRecordFlag.setNextFlushBeg(n);
@@ -1696,9 +1696,9 @@ QC_Data::setNextFlushBeg(size_t n)
 }
 
 void
-QC_Data::setStatisticsAttribute(NcAPI *nc)
+QA_Data::setStatisticsAttribute(NcAPI *nc)
 {
-  // store the statistics' properties in qc_<variable>.nc
+  // store the statistics' properties in qa_<variable>.nc
   std::vector<std::string> vs;
   std::string t;
   size_t sz=2;
@@ -1755,7 +1755,7 @@ QC_Data::setStatisticsAttribute(NcAPI *nc)
 }
 
 void
-QC_Data::store(hdhC::FieldData &fA)
+QA_Data::store(hdhC::FieldData &fA)
 {
    if( bufferCount == maxBufferSize )
       flush();
@@ -1769,7 +1769,7 @@ QC_Data::store(hdhC::FieldData &fA)
 }
 
 void
-QC_Data::test(int i, hdhC::FieldData &fA)
+QA_Data::test(int i, hdhC::FieldData &fA)
 {
   // all tests return true for finding something no
   if( testValidity(fA) )
@@ -1798,7 +1798,7 @@ QC_Data::test(int i, hdhC::FieldData &fA)
 }
 
 bool
-QC_Data::testConst(hdhC::FieldData &fA)
+QA_Data::testConst(hdhC::FieldData &fA)
 {
   if( ! fA.isValid )
     return false;
@@ -1829,16 +1829,16 @@ QC_Data::testConst(hdhC::FieldData &fA)
     ostr.setf(std::ios::fixed, std::ios::floatfield);
     ostr << "rec#=" << pIn->currRec;
     ostr << ", variable=" << name;
-    ostr << ", date=" << pQC->qcTime.currDateStr;
+    ostr << ", date=" << pQA->qaTime.currDateStr;
 
     (void) notes->operate(capt, ostr.str()) ;
-    notes->setCheckDataStr(pQC->fail);
+    notes->setCheckDataStr(pQA->fail);
   }
   return true;
 }
 
 bool
-QC_Data::testInfNaN(hdhC::FieldData &fA)
+QA_Data::testInfNaN(hdhC::FieldData &fA)
 {
   if( !fA.infCount && !fA.nanCount )
     return false;
@@ -1854,17 +1854,17 @@ QC_Data::testInfNaN(hdhC::FieldData &fA)
     ostr.setf(std::ios::fixed, std::ios::floatfield);
     ostr << "rec#=" << pIn->currRec;
     ostr << ", variable=" << name;
-    ostr << ", date=" << pQC->qcTime.currDateStr;
+    ostr << ", date=" << pQA->qaTime.currDateStr;
 
     (void) notes->operate(capt, ostr.str()) ;
-    notes->setCheckDataStr(pQC->fail);
+    notes->setCheckDataStr(pQA->fail);
   }
 
   return true ;
 }
 
 bool
-QC_Data::testStndDev(hdhC::FieldData &fA)
+QA_Data::testStndDev(hdhC::FieldData &fA)
 {
   if( ! fA.isValid )
     return false;
@@ -1888,16 +1888,16 @@ QC_Data::testStndDev(hdhC::FieldData &fA)
     ostr.setf(std::ios::fixed, std::ios::floatfield);
     ostr << "rec#=" << pIn->currRec;
     ostr << ", variable=" << name;
-    ostr << ", date=" << pQC->qcTime.currDateStr;
+    ostr << ", date=" << pQA->qaTime.currDateStr;
 
     (void) notes->operate(capt, ostr.str()) ;
-    notes->setCheckDataStr(pQC->fail);
+    notes->setCheckDataStr(pQA->fail);
   }
   return true ;
 }
 
 bool
-QC_Data::testValidity(hdhC::FieldData &fA)
+QA_Data::testValidity(hdhC::FieldData &fA)
 {
   if( fA.size < 2 )
   {
@@ -1929,10 +1929,10 @@ QC_Data::testValidity(hdhC::FieldData &fA)
     ostr.setf(std::ios::fixed, std::ios::floatfield);
     ostr << "rec#=" << pIn->currRec;
     ostr << ", variable=" << name;
-    ostr << ", date=" << pQC->qcTime.currDateStr;
+    ostr << ", date=" << pQA->qaTime.currDateStr;
 
     (void) notes->operate(capt, ostr.str()) ;
-    notes->setCheckDataStr(pQC->fail);
+    notes->setCheckDataStr(pQA->fail);
   }
 
   return false ;

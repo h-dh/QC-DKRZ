@@ -25,7 +25,7 @@
 #include "Annotation.cpp"
 
 /*! \file syncFiles.cpp
-\brief Get the next filename for the QC processing.
+\brief Get the next filename for the QA processing.
 
 netCDF files provided on the command-line (exclusive) or on stdin
 are synchronised to a command-line given target.\n
@@ -39,9 +39,9 @@ Options:\n
    -m               Allow for mixing of filenames with and without time range.\n
    -M               Test modification times.\n
    -P string        Path to the files.\n
-   -p qc-nc-file    QC result file with path.\n
+   -p qa-nc-file    QA result file with path.\n
    -s               Output of filenames sorted according to time.\n
-                    If a qc_target is given (-p), then only the later ones.\n
+                    If a qa_target is given (-p), then only the later ones.\n
    -S               As -s, additionally with begin and end time.\n
                     Note that the range is given anyway in case of error.\n
    -T               Determine and append the total time range to the output.\n
@@ -50,11 +50,11 @@ Options:\n
 \n
 return:  output: \n
   0      Name of next file(s).\n
-  1      "" , i.e. qc-file is up-to-date or invalid.\n
+  1      "" , i.e. qa-file is up-to-date or invalid.\n
          Also for a fixed field file that was already checked.\n
          Note for --post: filename with latest dates.\n
   2      Last filename if the date is older than.\n
-         the end-date in the QC-result file.\n
+         the end-date in the QA-result file.\n
   3      Unspecific error.\n
   4      No unlimited variable found; output filename.\n
 >10      Ambiguity test failed (values accumulate):\n
@@ -110,7 +110,7 @@ class Ensemble
    public:
    Ensemble();
 
-   void   addTarget( std::string &qc_target );
+   void   addTarget( std::string &qa_target );
    int    constraint(std::string &timeLimitStr);
    int    constraintSeries(void);
    int    constraintSingle(void);
@@ -176,13 +176,13 @@ class SyncFiles
    void readArgv(int optInd, int argc, char *argv[]);
    int  run(void);
 
-   void setTarget(std::string q)        {qc_target=q;}
+   void setTarget(std::string q)        {qa_target=q;}
    void setPath(std::string &p);
-   void setQC_target(std::string s)     {qc_target=s;}
+   void setQA_target(std::string s)     {qa_target=s;}
    void setTimeLimit(std::string s)     {timeLimitStr = s;}
 
    std::string path;
-   std::string qc_target ;
+   std::string qa_target ;
    std::string timeLimitStr;
 
    bool isAddTimes;
@@ -304,7 +304,7 @@ int main(int argc, char *argv[])
         syncFiles.setPath(path) ;
         break;
       case 'p':
-        syncFiles.setQC_target(opt.optarg) ;
+        syncFiles.setQA_target(opt.optarg) ;
         break;
       case 's':
         syncFiles.enableSeries();
@@ -371,11 +371,11 @@ Ensemble::Ensemble()
 }
 
 void
-Ensemble::addTarget( std::string &qc_target )
+Ensemble::addTarget( std::string &qa_target )
 {
   // test for existance
   std::string testFile("/bin/bash -c \'test -e ") ;
-  testFile += qc_target ;
+  testFile += qa_target ;
   testFile += '\'' ;
 
   // see 'man system' for the return value, here we expect 0,
@@ -386,7 +386,7 @@ Ensemble::addTarget( std::string &qc_target )
   }
 
   member.push_back( new Member );
-  member.back()->setFile(qc_target) ;
+  member.back()->setFile(qa_target) ;
   isWithTarget = true;
   ++last ;
   return ;
@@ -1267,8 +1267,8 @@ SyncFiles::description(void)
   std::cout << "         omission indicates the end.\n";
   std::cout << "-E       Show info about all files (purpose: debugging).\n";
   std::cout << "-P path  Common path of all data files, but the target.\n";
-  std::cout << "-p qc_<variable>.nc-file\n";
-  std::cout << "         QC result file with path.\n";
+  std::cout << "-p qa_<variable>.nc-file\n";
+  std::cout << "         QA result file with path.\n";
   std::cout << "-s       Output the sequence of all remaining files.\n";
   std::cout << "-t begin_date-end_date \n";
   std::cout << "         Requires separator '-'; no spaces\n";
@@ -1276,9 +1276,9 @@ SyncFiles::description(void)
   std::cout << "         Time attributes of files must be identical.\n\n";
   std::cout << "Output: one  or more filenames.\n";
   std::cout << "return:  0  File(s) synchronised to the target.\n";
-  std::cout << "         1  qc-file is up-to-date.\n";
+  std::cout << "         1  qa-file is up-to-date.\n";
   std::cout << "         2  File with latest date; but, \n";
-  std::cout << "            the date is older than in the qc-file.\n";
+  std::cout << "            the date is older than in the qa-file.\n";
   std::cout << "         3  Unspecific error.\n";
   std::cout << "         4  No unlimited dimension found.\n";
   std::cout << "        10  Ambiguity check failed (return values accumulate):\n";
@@ -1409,9 +1409,9 @@ SyncFiles::readArgv(int i, int argc, char *argv[])
 int
 SyncFiles::run(void)
 {
-  // we append the qc_target, if available
-  if( qc_target.size()  )
-    ensemble->addTarget(qc_target);
+  // we append the qa_target, if available
+  if( qa_target.size()  )
+    ensemble->addTarget(qa_target);
 
   // read dates from nc-files,
   // sort dates in ascending order (old --> young)

@@ -10,7 +10,7 @@ descript()
   echo "  -t str   comma-sep-list of 'name,ensemble' pairs"
   echo "           where '|ensemble' may be omitted."
   echo "  -x       set -x"
-  echo "  f(s)     *.log files in experiment_logs of QC results."
+  echo "  f(s)     *.log files in experiment_logs of QA results."
   echo "           Files without a leading path component are"
   echo "           searched in the path supplied with -p. If a "
   echo "           path was not specified, then in the current directory."

@@ -11,7 +11,7 @@
 #include "geo_meta.h"
 
 /*! \file fd_interface.h
- \brief Interface to build frequency distributions of QC results.
+ \brief Interface to build frequency distributions of QA results.
 */
 
 //! Calculate frequency distributions out of netCF records.

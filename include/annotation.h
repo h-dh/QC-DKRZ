@@ -6,14 +6,14 @@
 #include "brace_op.h"
 
 /*! \file annotation.h
- \brief Annotate QC exceptions.
+ \brief Annotate QA exceptions.
 */
 
-//! Annotation QC exceptions.
+//! Annotation QA exceptions.
 /*! A file with user supplied directives is parsed to
     respond for any annotation/task. An example of such a file
-    is given by file QC-0.4/tables/SVN_defaults/CMIP5_check-list.conf.
-    Flags within the file have to be specified in the QC class in order
+    is given by file QA-0.4/tables/SVN_defaults/CMIP5_check-list.conf.
+    Flags within the file have to be specified in the QA class in order
     to identify conditions for annotation.\n
     The methods inq() and operate() are applied paired off: inq() inquires
     a task to be made, the method operate() performs it. In between any
@@ -30,9 +30,9 @@
        processing of the current variable.\n
     L3        Stop immediately (but complete meta-data checks). Lock
        processing of current variable.\n
-    L4        Stop immediately and shutdown the QC session (no locks).\n
+    L4        Stop immediately and shutdown the QA session (no locks).\n
     Table:    Standard Output Table (ST), Project Table (PT)\n
-    Flag:     Given in column 1. Must match in the QC.cpp class.\n
+    Flag:     Given in column 1. Must match in the QA.cpp class.\n
     Task:     Email notification (EM), discard the check/test (D)\n
     Variable: A list of comma-separated acronyms of variables; directive is \n
               only applied to the variables (for all by default).\n

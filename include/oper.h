@@ -4,7 +4,7 @@
 #include "base.h"
 
 /*! \file oper.h
- \brief Operation of data (not for QC).
+ \brief Operation of data (not for QA).
 */
 
 class Annotation;

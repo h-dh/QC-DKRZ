@@ -22,7 +22,7 @@
 */
 
 class InFile;
-class QC ;
+class QA ;
 
 //! Basic structs and methods of derived classes
 
@@ -107,8 +107,8 @@ class Base : public IObj
   void setFreqDistI(FD_interface *p){ fDI=p; return;}
 
 //  void setGDwithSrcProps(std::string vName);
-  //! Connect a QC object.
-  void setQualityControl(QC *p){ qC=p; return;}
+  //! Connect a QA object.
+  void setQualityControl(QA *p){ qA=p; return;}
 //  void setRec(size_t rec)
 //         {currRec=rec;}
   void setSrcStr(std::string s)

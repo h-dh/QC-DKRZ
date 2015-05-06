@@ -3,18 +3,18 @@
 ##/*! \file taskSummary.h
 ## \brief Summary of all processed variables of a given experiment
 
-## Annotations in QC_RESULTS/check_logs/_Notes/experiment are explored.
+## Annotations in QA_RESULTS/check_logs/_Notes/experiment are explored.
 ##*/
 
 descript()
 {
-  echo -e "\nUsage: QC/scripts/taskSummary opts list-of-experiments"
+  echo -e "\nUsage: QA/scripts/taskSummary opts list-of-experiments"
   echo "purpose: extract annotations from a logfile,"
   echo "         output a comprehensive summary and an outline."
   echo "  -e addr   Email address for sending the outline."
   echo "  -P name   Project name."
   echo "  -p path   Path to check_logs by default current working directory."
-  echo "  -r path   Path to QC_Results, inclusively."
+  echo "  -r path   Path to QA_Results, inclusively."
   echo "  -t path   Path to the check_list table."
   echo "  --debug[=script]"
   echo "  --help"
@@ -30,7 +30,7 @@ period()
 
   test ! -e $exp.log && return
 
-  prg=${QC_SRC}/xtractTimeRange_from_log
+  prg=${QA_SRC}/xtractTimeRange_from_log
 
   test ${#prg} -gt 0 && \
     /bin/bash ${prg} ${DEBUG_X} -P ${PROJECT} -Q $exp.log
@@ -68,12 +68,12 @@ processBlk()
 
 summaryHR()
 {
-txt="Annotation summary of the QC of experiment\n \
+txt="Annotation summary of the QA of experiment\n \
     ${exp}\
-\n\nAccess to all QC results:\n \
-   ${QC_RESULTS} \
+\n\nAccess to all QA results:\n \
+   ${QA_RESULTS} \
 \n\nAccess to the logfiles:\n \
-   ${QC_RESULTS}/check_logs \
+   ${QA_RESULTS}/check_logs \
 \n\nPath to the annotations in YAML format:\n\
    $(pwd)/_Notes/${exp}\n\
 \n\n"
@@ -143,7 +143,7 @@ txt="Annotation summary of the QC of experiment\n \
   if [ "${PROJECT}" = CORDEX ] ; then
     if ! expr match "$exp" '.*r0i0p0' &> /dev/null ; then
       if [ ${#std_table} -gt 0 ] ; then
-         /bin/bash ${QC_SRC}/findNotDelivered  --project=CORDEX ${DEBUG_X} \
+         /bin/bash ${QA_SRC}/findNotDelivered  --project=CORDEX ${DEBUG_X} \
          --period=$outP \
          --table=${std_table} \
          --out=$outA \
@@ -164,7 +164,7 @@ txt="Annotation summary of the QC of experiment\n \
     fi
   else
     echo -e "\n\nPeriods of atomic variables in\n\"
-    ${QC_RESULTS}/check_logs/_Period/${exp}.period" >> $outA
+    ${QA_RESULTS}/check_logs/_Period/${exp}.period" >> $outA
     echo -e "\nno evidence" >> $outA
   fi
 
@@ -264,7 +264,7 @@ summaryY()
 
   test ! -e $exp.log && return
 
-  /bin/bash ${QC_SRC}/xtractNotes_from_log ${DEBUG_X} ${MERGE} -H $exp.log
+  /bin/bash ${QA_SRC}/xtractNotes_from_log ${DEBUG_X} ${MERGE} -H $exp.log
 
   return
 }
@@ -278,10 +278,10 @@ summaryY()
 
   # extract the path to scripts
   if [ "$0" != taskSummary ] ; then
-    QC_SRC=${0%/*}
+    QA_SRC=${0%/*}
   fi
 
-  QC_RESULTS=QC_RESULTS # by default
+  QA_RESULTS=QA_RESULTS # by default
   PROJECT='unkown_project'
 
   while getopts e:m:P:p:r:s:t:-: option ${args[*]}
@@ -291,7 +291,7 @@ summaryY()
       m)  MERGE="-m ${OPTARG}" ;;
       P)  PROJECT=${OPTARG} ;;
       p)  cd ${OPTARG} ;;
-      r)  QC_RESULTS=${OPTARG} ;;
+      r)  QA_RESULTS=${OPTARG} ;;
       s)  std_table=${OPTARG} ;;
       t)  test -e ${OPTARG} -a ! -d ${OPTARG} && cl_table=${OPTARG} ;;
       -)  if [ "$OPTARG" = "help" ] ; then

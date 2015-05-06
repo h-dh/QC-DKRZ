@@ -1,5 +1,5 @@
-#ifndef _QC_DATA_H
-#define _QC_DATA_H
+#ifndef _QA_DATA_H
+#define _QA_DATA_H
 
 #include "hdhC.h"
 #include "annotation.h"
@@ -10,8 +10,8 @@ are performed. Annotations are supplied via the Annotation class
 linked by a pointer.
 */
 
-class QC;
-class QC_Data;
+class QA;
+class QA_Data;
 class VariableMetaData ;
 
 class DataOutputBuffer
@@ -81,15 +81,15 @@ class SharedRecordFlag
 class Outlier
 {
   public:
-  Outlier( QC *p, size_t vmdIX, std::string name);
+  Outlier( QA *p, size_t vmdIX, std::string name);
   ~Outlier(){;}
 
-  QC *pQC;
+  QA *pQA;
 
   static bool
         isSelected( std::vector<std::string> &opts,
                      std::string &vName,
-                     bool isQC_enablePostProc,
+                     bool isQA_enablePostProc,
                      int effDims );
 
   //! Evaluate outlier test
@@ -98,7 +98,7 @@ class Outlier
       exploit the function N(sigma) as criterion.*/
   void  parseOption(std::vector<std::string>&);
   void  setAnnotation(Annotation *p){notes=p;}
-  bool  test(QC_Data*);
+  bool  test(QA_Data*);
 
   std::vector<std::string> options;
 
@@ -112,19 +112,19 @@ class ReplicatedRecord
 {
   //! Test for replicated records.
   /*! Before an array of values (e.g. ave, max ,min)
-      is flushed to the qc_<filename>.nc file, the values
+      is flushed to the qa_<filename>.nc file, the values
       in the array are tested for replicated records in
-      the priviously written qc_<filename>.nc as well as
+      the priviously written qa_<filename>.nc as well as
       in the array itself.*/
 
   public:
-  ReplicatedRecord( QC *, size_t vMDix, std::string name);
+  ReplicatedRecord( QA *, size_t vMDix, std::string name);
   ~ReplicatedRecord(){;}
 
   static bool
          isSelected( std::vector<std::string> &options,
                      std::string &vName,
-                     bool isQC_enablePostProc,
+                     bool isQA_enablePostProc,
                      int effDims );
 
   void   parseOption( std::vector<std::string> &opts ) ;
@@ -142,19 +142,19 @@ class ReplicatedRecord
 
   size_t vMDix;
   Annotation *notes;
-  QC *pQC;
+  QA *pQA;
 } ;
 
-class QC_Data
+class QA_Data
 {
   public:
-  QC_Data();
-  ~QC_Data();
+  QA_Data();
+  ~QA_Data();
 
   void   applyOptions(bool isPost=false);
 
   //! Collects the results of checked records.
-  /*! Does not really print, but store in the 'qcNcOutData' object.*/
+  /*! Does not really print, but store in the 'qaNcOutData' object.*/
   void   checkFinally(Variable *);
 
   void   disableTests(std::string);
@@ -165,10 +165,10 @@ class QC_Data
 
   void   forkAnnotation(Annotation *p);
 
-  //! Flush results to the qc-netCDF file.
+  //! Flush results to the qa-netCDF file.
   void   flush(void);
 
-  void   init(InFile*, QC*, std::string);
+  void   init(InFile*, QA*, std::string);
 
   //! Change the flush counter; 1500 by default
   void   initBuffer(NcAPI *, size_t next=0, size_t max=1500);
@@ -223,14 +223,14 @@ class QC_Data
   std::string   ANNOT_NO_MT;
   size_t        numOfClearedBitsInChecksum;
 
-  //! results to qc.nc
+  //! results to qa.nc
   DataOutputBuffer dataOutputBuffer;
   SharedRecordFlag sharedRecordFlag;
 
   Annotation *notes;
   InFile *pIn;
   Outlier *outlier;
-  QC *pQC;
+  QA *pQA;
   ReplicatedRecord *replicated;
 };
 

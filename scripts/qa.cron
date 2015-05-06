@@ -1,62 +1,62 @@
 #! /bin/bash
 
-# Purpose:  I) re-launch qc-DKRZ processes after a system crash.
+# Purpose:  I) re-launch qa-DKRZ processes after a system crash.
 #          II) start of new tasks provided in a TASK Directory
 
 # Actions for I) take priority of II)
-         
-# Note: Variable QC_SRC below is derived from $0
-#       If you change the location of the qc.cron script
-#       from directory QC/scripts to somewhere else, then
-#       you have to provide the absolute path to the QC source
+
+# Note: Variable QA_SRC below is derived from $0
+#       If you change the location of the qa.cron script
+#       from directory QA-DKRZ/scripts to somewhere else, then
+#       you have to provide the absolute path to the QA source
 #       as additonal argument to your crontab script calling.
 
 # This script checks whether there are more files , i.e. PIDs of
-# qc-DKRZ instances are registered in dir QC/PID directory, than
+# qa-DKRZ instances are registered in dir QA-DKRZ/PID directory, than
 # corresponding jobs are running. If so, this indicates a system
-# crash having interrupted all qcManger processes active before the crash.
+# crash having interrupted all qaManger processes active before the crash.
 # Then, information stored in file pid.number are used to restart
 # the session(s). Also remnants from the broken sessions are removed,
 # i.e. files PID/pid.number are removed as well as all
 # temporal ProcPool-ident.number(s) directories.
 # A message is written to the continued session log-file.
 
-# Note: the script checks the validity of the QC_SRC path. If it is
+# Note: the script checks the validity of the QA_SRC path. If it is
 # invalid and an email address was provided, the named recipient
 # will be notified. If invalid, this script exits without further action.
- 
+
 # Examples for crontab entries:
 
 # environment variable
-# path=your-absolute-QC-source-path
+# path=your-absolute-QA-source-path
 
 # every other second minute
-#0-59/2 * * * * path/QC/scripts/qc.cron
+#0-59/2 * * * * path/QA-DKRZ/scripts/qa.cron
 
 # at startup of the system
-#@reboot path/QC/scripts/qc.cron 
+#@reboot path/QA_DKRZ/scripts/qa.cron
 
 # each day at 23h and 49min
-#49 23 * * * path/QC/scripts/qc.cron
+#49 23 * * * path/QA-DKRZ/scripts/qa.cron
 
 if [ $# -eq 1 ] ; then
-  QC_SRC=$1
+  QA_SRC=$1
 else
   this=$0
-  QC_SRC=${this%/scripts/qc.cron}
+  QA_SRC=${this%/scripts/qa.cron}
 fi
 
-EMAIL_TO=(heinz-dieter.hollweg@zmaw.de)
+#EMAIL_TO=name@xyz.de)
 
 getPIDs()
 {
-  # get PIDs of qc-DKRZ while discarding child processes
+  # get PIDs of qa-DKRZ while discarding child processes
  local pid ppid save r
  declare -a pid ppid
- 
+
   # Note: there is alway one more pid, namely for the grep in the pipe.
   #       This is eliminated by 'grep -v grep'
-  r=( $( ps -ef | grep qc-DKRZ | grep -v grep | awk '{print $2,$3}' )  )
+  r=( $( ps -ef | grep qa-DKRZ | grep -v grep | awk '{print $2,$3}' )  )
 
   # sort pids according to child and parent;
   for(( i=0 ; i < ${#r[*]} ; ++i )) ;  do
@@ -127,7 +127,7 @@ task()
 {
   # the script requires the number of currently active runs
   # in order to prevent flooding
-  $QC_SRC/scripts/qc_task ${#runs[*]} >> /work/bm0021/hdh/QC_results/.qc_task.log
+  $QA_SRC/scripts/qaTask ${#runs[*]} > /dev/null # >> .qa_task.log
 
   exit
 }
@@ -143,25 +143,25 @@ elif [ ${HOSTNAME%.*} = lizard6 ] ; then
   sleep 40
 fi
 
-if [ ! -d $QC_SRC ] ; then
-  sendSubject="qc.cron: path to QC not found"
-  sendText="${QC_SRC}: No such directory"
+if [ ! -d $QA_SRC ] ; then
+  sendSubject="qa.cron: path to QA not found"
+  sendText="${QA_SRC}: No such directory"
   sendEMail
   exit
 fi
 
-if [ ! -d $QC_SRC/PID ] ; then
+if [ ! -d $QA_SRC/PID ] ; then
   # No active session running.
 
   #run the task launching script
-  $QC_SRC/scripts/qc_task
+  $QA_SRC/scripts/qaTask
   exit
 fi
 
-# Get files with appended pid of the corresponding qcManger process.
-files=( $( ls $QC_SRC/PID/* 2> /dev/null) )
+# Get files with appended pid of the corresponding qa-DKRZ process.
+files=( $( ls $QA_SRC/PID/* 2> /dev/null) )
 
-# Get pid(s) of running qc-DKRZ processes; store in runs
+# Get pid(s) of running qa-DKRZ processes; store in runs
 declare -a runs
 getPIDs runs
 
@@ -175,7 +175,7 @@ exit
 
 
 # The number of current runs equals the number of pid-files. ok
-# Note: if greater: one or more qc-DKRZ instance is/are either
+# Note: if greater: one or more qa-DKRZ instance is/are either
 # going to generate it's pid-file or, more likely, there
 # are temporal children.
 test ${#runs[*]} -ge ${#files[*]} && task
@@ -187,10 +187,10 @@ sleep 5
 test ${#runs[*]} -ge ${#files[*]} && task
 
 # this is only printed once
-message="restart by qc.cron"
+message="restart by qa.cron"
 
 # Apparently, a system crash has happened and there are remaining
-# qc-DKRZ instances to be re-launched.
+# qa-DKRZ instances to be re-launched.
 for f in ${files[*]} ; do
   # Get pid from file
   fp=${f##*.}
@@ -199,10 +199,10 @@ for f in ${files[*]} ; do
   # corresponding running process.
   for run in ${runs[*]} ; do
      test ${run} -eq ${fp} && continue 2
-  done 
+  done
 
   # clear ProcPool remnants
-  fs=( $( ls -d $QC_SRC/ProcPool*.$fp 2> /dev/null ) )
+  fs=( $( ls -d $QA_SRC/ProcPool*.$fp 2> /dev/null ) )
   for(( i=0 ; i < ${#fs[*]} ; ++i )) ; do
     \rm -r -f ${fs[i]}
   done
@@ -215,8 +215,8 @@ for f in ${files[*]} ; do
 
     read -a args          # the command-line arguments
     read sessionFile      # path/name of session logfile
-    
-    # Add option -q, if not present    
+
+    # Add option -q, if not present
     # Add option -s arg, if not present
     for a in ${args[*]} ; do
       test "$a" = '-q' && is_q=f
@@ -226,23 +226,22 @@ for f in ${files[*]} ; do
     test ${is_q:-t} = t && args=( ${args[*]} -q )
     test ${is_s:-t} = t && args=( ${args[*]} -s $sessionFile )
 
-    # Add option -q if not present    
+    # Add option -q if not present
     # Add option -s if not present
 
     # Re-launch. Any output to a console is discarded
     # because a cron job would not know where to direct.
-    $QC_SRC/scripts/qc-DKRZ ${args[*]} &> /dev/null &
-#    $QC_SRC/scripts/qc-DKRZ ${args[*]} -E_DEBUG_M &> /scratch/local1/k204145/hdh/QC/example/asdf &
+    $QA_SRC/scripts/qa-DKRZ ${args[*]} &> /dev/null &
 
     #collect messages
-    message="${message}\nstarted: $QC_SRC/scripts/qc-DKRZ ${args[*]}\nremoved: $f"
+    message="${message}\nstarted: $QA_SRC/scripts/qa-DKRZ ${args[*]}\nremoved: $f"
 
     break # loop was just used to keep the file open
   done < $f
 
   # clear the pid-file that survived a system crash.
   \rm -f $f
- 
+
 done
 
 # write message to the session log

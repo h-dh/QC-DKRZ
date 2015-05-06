@@ -1,38 +1,38 @@
-#ifndef _QC_H
-#define _QC_H
+#ifndef _QA_H
+#define _QA_H
 
 #include "hdhC.h"
 #include "date.h"
 #include "annotation.h"
-#include "qc_data.h"
-#include "qc_time.h"
-#include "qc_PT.h"
+#include "qa_data.h"
+#include "qa_time.h"
+#include "qa_PT.h"
 
 //! Quality Control Program Unit for CMIP5.
-/*! All the QC considerations are covered by this class.\n
-The QC_CMIP5.cpp and qc_CMIP5.h files have to be linked to
-QC.cpp and qc.h, respectively.\n
+/*! All the QA considerations are covered by this class.\n
+The QA_CMIP5.cpp and qa_CMIP5.h files have to be linked to
+QA.cpp and qa.h, respectively.\n
 Properties specified in standard_output.xlsx document
 from http://cmip-pcmdi.llnl.gov/cmip5/docs
 are checked as well as the Data Reference Syntax given in cmip5_data_reference_syntax.pdf.\n
 The netCDF data-file is linked by a pointer to the InFile class
-instance. Results of the QC are written to a netCDF file
-(to the directory where the main program was started) with filename qc_<data-filename>.nc. Outlier test and such for replicated records
+instance. Results of the QA are written to a netCDF file
+(to the directory where the main program was started) with filename qa_<data-filename>.nc. Outlier test and such for replicated records
 are performed. Annotations are supplied via the Annotation class
 linked by a pointer.
 */
 
 
 //! Main program unit of the Quality Control.
-/*! All the QC considerations are covered by this class. QC of CMIP5
+/*! All the QA considerations are covered by this class. QA of CMIP5
 netCDF dimensions, variables and data are checked.
 Atomic datasets, chunks and even chunks in the process of 'under-construction'
 are taken into account by multi-session features. A resulting
 netCDF file is written
-(to the directory where the program was started) prefixing the data-filename by 'qc_'.
+(to the directory where the program was started) prefixing the data-filename by 'qa_'.
 Zero-D to 3D data are checked, the latter layer-wise in a way that
 there is a method 'entry' for the data and an eventual method 'closeEntry', which stores time series results in a file
-qc_<varname>.nc .
+qa_<varname>.nc .
 */
 
 //! Struct containing dimensional properties to cross-check with table information.
@@ -60,7 +60,7 @@ struct DimensionMetaData
 class VariableMetaData
 {
   public:
-  VariableMetaData(QC*, Variable *v=0);
+  VariableMetaData(QA*, Variable *v=0);
   ~VariableMetaData();
 
   std::vector<size_t>  dimVarRep;
@@ -93,21 +93,21 @@ class VariableMetaData
 
   Annotation     *notes;
   Variable *var;
-  QC             *pQC ;
-  QC_Data         qcData;
+  QA             *pQA ;
+  QA_Data         qaData;
 
   int  finally(int errCode=0);
   void forkAnnotation(Annotation *p);
   void setAnnotation(Annotation *p);
-  void setParent(QC *p){pQC=p;}
+  void setParent(QA *p){pQA=p;}
 };
 
-class QC : public IObj
+class QA : public IObj
 {
 public:
   //! Default constructor.
-  QC();
-  ~QC();
+  QA();
+  ~QA();
 
   //! coresponding to virtual methods in IObj
 
@@ -116,8 +116,8 @@ public:
       Each multiple-set must be invoked by calling method 'clearStatistics'.*/
   bool   entry(void);
 
-  //! Initialisation of the QC object.
-  /*! Open the qc-result.nc file, when available or create
+  //! Initialisation of the QA object.
+  /*! Open the qa-result.nc file, when available or create
    it from scratch. Meta data checks are performed.
    Initialise time testing, time boundary testing, and cycles
    within a time step. At the end  entry() is called to test
@@ -278,7 +278,7 @@ public:
   /*! An exit code is returned.*/
   int    finally(int errCode=0);
 
-  //! The final qc data operations.
+  //! The final qa data operations.
   /*! Called from finall(). An exit code is returned.*/
   int    finally_data(int errCode=0);
 
@@ -348,7 +348,7 @@ public:
   //! Set default values.
   void initDefaults(void);
 
-  //! Global attributes of the qc-netCDF file.
+  //! Global attributes of the qa-netCDF file.
   /*! Partly reflecting global attributes from the sources. */
   void initGlobalAtts(InFile &);
 
@@ -362,7 +362,7 @@ public:
   /*! Does not work for tripolar coordinates */
 //  bool   locate( GeoMetaT<float>*, double *lat, double *lon, const char* );
 
-  //! Open a qc_result file for creation or appending data.
+  //! Open a qa_result file for creation or appending data.
   /*! CopY time variable from input-nc file.
    Collect some properties of the in-netcdf-file in
    struct varMeDa. Also check properties against tables.
@@ -408,13 +408,13 @@ public:
   //! Test the time-stamp of the input file.
   /*! If the end-date in the filename and the last time value
       match within the uncertainty of 0.75% of the time-step, then
-      the file is assumed to be completely qc-processed.
+      the file is assumed to be completely qa-processed.
       Syntax of date ranges as given in CMIP% DRS Syntax.*/
   bool   testPeriod(void);
 
   //! Name of the netCDF file with results of the quality control
-  std::string qcFilename;
-  std::string qcNcfileFlags;
+  std::string qaFilename;
+  std::string qaNcfileFlags;
 
   int exitCode;
   bool isExit;
@@ -422,10 +422,10 @@ public:
   std::vector<VariableMetaData> varMeDa;
 
   NcAPI *nc;
-  QC_Time qcTime;
+  QA_Time qaTime;
 
   size_t currQcRec;
-  size_t importedRecFromPrevQC; // initial num of recs in the write-to-nc-file
+  size_t importedRecFromPrevQA; // initial num of recs in the write-to-nc-file
   MtrxArr<double> tmp_mv;
 
   // init for test about times

@@ -1,8 +1,8 @@
-#include "qc_PT.h"
+#include "qa_PT.h"
 
-ProjectTable::ProjectTable(QC *p0, InFile *p1, std::string &s0, std::string &s1)
+ProjectTable::ProjectTable(QA *p0, InFile *p1, std::string &s0, std::string &s1)
 {
-   qc  = p0;
+   qa  = p0;
    pIn = p1;
 
    path=s0;
@@ -691,7 +691,7 @@ ProjectTable::lockFile(std::string &fName )
          std::string text("Check running applications.") ;
 
          if( notes->operate(capt, text) )
-           qc->setExit( notes->getExitValue() ) ;
+           qa->setExit( notes->getExitValue() ) ;
       }
     }
   }
@@ -705,7 +705,7 @@ ProjectTable::lockFile(std::string &fName )
         std::string text("could not create lock-file to protect project table.") ;
 
         if( notes->operate(capt, text) )
-          qc->setExit( notes->getExitValue() ) ;
+          qa->setExit( notes->getExitValue() ) ;
      }
 
      return true;
@@ -785,8 +785,8 @@ ProjectTable::write(Variable &dataVar)
 
       if( notes->operate(capt, text) )
       {
-        notes->setCheckMetaStr( qc->fail );
-        qc->setExit( notes->getExitValue() ) ;
+        notes->setCheckMetaStr( qa->fail );
+        qa->setExit( notes->getExitValue() ) ;
       }
     }
   }

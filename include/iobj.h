@@ -15,7 +15,7 @@ class FD_interface;
 class InFile;
 class Oper;
 class OutFile;
-class QC;
+class QA;
 class TimeControl;
 
 class IObj{
@@ -53,7 +53,7 @@ public:
     FD_interface *fDI;
     Oper         *pOper;
     OutFile      *pOut;
-    QC           *qC;
+    QA           *qA;
     TimeControl  *tC;
 };
 

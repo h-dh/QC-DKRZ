@@ -30,10 +30,10 @@
 #include "Oper.cpp"
 #include "OutFile.cpp"
 #include "Parse.cpp"
-#include "QC_data.cpp"
-#include "QC_time.cpp"
-#include "QC_PT.cpp"
-#include "QC.cpp"
+#include "QA_data.cpp"
+#include "QA_time.cpp"
+#include "QA_PT.cpp"
+#include "QA.cpp"
 #include "TimeControl.cpp"
 
 // ------------------

@@ -1,5 +1,5 @@
-#ifndef QC_MAIN_H
-#define QC_MAIN_H
+#ifndef QA_MAIN_H
+#define QA_MAIN_H
 
 #include <iostream>
 #include <fstream>
@@ -39,13 +39,13 @@
 #include "oper.h"
 #include "out_file.h"
 #include "parse.h"
-#include "qc_data.h"
-#include "qc_time.h"
-#include "qc_PT.h"
-#include "qc.h"
+#include "qa_data.h"
+#include "qa_time.h"
+#include "qa_PT.h"
+#include "qa.h"
 #include "time_control.h"
 
-/*! \file qc_main.h
+/*! \file qa_main.h
  \brief The C++ main() entry point. Frame program for the Quality Control.
 
  int main(int argc, char *argv[]) contains
@@ -60,7 +60,7 @@
  Various annotation levels trigger different exit
  states.\n
  Class and include files performing the qualitiy control
- must be linked to QC.cpp and qc.h, respectively.
+ must be linked to QA.cpp and qa.h, respectively.
 */
 
   struct IObjContainer
@@ -72,7 +72,7 @@
     std::vector<InFile> in ;
     std::vector<Oper> op ;
     std::vector<OutFile> out ;
-    std::vector<QC> qC ;
+    std::vector<QA> qA ;
     std::vector<TimeControl> tC;
 
     std::vector<IObj *> vIObj;
@@ -106,7 +106,7 @@ void
   linkObj( std::vector<std::vector<std::string> > &, IObjContainer &);
 
 /*! Objects are created for all names defined in class Parse
-(i.e. QC, TC, FD_interface, and Base-derived classes).*/
+(i.e. QA, TC, FD_interface, and Base-derived classes).*/
 void
   makeObject( std::vector<std::vector<std::string> > &list, IObjContainer &);
 
