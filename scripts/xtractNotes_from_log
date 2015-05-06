@@ -13,7 +13,7 @@ descript()
   echo "  -H       Output original header of input file."
   echo "  -h       Help."
   echo "  -i       Output the inverse; only with option -g or -r."
-  echo "  -m       Merge QC results (automaticly in ONLY_SUMMARY mode)."
+  echo "  -m       Merge QA results (automaticly in ONLY_SUMMARY mode)."
   echo "  -p       Print to output."
   echo "  -r expr  Remove blocks; equivalent to"
   echo "           -i -g expr -Q > same_File"
@@ -223,7 +223,7 @@ atomicBadConversion_blk()
     fi
   done
 
-  test ${i} -eq ${sz} -a ${f_ix} -eq -1 && return  # not a usual block, e.g. qc_revision
+  test ${i} -eq ${sz} -a ${f_ix} -eq -1 && return  # not a usual block, e.g. qa_version
 
   # look for a matching atomic scope
   for(( ix=0 ; ix < ${#scopeName[*]} ; ++ix )) ; do

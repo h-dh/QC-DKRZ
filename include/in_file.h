@@ -16,7 +16,7 @@
 
 /*! Purpose: open a netCDF file, get meta-data of variables (in struct Base::Variable),
     and store data in a GeoMeta object with the respective netCDF type. InFile may
-    have embedded pointers to the objects of FD_interface, QC, and/or TimeControl.
+    have embedded pointers to the objects of FD_interface, QA, and/or TimeControl.
     A pointer links the Annotation instance.*/
 
 class InFile : public Base

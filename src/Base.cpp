@@ -174,7 +174,7 @@ Base::copy(const Base &b)
   fDI=b.fDI;
   pOper=b.pOper;
   pOut=b.pOut;
-  qC=b.qC;
+  qA=b.qA;
   tC=b.tC;
 
   // point to the source base
@@ -454,8 +454,8 @@ Base::help(void)
   std::cerr << "CellStatistics, InFile, Oper, and OutFile.\n" ;
   std::cerr << "Option strings for these classes may enclose\n" ;
   std::cerr << "other option strings of class designators\n";
-  std::cerr << "QC, TC, and FD, which may be embedded with\n" ;
-  std::cerr << "e.g. QC@ where @ is any character not occurring\n";
+  std::cerr << "QA, TC, and FD, which may be embedded with\n" ;
+  std::cerr << "e.g. QA@ where @ is any character not occurring\n";
   std::cerr << "in the enclosing string (the last may be omitted,\n" ;
   std::cerr << "but, may be repeated in another embedded string).\n\n";
   std::cerr << "Options: The []-part is optional, patterns like\n" ;

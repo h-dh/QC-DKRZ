@@ -70,13 +70,13 @@ void    sync(Obj &);
 std::ofstream *ofsError=0;
 std::ofstream *ofsWarning=0;
 
-std::string strError = "qc_parent_error_";
-std::string strWarning = "qc_parent_warning_";
+std::string strError = "qa_parent_error_";
+std::string strWarning = "qa_parent_warning_";
 std::string filename;
 
 /*! \file testParentChild.cpp
 \brief Test proper continuation across successive experiments.
- 
+
 Times and time boundaries (the latter if available) towards the end \n
 of the parent file and those at the beginning of the experiment \n
 of the child are compared. Different reference dates by the unit \n
@@ -136,7 +136,7 @@ int main(int argc, char *argv[])
         ostr << "testExpCont:getopt() unknown option -" ;
         ostr << copt;
         ostr << "\nreturned option -" << copt ;
-        exceptionError( ostr.str() ); 
+        exceptionError( ostr.str() );
         break;
     }
   }
@@ -166,7 +166,7 @@ int main(int argc, char *argv[])
     if( flag.size() )
       flag += ";";
     flag += note ;
-    exceptionError( ostr.str() );  
+    exceptionError( ostr.str() );
   }
 
 #ifndef RAISE_ERRORS
@@ -180,7 +180,7 @@ int main(int argc, char *argv[])
 obj.nc_c.open( obj.file_c )
 #ifdef RAISE_ERRORS
 ;
-#endif 
+#endif
 #ifndef RAISE_ERRORS
     )
 #endif
@@ -191,7 +191,7 @@ obj.nc_c.open( obj.file_c )
     ostr << "\n" << note ;
     ostr << "\ntestExpCont::main()" ;
     ostr << "\nFile: "  << obj.file_c ;
-    exceptionError( ostr.str() );  
+    exceptionError( ostr.str() );
     finally(obj, note, 31);
   }
 
@@ -201,7 +201,7 @@ obj.nc_c.open( obj.file_c )
 obj.nc_p.open( obj.file_p )
 #ifdef RAISE_ERRORS
 ;
-#endif 
+#endif
 #ifndef RAISE_ERRORS
     )
 #endif
@@ -212,7 +212,7 @@ obj.nc_p.open( obj.file_p )
     ostr << "\n" << note ;
     ostr << "\ntestExpCont::main()" ;
     ostr << "\nFile: "  << obj.file_p ;
-    exceptionError( ostr.str() );  
+    exceptionError( ostr.str() );
     finally(obj, note, 31);
   }
 
@@ -263,7 +263,7 @@ checkTime(Obj &obj)
     ostr << "\n   File:          " << obj.file_c ;
     ostr << "\n   First time:    " << obj.t0_c ;
     ostr << "\nLag across files: " << lag_pc ;
-    exceptionError( ostr.str() );  
+    exceptionError( ostr.str() );
 
     std::string note("W36: ");
     note += "rec# (parent)";
@@ -296,7 +296,7 @@ checkTime(Obj &obj)
     ostr << "\n   File:       " << obj.file_c ;
     ostr << "\n   First time: " << obj.t0_c ;
     ostr << "\n   First lag:  " << lag_c ;
-    exceptionError( ostr.str() );  
+    exceptionError( ostr.str() );
 
     std::string note("W37: ");
     note += "rec# (parent)";
@@ -540,7 +540,7 @@ getTimeProperties(Obj &obj)
     ostr << "\n" << note ;
     ostr << "\ntestExpCont::getTimeProperties()" ;
     ostr << "\nFile (parent): "  << obj.file_c ;
-    exceptionError( ostr.str() );  
+    exceptionError( ostr.str() );
     std::cout << note << ";" << std::endl;
     finally(obj, note, 33);
   }
@@ -555,7 +555,7 @@ getTimeProperties(Obj &obj)
     ostr << "\n" << note ;
     ostr << "\ntestExpCont::getTimeProperties()" ;
     ostr << "\nFile (parent): "  << obj.file_p ;
-    exceptionError( ostr.str() );  
+    exceptionError( ostr.str() );
     std::cout << note << ";" << std::endl;
     finally(obj, note, 33);
   }
@@ -660,7 +660,7 @@ sync(Obj &obj)
   double t1_p = obj.nc_p.getData(mv, "time", 0);
 
   obj.t0_c = t0_c ;
-  
+
 #ifndef RAISE_ERRORS
   if( t0_c <= t1_p )
 #endif

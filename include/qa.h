@@ -1,21 +1,21 @@
-#ifndef _QC_H
-#define _QC_H
+#ifndef _QA_H
+#define _QA_H
 
 #include "hdhC.h"
 #include "date.h"
 #include "annotation.h"
-#include "qc_data.h"
-#include "qc_time.h"
-#include "qc_PT.h"
+#include "qa_data.h"
+#include "qa_time.h"
+#include "qa_PT.h"
 
 //! Quality Control Program Unit for project NONE.
-/*! All the QC considerations are covered by this class.\n
-The QC_NONE.cpp and qc_NONE.h files have to be linked to
-QC.cpp and qc.h, respectively.\n
+/*! All the QA considerations are covered by this class.\n
+The QA_NONE.cpp and qa_NONE.h files have to be linked to
+QA.cpp and qa.h, respectively.\n
 The netCDF data-file is linked by a pointer to the InFile class
-instance. Results of the QC are written to a netCDF file
+instance. Results of the QA are written to a netCDF file
 (to the directory where the main program was started) with filename
-qc_<data-filename>.nc. Outlier test and such for replicated records
+qa_<data-filename>.nc. Outlier test and such for replicated records
 are performed. Annotations are supplied via the Annotation class
 linked by a pointer.
 */
@@ -39,11 +39,11 @@ struct DimensionMetaData
   size_t       size;
 };
 
-  //! QC related variable information.
+  //! QA related variable information.
 class VariableMetaData
 {
   public:
-  VariableMetaData(QC*, Variable *var=0);
+  VariableMetaData(QA*, Variable *var=0);
   ~VariableMetaData();
 
   // index of variable obj
@@ -69,22 +69,22 @@ class VariableMetaData
 
   Annotation     *notes;
   Variable *var;
-  QC             *pQC ;
-  QC_Data         qcData;
+  QA             *pQA ;
+  QA_Data         qaData;
 
   int  finally(int errCode=0);
   void forkAnnotation(Annotation *p);
   void setAnnotation(Annotation *p);
-  void setParent(QC *p){pQC=p;}
+  void setParent(QA *p){pQA=p;}
 };
 
-class QC : public IObj
+class QA : public IObj
 {
   public:
 
    //! Default constructor.
-  QC();
-  ~QC();
+  QA();
+  ~QA();
 
   //! coresponding to virtual methods in IObj
 
@@ -93,8 +93,8 @@ class QC : public IObj
       Each multiple-set must be invoked by calling method 'clearStatistics'.*/
   bool   entry(void);
 
-  //! Initialisation of the QC object.
-  /*! Open the qc-result.nc file, when available or create
+  //! Initialisation of the QA object.
+  /*! Open the qa-result.nc file, when available or create
    it from scratch. Meta data checks are performed.
    Initialise time testing, time boundary testing, and cycles
    within a time step. At the end  entry() is called to test
@@ -120,7 +120,7 @@ class QC : public IObj
   /*! An exit code is returned.*/
   int    finally(int errCode=0);
 
-  //! The final qc data operations.
+  //! The final qa data operations.
   /*! Called from finall(). An exit code is returned.*/
   int    finally_data(int errCode=0);
 
@@ -149,7 +149,7 @@ class QC : public IObj
   //! Set default values.
   void   initDefaults(void);
 
-  //! Global attributes of the qc-netCDF file.
+  //! Global attributes of the qa-netCDF file.
   /*! Partly reflecting global attributes from the sources. */
   void   initGlobalAtts(InFile &);
 
@@ -162,7 +162,7 @@ class QC : public IObj
 
   bool   isProgress(void){ return ! isNoProgress ; }
 
-  //! Open a qc_result file for creation or appending data.
+  //! Open a qa_result file for creation or appending data.
   /*! CopY time variable from input-nc file.
    Collect some properties of the in-netcdf-file in
    struct varMeDa. Also check properties against tables.
@@ -190,12 +190,12 @@ class QC : public IObj
   //! Test the time-period of the input file.
   /*! If the end-date in the filename and the last time value
       match within the uncertainty of 0.75% of the time-step, then
-      the file is assumed to be completely qc-processed. */
+      the file is assumed to be completely qa-processed. */
   bool   testPeriod(void);
 
   //! Name of the netCDF file with results of the quality control
-  std::string qcFilename;
-  std::string qcNcfileFlags;
+  std::string qaFilename;
+  std::string qaNcfileFlags;
 
   int exitCode;
   bool isExit;
@@ -203,13 +203,13 @@ class QC : public IObj
   std::vector<VariableMetaData> varMeDa;
 
   NcAPI *nc;
-  QC_Time qcTime;
+  QA_Time qaTime;
 
 //private:
   int thisId;
 
   size_t currQcRec;
-  size_t importedRecFromPrevQC; // initial num of recs in the write-to-nc-file
+  size_t importedRecFromPrevQA; // initial num of recs in the write-to-nc-file
   MtrxArr<double> tmp_mv;
 
   // init for test about times

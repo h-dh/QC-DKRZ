@@ -4,7 +4,7 @@
 #include "base.h"
 
 /*! \file out_file.h
- \brief Output of data (not for QC).
+ \brief Output of data (not for QA).
 */
 
 //! Writing results to netCDF file(s) (derived from class Base).

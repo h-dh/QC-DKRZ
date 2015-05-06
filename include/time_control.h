@@ -5,7 +5,7 @@
 #include "iobj.h"
 
 /*! \file time_control.h
- \brief Time range window for reading of records (not for QC).
+ \brief Time range window for reading of records (not for QA).
 */
 
 //! Record range constraint for file processing.

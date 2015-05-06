@@ -103,7 +103,7 @@ void
 Annotation::config(void)
 {
   // note: first items of options may be already defined
-  //       in QC.applyOPtions()
+  //       in QA.applyOPtions()
 
   // get flag configuration from file
   readConf();
@@ -366,7 +366,7 @@ Annotation::getAnnotation(std::string tag)
 std::string
 Annotation::getCheckResults(void)
 {
-  // brief summery of the QC findings, which are currently
+  // brief summery of the QA findings, which are currently
   // collected in vectors, but are eventually merged.
 
   // default: omission
@@ -450,7 +450,7 @@ Annotation::initDefaults(void)
   fDI=0;
   pOper=0;
   pOut=0;
-  qC=0;
+  qA=0;
   tC=0;
 
   isInit=false;
@@ -549,8 +549,8 @@ Annotation::linkObject(IObj *p)
     pOper = dynamic_cast<Oper*>(p) ;
   else if( className == "Out" )
     pOut = dynamic_cast<OutFile*>(p) ;
-  else if( className == "QC" )
-    qC = dynamic_cast<QC*>(p) ;
+  else if( className == "QA" )
+    qA = dynamic_cast<QA*>(p) ;
   else if( className == "TC" )
     tC = dynamic_cast<TimeControl*>(p) ;
 
@@ -623,7 +623,7 @@ Annotation::operate(std::string headline,
      passedText = text[currIndex] ;
 
 
-   // a caption only for the 'classical' output into the QC_RESULTS DRS
+   // a caption only for the 'classical' output into the QA_RESULTS DRS
    std::string capt(code[currIndex]);
    capt += ": ";
    capt += mp_capt[tag] ;
@@ -919,7 +919,7 @@ Annotation::printCheckResult(void)
 
   isCheckResultsWasPrinted = true;
 
-  // brief summery of the QC findings, which are currently
+  // brief summery of the QA findings, which are currently
   // collected in vectors, but are eventually merged.
 
   std::string out( "CHECK-BEG" );
@@ -1088,7 +1088,7 @@ Annotation::printNotes(std::string &tag, std::string &caption,
       filename = "undefined_filename" ;
 
     // compose the header of issued messages
-    std::string strNotes = "qc_note_" ;
+    std::string strNotes = "qa_note_" ;
     size_t pos = filename.rfind( ".nc" );
     strNotes += filename.substr(0, pos) ;
     strNotes += ".txt";

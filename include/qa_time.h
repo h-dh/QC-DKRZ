@@ -1,5 +1,5 @@
-#ifndef _QC_TIME_H
-#define _QC_TIME_H
+#ifndef _QA_TIME_H
+#define _QA_TIME_H
 
 #include "hdhC.h"
 #include "date.h"
@@ -7,7 +7,7 @@
 
 //! Quality Control Program Unit for time management and checks.
 
-class QC;
+class QA;
 class SharedRecordFlag;
 
 class TimeInputBuffer
@@ -79,15 +79,15 @@ enum TimeTableMode
 };
 TimeTableMode timeTableMode;
 
-class QC_Time
+class QA_Time
 {
   public:
 
   //! Default constructor.
-  QC_Time();
-//  ~QC_Time();
+  QA_Time();
+//  ~QA_Time();
 
-  //! get only options from QC options relevant to class QC_Time
+  //! get only options from QA options relevant to class QA_Time
   void   applyOptions(std::vector<std::string> &os);
 
   /*! Close records for time only.*/
@@ -164,7 +164,7 @@ class QC_Time
   void   getDRSformattedDateRange(std::vector<Date> &,
                    std::vector<std::string> &);
 
-  void   init(InFile*, Annotation*, QC*);
+  void   init(InFile*, Annotation*, QA*);
   void   initDefaults(void);
 
   //! Initialisiation of a resumed session.
@@ -191,7 +191,7 @@ class QC_Time
   /*! When the name is supplied by option, then use the default.*/
   void   setTable(std::string &p, std::string t="");
 
-  //! Synchronise the in-file and the qc-netCDF file.
+  //! Synchronise the in-file and the qa-netCDF file.
   /*! Return value==true for isNoProgress.*/
   bool   sync(bool checkData, bool postProc);
 
@@ -229,7 +229,7 @@ class QC_Time
 
   Annotation *notes;
   InFile *pIn;
-  QC *pQC;
+  QA *pQA;
 };
 
 #endif

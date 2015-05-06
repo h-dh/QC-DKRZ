@@ -1,17 +1,17 @@
-#ifndef _QC_PT_H
-#define _QC_PT_H
+#ifndef _QA_PT_H
+#define _QA_PT_H
 
 #include "hdhC.h"
 #include "date.h"
 #include "annotation.h"
 
-class QC;
+class QA;
 class InFile;
 
 class ProjectTable
 {
   public:
-  ProjectTable(QC *, InFile*, std::string &path, std::string &table);
+  ProjectTable(QA *, InFile*, std::string &path, std::string &table);
 
   //! Prepare the comparison of dimensions between file and project table.
   /*! This is checked for each chunk or atomic data set in each
@@ -58,7 +58,7 @@ class ProjectTable
 
   Annotation *notes;
   InFile     *pIn;
-  QC         *qc;  //the parent
+  QA         *qa;  //the parent
 } ;
 
 #endif

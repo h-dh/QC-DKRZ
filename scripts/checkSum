@@ -22,10 +22,10 @@ descript()
   echo "  --help"
   echo "  --no_history Accept remainig creation_date and tracking_id."
   echo "  --type       Checksum type: md5 | sha1 ; default: md5."
-  echo "  -b  str     path to QC executables."
+  echo "  -b  str     path to QA executables."
   echo "  -m  str  Email notification to addr=str."
   echo "  -P  str  Path to the PROJECT_DATA."
-  echo "  -q  str  Path to QC_RESULTS."
+  echo "  -q  str  Path to QA_RESULTS."
   echo "  -S  str  SUB_PATH."
   echo "  -t       Path to the checksum table [def: locally 'cs_table'."
   echo "  -w       Create filename.md5 containing the checksum."
@@ -99,7 +99,7 @@ pre_logY()
   if [ $# -eq 0 ] ; then
     sTxt[$((ix++))]="3file: ${fn}"
     sTxt[$((ix++))]="3data_path: ${file%/*}"
-    sTxt[$((ix++))]="3result_path: ${QC_RES}/data/${SUB_PATH}"
+    sTxt[$((ix++))]="3result_path: ${QA_RES}/data/${SUB_PATH}"
     sTxt[$((ix++))]="3check:"
     sTxt[$((ix++))]="4meta_data: ${y_meta_data:-FAIL}"
     sTxt[$((ix++))]="4time_values: ${y_time_values:-OMIT}"
@@ -162,20 +162,20 @@ log_expMessage()
 
   str="$str""\nFile:\t\t${NEXT_FILE}"
   str="$str""\nData path:\t${PROJECT_DATA}/${SUB_PATH}"
-  str="$str""\nQC result path: ${QC_RES}/data/${SUB_PATH}"
+  str="$str""\nQA result path: ${QA_RES}/data/${SUB_PATH}"
   str="$str""\nCHECK:: meta data: FAIL,        time: OMIT,     data: OMIT"
 #    str="$str""\nDRS tree:\t${SUB_PATH}"
 
   str="$str""\n$1"
 
   local out
-  out=${QC_RES}/check_logs/${EXP_NAME}.log
+  out=${QA_RES}/check_logs/${EXP_NAME}.log
   echo -e "\n${str}" >> $out
 
 #  if [ ${DISTRIBUTED_FS:-f} = f ] ; then
 #    tryCom echo -e "\n${str}" >> $PROC_POOL/experiments/${EXP_NAME}.$$.log
 #  else
-#    tryRemote ssh ${QC_MANAGER_HOST} \
+#    tryRemote ssh ${QA_MANAGER_HOST} \
 #      echo -e "\n${str}"      >> $PROC_POOL/experiments/${EXP_NAME}.$$.log
 #  fi
 
@@ -200,15 +200,15 @@ logY()
   sp[8]='        '
 
   local out
-  out=${QC_RES}/check_logs/${EXP_NAME}.log
+  out=${QA_RES}/check_logs/${EXP_NAME}.log
 
   s_out="${s_out} - date: $( date +'%FT%T' )"
 
-#  if [ ${QC_MANAGER_HOST} = $HOSTNAME ] ; then
+#  if [ ${QA_MANAGER_HOST} = $HOSTNAME ] ; then
 #  test ${ix} -lt 2 && \
 #    echo  "${sp[ix]}date: $( date +'%FT%T' )" >> $out
 #  else
-#    tryRemote ssh ${QC_MANAGER_HOST} \
+#    tryRemote ssh ${QA_MANAGER_HOST} \
 #      echo -e ${str} >> $out
 #  fi
 
@@ -361,7 +361,7 @@ table()
           log_expMessage "${logExpStr}"
         fi
 
-        local out=${QC_RES}/data/${SUB_PATH}/qc_lock_${fn%.nc}.txt
+        local out=${QA_RES}/data/${SUB_PATH}/qa_lock_${fn%.nc}.txt
         echo "Path: ${file%/*}"                  > $out
         echo "File: ${file##*/}"                 >> $out
         echo -e "${logExpStr2}"                  >> $out
@@ -386,10 +386,10 @@ PRG=md5sum
 while getopts b:m:P:q:S:t:wx:-: option ${args[*]}
 do
   case $option in
-    b)  QC_BIN=${OPTARG}/ ;;
+    b)  QA_BIN=${OPTARG}/ ;;
     m)  EMAIL_TO=( ${OPTARG//,/ } ) ;;
     P)  PROJECT_DATA=${OPTARG} ;;
-    q)  QC_RES=${OPTARG} ;;
+    q)  QA_RES=${OPTARG} ;;
     S)  SUB_PATH=${OPTARG} ;;
     t)  TABLE_PATH=${OPTARG}/ ;;
     w)  STAND_ALONE_FILE=t ;;
@@ -477,7 +477,7 @@ for fn in $* ; do
       fi
   fi
 
-  att=( ${str[*]} $( ${QC_BIN}getNC_att.x $file creation_date tracking_id ) )
+  att=( ${str[*]} $( ${QA_BIN}getNC_att.x $file creation_date tracking_id ) )
 
   table ${cs[0]} $fn $PROJECT_DATA $SUB_PATH ${att[*]} mod_time=$modTime
 

@@ -39,10 +39,10 @@
 #include "oper.h"
 #include "out_file.h"
 #include "parse.h"
-#include "qc_data.h"
-#include "qc_time.h"
-#include "qc_PT.h"
-#include "qc.h"
+#include "qa_data.h"
+#include "qa_time.h"
+#include "qa_PT.h"
+#include "qa.h"
 #include "time_control.h"
 
 /*! Command-line options are gathered from ordinary command-line arguments,

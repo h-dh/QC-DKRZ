@@ -1,21 +1,21 @@
-#include "qc.h"
+#include "qa.h"
 
 // Macro option to enable output of all messages.
 // Please compile with '-D RAISE_ERRORS'
 
-QC::QC()
+QA::QA()
 {
   initDefaults();
 }
 
-QC::~QC()
+QA::~QA()
 {
   if( nc )
     delete nc ;
 }
 
 void
-QC::appendToHistory(size_t eCode)
+QA::appendToHistory(size_t eCode)
 {
   // date and time at run time
   std::string today( Date::getCurrentDate() );
@@ -56,7 +56,7 @@ QC::appendToHistory(size_t eCode)
 /*
     hst += "\nfilenames and tracking_id in file tid_";
 
-    std::string t0(qcFilename.substr(3));
+    std::string t0(qaFilename.substr(3));
     t0 = t0.substr(0, t0.size()-3);
     hst += t0;
     hst += ".txt" ;
@@ -86,13 +86,13 @@ QC::appendToHistory(size_t eCode)
       tmp = splt[++index] ;
     else
       // not in the history, so take the one from the version attribute
-      tmp = nc->getAttString("QC_svn_revision");
+      tmp = nc->getAttString("QA_svn_revision");
 
     if( svnVersion != tmp )
     {
       hst += "\n" ;
       hst += today;
-      hst += " changed QC svn revision=" ;
+      hst += " changed QA svn revision=" ;
       hst += svnVersion ;
     }
   }
@@ -107,7 +107,7 @@ QC::appendToHistory(size_t eCode)
 }
 
 void
-QC::applyOptions(bool isPost)
+QA::applyOptions(bool isPost)
 {
   // the first loop for items with higher precedence
   for( size_t i=0 ; i < optStr.size() ; ++i)
@@ -177,7 +177,7 @@ QC::applyOptions(bool isPost)
      {
        if( split.size() == 2 )
        {
-          qcFilename=split[1];
+          qaFilename=split[1];
           continue;
        }
      }
@@ -207,12 +207,12 @@ QC::applyOptions(bool isPost)
        }
      }
 
-     if( split[0] == "qNF" || split[0] == "qcNcfileFlags"
-       || split[0] == "qc_ncfile_flags" )
+     if( split[0] == "qNF" || split[0] == "qaNcfileFlags"
+       || split[0] == "qa_ncfile_flags" )
      {
        if( split.size() == 2 )
        {
-          qcNcfileFlags=split[1];
+          qaNcfileFlags=split[1];
           continue;
        }
      }
@@ -284,7 +284,7 @@ QC::applyOptions(bool isPost)
 }
 
 void
-QC::checkMetaData(InFile &in)
+QA::checkMetaData(InFile &in)
 {
   notes->setCheckMetaStr("PASS");
 
@@ -308,9 +308,9 @@ QC::checkMetaData(InFile &in)
 }
 
 void
-QC::closeEntry(void)
+QA::closeEntry(void)
 {
-   // This here is only for the regular QC time series file
+   // This here is only for the regular QA time series file
    if( isCheckTime )
      storeTime();
 
@@ -331,7 +331,7 @@ QC::closeEntry(void)
 
        // test overflow of ranges specified in a table, or
        // plausibility of the extrema.
-       varMeDa[i].qcData.test(i, fA.back() );
+       varMeDa[i].qaData.test(i, fA.back() );
      }
 
      storeData(fA);
@@ -343,7 +343,7 @@ QC::closeEntry(void)
 }
 
 void
-QC::createVarMetaData(void)
+QA::createVarMetaData(void)
 {
   // set corresponding isExcluded=true
   pIn->excludeVars();
@@ -369,7 +369,7 @@ QC::createVarMetaData(void)
     Split splt(vMD.dims);
     int effDim = splt.size() ;
     for( size_t j=0 ; j < splt.size() ; ++j )
-      if( splt[j] == qcTime.time )
+      if( splt[j] == qaTime.time )
         --effDim;
 
     if( replicationOpts.size() )
@@ -377,9 +377,9 @@ QC::createVarMetaData(void)
       if( ReplicatedRecord::isSelected(
              replicationOpts, vMD.name, enablePostProc, effDim ) )
       {
-        vMD.qcData.replicated = new ReplicatedRecord(this, i, vMD.name);
-        vMD.qcData.replicated->setAnnotation(notes);
-        vMD.qcData.replicated->parseOption(replicationOpts) ;
+        vMD.qaData.replicated = new ReplicatedRecord(this, i, vMD.name);
+        vMD.qaData.replicated->setAnnotation(notes);
+        vMD.qaData.replicated->parseOption(replicationOpts) ;
       }
     }
 
@@ -388,9 +388,9 @@ QC::createVarMetaData(void)
       if( Outlier::isSelected(
              outlierOpts, vMD.name, enablePostProc, effDim ) )
       {
-        vMD.qcData.outlier = new Outlier(this, i, vMD.name);
-        vMD.qcData.outlier->setAnnotation(notes);
-        vMD.qcData.outlier->parseOption(outlierOpts);
+        vMD.qaData.outlier = new Outlier(this, i, vMD.name);
+        vMD.qaData.outlier->setAnnotation(notes);
+        vMD.qaData.outlier->parseOption(outlierOpts);
       }
     }
   }
@@ -399,7 +399,7 @@ QC::createVarMetaData(void)
 }
 
 bool
-QC::entry(void)
+QA::entry(void)
 {
    if( isCheckData )
    {
@@ -446,7 +446,7 @@ QC::entry(void)
 }
 
 int
-QC::finally(int eCode)
+QA::finally(int eCode)
 {
   if( nc )
     setExit( finally_data(eCode) );
@@ -462,11 +462,11 @@ QC::finally(int eCode)
 }
 
 int
-QC::finally_data(int eCode)
+QA::finally_data(int eCode)
 {
   setExit(eCode);
 
-  // write pending results to qc-file.nc. Modes are considered there
+  // write pending results to qa-file.nc. Modes are considered there
   for( size_t i=0 ; i < varMeDa.size() ; ++i )
     setExit( varMeDa[i].finally() );
 
@@ -485,13 +485,13 @@ QC::finally_data(int eCode)
     // must follow flushOutput(), if the latter is effective
     if( isCheckData )
       for( size_t i=0 ; i < varMeDa.size() ; ++i )
-         if( varMeDa[i].qcData.enableOutlierTest )
-           varMeDa[i].qcData.outlier->test( &(varMeDa[i].qcData) );
+         if( varMeDa[i].qaData.enableOutlierTest )
+           varMeDa[i].qaData.outlier->test( &(varMeDa[i].qaData) );
   }
 
   if( exitCode == 63 ||
      ( nc == 0 && exitCode ) || (currQcRec == 0 && pIn->isTime ) )
-  { // qc is up-to-date or a forced exit right from the start;
+  { // qa is up-to-date or a forced exit right from the start;
     // no data to write
     nc->close();
 
@@ -503,23 +503,23 @@ QC::finally_data(int eCode)
   }
 
   if( exitCode != 63 )
-    qcTime.finally( nc );
+    qaTime.finally( nc );
 
-  // read history from the qc-file.nc and append new entries
+  // read history from the qa-file.nc and append new entries
   appendToHistory(exitCode);
 
   // check for flags concerning the total data set,
   // but exclude the case of no record
   if( pIn->currRec > 0 )
     for( size_t j=0 ; j < varMeDa.size() ; ++j )
-      varMeDa[j].qcData.checkFinally(varMeDa[j].var);
+      varMeDa[j].qaData.checkFinally(varMeDa[j].var);
 
   if( isCheckData )
   {
     for( size_t j=0 ; j < varMeDa.size() ; ++j )
     {
-       // write qc-results attributes about statistics
-       varMeDa[j].qcData.setStatisticsAttribute(nc);
+       // write qa-results attributes about statistics
+       varMeDa[j].qaData.setStatisticsAttribute(nc);
     }
   }
 
@@ -529,7 +529,7 @@ QC::finally_data(int eCode)
 }
 
 std::string
-QC::getFrequency()
+QA::getFrequency()
 {
   if( frequency.size() )
     return frequency;  // already known
@@ -609,12 +609,12 @@ QC::getFrequency()
 }
 
 void
-QC::help(void)
+QA::help(void)
 {
-  std::cerr << "Option string of the quality control class QC:\n" ;
+  std::cerr << "Option string of the quality control class QA:\n" ;
   std::cerr << "(may be embedded in option strings of Base derived\n" ;
   std::cerr << "classes)\n";
-  std::cerr << "or connected to these by explicit index 'QC0...'.\n" ;
+  std::cerr << "or connected to these by explicit index 'QA0...'.\n" ;
   std::cerr << "   checkTimeBounds\n" ;
   std::cerr << "   noCalendar\n" ;
   std::cerr << "   cycle=num\n" ;
@@ -625,9 +625,9 @@ QC::help(void)
 }
 
 bool
-QC::init(void)
+QA::init(void)
 {
-   // Open the qc-result.nc file, when available or create
+   // Open the qa-result.nc file, when available or create
    // it from scratch. Initialise time testing and
    // time boundary testing.
    // Eventually, entry() is called to test the data of fields.
@@ -673,16 +673,16 @@ QC::init(void)
    {
      // init the time object
      // note that freq is compared to the first column of the time table
-     qcTime.init(pIn, notes, this);
-     qcTime.applyOptions(optStr);
-     qcTime.initTimeTable( getFrequency() );
+     qaTime.init(pIn, notes, this);
+     qaTime.applyOptions(optStr);
+     qaTime.initTimeTable( getFrequency() );
 
-     // note that this test is not part of the QC_Time class, because
+     // note that this test is not part of the QA_Time class, because
      // coding depends on projects
      if( testPeriod() )
      {
         std::string key("82");
-        if( notes->inq( key, qcTime.time) )
+        if( notes->inq( key, qaTime.time) )
         {
           std::string capt("status is apparently in progress");
 
@@ -694,7 +694,7 @@ QC::init(void)
    if(isExit)
      return true;
 
-   // open netCDF for creating, continuation or resuming qc_<varname>.nc
+   // open netCDF for creating, continuation or resuming qa_<varname>.nc
    openQcNc(*pIn);
 
    if( isExit || isNoProgress )
@@ -744,27 +744,27 @@ QC::init(void)
 }
 
 void
-QC::initDataOutputBuffer(void)
+QA::initDataOutputBuffer(void)
 {
   if( isCheckTime )
   {
-    qcTime.timeOutputBuffer.initBuffer(nc, currQcRec);
-    qcTime.sharedRecordFlag.initBuffer(nc, currQcRec);
+    qaTime.timeOutputBuffer.initBuffer(nc, currQcRec);
+    qaTime.sharedRecordFlag.initBuffer(nc, currQcRec);
   }
 
   if( isCheckData )
   {
     for( size_t i=0 ; i < varMeDa.size() ; ++i)
-      varMeDa[i].qcData.initBuffer(nc, currQcRec);
+      varMeDa[i].qaData.initBuffer(nc, currQcRec);
   }
 
   return;
 }
 
 void
-QC::initDefaults(void)
+QA::initDefaults(void)
 {
-  setObjName("QC");
+  setObjName("QA");
 
   // pre-setting of some pointers
   nc=0;
@@ -775,7 +775,7 @@ QC::initDefaults(void)
   fDI=0;
   pOper=0;
   pOut=0;
-  qC=0;
+  qA=0;
   tC=0;
 
   fail="FAIL";
@@ -795,7 +795,7 @@ QC::initDefaults(void)
 
   nextRecords=0;  //see init()
 
-  importedRecFromPrevQC=0; // initial #rec in out-nc-file.
+  importedRecFromPrevQA=0; // initial #rec in out-nc-file.
   currQcRec=0;
 
   // by default
@@ -821,12 +821,12 @@ QC::initDefaults(void)
 }
 
 void
-QC::initGlobalAtts(InFile &in)
+QA::initGlobalAtts(InFile &in)
 {
   // global atts at creation.
   std::string today( Date::getCurrentDate() );
 
-  nc->setGlobalAtt( "QC_svn_revision", svnVersion);
+  nc->setGlobalAtt( "QA_svn_revision", svnVersion);
   nc->setGlobalAtt( "contact", "hollweg@dkrz.de");
 
   nc->setGlobalAtt( "creation_date", today);
@@ -843,7 +843,7 @@ QC::initGlobalAtts(InFile &in)
 }
 
 void
-QC::initResumeSession(void)
+QA::initResumeSession(void)
 {
   // this method may be used for two different purposes. First,
   // resuming within the same experiment. Second, continuation
@@ -912,23 +912,23 @@ QC::initResumeSession(void)
   }
 
   // now, resume
-  qcTime.timeOutputBuffer.setNextFlushBeg(currQcRec);
-  qcTime.setNextFlushBeg(currQcRec);
+  qaTime.timeOutputBuffer.setNextFlushBeg(currQcRec);
+  qaTime.setNextFlushBeg(currQcRec);
 
   if( isCheckTime )
-    qcTime.initResumeSession();
+    qaTime.initResumeSession();
 
   if( isCheckData )
   {
     for( size_t i=0 ; i < varMeDa.size() ; ++i )
-    varMeDa[i].qcData.initResumeSession();
+    varMeDa[i].qaData.initResumeSession();
   }
 
   return;
 }
 
 void
-QC::inqTables(void)
+QA::inqTables(void)
 {
   // check tablePath; must exist
   std::string testFile("/bin/bash -c \'test -d ") ;
@@ -969,7 +969,7 @@ QC::inqTables(void)
 }
 
 void
-QC::linkObject(IObj *p)
+QA::linkObject(IObj *p)
 {
   std::string className = p->getObjName();
 
@@ -985,8 +985,8 @@ QC::linkObject(IObj *p)
     pOper = dynamic_cast<Oper*>(p) ;
   else if( className == "Out" )
     pOut = dynamic_cast<OutFile*>(p) ;
-  else if( className == "QC" )
-    qC = dynamic_cast<QC*>(p) ;
+  else if( className == "QA" )
+    qA = dynamic_cast<QA*>(p) ;
   else if( className == "TC" )
     tC = dynamic_cast<TimeControl*>(p) ;
 
@@ -994,23 +994,23 @@ QC::linkObject(IObj *p)
 }
 
 void
-QC::openQcNc(InFile &in)
+QA::openQcNc(InFile &in)
 {
-  // Generates a new nc file for QC results or
+  // Generates a new nc file for QA results or
   // opens an existing one for appending data.
   // Copies time variable from input-nc file.
 
-  // name of the file begins with qc_
-  if ( qcFilename.size() == 0 )
+  // name of the file begins with qa_
+  if ( qaFilename.size() == 0 )
   {
     // use the input filename as basis;
     // there could be a leading path
-    qcFilename = dataPath;
-    if( qcFilename.size() > 0 )
-      qcFilename += '/' ;
-    qcFilename += "qc_";
-    qcFilename += hdhC::getBasename(dataFilename);
-    qcFilename += ".txt";
+    qaFilename = dataPath;
+    if( qaFilename.size() > 0 )
+      qaFilename += '/' ;
+    qaFilename += "qa_";
+    qaFilename += hdhC::getBasename(dataFilename);
+    qaFilename += ".txt";
   }
 
   nc = new NcAPI;
@@ -1022,39 +1022,39 @@ QC::openQcNc(InFile &in)
   if( ! isCheckTime )
     return;
 
-  if( nc->open(qcFilename, "NC_WRITE", false) )
-//   if( isQC_open ) // false: do not exit in case of error
+  if( nc->open(qaFilename, "NC_WRITE", false) )
+//   if( isQA_open ) // false: do not exit in case of error
   {
     // continue a previous session
-    importedRecFromPrevQC=nc->getNumOfRecords();
-    currQcRec += importedRecFromPrevQC;
+    importedRecFromPrevQA=nc->getNumOfRecords();
+    currQcRec += importedRecFromPrevQA;
     if( currQcRec )
       isNotFirstRecord = true;
 
     initDataOutputBuffer();
-    qcTime.sharedRecordFlag.initBuffer(nc, currQcRec);
+    qaTime.sharedRecordFlag.initBuffer(nc, currQcRec);
 
     initResumeSession();
     isResumeSession=true;
 
     // if files are synchronised, i.e. a file hasn't changed since
-    // the last qc
+    // the last qa
     if( isCheckTime )
-      isNoProgress = qcTime.sync( isCheckData, enablePostProc );
+      isNoProgress = qaTime.sync( isCheckData, enablePostProc );
 
     return;
   }
 
   if( currQcRec == 0 && in.nc.getNumOfRecords() == 1 )
-    qcTime.isSingleTimeValue = true;
+    qaTime.isSingleTimeValue = true;
 
   // So, we have to generate a netCDF file from almost scratch;
 
   // open new netcdf file
-  if( qcNcfileFlags.size() )
-    nc->create(qcFilename,  qcNcfileFlags);
+  if( qaNcfileFlags.size() )
+    nc->create(qaFilename,  qaNcfileFlags);
   else
-    nc->create(qcFilename,  "Replace");
+    nc->create(qaFilename,  "Replace");
 
   if( pIn->isTime )
   {
@@ -1068,18 +1068,18 @@ QC::openQcNc(InFile &in)
       }
     }
 
-    qcTime.openQcNcContrib(nc);
+    qaTime.openQcNcContrib(nc);
   }
   else if( isCheckTime )
   {
     // dimensions
-    qcTime.time="fixed";
+    qaTime.time="fixed";
     nc->defineDim("fixed", 1);
   }
 
   // create variable for the data statics etc.
   for( size_t m=0 ; m < varMeDa.size() ; ++m )
-    varMeDa[m].qcData.openQcNcContrib(nc, varMeDa[m].var);
+    varMeDa[m].qaData.openQcNcContrib(nc, varMeDa[m].var);
 
   // global atts at creation.
   initGlobalAtts(in);
@@ -1090,7 +1090,7 @@ QC::openQcNc(InFile &in)
 }
 
 bool
-QC::postProc(void)
+QA::postProc(void)
 {
   bool retCode=false;
 
@@ -1105,7 +1105,7 @@ QC::postProc(void)
 }
 
 bool
-QC::postProc_outlierTest(void)
+QA::postProc_outlierTest(void)
 {
   bool retCode=false;
 
@@ -1113,13 +1113,13 @@ QC::postProc_outlierTest(void)
   {
      VariableMetaData &vMD = varMeDa[i] ;
 
-     if( ! vMD.qcData.enableOutlierTest )
+     if( ! vMD.qaData.enableOutlierTest )
         continue ;
 
-     if( ! vMD.qcData.statAve.getSampleSize()  )
+     if( ! vMD.qaData.statAve.getSampleSize()  )
      {
        // compatibility mode: determine the statistics of old-fashioned results
-       // note: the qc_<variable>.nc file becomes updated
+       // note: the qa_<variable>.nc file becomes updated
        std::vector<std::string> vars ;
        std::string statStr;
 
@@ -1163,13 +1163,13 @@ QC::postProc_outlierTest(void)
          }
 
          if( j == 0 )
-           vMD.qcData.statMin.setSampleProperties( statStr );
+           vMD.qaData.statMin.setSampleProperties( statStr );
          else if( j == 1 )
-           vMD.qcData.statMax.setSampleProperties( statStr );
+           vMD.qaData.statMax.setSampleProperties( statStr );
          else if( j == 2 )
-           vMD.qcData.statAve.setSampleProperties( statStr );
+           vMD.qaData.statAve.setSampleProperties( statStr );
          else if( j == 3 )
-           vMD.qcData.statStdDev.setSampleProperties( statStr );
+           vMD.qaData.statStdDev.setSampleProperties( statStr );
 
          is=false;
        }
@@ -1219,20 +1219,20 @@ QC::postProc_outlierTest(void)
 // vals_max[10]=400.;
 // vals_min[10]=150.;
              // feed data to the statistics
-             vMD.qcData.statMin.add( vals_min, sz );
-             vMD.qcData.statMax.add( vals_max, sz );
-             vMD.qcData.statAve.add( vals_ave, sz );
-             vMD.qcData.statStdDev.add( vals_std_dev, sz );
+             vMD.qaData.statMin.add( vals_min, sz );
+             vMD.qaData.statMax.add( vals_max, sz );
+             vMD.qaData.statAve.add( vals_ave, sz );
+             vMD.qaData.statStdDev.add( vals_std_dev, sz );
            }
 
            // write statistics attributes
-           vMD.qcData.setStatisticsAttribute(nc);
+           vMD.qaData.setStatisticsAttribute(nc);
          }
        }
      }
 
      // the test: regular post-processing on the basis of stored statistics
-     if( vMD.qcData.outlier->test(&vMD.qcData) )
+     if( vMD.qaData.outlier->test(&vMD.qaData) )
        retCode = true;
   }
 
@@ -1240,7 +1240,7 @@ QC::postProc_outlierTest(void)
 }
 
 void
-QC::pushBackVarMeDa(Variable *var)
+QA::pushBackVarMeDa(Variable *var)
 {
    varMeDa.push_back( VariableMetaData(this, var) );
 
@@ -1251,16 +1251,16 @@ QC::pushBackVarMeDa(Variable *var)
      vMD.forkAnnotation(notes);
 
      // disable tests by given options
-     vMD.qcData.disableTests(var->name);
+     vMD.qaData.disableTests(var->name);
 
-     vMD.qcData.init(pIn, this, vMD.var->name);
+     vMD.qaData.init(pIn, this, vMD.var->name);
    }
 
    return;
 }
 
 void
-QC::setFilename(std::string f)
+QA::setFilename(std::string f)
 {
   dataFile = f;
   dataPath = hdhC::getPath(f);
@@ -1270,7 +1270,7 @@ QC::setFilename(std::string f)
 }
 
 void
-QC::setCheckMode(std::string m)
+QA::setCheckMode(std::string m)
 {
   isCheckMeta=false;
   isCheckTime=false;
@@ -1291,7 +1291,7 @@ QC::setCheckMode(std::string m)
 }
 
 void
-QC::setExit( int e )
+QA::setExit( int e )
 {
   if( e > exitCode )
   {
@@ -1303,7 +1303,7 @@ QC::setExit( int e )
 }
 
 void
-QC::setTable(std::string t, std::string acronym)
+QA::setTable(std::string t, std::string acronym)
 {
   // it is possible that this method is called from a spot,
   // where there is still no valid table name.
@@ -1317,7 +1317,7 @@ QC::setTable(std::string t, std::string acronym)
 }
 
 void
-QC::storeData(std::vector<hdhC::FieldData> &fA)
+QA::storeData(std::vector<hdhC::FieldData> &fA)
 {
   //FieldData structure defined in geoData.h
 
@@ -1331,26 +1331,26 @@ QC::storeData(std::vector<hdhC::FieldData> &fA)
     if( isNotFirstRecord && vMD.var->isFixed  )
       continue;
 
-    vMD.qcData.store(fA[i]) ;
+    vMD.qaData.store(fA[i]) ;
   }
 
   return ;
 }
 
 void
-QC::storeTime(void)
+QA::storeTime(void)
 {
    // testing time steps and bound (if any)
-   qcTime.testDate(pIn->nc);
+   qaTime.testDate(pIn->nc);
 
-   qcTime.timeOutputBuffer.store(qcTime.currTimeValue, qcTime.currTimeStep);
-   qcTime.sharedRecordFlag.store();
+   qaTime.timeOutputBuffer.store(qaTime.currTimeValue, qaTime.currTimeStep);
+   qaTime.sharedRecordFlag.store();
 
    return ;
 }
 
 bool
-QC::testPeriod(void)
+QA::testPeriod(void)
 {
   // return true, if a file is supposed to be not complete.
   // return false, a) if there is no period in the filename
@@ -1399,7 +1399,7 @@ QC::testPeriod(void)
   std::vector<Date> period;
 
   // convert ascii formated date to class Date
-  qcTime.getDRSformattedDateRange(period, sd);
+  qaTime.getDRSformattedDateRange(period, sd);
 
   // necessary for validity (not sufficient)
   if( period[0] > period[1] )
@@ -1424,20 +1424,20 @@ QC::testPeriod(void)
   bool bLeft0, bLeft1, bRight0, bRight1;
   bLeft0 = bLeft1 = bRight0 = bRight1 = false;
 
-  if( qcTime.isTimeBounds)
+  if( qaTime.isTimeBounds)
   {
-    period.push_back( qcTime.getDate("first", "left") );
-    period.push_back( qcTime.getDate("last", "right") );
+    period.push_back( qaTime.getDate("first", "left") );
+    period.push_back( qaTime.getDate("last", "right") );
 
-    bLeft1=(period[0].getJulianDay() + 1.25*qcTime.referenceTimeStep)
+    bLeft1=(period[0].getJulianDay() + 1.25*qaTime.referenceTimeStep)
               < period[2].getJulianDay();
-    bRight0=(period[1].getJulianDay() - 1.25*qcTime.referenceTimeStep)
+    bRight0=(period[1].getJulianDay() - 1.25*qaTime.referenceTimeStep)
               < period[3].getJulianDay();
   }
   else
   {
-    period.push_back( qcTime.getDate("first") );
-    period.push_back( qcTime.getDate("last") );
+    period.push_back( qaTime.getDate("first") );
+    period.push_back( qaTime.getDate("last") );
   }
 
   bLeft0= period[2] < period[0] ;
@@ -1454,7 +1454,7 @@ QC::testPeriod(void)
        text += period[2].getDate();
        text += "\nfilename=" ;
        text += period[0].getDate() ;
-       if( ! qcTime.isTimeBounds)
+       if( ! qaTime.isTimeBounds)
          text += "\n note: time_bounds not available" ;
 
        (void) notes->operate(capt, text) ;
@@ -1489,9 +1489,9 @@ QC::testPeriod(void)
   return false;
 }
 
-VariableMetaData::VariableMetaData(QC *p, Variable *v)
+VariableMetaData::VariableMetaData(QA *p, Variable *v)
 {
-   pQC = p;
+   pQA = p;
    var = v;
 
    if( v )
@@ -1502,14 +1502,14 @@ VariableMetaData::VariableMetaData(QC *p, Variable *v)
 
 VariableMetaData::~VariableMetaData()
 {
-  qcData.dataOutputBuffer.clear();
+  qaData.dataOutputBuffer.clear();
 }
 
 int
 VariableMetaData::finally(int eCode)
 {
-  // write pending results to qc-file.nc. Modes are considered there
-  qcData.flush();
+  // write pending results to qa-file.nc. Modes are considered there
+  qaData.flush();
 
   // annotation obj forked by the parent VMD
   notes->printFlags();
@@ -1531,7 +1531,7 @@ VariableMetaData::forkAnnotation(Annotation *n)
 //   isForkedAnnotation=true;
 
    // this is not a mistaken
-   qcData.setAnnotation(n);
+   qaData.setAnnotation(n);
 
    return;
 }
@@ -1546,7 +1546,7 @@ VariableMetaData::setAnnotation(Annotation *n)
 
 //   isForkedAnnotation=false;
 
-   qcData.setAnnotation(n);
+   qaData.setAnnotation(n);
 
    return;
 }

@@ -180,7 +180,7 @@ getNextSubPath()
     test ${hasChanged:-f} = t && fBase=(${fBase[*]})
 
     # found unlocked variable (constraint: SHOW_CLEAR=f)
-#    mkdir -p ${QC_RESULTS}/data/${subPath}
+#    mkdir -p ${QA_RESULTS}/data/${subPath}
 
     return
   done

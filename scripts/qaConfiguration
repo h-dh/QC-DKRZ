@@ -1,6 +1,6 @@
 #! /bin/bash
 
-##/*! \file qcConfiguration.h
+##/*! \file qaConfiguration.h
 ## \brief Parse configuration given by file or command-line
 
 ## Priority: command-line statements overwrite all previous
@@ -37,17 +37,17 @@
 setDefaults()
 {
   # the comment 'export' denotes keywords which must be submitted
-  # to the calling qcDirector
+  # to the calling qaDirector
 
   # you should not leave this unchanged in the config file
-  test ${#QC_RESULTS} -eq 0 && setKWL QC_RESULTS=${QC_SRC}/data
+  test ${#QA_RESULTS} -eq 0 && setKWL QA_RESULTS=${QA_SRC}/data
 
-  setKWL QC_MANAGER_HOST=$HOSTNAME
+  setKWL QA_MANAGER_HOST=$HOSTNAME
 
-  setKWL QC_BIN=${HOSTNAME}:${QC_SRC}/bin
+  setKWL QA_BIN=${HOSTNAME}:${QA_SRC}/bin
 
   # A list of machines executing asynchronous jobs.
-  setKWL QC_EXEC_HOSTS=$HOSTNAME
+  setKWL QA_EXEC_HOSTS=$HOSTNAME
 
   # If a process cannot be run, because e.g. the data base
   # is not available or a server is absent, then, after a
@@ -63,17 +63,17 @@ setDefaults()
 
 # List of number(s) of simultaneous entity of executors per host.
 # This is a friendly act against your colleagues.
-# Special: the one and only number is assigned to all QC_EXEC_HOSTS.
+# Special: the one and only number is assigned to all QA_EXEC_HOSTS.
 # Fine tuning: each positional number in the list corresponds to a
-# position in the QC_EXEC_HOSTS list. If less positions are given
-# than in QC_EXEC_HOSTS, then the last position is assigned to
+# position in the QA_EXEC_HOSTS list. If less positions are given
+# than in QA_EXEC_HOSTS, then the last position is assigned to
 # the omitted positions.
   setKWL NUM_EXEC_THREADS=1
 
   setKWL SLEEP_PERIOD=300            # [s] export
 }
 
-add2qcConf()
+add2qaConf()
 {
   local prospect=$1
 
@@ -86,11 +86,11 @@ add2qcConf()
 
   # found a name
   # test whether this name was already specified
-  for(( i=0 ; i < ${#qcConf[*]} ; ++i )) ; do
-    test "${qcConf[i]}" = "${prospect}" && return 1
+  for(( i=0 ; i < ${#qaConf[*]} ; ++i )) ; do
+    test "${qaConf[i]}" = "${prospect}" && return 1
   done
 
-  qcConf[${#qcConf[*]}]=${prospect}
+  qaConf[${#qaConf[*]}]=${prospect}
 
   return 0
 }
@@ -105,7 +105,7 @@ changeGroupPermission()
     item=$( ls -ld $1 | awk '{print $4}' )
     if [ "$item" != "$GROUP_NAME" ] ; then
       if ! chgrp -R $GROUP_NAME $1 &> /dev/null ; then
-        std_out "qcConfiguration::changeGroupPermission(): chgrp "
+        std_out "qaConfiguration::changeGroupPermission(): chgrp "
         std_out "Invalid group or you are probably not allowed to change group."
         std_out "If so, please ask your admin to chgrp -R $GROUP_NAME $1"
         std_out flush
@@ -118,7 +118,7 @@ changeGroupPermission()
     if [ ${#sendText} -eq 0 -a ${item:6:1} != s ] ; then
       # It would be amazing if chmod would not be allowed, but chgrp was
       find $1 -type d -exec chmod g+srwx {} \;
-      find $1 -type f -exec $QC_SRC/scripts/cpMod {} \;
+      find $1 -type f -exec $QA_SRC/scripts/cpMod {} \;
     fi
   fi
 }
@@ -137,10 +137,10 @@ checkTools()
   # we know that it's bash
 
   if [ $CHECK_TOOLS = t ] ; then
-    if [ ! -e $QC_SRC ] ; then
-      std_out "$QC_SRC\t\t directory not found"
+    if [ ! -e $QA_SRC ] ; then
+      std_out "$QA_SRC\t\t directory not found"
     else
-      std_out "QC_SRC\t\t $QC_SRC"
+      std_out "QA_SRC\t\t $QA_SRC"
     fi
   fi
 
@@ -148,18 +148,18 @@ checkTools()
 
   # invoke execution paths
   local bin l nnn
-  for(( l=0 ; l < ${#QC_BIN[*]} ; ++l )) ; do
-    bin=${QC_BIN[l]}
+  for(( l=0 ; l < ${#QA_BIN[*]} ; ++l )) ; do
+    bin=${QA_BIN[l]}
     bin=${bin%/}  # rm trailing '/'
     if ! mkdir -p ${bin#*:} &> /dev/null ; then
        std_out "Fatal error: could not mkdir ${bin#*:}"
     fi
 
-    # valid on the qc-DKRZ host
+    # valid on the qa-DKRZ host
     if [ "${bin#*:}" = "${bin}" ] ; then
-      PATH=${bin}:$PATH  # this is 'imported' by qc-DKRZ
+      PATH=${bin}:$PATH  # this is 'imported' by qa-DKRZ
     elif [ "${bin%:*}" = "${HOSTNAME}" ] ; then
-      PATH=${bin#*:}:$PATH  # this is 'imported' by qc-DKRZ
+      PATH=${bin#*:}:$PATH  # this is 'imported' by qa-DKRZ
     fi
   done
 
@@ -305,13 +305,13 @@ descript()
        # session log-file
        com=cat
        localDev='>> $SESSION_LOGDIR/session.log'
-    elif [ ${#QC_SRC} -gt 0 ] ; then
+    elif [ ${#QA_SRC} -gt 0 ] ; then
       # NoDevice
       local str0
       str0="undeliv_$( date +'%FT%T' )_${HOSTNAME%%.*}".txt
-      if mkdir -p $QC_SRC/NoDevice &> /dev/null ; then
+      if mkdir -p $QA_SRC/NoDevice &> /dev/null ; then
         com=cat
-        localDev='>> ${QC_SRC}/NoDevice/$str0'
+        localDev='>> ${QA_SRC}/NoDevice/$str0'
       fi
     fi
   fi
@@ -324,23 +324,23 @@ descript()
   eval $com $localDev <<!
 $sendText
 
-Usage: qc-DKRZ options
+Usage: qa-DKRZ options
 
   Quality Control of file system based ${PROJECT} experiments.
 
-  QC for file system (FS) based data of climatological experiments
+  QA for file system (FS) based data of climatological experiments
   contained in netCDF files.
-  The QC builds directories for storage of check-log files, session
-  annotations and time series (netCDF) of QC specific data. The
+  The QA builds directories for storage of check-log files, session
+  annotations and time series (netCDF) of QA specific data. The
   latter is given in a directory tree similar to the one of the original
   data, i.e. arranged for variables and the corresponding frequency.
   The logfiles for checked experiments are stored within directory
   'check_logs', which contain sub-dirs _Notes and _Periods for
   annotations of failed checks and checked time-range, respectively.
-  Please, have a look at QC-0.4/doc/qc-user-manual.pdf for more details.
+  Please, have a look at QA-DKRZ/doc/qa-user-manual.pdf for more details.
 
   A run is usually started by executing:
-     path/QC-0.4/scripts/qc-DKRZ options
+     path/QA-DKRZ/scripts/qa-DKRZ options
   where options contain usually -c 'file' and/or -f 'file' for
   one or two configuration files.
   A configuration file with processing directives may contain a link
@@ -402,17 +402,17 @@ Usage: qc-DKRZ options
              items without assignments are boolean switches (t or f) where
              a key-word without any assign,ment expands to (t).
              Detailed description is given in file
-             QC-0.4/example/CORDEX_qc.conf .
+             QA-DKRZ/example/CORDEX_qa.conf .
    -c name   Read configuration.
    -f name   Read configuration.
              Note: one configuration file may contain frequently
              modified assignments while the other hold all time
              assignments. If a name without leading path component
-             is not available locally, then QC-0.4/tables is searched.
+             is not available locally, then QA-DKRZ/tables is searched.
              Note: files for -c and -f are arbitrarily convertible.
    -h/--help This description.
    -L        Locking of paths and variables
-   -m        Monitor variable name most recently qc'ed in status line.
+   -m        Monitor variable name most recently qa'ed in status line.
    -P        Project name (usually PROJECT= in a config-file).
    -S        Selection of paths and variables (see config-file).
    -x        Equivalent to -E_DEBUG_C -E_DEBUG_E -E_DEBUG_M.
@@ -442,12 +442,12 @@ displayComLineOptions()
 
       Additional options usually enabled on the command-line:
       CHECK_TOOLS           Check and show availability of tools and exit.
-      DEBUG_C[ONFIGURATOR]  Log qcConfiguration processing to stderr.
-      DEBUG_E[XECUTOR]      Log qcExecutor processing to files corresponding to
-                            variable names (where qc-DKRZ was started).
-      DEBUG_M[ANAGER]       Execution log of the qc-DKRZ to stderr.
+      DEBUG_C[ONFIGURATOR]  Log qaConfiguration processing to stderr.
+      DEBUG_E[XECUTOR]      Log qaExecutor processing to files corresponding to
+                            variable names (where qa-DKRZ was started).
+      DEBUG_M[ANAGER]       Execution log of the qa-DKRZ to stderr.
       DEBUG_X[=script]      Enable debugging of external script; default all.
-      FLOW_TRACE            Flow trace analysis of the qc-DKRZ main-loop.
+      FLOW_TRACE            Flow trace analysis of the qa-DKRZ main-loop.
                             Note that specific commenting-in is required.
       NEXT[=num]            Process the next num variables.
       ONLY_SUMMARY          Post-processed by default when ever a check
@@ -457,7 +457,7 @@ displayComLineOptions()
       SHOW_CONF             Show configuration and exit.
       SHOW_EXP              Show names of paths with scheduled variables.
       SHOW_NEXT[=num}       Show num next scheduled variables and paths.
-      REFRESH_CF_STANDARD   wget original sources from PCMDI into QC-x.x/tables.
+      REFRESH_CF_STANDARD   wget original sources from PCMDI into QA-DKRZ/tables.
       REUSE_PATH_LIST       Use a path-list left previously for a resumed session.
 "
 
@@ -495,14 +495,14 @@ findEmbeddedConf()
     setKWL PROJECT_AS=${PROJECT}
   fi
 
-  # Is there a QC_CONFIG assignment embedded in the current file?
-  # This separates commented-out from enabled QC_CONF assignment
-  item="$(grep 'QC_CONF=' "${currConf}" 2> /dev/null )"
+  # Is there a QA_CONFIG assignment embedded in the current file?
+  # This separates commented-out from enabled QA_CONF assignment
+  item="$(grep 'QA_CONF=' "${currConf}" 2> /dev/null )"
   item="${item// /}"
   item=( ${item} )           # several lines are possible
   item=( ${item[*]%%\#*} )
   item=( ${item[*]} )
-  item=${item#QC_CONF=}
+  item=${item#QA_CONF=}
 
   test ${#item} -eq 0 && return
 
@@ -510,10 +510,10 @@ findEmbeddedConf()
   local pDir  # index 0 -> 3 provides precedence
 
   pDir[0]=''  # absolute or local path
-  pDir[1]=${QC_SRC}/tables
-  pDir[2]=${QC_SRC}/tables/${PROJECT_AS}
-  pDir[3]=${QC_SRC}/tables/projects
-  pDir[4]=${QC_SRC}/tables/projects/${PROJECT_AS}
+  pDir[1]=${QA_SRC}/tables
+  pDir[2]=${QA_SRC}/tables/${PROJECT_AS}
+  pDir[3]=${QA_SRC}/tables/projects
+  pDir[4]=${QA_SRC}/tables/projects/${PROJECT_AS}
   local ix
 
   for(( ix=0 ; ix < 5 ; ++ix )) ; do
@@ -521,7 +521,7 @@ findEmbeddedConf()
        p=${pDir[ix]}/
        test ${ix} -eq 0 && p=$(pwd)/
 
-       if add2qcConf ${p}${item##*/} ; then
+       if add2qaConf ${p}${item##*/} ; then
          findEmbeddedConf ${p}${item##*/}
        fi
     fi
@@ -556,51 +556,51 @@ getConfPriority()
   # the first two items of array 'task_priority' would have been
   # set while performing getops().
 
-  local i item qcResults swp sz1 sz
+  local i item qaResults swp sz1 sz
 
   # in case there are multiple conf files, then 'task' files followed by
-  # the sequence of embedded QC_CONF assignments get
+  # the sequence of embedded QA_CONF assignments get
   # priority with the order the task-files are specified.
-  sz1=$(( ${#qcConf[*]} -1 ))
-  sz=${#qcConf[*]}
+  sz1=$(( ${#qaConf[*]} -1 ))
+  sz=${#qaConf[*]}
   local i1 i2
 
   for(( i1=0 ; i1 < sz1 ; ++i1 )) ; do
     for((i2=i1+1 ; i2 < sz ; ++i2 )) ; do
-      if [ "${qcConf[i1]##*.}" != task -a "${qcConf[i2]##*.}" = task ] ; then
-      swp=${qcConf[i1]}
-      qcConf[${i1}]=${qcConf[i2]}
-      qcConf[${i2}]=${swp}
+      if [ "${qaConf[i1]##*.}" != task -a "${qaConf[i2]##*.}" = task ] ; then
+      swp=${qaConf[i1]}
+      qaConf[${i1}]=${qaConf[i2]}
+      qaConf[${i2}]=${swp}
     fi
     done
   done
 
   # resolve relative paths
   for(( i1=0 ; i1 < sz ; ++i1 )) ; do
-    if [ ${qcConf[i1]:0:2} = './' ] ; then
-      qcConf[i1]=${qcConf[i1]:2}
-    elif [ ${qcConf[i1]:0:3} = '../' ] ; then
+    if [ ${qaConf[i1]:0:2} = './' ] ; then
+      qaConf[i1]=${qaConf[i1]:2}
+    elif [ ${qaConf[i1]:0:3} = '../' ] ; then
       item=$(pwd)
       item=${item%/*}
-      qcConf[i1]=${item}/${qcConf[i1]:3}
+      qaConf[i1]=${item}/${qaConf[i1]:3}
     fi
   done
 
   # if a config file found so far is not a valid file, then try in
-  #   1) QC_SRC/tables
-  #   2) QC_SRC/tables/projects
+  #   1) QA_SRC/tables
+  #   2) QA_SRC/tables/projects
 
   # go through the chain of config files unless no more
   # is found or a path found before is found again;
   # an invalid file would also break processing
-  sz=${#qcConf[*]}
+  sz=${#qaConf[*]}
   local j
 
   for(( i=0 ; i < sz ; ++i )) ; do
     # attach a chain of embedded conf-files
     # sets also PROJECT if found in the sequence of conf-files.
-    if ! add2qcConf ${qcConf[i]} ; then
-      findEmbeddedConf ${qcConf[i]}
+    if ! add2qaConf ${qaConf[i]} ; then
+      findEmbeddedConf ${qaConf[i]}
     fi
   done
 
@@ -608,13 +608,13 @@ getConfPriority()
   # paths: local, tables, tables/projects
   if [ ${#PROJECT_AS} -gt 0 ] ; then
     local name
-    name=${PROJECT_AS}_qc.conf
+    name=${PROJECT_AS}_qa.conf
 
     local p
-    for p in '' ${QC_SRC}/tables/ ${QC_SRC}/tables/projects/ ; do
+    for p in '' ${QA_SRC}/tables/ ${QA_SRC}/tables/projects/ ; do
       if [ -f ${p}${name} ] ; then
-         # add to qcConf array preserving uniquness
-         if ! add2qcConf ${p}${name} ; then
+         # add to qaConf array preserving uniquness
+         if ! add2qaConf ${p}${name} ; then
            findEmbeddedConf ${p}${name}
          fi
       fi
@@ -622,14 +622,14 @@ getConfPriority()
   fi
 
   # construct a comma-sep-list
-  test ${#qcConf[*]} -gt 0 && QC_CONFS=${qcConf[0]}
+  test ${#qaConf[*]} -gt 0 && QA_CONFS=${qaConf[0]}
 
-  for(( i=1 ; i < ${#qcConf[*]} ; ++i )) ; do
-    QC_CONFS="${QC_CONFS},${qcConf[i]}"
+  for(( i=1 ; i < ${#qaConf[*]} ; ++i )) ; do
+    QA_CONFS="${QA_CONFS},${qaConf[i]}"
   done
 
-  if [ ${#qcC} -gt 0 ] ; then
-    setKWL TASK=${qcConf[0]##*/}
+  if [ ${#qaC} -gt 0 ] ; then
+    setKWL TASK=${qaConf[0]##*/}
   fi
 
   return
@@ -643,13 +643,13 @@ initSession()
   # Specific command-line options (SHOW_*)
   # will write 'test_session', i.e. set RESUME_SESSION=f.
   # A session is definded by conf and task files given
-  # in array QC_CONF.
+  # in array QA_CONF.
   # When all checkums of the current files are found in a previous session,
   # then the latter is resumed, i.e. RESUME_SESSION=t.
   # Explicit RESUME_SESSION=f disables.
 
   # base path to sessions
-  test ! -d ${QC_RESULTS}/session_logs && mkdir -p ${QC_RESULTS}/session_logs
+  test ! -d ${QA_RESULTS}/session_logs && mkdir -p ${QA_RESULTS}/session_logs
 
   setKWL RESUME_SESSION=t  # by default
 
@@ -674,12 +674,12 @@ initSession()
   declare -a curr_md5
   local currDate=$( date +'%F_%T' )
 
-  local qcC qcCs
-  qcCs=( ${QC_CONFS[*]//,/ } )
+  local qaC qaCs
+  qaCs=( ${QA_CONFS[*]//,/ } )
 
-  if [ ${#qcCs[*]} -gt 0 ] ; then
-    for qcC in ${qcCs[*]}  ; do
-      curr_md5=( ${curr_md5[*]} $( md5sum $qcC | awk '{print $1}') )
+  if [ ${#qaCs[*]} -gt 0 ] ; then
+    for qaC in ${qaCs[*]}  ; do
+      curr_md5=( ${curr_md5[*]} $( md5sum $qaC | awk '{print $1}') )
     done
   else
     curr_md5=( '-' )
@@ -692,15 +692,15 @@ initSession()
     declare -a dates0 dates1
 
     # look for a previous identical session given in file sess_md5.txt
-    if [ -f ${QC_RESULTS}/session_logs/sess_md5.txt ] ; then
+    if [ -f ${QA_RESULTS}/session_logs/sess_md5.txt ] ; then
       # first item is a date, second is a checksum.
       dates0=( $(grep "${curr_md5[0]}" \
-                ${QC_RESULTS}/session_logs/sess_md5.txt 2> /dev/null \
+                ${QA_RESULTS}/session_logs/sess_md5.txt 2> /dev/null \
                 | awk '{print $1}' ) )
 
-      for(( k=1 ; k < ${#qcCs[*]} ; ++k )) ; do
+      for(( k=1 ; k < ${#qaCs[*]} ; ++k )) ; do
         dates1=( $(grep "${curr_md5[k]}" \
-                 ${QC_RESULTS}/session_logs/sess_md5.txt 2> /dev/null \
+                 ${QA_RESULTS}/session_logs/sess_md5.txt 2> /dev/null \
                  |  awk '{print $1}' ) )
 
         for(( i=${#dates0[*]}-1 ; i >-1 ; --i )) ; do
@@ -731,8 +731,8 @@ initSession()
   else
     if [ ${testCase:-f} = t ] ; then
       setKWL SESSION=test_session
-      test -d ${QC_RESULTS}/session_logs/test_session && \
-         \rm -r ${QC_RESULTS}/session_logs/test_session
+      test -d ${QA_RESULTS}/session_logs/test_session && \
+         \rm -r ${QA_RESULTS}/session_logs/test_session
     fi
 
     setKWL RESUME_SESSION=f
@@ -740,20 +740,20 @@ initSession()
 
   # session date wasn't set externally.
   if [ ${RESUME_SESSION} = f -a ${testCase:-f} = f ] ; then
-    for(( k=0 ; k < ${#qcCs[*]} ; ++k )) ; do
+    for(( k=0 ; k < ${#qaCs[*]} ; ++k )) ; do
       # write a new entry for each conf/task file
       echo -e -n "${currDate}\t" \
-             >> ${QC_RESULTS}/session_logs/sess_md5.txt
+             >> ${QA_RESULTS}/session_logs/sess_md5.txt
       echo -e -n "${curr_md5[k]}\t" \
-             >> ${QC_RESULTS}/session_logs/sess_md5.txt
-      echo       "${qcCs[k]}" \
-             >> ${QC_RESULTS}/session_logs/sess_md5.txt
+             >> ${QA_RESULTS}/session_logs/sess_md5.txt
+      echo       "${qaCs[k]}" \
+             >> ${QA_RESULTS}/session_logs/sess_md5.txt
     done
 
     setKWL SESSION=${currDate}
   fi
 
-  setKWL SESSION_LOGDIR=${QC_RESULTS}/session_logs/${SESSION}
+  setKWL SESSION_LOGDIR=${QA_RESULTS}/session_logs/${SESSION}
   mkdir -p ${SESSION_LOGDIR}
 
   return
@@ -763,23 +763,23 @@ loadSetting()
 {
   local tmp
 
-  if [ ${#QC_SRC} -eq 0 ] ; then
-    sendSubject='QC: initialisation error'
-    std_out "QC_SRC must be set. Exit."
+  if [ ${#QA_SRC} -eq 0 ] ; then
+    sendSubject='QA: initialisation error'
+    std_out "QA_SRC must be set. Exit."
     std_out flush
     exit 1
   fi
 
-  if [ ! -d "$QC_SRC" ] ; then
-    sendSubject='QC: initialisation error'
-    std_out "Source dir $QC_SRC must exist and must be writable. Exit."
+  if [ ! -d "$QA_SRC" ] ; then
+    sendSubject='QA: initialisation error'
+    std_out "Source dir $QA_SRC must exist and must be writable. Exit."
     std_out flush
     exit 1
   fi
 
-  if [ ${#QC_RESULTS} -eq 0 ] ; then
-    sendSubject='QC: initialisation error'
-    std_out "missing QC_RESULTS assignment. Exit."
+  if [ ${#QA_RESULTS} -eq 0 ] ; then
+    sendSubject='QA: initialisation error'
+    std_out "missing QA_RESULTS assignment. Exit."
     std_out flush
     exit 1
   fi
@@ -804,17 +804,17 @@ loadSetting()
   tmp="${tmp[*]}"
   PROJECT_DATA=${tmp// /,}
 
-  QC_SRC=${QC_SRC%/}  # rm trailing '/'
+  QA_SRC=${QA_SRC%/}  # rm trailing '/'
 
-  QC_RESULTS=${QC_RESULTS%/}  # rm trailing '/'
-  if [ ${QC_RESULTS:0:1} != '/' ] ; then
-    if [ ${QC_RESULTS:0:2} = './'  ] ; then
-      QC_RESULTS=$(pwd)${QC_RESULTS:1}
-    elif [ ${QC_RESULTS:0:3} = '../'  ] ; then
+  QA_RESULTS=${QA_RESULTS%/}  # rm trailing '/'
+  if [ ${QA_RESULTS:0:1} != '/' ] ; then
+    if [ ${QA_RESULTS:0:2} = './'  ] ; then
+      QA_RESULTS=$(pwd)${QA_RESULTS:1}
+    elif [ ${QA_RESULTS:0:3} = '../'  ] ; then
       myPwd=$(pwd)
-      QC_RESULTS=${myPwd%/*}${QC_RESULTS:2}
+      QA_RESULTS=${myPwd%/*}${QA_RESULTS:2}
     else
-      QC_RESULTS=$(pwd)/${QC_RESULTS}
+      QA_RESULTS=$(pwd)/${QA_RESULTS}
     fi
   fi
 
@@ -825,10 +825,10 @@ loadSetting()
       exit 1
     fi
 
-    if [ "$pD" = "$QC_RESULTS" ] ; then
+    if [ "$pD" = "$QA_RESULTS" ] ; then
       # this must not happen
-      sendSubject='QC: configuration error'
-      std_out "Conflict: QC_RESULTS and PROJECT_DATA are identical. Exit."
+      sendSubject='QA: configuration error'
+      std_out "Conflict: QA_RESULTS and PROJECT_DATA are identical. Exit."
       std_out flush
       exit 1
     fi
@@ -842,14 +842,14 @@ loadSetting()
     exit 1
   fi
 
-  # Naming and placement of the base dirs in QC_RESULTS.
+  # Naming and placement of the base dirs in QA_RESULTS.
   # Inits also session-logs
   naming
 
   # change permissions
-  changeGroupPermission $QC_SRC
-  if [ "${QC_RESULTS:0:${#QC_SRC}}" != "$QC_SRC" ] ; then
-    changeGroupPermission $QC_RESULTS
+  changeGroupPermission $QA_SRC
+  if [ "${QA_RESULTS:0:${#QA_SRC}}" != "$QA_SRC" ] ; then
+    changeGroupPermission $QA_RESULTS
   fi
 
   # any error case happened before is written now
@@ -878,8 +878,7 @@ parseConfigurationFile()
      return
   fi
 
-  # now parse the configuration file. Syntax see
-  # template file path/QC/scripts/qualityControl.conf
+  # now parse the configuration file.
 
   confLine=
 
@@ -957,25 +956,25 @@ naming()
 {
   # A change in the placement of results.
 
-  # QC_RESULTS will contain sub-dirs:
+  # QA_RESULTS will contain sub-dirs:
   # tables, data, check_logs,
   # and checksum; the latter only on request.
   # Sub-dir session_logs contains config, tasks, processing information.
   # As before, directory data/${PROJECT} will get the dir-tree spanned by
   # PROJECT_DATA=.*/project-name/dir-tree
 
-  setKWL QC_RESULTS=$QC_RESULTS
+  setKWL QA_RESULTS=$QA_RESULTS
 
   # the place for general log-messages
   initSession
 
   # sub-dir for experiment logs
-  setKWL EXP_LOGDIR=${QC_RESULTS}/check_logs
+  setKWL EXP_LOGDIR=${QA_RESULTS}/check_logs
   mkdir -p $EXP_LOGDIR
 
-  if ! mkdir -p ${QC_RESULTS}/data ; then
-    sendSubject='QC: initialisation error'
-    std_out "Could not mkdir ${QC_RESULTS}/data. Exit."
+  if ! mkdir -p ${QA_RESULTS}/data ; then
+    sendSubject='QA: initialisation error'
+    std_out "Could not mkdir ${QA_RESULTS}/data. Exit."
     std_out flush
     exit 1
   fi
@@ -984,7 +983,7 @@ naming()
 
   # project table
   if [ ${#TABLE_PATH} -eq 0 ] ; then
-    TABLE_PATH=${QC_RESULTS}/tables
+    TABLE_PATH=${QA_RESULTS}/tables
     test ! -d ${TABLE_PATH} && mkdir -p ${TABLE_PATH}
     setKWL TABLE_PATH=${TABLE_PATH}
   else
@@ -1070,6 +1069,8 @@ parseLines()
      fi
   done
 
+  line_="${line_//QC/QA}"
+  line_="${line_//qc/qa}"
 
   # we'd like to remember effective lines in the conf file
   confLine=${confLine}"${line_}"\\n
@@ -1306,8 +1307,8 @@ Command-line parameters:
 $( echo "${comLine[*]}" )
 
 Current Paths:
-Source directory: $QC_SRC
-QC data directory: $QC_RESULTS/data
+Source directory: $QA_SRC
+QA data directory: $QA_RESULTS/data
 FS data directory: ${PROJECT_DATA[*]}
 !
 
@@ -1389,8 +1390,8 @@ setKWL()
 
 #  eval ${key}="${value// /\\ /}"
 
-  # special: QC_BIN
-  if [ "$key" = QC_BIN ] ; then
+  # special: QA_BIN
+  if [ "$key" = QA_BIN ] ; then
     value=${value%/}  # rm a trailing '/'
     vals=( ${value//,/ } )
     local host hosts
@@ -1428,23 +1429,23 @@ setKWL()
        fi
     done
 
-    QC_BIN=
+    QA_BIN=
     # convert relative paths to abolute ones
-    test "${vals[0]:0:1}" != '/' && vals[0]=${QC_SRC}/${vals[0]}
-    QC_BIN[0]=${vals[0]}
+    test "${vals[0]:0:1}" != '/' && vals[0]=${QA_SRC}/${vals[0]}
+    QA_BIN[0]=${vals[0]}
 
     for(( i=1 ; i < ${#vals[*]} ; ++i )) ; do
       # convert relative paths to abolute ones
-      test "${vals[i]:0:1}" != '/' && vals[$i]=${QC_SRC}/${vals[i]}
+      test "${vals[i]:0:1}" != '/' && vals[$i]=${QA_SRC}/${vals[i]}
 
-      QC_BIN[${#QC_BIN[*]}]=${hosts[i]}${vals[i]}
+      QA_BIN[${#QA_BIN[*]}]=${hosts[i]}${vals[i]}
     done
-    value="${QC_BIN[*]}"
+    value="${QA_BIN[*]}"
     value=${value// /,}
-    unset QC_BIN
+    unset QA_BIN
 
     # to be applied within this script
-    curr_QC_BIN=${value%%,*}
+    curr_QA_BIN=${value%%,*}
   fi
 
   # was key already defined?
@@ -1500,11 +1501,11 @@ std_out()
         sendText="${sendText}\n${outputText[j]}"
       done
       if [ ${#sendSubject} -eq 0 ] ; then
-        sendSubject="qcConfiguration: message"
+        sendSubject="qaConfiguration: message"
       fi
       sendEMail
     elif [ ${#SESSION_LOGDIR} -gt 0 ] ; then
-      str0="$( date +'%F %T' ) ${HOSTNAME%%.*}:qcConfiguration"
+      str0="$( date +'%F %T' ) ${HOSTNAME%%.*}:qaConfiguration"
       echo -e "\n${str0}" >> $SESSION_LOGDIR/session.log
 
       for(( j=0 ; j < ${#outputText[*]} ; ++j )) ; do
@@ -1513,9 +1514,9 @@ std_out()
     else
       # str0 gets the filename for undeliverables
       str0="undeliv_$( date +'%FT%T' )_${HOSTNAME%%.*}".txt
-      if mkdir -p $QC_SRC/NoDevice &> /dev/null ; then
+      if mkdir -p $QA_SRC/NoDevice &> /dev/null ; then
         for(( j=0 ; j < ${#outputText[*]} ; ++j )) ; do
-          echo -e "${outputText[j]}" >> $QC_SRC/NoDevice/$str0
+          echo -e "${outputText[j]}" >> $QA_SRC/NoDevice/$str0
         done
       fi
     fi
@@ -1559,7 +1560,7 @@ tryExist()
   fi
 
   if [ "$1" = 'com' ] ; then
-    if which ${curr_QC_BIN#*:}/$2 &>/dev/null ; then
+    if which ${curr_QA_BIN#*:}/$2 &>/dev/null ; then
       return 0
     elif [ "$3" != 'compile' ] ; then
       if which $2 &>/dev/null ; then
@@ -1571,15 +1572,15 @@ tryExist()
     fi
 
     # try a C compilation
-    if [ -e ${QC_SRC}/src/${2%.x}.c ] ; then
+    if [ -e ${QA_SRC}/src/${2%.x}.c ] ; then
       if [ ${#CC} -eq 0 ] ; then
         sendText="${sendText}\nC compiler not found."
         return 1
       fi
 
       local answ status
-      answ=$( $CC ${CFLAGS[*]} -o ${curr_QC_BIN#*:}/$2 \
-          ${QC_SRC}/src/${2%.x}.c )
+      answ=$( $CC ${CFLAGS[*]} -o ${curr_QA_BIN#*:}/$2 \
+          ${QA_SRC}/src/${2%.x}.c )
 
       status=$?
       if [ ${status} -eq 0 ] ; then
@@ -1590,15 +1591,15 @@ tryExist()
       fi
 
     # try a C++ compilation
-    elif [ -e ${QC_SRC}/src/${2%.x}.cpp ] ; then
+    elif [ -e ${QA_SRC}/src/${2%.x}.cpp ] ; then
       if [ ${#CXX} -eq 0 ] ; then
         sendText="${sendText}\nC++ compiler not found CXX=${CXX}."
         return 1
       fi
 
       local answ status
-      answ=$( $CXX ${CPPFLAGS[*]} -o ${curr_QC_BIN#*:}/$2 \
-          ${QC_SRC}/src/${2%.x}.cpp &> /dev/null )
+      answ=$( $CXX ${CPPFLAGS[*]} -o ${curr_QA_BIN#*:}/$2 \
+          ${QA_SRC}/src/${2%.x}.cpp &> /dev/null )
 
       status=$?
       if [ ${status} -eq 0 ] ; then
@@ -1608,8 +1609,8 @@ tryExist()
         return 1
       fi
     else
-      if [ ! -e ${curr_QC_BIN#:*}/$2 ] ; then
-        sendText="${sendText}\n${2%.x}.c|cpp not found in ${QC_SRC}/src."
+      if [ ! -e ${curr_QA_BIN#:*}/$2 ] ; then
+        sendText="${sendText}\n${2%.x}.c|cpp not found in ${QA_SRC}/src."
         sendText="${sendText} No compilation."
         return 1
       fi
@@ -1617,7 +1618,7 @@ tryExist()
       return 0  # ok
     fi
 
-    std_out 'qcConfiguration:tryExist() we never shall arrive here'
+    std_out 'qaConfiguration:tryExist() we never shall arrive here'
     std_out flush
     exit 1
   fi
@@ -1629,7 +1630,7 @@ tryExist()
 # ############### main ###############
 umask 002
 
-# called by qc-DKRZ
+# called by qa-DKRZ
 
 # very specific: convert -E_SELECT or -E_LOCK into -S or -L respectively.
 # Also, accept -E_SELECT param or -E_LOCK param, i.e. separated by a space
@@ -1656,7 +1657,7 @@ done
 while getopts c:E:f:hHmP:p:QqL:S:s:T:Vx-: option
 do
   case $option in
-    c)  qcConf[${#qcConf[*]}]=${OPTARG}
+    c)  qaConf[${#qaConf[*]}]=${OPTARG}
         test ! -f ${OPTARG} && noSuchFile=( ${noSuchFile[*]} ${OPTARG} )
         ;;
     E)  if [ ${OPTARG:0:8} = '_DEBUG_C' ] ; then
@@ -1667,11 +1668,11 @@ do
           setKWL ${OPTARG:1}
         fi
         ;;
-    f)  qcConf[${#qcConf[*]}]=${OPTARG}
+    f)  qaConf[${#qaConf[*]}]=${OPTARG}
         test ! -f ${OPTARG} && noSuchFile=( ${noSuchFile[*]} ${OPTARG} )
         ;;
     h)  isHelp=t ;;
-    p)  setKWL QC_SRC=$OPTARG ;;
+    p)  setKWL QA_SRC=$OPTARG ;;
     P)  setKWL PROJECT=$OPTARG ;;
     T)  TTY=${OPTARG} ;;
     x)  set -x ;;
@@ -1701,8 +1702,8 @@ setDefaults
 getConfPriority
 
 # proceed from low to high priority
-for(( i=${#qcConf[*]}-1 ; i > -1 ; --i )) ; do
-  parseConfigurationFile ${qcConf[i]}
+for(( i=${#qaConf[*]}-1 ; i > -1 ; --i )) ; do
+  parseConfigurationFile ${qaConf[i]}
 done
 
 test ${#PROJECT} -eq 0 && setKWL PROJECT=NONE
@@ -1711,10 +1712,10 @@ test ${#PROJECT_AS} -eq 0 && setKWL PROJECT_AS=${PROJECT}
 # command-line overwrites configuration file assignments
 comLine=( $* ) # for e-mail and initSession
 
-test ${#QC_CONFS} -gt 0 && setKWL QC_CONF=${QC_CONFS}
+test ${#QA_CONFS} -gt 0 && setKWL QA_CONF=${QA_CONFS}
 
-# Note: option -T is used internally, when the qc-DKRZ
-#       executes the qcConfiguration script.
+# Note: option -T is used internally, when the qa-DKRZ
+#       executes the qaConfiguration script.
 setF -f
 
 # stage1
@@ -1755,11 +1756,11 @@ do
         elif [ "${OPTARG%=*}" = "auto-up" ] ; then
            if [ "${OPTARG#*=}" = disable -o "${OPTARG#*=}" = f -o "${OPTARG#*=}" = d ]
            then
-              if grep -q auto-up ${QC_SRC}/.conf &> /dev/null; then
+              if grep -q auto-up ${QA_SRC}/.conf &> /dev/null; then
                 setKWL AUTO_UPDATE=f
               fi
            else
-              if ! grep -q auto-up ${QC_SRC}/.conf &> /dev/null; then
+              if ! grep -q auto-up ${QA_SRC}/.conf &> /dev/null; then
                  setKWL AUTO_UPDATE=t
               fi
            fi
@@ -1783,7 +1784,7 @@ done
 setF +f
 
 # for downward compatibility
-test ${#QC_DATA_ROOT} -gt 0 && setKWL QC_RESULTS=${QC_DATA_ROOT}
+test ${#QA_DATA_ROOT} -gt 0 && setKWL QA_RESULTS=${QA_DATA_ROOT}
 test ${#DATA_ROOT_FS} -gt 0 && setKWL PROJECT_DATA=${DATA_ROOT_FS}
 
 # almost everything is done here
@@ -1797,11 +1798,11 @@ loadSetting
 
 setF -f
 
-# Synchronise QC_EXEC_HOSTS and NUM_EXEC_THREADS
-if [ ${#NUM_EXEC_THREADS[*]} -lt ${#QC_EXEC_HOSTS[*]} ] ; then
+# Synchronise QA_EXEC_HOSTS and NUM_EXEC_THREADS
+if [ ${#NUM_EXEC_THREADS[*]} -lt ${#QA_EXEC_HOSTS[*]} ] ; then
   myLastPos=$(( ${#NUM_EXEC_THREADS[*]} -1 ))
   myLastNum=${NUM_EXEC_THREADS[myLastPos]}
-  for(( j=myLastPos+1 ; j < ${#QC_EXEC_HOSTS[*]} ; ++j )) ; do
+  for(( j=myLastPos+1 ; j < ${#QA_EXEC_HOSTS[*]} ; ++j )) ; do
     NUM_EXEC_THREADS[j]=$myLastNum
     # add key to the list
   done
@@ -1816,9 +1817,9 @@ keyWordList=( $(echo -e " ${keyWordList[*]/%/\\n}" | sort -b | uniq ) )
 
 # Prepare the settings as key=val, where val could also be an array.
 for key in ${keyWordList[*]} ; do
-  test QC_DATA_ROOT = ${key} && continue
+  test QA_DATA_ROOT = ${key} && continue
   test DATA_ROOT_FS = ${key} && continue
-  test QC_PROJECT   = ${key} && continue
+  test QA_PROJECT   = ${key} && continue
 
   eval val=( \${${key}[*]} )
   test ${#val} -gt 0  &&  array[${#array[*]}]=${key}=${val[*]}

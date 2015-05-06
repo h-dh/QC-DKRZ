@@ -2306,7 +2306,7 @@ CF::initDefaults()
   fDI=0;
   pOper=0;
   pOut=0;
-  qC=0;
+  qA=0;
   tC=0;
 
   cFVal=14;  // the default for checking
@@ -2652,8 +2652,8 @@ CF::linkObject(IObj *p)
     pOper = dynamic_cast<Oper*>(p) ;
   else if( className == "Out" )
     pOut = dynamic_cast<OutFile*>(p) ;
-  else if( className == "QC" )
-    qC = dynamic_cast<QC*>(p) ;
+  else if( className == "QA" )
+    qA = dynamic_cast<QA*>(p) ;
   else if( className == "TC" )
     tC = dynamic_cast<TimeControl*>(p) ;
 

@@ -360,7 +360,7 @@ FD_interface::init(void)
   fDI=0;
   pOper=0;
   pOut=0;
-  qC=0;
+  qA=0;
   tC=0;
 
   // A freqDist is a vector of FreqDist objects, which  is for
@@ -553,7 +553,7 @@ FD_interface::initTimeWindow(void)
      // Any file available from a previous time interval?
      DIR *dir;
      struct dirent *file;
-     dir=opendir(".") ;  // there was a cd in the qc_Executor script
+     dir=opendir(".") ;  // there was a cd in the qa_Executor script
 
      ReadLine rF;
      Date fBeginDate, fEndDate;
@@ -572,7 +572,7 @@ FD_interface::initTimeWindow(void)
        // Ignore leading three chars and trailing part; only use
        // those part of str that must be contained in str1.
        // Test whether str1 > 3 is not necessary here.
-       // Note: 'qc_' was stripped off str
+       // Note: 'qa_' was stripped off str
        std::string t = str1.substr(3, str.size());
 
        if( str1.size() > 6 && str == t )
@@ -666,8 +666,8 @@ FD_interface::linkObject(IObj *p)
     pOper = dynamic_cast<Oper*>(p) ;
   else if( className == "Out" )
     pOut = dynamic_cast<OutFile*>(p) ;
-  else if( className == "QC" )
-    qC = dynamic_cast<QC*>(p) ;
+  else if( className == "QA" )
+    qA = dynamic_cast<QA*>(p) ;
   else if( className == "TC" )
     tC = dynamic_cast<TimeControl*>(p) ;
 

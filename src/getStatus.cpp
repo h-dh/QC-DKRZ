@@ -6,8 +6,6 @@
 
 #include "hdhC.cpp"
 #include "Split.cpp"
-//#include "/scratch/local1/k204145/hdh/QC-0.1/include/hdhC.h"
-//#include "/scratch/local1/k204145/hdh/QC-0.1/src/hdhC.cpp"
 
 std::string getHumanTime(double);
 std::string getHumanStorage(double);

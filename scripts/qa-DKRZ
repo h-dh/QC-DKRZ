@@ -1,19 +1,19 @@
 #! /bin/bash
 
-# ##/*! \file qcDKRZ.h
-## \brief Start script for the QC
+# ##/*! \file qa-DKRZ
+## \brief Start script for the QA
 
-## This script starts a Quality Control (QC) session.\n
+## This script starts a Quality Assurance (QA) session.\n
 ## The script is started on the command-line with optional parameters.\n
-## Example: <tt> path/QC-0.4/scripts/qcDKRZ -f file.conf [opts] </tt> \n
+## Example: <tt> path/QA-DKRZ/scripts/qa-DKRZ -f file.conf [opts] </tt> \n
 ## The script keeps track of netCDF files scheduled for processing
 ## (and those which have been processed). A quality check is performed
-## by an executable of the \a qc_main.cpp file within
-## the script \a qcExecutable_FS which in turn was launched by
-## \a qcDKRZ asynchronously parallel in the back-ground.
+## by an executable of the \a qA_main.cpp file within
+## the script \a qaExecutable_FS which in turn was launched by
+## \a qa-DKRZ asynchronously parallel in the back-ground.
 ## User provided parameters from a configuration and/or task
 ## file as well as from the command-line are parsed by the
-## script \a qcConfiguration.\n
+## script \a qaConfiguration.\n
 ##*/
 
 ##//! Apply rules for SELECTing and LOCKing of paths and files.
@@ -166,15 +166,15 @@ bind_checksum()
     if [ ${CS_DIR:0:1} = '/' ] ; then
       CS_TABLE="${CS_DIR}"
     else
-      CS_TABLE="${QC_RESULTS}/${CS_DIR}"
+      CS_TABLE="${QA_RESULTS}/${CS_DIR}"
     fi
   else
-    test ${CS_STAND_ALONE:-f} = f && CS_TABLE="${QC_RESULTS}/cs_table"
+    test ${CS_STAND_ALONE:-f} = f && CS_TABLE="${QA_RESULTS}/cs_table"
   fi
 
   if [ ${CS_STAND_ALONE:-f} = t ] ; then
     if [ ${#CS_TABLE} -eq 0 ] ; then
-      CS_TABLE=${QC_RESULTS}/data/${subPath}
+      CS_TABLE=${QA_RESULTS}/data/${subPath}
     fi
   fi
 
@@ -187,8 +187,8 @@ bind_checksum()
   getExperimentName ${subPath}
 
   # calculate the checksum(s)
-  ${QC_SRC}/scripts/checkSum -b ${QC_BIN#*:} $type \
-      -q ${QC_RESULTS} ${YAML:+--yaml} ${CS_NO_HISTORY:+--no_history} \
+  ${QA_SRC}/scripts/checkSum -b ${QA_BIN#*:} $type \
+      -q ${QA_RESULTS} ${YAML:+--yaml} ${CS_NO_HISTORY:+--no_history} \
       ${CS_STAND_ALONE:+-w}  $email ${CS_TABLE:+-t} ${CS_TABLE} \
       ${CURR_EXP_NAME:+-x} ${CURR_EXP_NAME} \
       -P ${PROJECT_DATA} -S ${subPath} ${fs[*]}
@@ -214,26 +214,26 @@ callPing()
 
 ##/*!
 ## Detailed comments on configuration parameters are given in files
-## \a path/QC-0.4/tables/projects/*_qc.conf
+## \a path/QA-DKRZ/tables/projects/*_qa.conf
 ##*/
 
 callQcConfig()
 {
 # setting defaults, parsing of the configuration file and command-line  is left to the
-# qcConfiguration, which returns key-word assignments and lists.
+# qaConfiguration, which returns key-word assignments and lists.
 # NOTE: arrays of experiments and parameters are provided by the file
 # LOGIDR/cache_request.txt.
 
   local items i key
 
-# necessary for returning embedded arrays from qcConfiguration
+# necessary for returning embedded arrays from qaConfiguration
   OLD_IFS="$IFS"
   IFS="%"
 
   setF -f
 
 # calling the configuration script
-  if ! items=( $( $QC_SRC/scripts/$QC_CONFIGURATOR -p $QC_SRC $* ) ) ; then
+  if ! items=( $( $QA_SRC/scripts/$QA_CONFIGURATOR -p $QA_SRC $* ) ) ; then
     # not necessarily an error; also SHOW_CONF, CHECK_TOOLS and
     # no argument for displaying help will return exit 1
     exit
@@ -247,7 +247,7 @@ callQcConfig()
     exit
   fi
 
-  #enable settings for the qcDKRZ
+  #enable settings for the qa
   for(( i=0 ; i < ${#items[*]} ; ++i )) ; do
     key="${items[i]%%=*}"
 
@@ -293,16 +293,16 @@ callQcConfig()
   test ${RESUME_SESSION:-f} = t && log_sessMessage "session resumed."
 
   # always set
-  PATH=${QC_BIN#*:}:$PATH
+  PATH=${QA_BIN#*:}:$PATH
 
   # add relevant compilation paths to LD_LIBRARY_PATH
   setLD_LIB_PATH
 
   #save for NIGHT_SHIFT operation
-  save_QC_EXEC_HOSTS=( ${QC_EXEC_HOSTS[*]} )
+  save_QA_EXEC_HOSTS=( ${QA_EXEC_HOSTS[*]} )
   save_NUM_EXEC_THREADS=( ${NUM_EXEC_THREADS[*]} )
 
-  QC_DATADIR=${QC_RESULTS}/data
+  QA_DATADIR=${QA_RESULTS}/data
 
   setF +f
 
@@ -315,7 +315,7 @@ callQcConfig()
   return
 }
 
-##//! Launcher of the executable of QC main-program qc_main.cpp
+##//! Launcher of the executable of QA main-program qA_main.cpp
 
 ##/*!
 ## The script runs in the back-round. Hence, multiple instances may
@@ -430,11 +430,11 @@ callQcExecutor()
           PROJECT_AS \
           PROJECT_DATA \
           PROJECT_TABLE \
-          QC \
-          QC_MANAGER_HOST \
-          QC_NCFILE_FLAGS \
-          QC_RESULTS \
-          QC_SRC \
+          QA \
+          QA_MANAGER_HOST \
+          QA_NCFILE_FLAGS \
+          QA_RESULTS \
+          QA_SRC \
           REATTEMPT_LIMIT \
           REPLICATED_RECORD \
           REQUIREMENTS_TABLE \
@@ -468,9 +468,9 @@ callQcExecutor()
   done
   test ${#DEBUG_MANAGER} -eq 0 && pauseX
 
-  # call qcExecutor with arg-list: format: name=value
+  # call qaExecutor with arg-list: format: name=value
   # Note: if execution takes place on a host different than
-  # the one where qcDKRZ runs, then all paths must be
+  # the one where qa-DKRZ runs, then all paths must be
   # accessible.
 
   local prevPID=$currPID
@@ -479,15 +479,15 @@ callQcExecutor()
   test ${DEBUG_EXECUTOR:-f} = t && ca="${ca} DEBUG_EXECUTOR=t "
 
   if [ "$nextHost" = "${HOSTNAME:0:${#nextHost}}" ] ; then
-    # use the first item of the QC_BIN array
+    # use the first item of the QA_BIN array
 
-    text="${text}\nIMPORTED_PATH=${QC_BIN#*:}"
+    text="${text}\nIMPORTED_PATH=${QA_BIN#*:}"
     echo -e "$text" > $procFile
 
-    $QC_SRC/scripts/$QC_EXECUTOR "${ca}QC_SRC=${QC_SRC} PROC_POOL=$PROC_POOL PROC_FILE=${procFile##*/} PAR_PID=${rootPID}" &
+    $QA_SRC/scripts/$QA_EXECUTOR "${ca}QA_SRC=${QA_SRC} PROC_POOL=$PROC_POOL PROC_FILE=${procFile##*/} PAR_PID=${rootPID}" &
   else
     local bin
-    for bin in ${QC_BIN[*]} ; do
+    for bin in ${QA_BIN[*]} ; do
       if [ "${nextHost}" = ${bin%:*} ] ; then
         text="${text}\nIMPORTED_PATH=${bin#*:}"
         break
@@ -498,7 +498,7 @@ callQcExecutor()
     echo -e "$text" > $procFile
 
     if callPing ; then
-      ssh $nextHost $QC_SRC/scripts/$QC_EXECUTOR "PROC_POOL=$PROC_POOL PROC_FILE=${procFile##*/} PAR_PID=${rootPID} &" &> /dev/null
+      ssh $nextHost $QA_SRC/scripts/$QA_EXECUTOR "PROC_POOL=$PROC_POOL PROC_FILE=${procFile##*/} PAR_PID=${rootPID} &" &> /dev/null
     fi
   fi
 
@@ -569,8 +569,8 @@ check()
   # don't remove everything done so far in the next looping
   test ${#CLEAR} -gt 0 && unset CLEAR
 
-  # Just wait, give the qcExecutor(s) a chance to finish.
-  # This does not work for qcExecutor instances launched by ssh.
+  # Just wait, give the qaExecutor(s) a chance to finish.
+  # This does not work for qaExecutor instances launched by ssh.
 #trace \
   wait_fnct
 
@@ -580,14 +580,14 @@ check()
 ##//! Finialisation of annotations of each check.
 
 ##/*!
-## Communication between \a qcDKRZ and \ qcExecutor is done
-## by temporary files. After closing an qcExecutor instance, this
+## Communication between \a qa-DKRZ and \ qaExecutor is done
+## by temporary files. After closing an qaExecutor instance, this
 ## function finalises annotation processes.
 ##*/
 
 checkClosedMessages()
 {
-  # qcExecutors have added locked or closed files for finished runs
+  # qaExecutors have added locked or closed files for finished runs
   local expName f fs ffs ff g
 
   fs=( $( ls $PROC_POOL/*.closed 2> /dev/null ) )
@@ -665,11 +665,11 @@ checkLockFile()
    # $1 == PATH: check only paths
 
    # any variable locked?
-   ls ${QC_RESULTS}/data/${subPath}/*_lock_${1}${2}.txt &> /dev/null
+   ls ${QA_RESULTS}/data/${subPath}/*_lock_${1}${2}.txt &> /dev/null
    local x_lock=$?
 
    if [ ${LOCK_NOTES:-f} = t ] ; then
-     ls ${QC_RESULTS}/data/${subPath}/*_note_${1}${2}.txt &> /dev/null
+     ls ${QA_RESULTS}/data/${subPath}/*_note_${1}${2}.txt &> /dev/null
      local x_note=$?
    fi
 
@@ -678,9 +678,9 @@ checkLockFile()
        return 0 # option says: don't ignore a blocking file
      else
        # option says: ignore blocking file
-       if ! ls ${QC_RESULTS}/data/${subPath}/qc_${1}${2}.nc &> /dev/null
+       if ! ls ${QA_RESULTS}/data/${subPath}/qa_${1}${2}.nc &> /dev/null
        then
-         # no qc-result.nc file; block always
+         # no qa-result.nc file; block always
          return 0
        fi
      fi
@@ -701,12 +701,12 @@ checkValidNcFile()
   tryCom \
   test -d $p
 
-  fs=$( ls $p/z_qc_${v}.nc 2> /dev/null)
+  fs=$( ls $p/z_qa_${v}.nc 2> /dev/null)
 
   # Any previous backup file available? Yes. Then a crash happened.
   # Restore backup.
   if [ ${#fs} -gt 0 ] ; then
-    mv $p/z_qc_${v}.nc $p/qc_${v}.nc
+    mv $p/z_qa_${v}.nc $p/qa_${v}.nc
 
     if [ -d $p/Z_fd_${v} ] ; then
       \rm -f $p/fd_${v}*.build
@@ -721,7 +721,7 @@ checkValidNcFile()
 
   # A crash happened while the file was open the first time.
   # No backup is available.
-  fs=$( ls $p/qc_${v}.nc 2> /dev/null)
+  fs=$( ls $p/qa_${v}.nc 2> /dev/null)
 
   if [ ${#fs} -eq 0 ] ; then
     return 1 # no previous check at all
@@ -767,28 +767,28 @@ clear()
        isClear=t
     elif [ "${f:0:4}" = lock ] ; then
        # locked  files
-       if ls ${QC_RESULTS}/data/${subPath}/qc_lock_${fBase[ix]}* &> /dev/null ; then
+       if ls ${QA_RESULTS}/data/${subPath}/qa_lock_${fBase[ix]}* &> /dev/null ; then
          isClear=t
        fi
     elif [ "${f:0:4}" = note ] ; then
        # if any note
-       if ls ${QC_RESULTS}/data/${subPath}/qc_note*_${fBase[ix]}* &> /dev/null ; then
+       if ls ${QA_RESULTS}/data/${subPath}/qa_note*_${fBase[ix]}* &> /dev/null ; then
          isClear=t
        fi
     elif [ "${f:0:4}" = mark ] ; then
        # only pass those that are locked; redo erroneous cases
-       if ls ${QC_RESULTS}/data/${subPath}/clear.mark &> /dev/null \
-            && ls ${QC_RESULTS}/data/${subPath}/${fBase[ix]}.clear &> /dev/null ; then
+       if ls ${QA_RESULTS}/data/${subPath}/clear.mark &> /dev/null \
+            && ls ${QA_RESULTS}/data/${subPath}/${fBase[ix]}.clear &> /dev/null ; then
          isClear=t
        fi
     elif [ ${f%=*} = level ] ; then
        f="^${f#*=}-"
 
        # clear specified level
-       if grep -q $f ${QC_RESULTS}/data/${subPath}/qc_note_${fBase[ix]}* &> /dev/null
+       if grep -q $f ${QA_RESULTS}/data/${subPath}/qa_note_${fBase[ix]}* &> /dev/null
        then
          isClear=t
-       elif grep -q $f ${QC_RESULTS}/data/${subPath}/qc_lock_${fBase[ix]}* &> /dev/null
+       elif grep -q $f ${QA_RESULTS}/data/${subPath}/qa_lock_${fBase[ix]}* &> /dev/null
        then
          isClear=t
        fi
@@ -797,17 +797,17 @@ clear()
        f="^[[:alnum:]]*-*${f#*=}.*: "
 
        # clear specified level and/or flag
-       if grep -q $f ${QC_RESULTS}/data/${subPath}/qc_note_${fBase[ix]}* &> /dev/null
+       if grep -q $f ${QA_RESULTS}/data/${subPath}/qa_note_${fBase[ix]}* &> /dev/null
        then
          isClear=t
-       elif grep -q $f ${QC_RESULTS}/data/${subPath}/qc_lock_${fBase[ix]}* &> /dev/null
+       elif grep -q $f ${QA_RESULTS}/data/${subPath}/qa_lock_${fBase[ix]}* &> /dev/null
        then
          isClear=t
        fi
     elif [ ${f} != ${f/=/} -a ${f%=*} = var ] ; then
        # CLEAR=var=name
        if expr match ${fBase[ix]} "${f}" &> /dev/null ; then
-         if ls ${QC_RESULTS}/data/${subPath}/*_${fBase[ix]}* &> /dev/null
+         if ls ${QA_RESULTS}/data/${subPath}/*_${fBase[ix]}* &> /dev/null
          then
            isClear=t
          fi
@@ -818,7 +818,7 @@ clear()
                 # without '_' with 't' meaning enabled.
 
        if expr match ${fBase[ix]} "${f}" &> /dev/null ; then
-         if ls ${QC_RESULTS}/data/${subPath}/*_${fBase[ix]}* &> /dev/null
+         if ls ${QA_RESULTS}/data/${subPath}/*_${fBase[ix]}* &> /dev/null
          then
            isClear=t
          fi
@@ -832,7 +832,7 @@ clear()
     if [ "${isFL}" = t ] ; then
       fs=( $( \
            tryCom \
-           ls ${QC_RESULTS}/data/${subPath}/*_${fBase[ix]}* 2> /dev/null ) )
+           ls ${QA_RESULTS}/data/${subPath}/*_${fBase[ix]}* 2> /dev/null ) )
 
       for f in ${fs[*]} ; do
         if [ -h $f ] ; then
@@ -846,7 +846,7 @@ clear()
            for t in ${ts[*]} ; do
              if [ $isResume = t ] ; then
                 tx=${t##*/}
-                test "${tx:0:7}" != 'qc_lock' && continue
+                test "${tx:0:7}" != 'qa_lock' && continue
              fi
 
              if [ ${SHOW_CLEAR:-f} = t ] ; then
@@ -869,11 +869,11 @@ clear()
       if [ $isMessage = t ]  ; then
         if [ $isResume = t ] ; then
           # only write a log message if targets of sym links were removed
-          headerText="File:\t\tqc_${fBase[ix]}\n\
-QC result path: ${target}\nResume: removed qc-break file by following links."
+          headerText="File:\t\tqa_${fBase[ix]}\n\
+QA result path: ${target}\nResume: removed qa-break file by following links."
         else
-          headerText="File:\t\tqc_${fBase[ix]}\n\
-QC result path: ${target}\nRemoved QC results by following links."
+          headerText="File:\t\tqa_${fBase[ix]}\n\
+QA result path: ${target}\nRemoved QA results by following links."
         fi
 
         log_sessMessage "$headerText"
@@ -887,14 +887,14 @@ QC result path: ${target}\nRemoved QC results by following links."
 
     fs=( $( \
             tryCom get_status \
-            ls ${QC_RESULTS}/data/${subPath}/*_${fBase[ix]}* 2> /dev/null ) )
+            ls ${QA_RESULTS}/data/${subPath}/*_${fBase[ix]}* 2> /dev/null ) )
 
-    test -e ${QC_RESULTS}/data/${subPath}/core && fs[${#fs[*]}]=core
+    test -e ${QA_RESULTS}/data/${subPath}/core && fs[${#fs[*]}]=core
 
     for f in ${fs[*]} ; do
       if [ $isResume = t ] ; then
         tx=${f##*/}
-        if [ "${tx:0:7}" = 'qc_lock' -o "${tx}" = 'core' ] ; then
+        if [ "${tx:0:7}" = 'qa_lock' -o "${tx}" = 'core' ] ; then
           fs=($f)
           isRm=t
           break
@@ -922,7 +922,7 @@ QC result path: ${target}\nRemoved QC results by following links."
     # also delete table entries
     if [ $isClearTables = t ] ; then
       local prg
-      prg=${QC_SRC}/scripts/xtractNotes_from_log
+      prg=${QA_SRC}/scripts/xtractNotes_from_log
 
       test ${#prg} -gt 0 && \
         /bin/bash ${prg} -Q -r ${fBase[ix]} $EXP_LOGDIR/$CURR_EXP_NAME.log
@@ -931,23 +931,23 @@ QC result path: ${target}\nRemoved QC results by following links."
     if [ "$isMessage" != f ] ; then
       local note
       if [ ${isResume} != f ] ; then
-         note="Resume: removed only qc-lock file."
+         note="Resume: removed only qa-lock file."
       elif [ ${#target} -gt 0 ] ; then
          note="Removed symbolic links."
       else
-         note="Cleared QC results."
+         note="Cleared QA results."
       fi
 
       # only write a log message if anything was removed
-      headerText="File:\t\tqc_${fBase[ix]}\nPath: \t\t$PROJECT_DATA\n\
-QC result path: $QC_RESULTS/data\nDRS tree:\t${subPath}\n${note}"
+      headerText="File:\t\tqa_${fBase[ix]}\nPath: \t\t$PROJECT_DATA\n\
+QA result path: $QA_RESULTS/data\nDRS tree:\t${subPath}\n${note}"
 
       log_sessMessage "$headerText"
     fi
   fi
 
-  test ${isCLEAR_ONLY:-f} = t && return 0  # no qc
-  test ${SHOW_CLEAR:-f}   = t && return 0  # no qc
+  test ${isCLEAR_ONLY:-f} = t && return 0  # no qa
+  test ${SHOW_CLEAR:-f}   = t && return 0  # no qa
 
   return 1
 }
@@ -957,11 +957,11 @@ copyPreamble()
   local i zsTxt
 
 # if [ -e $EXP_LOGDIR/${CURR_EXP_NAME}.log ] ; then
-#    # a new qc svn revision number?
+#    # a new qa svn revision number?
 #    local rev_0 rev_1
 
 #    # i) grep revision num save in
-#    rev_0=( $(grep 'qc_svn_revision' $EXP_LOGDIR/${CURR_EXP_NAME}.log 2> /dev/null \
+#    rev_0=( $(grep 'qa_svn_revision' $EXP_LOGDIR/${CURR_EXP_NAME}.log 2> /dev/null \
 #         | awk -F: '{print $2}') )
 
 #    if [ ${#rev_0[*]} -eq 0 ] ; then
@@ -982,7 +982,7 @@ copyPreamble()
 #        unset sTxt
 #      fi
 
-#      sTxt[0]="3qc_svn_revision: ${rev_1}"
+#      sTxt[0]="3qa_svn_revision: ${rev_1}"
 #      log
 #    fi
 # else
@@ -999,7 +999,7 @@ copyPreamble()
 #        unset sTxt
 #      fi
 
-#      sTxt[0]="3qc_svn_revision: ${rev_1}"
+#      sTxt[0]="3qa_svn_revision: ${rev_1}"
 #      log
 #    fi
 # fi
@@ -1109,9 +1109,9 @@ finally()
   # release file with pid, if the session finished
   # rm filename with appended pid
   tryCom \
-  \rm -f $QC_RESULTS/session_logs/PID/pid.$rootPID
+  \rm -f $QA_RESULTS/session_logs/PID/pid.$rootPID
 
-  # directory containing files with PIDs of current qcDKRZ runs.
+  # directory containing files with PIDs of current qa-DKRZ runs.
   rmdir $SESSION_LOG/PID &> /dev/null # only if empty
 
   test ${FLOW_TRACE:-f} = t && tracePrint
@@ -1134,7 +1134,7 @@ finally()
     fi
 
     sendSubject=" PROC_POOL not cleared"
-    sendText="qcDKRZ.finally: ${PROC_POOL} was not cleared."
+    sendText="qa-DKRZ.finally: ${PROC_POOL} was not cleared."
 
     log_sessMessage "$sendText"
     sendEMail
@@ -1227,7 +1227,7 @@ getAllExps()
 getCF_STD_NAME()
 {
   local p
-  p=${QC_SRC}/tables/projects/CF
+  p=${QA_SRC}/tables/projects/CF
 
   local name=cf-standard-name-table.xml
 
@@ -1385,7 +1385,7 @@ getFilenameBase()
   fBase=( ${fileNames[*]#${PROJECT_DATA}/${subPath}/} )
 
   # find all available files: same root, but different time periods
-  # is there any qc_*.nc ? Rather circuitous, but safe.
+  # is there any qa_*.nc ? Rather circuitous, but safe.
   # works also for names without appended date
 
   fBase=( ${fBase[*]%.nc} )
@@ -1412,18 +1412,18 @@ getFilenameBase()
   return
 }
 
-##//! Get the name of a host ready for a start of the \a qcExecutor
+##//! Get the name of a host ready for a start of the \a qaExecutor
 
 ##/*!
 ## All host must share the same file system. Names of hosts is
-## supplied by the configuration option QC_EXEC_HOSTS. Maximum number of
-## simultaneous qcExecutor instances is given by NUM_EXEC_THREADS.
+## supplied by the configuration option QA_EXEC_HOSTS. Maximum number of
+## simultaneous qaExecutor instances is given by NUM_EXEC_THREADS.
 ##*/
 
 getHost()
 {
   # determination of a next host. The limits by
-  # QC_EXEC_HOSTS and NUM_EXEC_THREADS are applied.
+  # QA_EXEC_HOSTS and NUM_EXEC_THREADS are applied.
 
   # before that, however, check for closed message-files
   checkClosedMessages
@@ -1439,21 +1439,21 @@ getHost()
     local dayTime
     dayTime=$(date +'%H')
     if [ $dayTime -lt 8 -o $dayTime -gt 18 ] ; then
-      QC_EXEC_HOSTS=( ${save_QC_EXEC_HOSTS[*]} )
+      QA_EXEC_HOSTS=( ${save_QA_EXEC_HOSTS[*]} )
       NUM_EXEC_THREADS=( ${save_NUM_EXEC_THREADS[*]} )
     else
-      QC_EXEC_HOSTS=( $HOSTNAME )
+      QA_EXEC_HOSTS=( $HOSTNAME )
       NUM_EXEC_THREADS=( 1 )
     fi
   fi
 
   # preset
-  for(( i=0 ; i < ${#QC_EXEC_HOSTS[*]} ; ++i )) ; do
+  for(( i=0 ; i < ${#QA_EXEC_HOSTS[*]} ; ++i )) ; do
     currNum[i]=0
   done
 
 #  currSec=$( date +'%s' )  # works only for unix
-  currSec=$( ${QC_BIN#*:}/unixTime.x )
+  currSec=$( ${QA_BIN#*:}/unixTime.x )
   local f
   for f in $( ls -1 $PROC_POOL/*.lock 2> /dev/null ) ; do
     f=${f%.lock}
@@ -1493,8 +1493,8 @@ getHost()
 
     # Determine the host names currently in use and
     # the number of corresponding instances of executors.
-    for(( i=0 ; i < ${#QC_EXEC_HOSTS[*]} ; ++i )) ; do
-      if [ "${currHost}" = "${QC_EXEC_HOSTS[i]}" ] ; then
+    for(( i=0 ; i < ${#QA_EXEC_HOSTS[*]} ; ++i )) ; do
+      if [ "${currHost}" = "${QA_EXEC_HOSTS[i]}" ] ; then
         currNum[i]=$(( ${currNum[i]} + 1 ))
         continue 2
       fi
@@ -1502,9 +1502,9 @@ getHost()
   done
 
   # look for a free slot
-  for(( j=0 ; j < ${#QC_EXEC_HOSTS[*]} ; ++j )) ; do
+  for(( j=0 ; j < ${#QA_EXEC_HOSTS[*]} ; ++j )) ; do
     if [ ${currNum[j]} -lt ${NUM_EXEC_THREADS[j]} ] ; then
-      nextHost=${QC_EXEC_HOSTS[j]}
+      nextHost=${QA_EXEC_HOSTS[j]}
 
       # only select a host, if it is reachable
 #      if ping -c 1 $nextHost &> /dev/null ; then
@@ -1540,12 +1540,12 @@ getNextVariable()
 {
   # $1 fBase
 
-  # return 0, if a qc-check shall not be done(, mostly because it
+  # return 0, if a qa-check shall not be done(, mostly because it
   #           was already done previously), then idle.
   # return 1, if the file nextFile is going to be checked.
 
   local ix
-  local qc_fl text
+  local qa_fl text
   local status checksumTable
 
   local link_filenameBase=$1
@@ -1647,14 +1647,14 @@ getNextVariable()
     return 0
   fi
 
-  # Note: if the first attempt of creating a qc-nc file
+  # Note: if the first attempt of creating a qa-nc file
   # was interrupted by a system crash before closing it properly,
-  # then the qc-nc file is corrupt. If a crash happened at any
+  # then the qa-nc file is corrupt. If a crash happened at any
   # further attempt to continue writing, then there will be a
   # back-up file available. Note: return value 0 (true) would happen
-  # only, if there are more than one qc-files backup files.
+  # only, if there are more than one qa-files backup files.
   # The function shall clear such.
-  if checkValidNcFile ${QC_RESULTS}/data/${subPath} $1 ; then
+  if checkValidNcFile ${QA_RESULTS}/data/${subPath} $1 ; then
     nextFile=  # ignore, try next
     return 0
   fi
@@ -1684,8 +1684,8 @@ getNextVariable()
     bind_checksum ${nV_fls[*]}
     status=$?
 
-    # checksum has changed; remove qc results
-    test $status -gt 1 && \rm ${QC_RESULTS}/data/${subPath}/qc_${1}.* 2> /dev/null
+    # checksum has changed; remove qa results
+    test $status -gt 1 && \rm ${QA_RESULTS}/data/${subPath}/qa_${1}.* 2> /dev/null
 
     if [ $status -eq 6 ] ; then
       # creation_date and/or tracking_id was kept
@@ -1694,12 +1694,12 @@ getNextVariable()
     fi
   fi
 
-  qc_fl=($( ls ${QC_RESULTS}/data/${subPath}/qc_${1}.nc 2> /dev/null))
+  qa_fl=($( ls ${QA_RESULTS}/data/${subPath}/qa_${1}.nc 2> /dev/null))
 
-  # sync with qc_file if available
+  # sync with qa_file if available
   #exception: only scan for the tracking id
-  if [ ${#qc_fl} -gt 0 -a ${TRACKING_ID_ONLY:-f} = f ] ; then
-    syncOpts="${syncOpts} -p ${qc_fl}"
+  if [ ${#qa_fl} -gt 0 -a ${TRACKING_ID_ONLY:-f} = f ] ; then
+    syncOpts="${syncOpts} -p ${qa_fl}"
   fi
 
   # any time limit specified?
@@ -1735,7 +1735,7 @@ getNextVariable()
     fi
   fi
 
-  nextFile="$(echo ${nV_fls[*]} | ${QC_BIN#*:}/syncFiles.x \
+  nextFile="$(echo ${nV_fls[*]} | ${QA_BIN#*:}/syncFiles.x \
      ${isPost:+--post} $syncOpts -P ${nextPath} )"
 
   status=$?
@@ -1755,11 +1755,11 @@ getNextVariable()
 #    fi
 
     # --post option caused to output the last filename
-    if [ ${#qc_fl} -eq 0 -a ${isPost:-f} = t ] ; then
-      if [ ${#qc_fl} -gt 0 ] ; then
+    if [ ${#qa_fl} -eq 0 -a ${isPost:-f} = t ] ; then
+      if [ ${#qa_fl} -gt 0 ] ; then
         # check global attributes for outlier_test=done
         local att
-        att=$( getNC_att.x ${qc_fl} postponed_operations )
+        att=$( getNC_att.x ${qa_fl} postponed_operations )
         att=${att#*=}
         att=${att%% }
       fi
@@ -1800,7 +1800,7 @@ getNextVariable()
   # a fixed variable?
   if [ $status -eq 4 ] ; then
     # already processed?
-    if [ ${#qc_fl} -gt 0 ] ; then
+    if [ ${#qa_fl} -gt 0 ] ; then
 #      if [ ${#PROGRESS_BAR} -gt 0 ] ; then
         # get number of data files for progress estimation
         # note: all files no matter whether processed or locked
@@ -1849,11 +1849,11 @@ getNextVariable()
   # nextFile is the first sub-temporal file, i.e. candidate for
   # a parent check.
   HAS_PARENT=f
-  test ${#qc_fl} -eq 0 && HAS_PARENT=t
+  test ${#qa_fl} -eq 0 && HAS_PARENT=t
 
   if [ ${DEREFERENCE_SYM_LINKS:-f} = f -a \
         -h ${PROJECT_DATA}/${subPath}/$nextFile ] ; then
-    # make links for QC results, where links are in the DRS tree
+    # make links for QA results, where links are in the DRS tree
     # (not for links to the outside of the DRS tree).
     testFileLink $1
     nextFile= # ignore, try next
@@ -1915,7 +1915,7 @@ getNextSubPath()
     if [ ${#fBase[*]} -gt 0 ] ; then
       for(( ix = ${#fBase[*]} - 1 ; ix > -1 ; --ix )) ; do
         if [ ${#fBase[ix]} -gt 0 ] ; then
-          # apply rules, clearings, and test for qc_note files
+          # apply rules, clearings, and test for qa_note files
           if \
 #trace \
             testLocks ; then
@@ -1930,7 +1930,7 @@ getNextSubPath()
       test ${hasChanged:-f} = t && fBase=(${fBase[*]})
 
       # found unlocked variable (constraint: SHOW_CLEAR=f)
-      mkdir -p ${QC_RESULTS}/data/${subPath}
+      mkdir -p ${QA_RESULTS}/data/${subPath}
 
       if [ ${waitCounter} -gt 0 ] ; then
         displayStatusLine 51 ''
@@ -2029,7 +2029,7 @@ getPaths()
 
     std_out flush "${sTxt[0]:1}\n${sTxt[2]:4}"
 
-    sendSubject="qcDKRZ: SELECT/LOCK conflict"
+    sendSubject="qa-DKRZ: SELECT/LOCK conflict"
 
     sendEMail
     lastStatus=1  # exit status of this script
@@ -2087,9 +2087,9 @@ getProjectTableName()
 
 getRevNum()
 {
-  # get the number saved in QC_SRC/.conf as revision=num
+  # get the number saved in QA_SRC/.conf as revision=num
   local rev revs
-  revs=( $( grep 'revision=' ${QC_SRC}/.conf 2> /dev/null \
+  revs=( $( grep 'revision=' ${QA_SRC}/.conf 2> /dev/null \
        | awk -F= '{print $2}' ) )
 
   if [ ${#revs[*]} -eq 0 ] ; then
@@ -2332,14 +2332,14 @@ has()
 ##//! Initialisation of a session
 
 ##/*!
-## Starts script \a qcConfiguration.
+## Starts script \a qaConfiguration.
 ##*/
 
 init()
 {
   # setting defaults, parsing of the configuration file and
   # command-line is left to the
-  # qcConfiguration, which returns key-word assignments and lists.
+  # qaConfiguration, which returns key-word assignments and lists.
 
   # look if argc contains a tty statement
   local is
@@ -2381,18 +2381,18 @@ init()
 
   # automatic svn update
 #  if [ "${AUTO_UPDATE}" = t ] ; then
-#     ${QC_SRC}/install --auto-up --update
+#     ${QA_SRC}/install --auto-up --update
 #  elif [ "${AUTO_UPDATE}" = f ] ; then
-#     ${QC_SRC}/install --auto-up=disable
-#  elif grep -q auto-up=enabled ${QC_SRC}/.conf 2> /dev/null ; then
-#     ${QC_SRC}/install --update
+#     ${QA_SRC}/install --auto-up=disable
+#  elif grep -q auto-up=enabled ${QA_SRC}/.conf 2> /dev/null ; then
+#     ${QA_SRC}/install --update
 #  fi
 
   # expand comma-sep-list to arrays
   EMAIL_SUMMARY=( ${EMAIL_SUMMARY//,/ } )
   EMAIL_TO=( ${EMAIL_TO//,/ } )
-  QC_BIN=( ${QC_BIN//,/ } )
-  QC_EXEC_HOSTS=( ${QC_EXEC_HOSTS//,/ } )
+  QA_BIN=( ${QA_BIN//,/ } )
+  QA_EXEC_HOSTS=( ${QA_EXEC_HOSTS//,/ } )
   NUM_EXEC_THREADS=( ${NUM_EXEC_THREADS//,/ } )
 
   # set defaults
@@ -2414,10 +2414,10 @@ init()
   # parse REATTEMPT_LIMIT and SLEEP_TIME
   initTryCom
 
-  # Are the executables in QC_BIN applicable?
-  if ! ${QC_BIN#*:}/unixTime.x &> /dev/null ; then
+  # Are the executables in QA_BIN applicable?
+  if ! ${QA_BIN#*:}/unixTime.x &> /dev/null ; then
     sTxt[0]="3text: 1"
-    sTxt[1]="3 - no executables in ${QC_BIN}"
+    sTxt[1]="3 - no executables in ${QA_BIN}"
 
     std_out flush "${sTxt[0]:1}\n${sTxt[1]:4}"
     sendEMail
@@ -2443,7 +2443,7 @@ init()
 
   initProjectTableName
 
-  # QC_SRC/tables -> QC_Results/tables
+  # QA_SRC/tables -> QA_Results/tables
   initTables
 
   # save the configuration and init the session logfile
@@ -2602,7 +2602,7 @@ initLog()
 {
   sTxt[$((ix++))]="3file: $1"
   sTxt[$((ix++))]="3data_path: ${nextPath}"
-  sTxt[$((ix++))]="3result_path: ${QC_DATADIR}/${subPath}"
+  sTxt[$((ix++))]="3result_path: ${QA_DATADIR}/${subPath}"
   sTxt[$((ix++))]="3check:"
   sTxt[$((ix++))]="4meta_data: ${y_meta_data:-FAIL}"
   sTxt[$((ix++))]="4time_values: ${y_time_values:-OMIT}"
@@ -2629,7 +2629,7 @@ initLog()
   sTxt[$((ix++))]="3status: ${y_status:-0}"
   y_status=
 
-  local out=${QC_RESULTS}/data/${subPath}/qc_lock_${1}.txt
+  local out=${QA_RESULTS}/data/${subPath}/qa_lock_${1}.txt
   echo "Path: ${nextPath}"                  > $out
   echo "File: ${1}"                        >> $out
   echo "${impact}-${tag}: ${y_caption}" >> $out
@@ -2640,11 +2640,11 @@ initLog()
   sendEMail
 }
 
-##//! Determination of various tables for the QC.
+##//! Determination of various tables for the QA.
 
 ##/*!
 ## At the very first start, the script puts user-provided tables
-## into QC_RESULTS/tables which are used during the further session.
+## into QA_RESULTS/tables which are used during the further session.
 ##*/
 
 initProjectTableName()
@@ -2697,10 +2697,10 @@ initTables()
   #   tables/${PROJECT}
   #   tables
 
-  # 1) default tables are provided in ${QC_SRC}/tables/projects/PROJECT.
-  # 2) a table of the same name provided in ${QC_SRC}/tables gets
+  # 1) default tables are provided in ${QA_SRC}/tables/projects/PROJECT.
+  # 2) a table of the same name provided in ${QA_SRC}/tables gets
   #    priority, thus may be persistently modified.
-  # 3) tables from 2) or 1) are copied to ${QC_Results}/tables.
+  # 3) tables from 2) or 1) are copied to ${QA_Results}/tables.
   # 4) Option TABLE_AUTO_UPDATE is the default, i.e. tables in
   #    projects are updated and are applied.
   # 5) 4) also for option USE_STRICT.
@@ -2764,14 +2764,14 @@ initT()
      test -f ${value} && break
 
      # explicitly in a sub-dir path
-     if [ -f ${QC_SRC}/${value} ] ; then
-       p=${QC_SRC}/${value%/*}/
+     if [ -f ${QA_SRC}/${value} ] ; then
+       p=${QA_SRC}/${value%/*}/
        break
      fi
 
      # scan through the precedence chain
-     if [ -f ${QC_SRC}/${pDir[ix]}/${value} ] ; then
-       p=${QC_SRC}/${pDir[ix]}/
+     if [ -f ${QA_SRC}/${pDir[ix]}/${value} ] ; then
+       p=${QA_SRC}/${pDir[ix]}/
        break
      fi
    done
@@ -2878,7 +2878,7 @@ inqDiskSpace()
 
   # diskUsage.x outputs percentage of used disk space.
   # if this could not be calculated, then return silently
-  if ! usedDiskSpace=$( diskUsage.x ${QC_RESULTS} ) ; then
+  if ! usedDiskSpace=$( diskUsage.x ${QA_RESULTS} ) ; then
     return
   fi
 
@@ -2897,10 +2897,10 @@ inqDiskSpace()
 
       local text
       text="Available capacity on device below $((100 - threshold)) %"
-      text="${text}\ndf  ${QC_RESULTS}:"
+      text="${text}\ndf  ${QA_RESULTS}:"
       text="${text}\n$( df -h .|head -n 1)"
       text="${text}\n$( df -h .|tail -n 1)"
-      text="${text}\nqcDKRZ stays in a wait loop."
+      text="${text}\nqa-DKRZ stays in a wait loop."
 
       std_out flush "${text}"
       isSubmitted=t
@@ -2911,7 +2911,7 @@ inqDiskSpace()
 
   sendSubject="disk space shortage cleared"
   text="Disk space shortage cleared."
-  text="${text}\nqcDKRZ resumes processing."
+  text="${text}\nqa-DKRZ resumes processing."
 
   std_out flush "${text}"
 }
@@ -2965,7 +2965,7 @@ logConfiguration()
   # this file is prepented to all exp-log-files
   tryCom \
   echo    '---'                 > $preamble
-  echo    '# Log-file of a QC session started by qcDKRZ' \
+  echo    '# Log-file of a QA session started by qa-DKRZ' \
                                >> $preamble
   echo    'configuration: '    >> $preamble
   echo -n ' command-line: '    >> $preamble
@@ -2991,15 +2991,14 @@ logConfiguration()
 #  local rev_0
 #  getRevNum rev_0
 
-#  sTxt[0]="3qc_svn_revision: ${rev_0}"
   log --start
 
   # make a link between session logdir and task name
-  if [ ${#qcCs[*]} -gt 0 ] ; then
+  if [ ${#qaCs[*]} -gt 0 ] ; then
     local p s
     p=${SESSION_LOGDIR%/*}
     s=${SESSION_LOGDIR##*/}
-    ln -sf ${SESSION} $p/${qcCs[0]##*/}
+    ln -sf ${SESSION} $p/${qaCs[0]##*/}
   fi
 
   return
@@ -3040,11 +3039,11 @@ log()
 
   s_out="${s_out} - date: $( date +'%FT%T' )"
 
-#  if [ ${QC_MANAGER_HOST} = $HOSTNAME ] ; then
+#  if [ ${QA_MANAGER_HOST} = $HOSTNAME ] ; then
 #  test ${ix} -lt 2 && \
 #    echo  "${sp[ix]}date: $( date +'%FT%T' )" >> $out
 #  else
-#    tryRemote ssh ${QC_MANAGER_HOST} \
+#    tryRemote ssh ${QA_MANAGER_HOST} \
 #      echo -e ${str} >> $out
 #  fi
 
@@ -3123,11 +3122,11 @@ log_expMessage()
   str="\n$( date +'%F %T' ) "
   str="$str""$1"
 
-#  if [ ${QC_MANAGER_HOST} = $HOSTNAME ] ; then
+#  if [ ${QA_MANAGER_HOST} = $HOSTNAME ] ; then
     tryCom \
     echo -e "${str}" >> $EXP_LOGDIR/${CURR_EXP_NAME}.log
 #  else
-#    tryRemote ssh ${QC_MANAGER_HOST} \
+#    tryRemote ssh ${QA_MANAGER_HOST} \
 #      echo -e ${str} >> $EXP_LOGDIR/${CURR_EXP_NAME}.log
 #  fi
 
@@ -3145,7 +3144,7 @@ log_sessMessage()
   # date and host
   local k N str0 str
 
-  str0="$( date +'%F %T' ) ${HOSTNAME%%.*}:qcDKRZ\n"
+  str0="$( date +'%F %T' ) ${HOSTNAME%%.*}:qa-DKRZ\n"
   str0="${str0}$*"
 
   # The total output is subdivided into chunqks of pmax characters.
@@ -3184,7 +3183,7 @@ log_sessMessage()
   return
 }
 
-##//! Log current QC version information
+##//! Log current QA version information
 
 mkLinks()
 {
@@ -3201,7 +3200,7 @@ mkLinks()
   f=${src_filename%.nc}
   f=${f%_${tmp}}
 
-  # Get all names of corresponding genuine qc result files.
+  # Get all names of corresponding genuine qa result files.
   grfs=(
      $(ls ${dest_path}/${subPath}/*${fBase}* \
          2> /dev/null) )
@@ -3223,7 +3222,7 @@ mkLinks()
 
       if ln -s -t ${dest_path}$saveSubPath \
             ${link_target_path}/$name &> /dev/null ; then
-        text2="${text2}\nQC File:\t${grf##*/}"
+        text2="${text2}\nQA File:\t${grf##*/}"
       fi
     else
       grf=${grf##*/}
@@ -3233,7 +3232,7 @@ mkLinks()
 
       cd ${dest_path}$saveSubPath &> /dev/null
       if ln -s ${link_target_path}/$name $grf &> /dev/null ; then
-        text2="${text2}\nQC File:\t${grf}"
+        text2="${text2}\nQA File:\t${grf}"
       fi
       cd - &> /dev/null
     fi
@@ -3241,18 +3240,18 @@ mkLinks()
 
   if [ ${#grfs[*]} -gt 0 ] ; then
     sTxt[0]="3data_path: ${PROJECT_DATA}${saveSubPath}"
-    sTxt[1]="3caption: 'symbolic link to QC results'"
+    sTxt[1]="3caption: 'symbolic link to QA results'"
     sTxt[2]="3text: $((${#grfs[*]}+2))"
-    sTxt[3]="3 - qc_linkpath= ${dest_path}${saveSubPath}"
-    sTxt[4]="3 - qc_target_path= ${grf[0]%/*}"
+    sTxt[3]="3 - qa_linkpath= ${dest_path}${saveSubPath}"
+    sTxt[4]="3 - qa_target_path= ${grf[0]%/*}"
 
     if [ ${#grfs[*]} -gt 1 ] ; then
       local l
       for(( l=0 ; l <  ${#grfs[*]} ; ++l )) ; do
-         sTxt[$((l+4))]="3 - qc_file= ${grfs[l]}"
+         sTxt[$((l+4))]="3 - qa_file= ${grfs[l]}"
       done
     else
-      sTxt[4]="3 - qc_file= ${grfs}"
+      sTxt[4]="3 - qa_file= ${grfs}"
     fi
 
     local k n text
@@ -3311,7 +3310,7 @@ operatePipes()
     fi
 
     # Any duplicates of variables in case of multiple PROJECT_DATA
-    # assignments? Note: all sub-paths are mapped to the same QC_RESULTS
+    # assignments? Note: all sub-paths are mapped to the same QA_RESULTS
     if [ ${#PROJECT_DATAV[*]} -gt 1 ] ; then
       local k;
       for(( k=0 ; k < nFmax ; ++k )) ; do
@@ -3352,7 +3351,7 @@ operatePipes()
     nF_SUBPATH[${j}]=${subPath}
     nF_name[${j}]=${fBase[ix]}
 
-    if [ -e ${QC_RESULTS}/data/${subPath}/qc_${fBase[ix]}.nc ] ; then
+    if [ -e ${QA_RESULTS}/data/${subPath}/qa_${fBase[ix]}.nc ] ; then
       nF_SEQ[${j}]=s
     else
       nF_SEQ[${j}]=f
@@ -3396,7 +3395,7 @@ operatePipes()
 
       # anything extraordinary in a record of a sub-temporal file must stop
       # the pipe; p_nF -eq 0 means that the pipe is empty
-      ls ${QC_RESULTS}/data/${subPath}/qc_lock_*.txt ${notes} &> /dev/null
+      ls ${QA_RESULTS}/data/${subPath}/qa_lock_*.txt ${notes} &> /dev/null
       local stt=$?
 
       if [ ${stt} -eq 0 ] ; then
@@ -3577,7 +3576,7 @@ sendEMail()
   fi
 
   local sendSub
-  sendSub="QC ${PROJECT} ${CURR_EXP_NAME}: ${sendSubject}"
+  sendSub="QA ${PROJECT} ${CURR_EXP_NAME}: ${sendSubject}"
 
   # activate backslash escaped chars
   local sendT
@@ -3633,7 +3632,7 @@ rmEmptyPaths()
 {
   local subPath
   while read -a subPath ; do
-    rmdir -p ${QC_RESULTS}/data/${subPath[1]} &> /dev/null
+    rmdir -p ${QA_RESULTS}/data/${subPath[1]} &> /dev/null
   done < ${pathListFile}
 
   return
@@ -3644,7 +3643,7 @@ setLD_LIB_PATH()
   # location of shared libraries not in default paths
   # get those used for the compilation stored in .conf
   local tmp
-  tmp=($( grep 'LD_LIBRARY_PATH=' ${QC_SRC}/.conf 2> /dev/null))
+  tmp=($( grep 'LD_LIBRARY_PATH=' ${QA_SRC}/.conf 2> /dev/null))
   tmp=( ${tmp[*]//LD_LIBRARY_PATH=/} )
   tmp=( ${tmp[*]//:/ } )
 
@@ -3761,15 +3760,15 @@ std_out()
   # neither email nor session logfile. Store in dir NoDevice
 #  if [ ${isSent} = f ] ; then
 #    # str0 gets the filename for undeliverables
-#    if mkdir -p $QC_SRC/NoDevice &> /dev/null ; then
+#    if mkdir -p $QA_SRC/NoDevice &> /dev/null ; then
 #      str0="undeliv_$( date +'%FT%T' )_${HOSTNAME%%.*}".txt
-#      echo "$str0" >> $QC_SRC/NoDevice/$str0
+#      echo "$str0" >> $QA_SRC/NoDevice/$str0
 
 #      for(( j=0 ; j < ${#outputText[*]} ; ++j )) ; do
-#        echo -e -n "${outputText[j]}" >> $QC_SRC/NoDevice/$str0
+#        echo -e -n "${outputText[j]}" >> $QA_SRC/NoDevice/$str0
 
 #      for(( j=0 ; j < ${#outputText[*]} ; ++j )) ; do
-#        echo -e -n "${outputText[j]}" >> $QC_SRC/NoDevice/$str0
+#        echo -e -n "${outputText[j]}" >> $QA_SRC/NoDevice/$str0
 #      done
 #    fi
 #  fi
@@ -3783,7 +3782,7 @@ taskSum()
 {
   local cvr prj qrs tcl ers
   test ${#PROJECT}    -gt 0 && prj="-P ${PROJECT}"
-  test ${#QC_RESULTS} -gt 0 && qrs="-r ${QC_RESULTS}"
+  test ${#QA_RESULTS} -gt 0 && qrs="-r ${QA_RESULTS}"
 
   if [ ${#TABLE_PATH} -gt 0 ] ; then
     tcl="-t ${TABLE_PATH}/${CHECK_LIST}"
@@ -3798,8 +3797,8 @@ taskSum()
   fi
 
   if [ ${#EXP_NAMES[*]} -gt 0 ] ; then
-    /bin/bash ${QC_SRC}/scripts/taskSummary ${DEBUG_X} \
-       -p ${QC_RESULTS}/check_logs \
+    /bin/bash ${QA_SRC}/scripts/taskSummary ${DEBUG_X} \
+       -p ${QA_RESULTS}/check_logs \
        ${cvr} ${ers} ${prj} ${qrs} ${tcl} ${EXP_NAMES[*]}
   fi
 
@@ -3816,8 +3815,8 @@ terminate()
 testFileLink()
 {
   # Purpose: when the file of the current path is
-  # a symbolic link, then make links to corresponding QC results.
-  # If corresponding QC results don't exist, the append the subpath
+  # a symbolic link, then make links to corresponding QA results.
+  # If corresponding QA results don't exist, the append the subpath
   # to the genuine data (Note: D A T A ).
   # If the path to the genuine data is LOCKed, then remove the lock.
 
@@ -3828,12 +3827,12 @@ testFileLink()
   local src_filename link_target_path
 
   # Note: multiple filenames are allowed, but all
-  # would be ascociated with the same QC result file.
+  # would be ascociated with the same QA result file.
   # Thus,considering the first one is sufficient
 
-  # Take into account not only a qc-result file but, also new
+  # Take into account not only a qa-result file but, also new
   # associated files, e.g. freqDist. These could be added
-  # after having established the link to the qc result file.
+  # after having established the link to the qa result file.
 
   # dereferenced link
   deref_link link_target_path ${PROJECT_DATA}/${subPath}/$nextFile
@@ -3855,16 +3854,16 @@ testFileLink()
   fi
 
   local saveSubPath=${subPath}
-  local dest_path=${QC_RESULTS}/data
+  local dest_path=${QA_RESULTS}/data
 
   if [ "${link_target_path:0:1}" = '/' ] ; then
     # a link to the outside of PROJECT_DATA will always be dereferenced
     test "${link_target_path:0:${#PROJECT_DATA}}" != ${PROJECT_DATA} && return 1
 
     # adjust for a link with an absolute path
-    link_target_path=$QC_RESULTS/data${link_target_path#${PROJECT_DATA}}
+    link_target_path=$QA_RESULTS/data${link_target_path#${PROJECT_DATA}}
 
-    subPath=${link_target_path#${QC_RESULTS}/data/}
+    subPath=${link_target_path#${QA_RESULTS}/data/}
   else
     # Any relative path?
     subPath=${link_target_path}
@@ -3884,9 +3883,9 @@ testFileLink()
     subPath=/${tmp_subPath}/${subPath}
   fi
 
-  # qc the genuine data
+  # qa the genuine data
   tryCom \
-  mkdir -p ${QC_RESULTS}/data/${subPath}
+  mkdir -p ${QA_RESULTS}/data/${subPath}
 
 # point to the genuine filename from here
   local ix=0
@@ -3903,7 +3902,7 @@ testFileLink()
 #trace \
   checkClosedMessages
 
-  # link to genuine qc results
+  # link to genuine qa results
   mkLinks ${dest_path} ${subPath} ${src_filename} ${fBase[ix]} &
 
   return
@@ -3911,7 +3910,7 @@ testFileLink()
 
 testLocks()
 {
-  # apply rules, clearings, and test for qc_note files
+  # apply rules, clearings, and test for qa_note files
   if \
 #trace \
   applyRules ${fBase[ix]} ; then
@@ -3944,7 +3943,7 @@ testLocks()
 testPathLink()
 {
   # Purpose: when the current path is
-  # a symbolic link, then make links for the QC results, too.
+  # a symbolic link, then make links for the QA results, too.
   # Input parameter: subPath
   # Return 0 for a link
 
@@ -3960,7 +3959,7 @@ testPathLink()
 
   local dest_path
 
-  dest_path=$QC_RESULTS/data${1}
+  dest_path=$QA_RESULTS/data${1}
 
   local link_target_path
 
@@ -3998,15 +3997,15 @@ testPathLink()
     fi
 
     # the dir where to place the link must exist.
-    test ! -e $QC_RESULTS/data${pc%/*} && return 0  # try again later
+    test ! -e $QA_RESULTS/data${pc%/*} && return 0  # try again later
 
-    # is there already a link in the qc dir tree?
-    if [ -e "$QC_RESULTS/data${pc}" ] ; then
+    # is there already a link in the qa dir tree?
+    if [ -e "$QA_RESULTS/data${pc}" ] ; then
        # is the link still the one it should be?
        local dest_lnk
 
        # dereferenced link
-       deref_link dest_lnk  ${QC_RESULTS}/data$pc
+       deref_link dest_lnk  ${QA_RESULTS}/data$pc
 
        # link exists; nothing has changed
        if [ "$link_target_path" = "$dest_lnk" ] ; then
@@ -4016,17 +4015,17 @@ testPathLink()
 
     # we don't care if a broken link is produced; this may get
     # valid in a later iteration.
-    ln -sf ${link_target_path} $QC_RESULTS/data${pc}
+    ln -sf ${link_target_path} $QA_RESULTS/data${pc}
 
     local text
     text="Symbolic link for a sub-tree"
 
     if [ ${link_target_path:0:1} = / ] ; then
       sTxt[0]="3text: 1"
-      sTxt[1]="3 - $QC_RESULTS/data${pc} --> ${link_target_path}"
+      sTxt[1]="3 - $QA_RESULTS/data${pc} --> ${link_target_path}"
     else
       sTxt[0]="text: 2"
-      sTxt[1]="3 - common_path: $QC_RESULTS/data${pc%/*}"
+      sTxt[1]="3 - common_path: $QA_RESULTS/data${pc%/*}"
       sTxt[2]="3 - link: ${pc##*/} --> ${link_target_path}"
     fi
 
@@ -4135,13 +4134,13 @@ traceCalibration()
   local prg
 
   if [ ${HOSTNAME} = surge ] ; then
-    prg="${QC_SRC}/bin/unixTime.x dec"
+    prg="${QA_SRC}/bin/unixTime.x dec"
   elif [ ${HOSTNAME:0:3} = liz ] ; then
-    prg="${QC_SRC}/bin_l/unixTime.x dec"
+    prg="${QA_SRC}/bin_l/unixTime.x dec"
   elif [ ${HOSTNAME:0:4} = pass ] ; then
-    prg="${QC_SRC}/bin_p/unixTime.x dec"
+    prg="${QA_SRC}/bin_p/unixTime.x dec"
   elif [ ${HOSTNAME:0:4} = bliz ] ; then
-    prg="${QC_SRC}/bin_b/unixTime.x dec"
+    prg="${QA_SRC}/bin_b/unixTime.x dec"
   else
     echo "traceCalibration: executable unixTime.x not found"
     exit
@@ -4168,7 +4167,7 @@ tracePrint()
 
   local i j tab resid sum out total sz
   sum=0.
-  out=qc_flowtrace.lst
+  out=qa_flowtrace.lst
 
   total=$(unixTime.x dec)
   total=$(echo "$total - ${traceStartTime}" | bc -l 2> /dev/null )
@@ -4266,9 +4265,9 @@ tryCom()
   # $*:   command [with args]
 
   # Examples:
-  # 1) tryCom 'eval echo -e qcDKRZ.${2} >> qwer/qwer'
+  # 1) tryCom 'eval echo -e qa-DKRZ.${2} >> qwer/qwer'
   # 2) for f in $(tryCom ls -d *) ; do ... ; done
-  # 3) tryCom 'eval echo -e qcDKRZ.${2} >> qwer/qwer'
+  # 3) tryCom 'eval echo -e qa-DKRZ.${2} >> qwer/qwer'
   # There is a dependency on bash's "noglob" setting
 
   local i arg tCStatus
@@ -4332,7 +4331,7 @@ tryCom()
     # for instance rm returns an error text with embedded ` and '
     failed=$( echo "$failed" | sed 's%`%%g' |sed "s%'%%g")
 
-    std_out add "Failed command in qcDKRZ: $*"
+    std_out add "Failed command in qa-DKRZ: $*"
     std_out add "\n${failed}"
 
     sendSubject="command failed after ${limits} reattempts"
@@ -4388,7 +4387,7 @@ wait_fnct()
   return
 }
 
-##//! Determine the path to QC-0.4/scripts from $0
+##//! Determine the path to QA-0.4/scripts from $0
 
 xtractSrcPath()
 {
@@ -4396,31 +4395,31 @@ xtractSrcPath()
   # gets its name in parameter $0, which is available
   # in functions.
 
-  if [ ${#QC_SRC} -eq 0 ] ; then
+  if [ ${#QA_SRC} -eq 0 ] ; then
     # init
     if [ ${0:0:1} = '/' ] ; then
-      QC_SRC=${0%/*}
+      QA_SRC=${0%/*}
     else
-      QC_SRC=$(pwd)/${0%/*}
+      QA_SRC=$(pwd)/${0%/*}
     fi
 
-    qcDKRZ=${0##*/}
+    qaDKRZ=${0##*/}
   fi
 
-  if [ -h $QC_SRC/$qcDKRZ ] ; then
+  if [ -h $QA_SRC/$qaDKRZ ] ; then
 
-    QC_SRC=$(ls -l $QC_SRC/${qcDKRZ} | awk  '{print $(NF)}')
-    qcDKRZ=${QC_SRC##*/}
-    QC_SRC=${QC_SRC%/*}
+    QA_SRC=$(ls -l $QA_SRC/${qaDKRZ} | awk  '{print $(NF)}')
+    qaDKRZ=${QA_SRC##*/}
+    QA_SRC=${QA_SRC%/*}
 
     xtractSrcPath
 
   else
 
     # resolve .. and .
-    local arr=( ${QC_SRC//\// } )
+    local arr=( ${QA_SRC//\// } )
 
-    # any //, ., or .. in the middle of QC_SRC?
+    # any //, ., or .. in the middle of QA_SRC?
     local i j sz
     sz=${#arr[*]}
 
@@ -4444,25 +4443,25 @@ xtractSrcPath()
     arr=( ${arr[*]} )
 
     sz=${#arr[*]}
-    QC_SRC=
+    QA_SRC=
 
     for(( i=0 ; i < sz ; ++i )) ; do
-      QC_SRC=${QC_SRC}/${arr[i]}
+      QA_SRC=${QA_SRC}/${arr[i]}
     done
   fi
 
   local tmp
-  while [ "${QC_SRC}" != "${QC_SRC%/*}" ] ; do
-    tmp=${QC_SRC##*/}
-    test ${tmp:0:3} = 'QC-' && return
+  while [ "${QA_SRC}" != "${QA_SRC%/*}" ] ; do
+    tmp=${QA_SRC##*/}
+    test ${tmp:0:3} = 'QA-' && return
 
-    QC_SRC=${QC_SRC%/*}
+    QA_SRC=${QA_SRC%/*}
   done
 
   local str
-  str="\nThis script was executed from out-side of the QC package."
+  str="\nThis script was executed from out-side of the QA package."
   str="${str}\nIt was probably copied or hard-linked. Please, use a"
-  str="${str}\nsymbolic link or call directly from /path/QC-package/scripts"
+  str="${str}\nsymbolic link or call directly from /path/QA-package/scripts"
 
   echo -e -n "${str}" > $TTY
 
@@ -4487,13 +4486,13 @@ if tty -s ; then TTY=$(tty) ; fi
 
 #sleep 10
 
-QC_CONFIGURATOR=qcConfiguration
-QC_EXECUTOR=qcExecution
+QA_CONFIGURATOR=qaConfiguration
+QA_EXECUTOR=qaExecution
 
 rootPID=$$
 
-#extract the path to QC from $0
-# get execution path of QC scripts
+#extract the path to QA from $0
+# get execution path of QA scripts
 xtractSrcPath
 
 init $*

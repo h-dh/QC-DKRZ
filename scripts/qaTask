@@ -5,7 +5,7 @@ MAX_NUM_MANAGER_THREADS=1
 
 descript()
 {
-  echo "usage: qc_task [opts] [qc-DKRZ-Opts] [task-files]"
+  echo "usage: qaTask [opts] [qc-DKRZ-Opts] [task-files]"
   echo "purpose: execute task-files, placed in a TASK directory."
   echo "         Eventually, the task-file is moved to directory 'Executed'"
   echo "         made inside a TASK directory."
@@ -37,7 +37,7 @@ descript()
   echo "                'STOP_TASK' (contents does not matter) terminates the qc_task"
   echo "                processes scanning the corresponding TASK directory."
   echo "                Accepts comma-separated list."
-  echo "  --td=str      Path(s) to the TASK directories [QC_RESULTS/Task]. Note that"
+  echo "  --td=str      Path(s) to the TASK directories [QA_RESULTS/Task]. Note that"
   echo "                more than a single directory may be specified by multiple usage"
   echo "                by a comma-separated list."
   echo "                If none of the TASK directories is valid, this script will"
@@ -107,7 +107,7 @@ doTask()
   saveTaskFile
 
   # this starts a qc run
-  $QC_SRC/scripts/qc-DKRZ -Q -f $TASK_DIR/Executed/$$/$task ${collect[*]} &
+  $QA_SRC/scripts/qc-DKRZ -Q -f $TASK_DIR/Executed/$$/$task ${collect[*]} &
 
   spawnedPIDS[${#spawnedPIDS[*]}]=$!
   movedTask[${#movedTask[*]}]=$task
@@ -286,7 +286,7 @@ start()
     test ${arr[i]} = '--start' && unset arr[${i}]
   done
 
-  exec ${QC_SRC}/scripts/qc_task ${arr[*]} --daemon  &
+  exec ${QA_SRC}/scripts/qc_task ${arr[*]} --daemon  &
   exit 0
   return
 }
@@ -376,8 +376,8 @@ xtractSrcPath()
     return
   fi
 
-  QC_SRC=$(pwd)
-  QC_SRC=${QC_SRC%/scripts}
+  QA_SRC=$(pwd)
+  QA_SRC=${QA_SRC%/scripts}
 
   cd $oldPath
   return
@@ -389,10 +389,10 @@ xtractSrcPath()
 
   arr=( $* )
 
-  #extract the path to QC from $0
+  #extract the path to QA from $0
   xtractSrcPath
 
-  TASK_DIRS=( $QC_SRC/Tasks )
+  TASK_DIRS=( $QA_SRC/Tasks )
 
   OPTERR=0
   while getopts n:t:-: option ${args[*]}

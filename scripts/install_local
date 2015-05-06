@@ -1,6 +1,6 @@
 #! /bin/bash
 
-package=QC-DKRZ  # default
+package=QA-DKRZ  # default
 
 srcPath=local/source  # by default, absolute path comes later
 
@@ -145,7 +145,6 @@ descript()
   echo "  --help         Also option -h."
   echo "  --link=str     Hard-link of external NetCDF installation to the directories"
   echo "                 in 'your-path/$package/local'."
-  echo "  --only-qc      Get ${package} sources and create install_configure."
   echo "  -q             Quiet for successful operation."
   echo "  --src-path=path To the place were all three packages reside."
 }
@@ -153,16 +152,16 @@ descript()
 distclean()
 {
   for f in bin include lib lib64 share ; do
-    \rm -rf ${QC_SRC}/local/$f
+    \rm -rf ${QA_SRC}/local/$f
   done
-  \rm -f ${QC_SRC}/local/source/INDSTALL_*.log
+  \rm -f ${QA_SRC}/local/source/INDSTALL_*.log
 
   local name
 
   for t in zlib hdf5 netcdf udunits ; do
     eval name=\${curr_${t}}
 
-    bash ${QC_SRC}/scripts/install_local_${t} --distclean  \
+    bash ${QA_SRC}/scripts/install_local_${t} --distclean  \
        -q --prefix=${prefix} ${QUIET:+-q} --src=$srcPath/$name
   done
 
@@ -356,7 +355,7 @@ f()
 
   mkdir -p $prefix
 
-  bash ${QC_SRC}/scripts/install_local_${1}  \
+  bash ${QA_SRC}/scripts/install_local_${1}  \
      ${isDebug:+--debug} ${QUIET:+-q} \
      --prefix=${prefix} \
      --src=$srcPath/$name
@@ -369,7 +368,7 @@ f()
     myStat=DONE
   fi
 
-  log ${QC_SRC}/scripts/install_local_${1} ${isDebug:+--debug} \
+  log ${QA_SRC}/scripts/install_local_${1} ${isDebug:+--debug} \
   --prefix=${prefix} ${QUIET:+-q} --src=${srcPath} ${myStat}
 
   test ${myStat} = FAIL && exit 1
@@ -700,7 +699,7 @@ xtractSrcPath()
     xtractSrcPath ${p##*/}
   fi
 
-  # Is it a symbolic link? Should be for QC-01 and QC-02.
+  # Is it a symbolic link?
   # The symbolic link could point to another symbolic link
   if [ -h $p ] ; then
     local tmps
@@ -714,10 +713,10 @@ xtractSrcPath()
     return
   fi
 
-  QC_SRC=$(pwd)
+  QA_SRC=$(pwd)
 
-  if [ ${QC_SRC} != ${QC_SRC%/scripts} ] ; then
-    QC_SRC=${QC_SRC%/scripts}
+  if [ ${QA_SRC} != ${QA_SRC%/scripts} ] ; then
+    QA_SRC=${QA_SRC%/scripts}
     cd ..
   fi
 
@@ -726,12 +725,12 @@ xtractSrcPath()
 
 # ++++++++++++   main   +++++++++++++++
 
-#extract the path to QC from $0
+#extract the path to QA from $0
 xtractSrcPath
 
-srcPath=${QC_SRC}/${srcPath}  # by default
+srcPath=${QA_SRC}/${srcPath}  # by default
 
-prefix=${QC_SRC}/local
+prefix=${QA_SRC}/local
 
 while getopts hq-: option ${args[*]}
 do

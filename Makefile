@@ -1,4 +1,4 @@
-# Makefile for the QC package
+# Makefile for the QA package
 
 # Cx   executables of stand-alone C   program
 # CPPx executables of stand-alone C++ program
@@ -16,16 +16,16 @@ BASE_HEADER = annotation.h base.h brace_op.h data_statistics.h date.h \
    geo_meta.h in_file.h iobj.h matrix_array.h nc_api.h \
    time_control.h variable.h
 
-QC_SOURCE = CF.cpp CellStatistics.cpp FD_interface.cpp Oper.cpp OutFile.cpp Parse.cpp \
-   QC.cpp QC_data.cpp QC_time.cpp QC_PT.cpp qC_main.cpp
-QC_HEADER = cell_statistics.h cf.h fd_interface.h oper.h out_file.h parse.h \
-   qc.h qc_data.h qc_PT.h qc_main.h qc_time.h
+QA_SOURCE = CF.cpp CellStatistics.cpp FD_interface.cpp Oper.cpp OutFile.cpp Parse.cpp \
+   QA.cpp QA_data.cpp QA_time.cpp QA_PT.cpp QA_main.cpp
+QA_HEADER = cell_statistics.h cf.h fd_interface.h oper.h out_file.h parse.h \
+   qa.h qa_data.h qa_PT.h qa_main.h qa_time.h
 
-#vpath %.c   $(QC_PATH)/src
-#vpath %.cpp $(QC_PATH)/src
-#vpath %.h   $(QC_PATH)/include
+#vpath %.c   $(QA_PATH)/src
+#vpath %.cpp $(QA_PATH)/src
+#vpath %.h   $(QA_PATH)/include
 
-VPATH = $(QC_PATH)/src $(QC_PATH)/include
+VPATH = $(QA_PATH)/src $(QA_PATH)/include
 all:    c-prog cpp-prog $(PRJ_NAME)
 
 c-prog: $(Cx)
@@ -48,28 +48,28 @@ testValidNC.x: $(UTIL_SOURCE) $(UTIL_HEADER) nc_api.h NcAPI.cpp testValidNC.cpp
 
 %.x: %.cpp
 	$(CXX) $(CXXFLAGS) -o $@  $< \
-	   -I $(QC_PATH)/include $(INCLUDE) \
+	   -I $(QA_PATH)/include $(INCLUDE) \
            $(LIB) $(LIBDL) -ludunits2 -lnetcdf -lhdf5_hl -lhdf5 -lz -luuid
 
 ${PRJ_NAME}: ${PRJ_NAME}.x
 
-${PRJ_NAME}.x: ${BASE_SOURCE} ${BASE_HEADER} $(QC_SOURCE) $(QC_HEADER) $(UTIL_SOURCE) $(UTIL_HEADER)
-	$(CXX) $(CXXFLAGS) -o ${PRJ_NAME}.x $(QC_PATH)/src/qC_main.cpp \
-           -I $(QC_PATH)/include $(INCLUDE) \
+${PRJ_NAME}.x: ${BASE_SOURCE} ${BASE_HEADER} $(QA_SOURCE) $(QA_HEADER) $(UTIL_SOURCE) $(UTIL_HEADER)
+	$(CXX) $(CXXFLAGS) -o ${PRJ_NAME}.x $(QA_PATH)/src/QA_main.cpp \
+           -I $(QA_PATH)/include $(INCLUDE) \
            $(LIB) $(LIBDL) -ludunits2 -lnetcdf -lhdf5_hl -lhdf5 -lz
 
 #          -DSVN_VERSION=$(SVN_VERSION) \
 
 CF-checker: cf-checker.x
 
-cf-checker.x: cF_main.cpp CF.cpp $(BASE_SOURCE) ${BASE_SOURCE} $(QC_HEADER) $(UTIL_SOURCE) $(UTIL_HEADER)
-	$(CXX) $(CXXFLAGS) -o cf-checker.x $(QC_PATH)/src/cF_main.cpp \
-           -I $(QC_PATH)/include $(INCLUDE) \
+cf-checker.x: CF_main.cpp CF.cpp $(BASE_SOURCE) ${BASE_SOURCE} $(QA_HEADER) $(UTIL_SOURCE) $(UTIL_HEADER)
+	$(CXX) $(CXXFLAGS) -o cf-checker.x $(QA_PATH)/src/CF_main.cpp \
+           -I $(QA_PATH)/include $(INCLUDE) \
            $(LIB) $(LIBDL) -ludunits2 -lnetcdf -lhdf5_hl -lhdf5 -lz
 
 ModifyNc: modifyNc.x
 
 modifyNc.x: modifyNc.cpp modify_nc.h modify_fnct.cpp inquiry_fnct.cpp $(BASE_SOURCE) $(UTIL_SOURCE) $(UTIL_HEADER)
-	$(CXX) $(CXXFLAGS) -o modifyNc.x $(QC_PATH)/src/modifyNc.cpp \
-           -I $(QC_PATH)/include $(INCLUDE) \
+	$(CXX) $(CXXFLAGS) -o modifyNc.x $(QA_PATH)/src/modifyNc.cpp \
+           -I $(QA_PATH)/include $(INCLUDE) \
            $(LIB) $(LIBDL) -lnetcdf -lhdf5_hl -lhdf5 -lz -luuid

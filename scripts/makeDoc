@@ -43,7 +43,7 @@ linkTargets()
            ix[${j}]=''
            continue 2
          fi
-      done  
+      done
     fi
   done
 
@@ -108,7 +108,7 @@ fi
 rPWD=$( pwd)
 
 # remove older versions of the documentation
-test -d doc/QC.html && \rm -r doc/QC.html
+test -d doc/QA.html && \rm -r doc/QA.html
 test -d doc/source && \rm -r doc/source
 
 mkdir -p doc/source/qc-sources
@@ -120,6 +120,6 @@ linkTargets
 
 doxygen doc/doxygen_config
 
-mv doc/html doc/QC.html
+mv doc/html doc/QA.html
 
 \rm -r doc/source
