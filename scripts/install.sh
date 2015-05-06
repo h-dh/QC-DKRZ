@@ -81,41 +81,15 @@ compilerSetting()
   fi
 
   if [ ! -f install_configure ] ; then
-    txt="${txt}# ============ Please, edit setting ========="
-    txt="${txt}\n# ============ Assignment containing spaces must be surrounded by \""
-
-    txt="${txt}\n\n# C compiler"
-    txt="${txt}\nCC=\"${CC}\""
-
-    txt="${txt}\n\n# C++ compiler"
-    txt="${txt}\nCXX=\"${CXX}\""
-
-    txt="${txt}\n\n# C compiler options"
-    txt="${txt}\nCFLAGS=\"${CFLAGS}\""
-
-    txt="${txt}\n\n# C++ compiler options"
-    txt="${txt}\nCXXFLAGS=\"${CXXFLAGS}\""
-
-    txt="${txt}\n\n# Path to NetcCDF libraries."
-    txt="${txt}\n# Prefix of '-L' may be skipped."
-    txt="${txt}\nLIB="
-
-    txt="${txt}\n\n# Path to NetCDF header files."
-    txt="${txt}\n# Prefix of '-I' may be skipped."
-    txt="${txt}\nINCLUDE="
-
-    txt="${txt}\n\n# path to place QC executables."
-    txt="${txt}\n# Default: path/$package/bin"
-    txt="${txt}\n# If the path is relative, then the default is extended."
-    txt="${txt}\n#BIN=$(pwd)/bin"
-
-    echo -e "${txt}" > install_configure
     log "create install_configure" DONE
+
+    test "${isBuild:-f}" = f && \
+      echo "Please, edit file install_configure."
 
   fi
 
   # --only-qc-src
-  test "${isNoBuild}" = t && exit
+  test "${isBuild:-f}" = f && exit
 
   FC=""
   F90=""
@@ -129,12 +103,12 @@ descript()
   echo "  -B                Unconditionally re-make all"
   echo "  -c                Exit after creation of script 'install_configure'."
   echo "  -d                Execute 'make' with debugging info."
+  echo "  --build           Download and build required libraries."
   echo "  --continue_log    Iternal processing option."
   echo "  --debug[=script]  Display execution commands."
   echo "  --help            Also option -h."
   echo "  --link=path       Link lib and include files, respectively, of external netcdf"
   echo "                    to the directories 'your-path/${package}/local'."
-  echo "  --only-qc-src         Get ${package} sources and create install_configure."
   echo "  --package=str     str=QC-version."
   echo "  --reset_tables    Remove every table in ${package}/tables having an"
   echo "                    entry of the same name in ${package}/tables/projects."
@@ -830,7 +804,7 @@ do
            coll[${#coll[*]}]=--${OPTARG}
         elif [ "${OPTARG:0:7}" = "only-qc" ] ; then
            # get only QC sources
-           isNoBuild=t
+           isBuild=f
         elif [ "${OPTARG%%=*}" = package ] ; then
            package=${OPTARG#=*}
            coll[${#coll[*]}]=--${OPTARG}

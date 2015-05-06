@@ -139,13 +139,13 @@ descript()
   echo "  -r num            Subversion revision number; the latest by default."
 #  echo "  --auto-up         Enable automatic svn updates at the beginning of a run;"
 #  echo "                    --auto-up=disable cancels."
+  echo "  --build           Download and build required libraries."
   echo "  --debug[=script]  Display execution commands."
   echo "  --distclean       For a re-installation of zlib, hdf5 and netcdf."
   echo "  --help            Display usage and exit."
   echo "  --link=path       Hard links of external NetCDF installations from the directories"
   echo "                    in 'your-path/${package}/local'."
   echo "                    Shared by all hdf, netcdf, udunits  and zlib."
-  echo "  --only-qc-src     Get ${package} sources and create install_configure."
   echo "  --prefix=path     Path for installing the ${package} package;"
   echo "                    current directory by default. "
   echo "  --reset           Clear library setting and start from scratch."
@@ -406,9 +406,6 @@ log ${allArgs}
 
 #svn_fnct
 
-# inhibit building of libraries
-test ${#isQC_only} -gt 0 && isNew=f
-
-exec scripts/install.sh ${debug} --pack=${package} --continue_log ${isNew:+--build} \
+exec scripts/install.sh ${debug} --pack=${package} --continue_log \
   --zlib=${zlib} --hdf5=${hdf5} --netcdf=${netcdf} --udunits=${udunits} \
   ${coll[*]} ${item[*]}
