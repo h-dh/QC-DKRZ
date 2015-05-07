@@ -1118,6 +1118,7 @@ parseOPTARG()
   local key value
 
   key=${1:1}
+
   value=
   test $# -eq 2 && value=$2
 
@@ -1645,6 +1646,29 @@ tryExist()
   fi
 }
 
+tr_option()
+{
+  local phrase="${!1}"
+
+  local sz i
+  local sz=${#phrase}
+  for((i=0 ; i < sz ; ++i )) ; do
+    test "${phrase:i:1}" = '=' && break
+  done
+
+  if [ ${i} -eq ${sz} ] ; then
+    phrase=$( echo "${phrase/% /}" | tr "[:lower:]" "[:upper:]" )
+  else
+    local tmp0="${phrase:0:i}"
+    tmp0="${tmp0//QC/QA}"
+    tmp0=$( echo "${tmp0/% /}" | tr "[:lower:]" "[:upper:]" )
+    phrase="${tmp0}""${phrase:i}"
+  fi
+
+  eval ${1}=\${phrase}
+  return
+}
+
 ##main()
 ##{
 
@@ -1656,14 +1680,17 @@ umask 002
 # very specific: convert -E_SELECT or -E_LOCK into -S or -L respectively.
 # Also, accept -E_SELECT param or -E_LOCK param, i.e. separated by a space
 for(( i=1 ; i <= $# ; ++i )) ; do
+  item=${!i}
+  tr_option item
+
   arg=
 
-  if [ ${!i:0:9} = '-E_SELECT' -o ${!i:0:7} = '-E_LOCK' ] ; then
+  if [ ${item:0:9} = '-E_SELECT' -o ${item:0:7} = '-E_LOCK' ] ; then
     j=$((i+1))
-    if [ ${!i#*=} != ${!i} ] ; then
-       arg="-${!i:3:1} ${!i#*=}"  # prefixed by -S or -L followed by arg
+    if [ ${item#*=} != ${item} ] ; then
+       arg="-${item:3:1} ${item#*=}"  # prefixed by -S or -L followed by arg
     elif [ ${!j:0:1} != '-' ] ; then
-       arg="-${!i:3:1} ${!j}"
+       arg="-${item:3:1} ${!j}"
        j=$((j+1))
     fi
   fi
@@ -1675,18 +1702,21 @@ for(( i=1 ; i <= $# ; ++i )) ; do
 done
 
 # stage 0: scan for configuration files etc.
-while getopts c:E:f:hHmP:p:QqL:S:s:T:Vx-: option
+while getopts c:e:E:f:hHmP:p:QqL:S:s:T:Vx-: option
 do
+  UOPTARG=${OPTARG}
+  tr_option UOPTARG
+
   case $option in
     c)  qaConf[${#qaConf[*]}]=${OPTARG}
         test ! -f ${OPTARG} && noSuchFile=( ${noSuchFile[*]} ${OPTARG} )
         ;;
-    E)  if [ ${OPTARG:0:8} = '_DEBUG_C' ] ; then
+    e|E)  if [ ${UOPTARG:0:8} = '_DEBUG_C' ] ; then
           set -x
-        elif [ ${OPTARG:0:9} = '_PROJECT=' ] ; then
+        elif [ ${UOPTARG:0:9} = '_PROJECT=' ] ; then
           setKWL ${OPTARG:1}
-        elif [ ${OPTARG:0:11} = '_PROJECT_AS=' ] ; then
-          setKWL ${OPTARG:1}
+        elif [ ${UOPTARG:0:11} = '_PROJECT_AS=' ] ; then
+          setKWL ${UOPTARG:1}
         fi
         ;;
     f)  qaConf[${#qaConf[*]}]=${OPTARG}
@@ -1698,7 +1728,7 @@ do
     T)  TTY=${OPTARG} ;;
     x)  set -x ;;
     -)  test "$OPTARG" = "help" && isHelp=t ;;
-    -)  test "${OPTARG%=*}" = "project_as" && setKWL PROJECT_AS=${OPTARG#*=} ;;
+    -)  test "${UOPTARG%=*}" = "PROJECT_AS" && setKWL PROJECT_AS=${OPTARG#*=} ;;
    \?)  is=f ;;
   esac
 done
@@ -1741,13 +1771,16 @@ setF -f
 
 # stage1
 unset OPTIND
-while getopts c:E:f:hmP:p:QqL:S:s:T:x-: option
+while getopts c:e:E:f:hmP:p:QqL:S:s:T:x-: option
 do
+  UOPTARG=$OPTARG
+  tr_option UOPTARG
+
   case $option in
     c)  # already done
         ;;
-    E) # Enable features or set parameters
-        test ${OPTARG:0:8} != '_DEBUG_C' && parseOPTARG ${OPTARG/=/ }
+    e|E) # Enable features or set parameters
+        test ${UOPTARG:0:8} != '_DEBUG_C' && parseOPTARG ${UOPTARG/=/ }
         ;;
     f)  # already done
         ;;
@@ -1759,7 +1792,8 @@ do
     m)  setKWL SIMPLE_STATUS_LINE=t ;;
     p)  # already done
         ;;
-    P)  setKWL PROJECT=$OPTARG ;;
+    P)
+        setKWL PROJECT=$UOPTARG ;;
     Q)  setKWL NO_STATUS=t ;;
     q)  setKWL QUIET=t ;;
     S)  sel_lock S ${OPTARG}
@@ -1774,14 +1808,14 @@ do
     -)  if [ "$OPTARG" = "help" ] ; then
            descript
            exit 1
-        elif [ "${OPTARG%=*}" = "auto-up" ] ; then
+        elif [ "${UOPTARG%=*}" = "AUTO-UP" ] ; then
            if [ "${OPTARG#*=}" = disable -o "${OPTARG#*=}" = f -o "${OPTARG#*=}" = d ]
            then
-              if grep -q auto-up ${QA_SRC}/.conf &> /dev/null; then
+              if grep -i -q auto-up ${QA_SRC}/.conf &> /dev/null; then
                 setKWL AUTO_UPDATE=f
               fi
            else
-              if ! grep -q auto-up ${QA_SRC}/.conf &> /dev/null; then
+              if ! grep -i -q auto-up ${QA_SRC}/.conf &> /dev/null; then
                  setKWL AUTO_UPDATE=t
               fi
            fi
@@ -1793,7 +1827,7 @@ do
            else
              setKWL PROGRESS_BAR=${OPTARG#*=}  # file to write to
            fi
-        elif [ "${OPTARG:0:4}" = post ] ; then
+        elif [ "${UOPTARG:0:4}" = POST ] ; then
            setKWL POST_PROC=t
         fi
         ;;
