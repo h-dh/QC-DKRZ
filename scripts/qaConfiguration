@@ -504,6 +504,16 @@ findEmbeddedConf()
   item=( ${item[*]} )
   item=${item#QA_CONF=}
 
+  # backward compatibility
+  if [ ${#item} -eq 0 ] ; then
+    item="$(grep 'QC_CONF=' "${currConf}" 2> /dev/null )"
+    item="${item// /}"
+    item=( ${item} )           # several lines are possible
+    item=( ${item[*]%%\#*} )
+    item=( ${item[*]} )
+    item=${item#QC_CONF=}
+  fi
+
   test ${#item} -eq 0 && return
 
   local ix p
@@ -1069,8 +1079,19 @@ parseLines()
      fi
   done
 
-  line_="${line_//QC/QA}"
-  line_="${line_//qc/qa}"
+  local i sz
+  sz=${#line_}
+  for((i=0 ; i < sz ; ++i )) ; do
+    test "${line_:i:1}" = '=' && break
+  done
+
+  if [ ${i} -eq ${sz} ] ; then
+    line_="${line_//QC/QA}"
+  else
+    local tmp0="${line_:0:i}"
+    tmp0="${tmp0//QC/QA}"
+    line_="${tmp0}""${line_:i}"
+  fi
 
   # we'd like to remember effective lines in the conf file
   confLine=${confLine}"${line_}"\\n
@@ -1377,7 +1398,7 @@ setKWL()
      fi
   done
 
-  key="${key/% /}"
+  key=$( echo "${key/% /}" | tr "[:lower:]" "[:upper:]" )
   value="${item#*=}"
 
   # disable --> f
