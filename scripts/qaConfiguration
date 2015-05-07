@@ -1702,7 +1702,7 @@ for(( i=1 ; i <= $# ; ++i )) ; do
 done
 
 # stage 0: scan for configuration files etc.
-while getopts c:e:E:f:hHmP:p:QqL:S:s:T:Vx-: option
+while getopts :c:e:E:f:hmP:p:QqL:S:s:T:Vx-: option
 do
   UOPTARG=${OPTARG}
   tr_option UOPTARG
@@ -1727,9 +1727,10 @@ do
     P)  setKWL PROJECT=$OPTARG ;;
     T)  TTY=${OPTARG} ;;
     x)  set -x ;;
-    -)  test "$OPTARG" = "help" && isHelp=t ;;
-    -)  test "${UOPTARG%=*}" = "PROJECT_AS" && setKWL PROJECT_AS=${OPTARG#*=} ;;
-   \?)  is=f ;;
+    -)  test "$OPTARG" = "help" && isHelp=t && continue
+        test "${UOPTARG%=*}" = "PROJECT_AS" && setKWL PROJECT_AS=${OPTARG#*=} && continue
+        ;;
+   \?)  ;;
   esac
 done
 
@@ -1805,31 +1806,39 @@ do
     x)  setKWL DEBUG_MANAGER=t
         setKWL DEBUG_EXECUTOR=t
         ;;  # already done for this script
-    -)  if [ "$OPTARG" = "help" ] ; then
-           descript
-           exit 1
-        elif [ "${UOPTARG%=*}" = "AUTO-UP" ] ; then
-           if [ "${OPTARG#*=}" = disable -o "${OPTARG#*=}" = f -o "${OPTARG#*=}" = d ]
-           then
-              if grep -i -q auto-up ${QA_SRC}/.conf &> /dev/null; then
-                setKWL AUTO_UPDATE=f
-              fi
-           else
-              if ! grep -i -q auto-up ${QA_SRC}/.conf &> /dev/null; then
-                 setKWL AUTO_UPDATE=t
-              fi
-           fi
-        elif [ "${OPTARG:0:4}" = fpid ] ; then
-           setKWL FORMER_PID=$OPTARG
-        elif [ "${OPTARG:0:2}" = pb ] ; then
-           if [ ${OPTARG} = ${OPTARG#*=} ] ; then
-             setKWL PROGRESS_BAR=t
-           else
-             setKWL PROGRESS_BAR=${OPTARG#*=}  # file to write to
-           fi
-        elif [ "${UOPTARG:0:4}" = POST ] ; then
-           setKWL POST_PROC=t
+    -)  test "$OPTARG" = "help" && descript && exit 1
+
+        if [ "${UOPTARG%=*}" = "AUTO-UP" ] ; then
+          if [ "${OPTARG#*=}" = disable -o "${OPTARG#*=}" = f -o "${OPTARG#*=}" = d ]
+          then
+            if grep -i -q auto-up ${QA_SRC}/.conf &> /dev/null; then
+              setKWL AUTO_UPDATE=f
+            fi
+          elif ! grep -i -q auto-up ${QA_SRC}/.conf &> /dev/null; then
+                setKWL AUTO_UPDATE=t
+          fi
+          continue
         fi
+
+        test "${OPTARG:0:4}" = fpid && setKWL FORMER_PID=$OPTARG && continue
+        test "$OPTARG" = "help" && continue # done before
+        test "${UOPTARG%=*}" = "PROJECT_AS" && continue # done before
+
+        if [ "${OPTARG:0:2}" = pb ] ; then
+          if [ ${OPTARG} = ${OPTARG#*=} ] ; then
+            setKWL PROGRESS_BAR=t
+          else
+            setKWL PROGRESS_BAR=${OPTARG#*=}  # file to write to
+          fi
+
+          continue
+        fi
+
+        test "${UOPTARG:0:4}" = POST && setKWL POST_PROC=t && continue
+
+        echo "invalid option --${OPTARG}" > /dev/stderr
+        descript
+        exit 1
         ;;
    \?)  descript
         exit 1;;
