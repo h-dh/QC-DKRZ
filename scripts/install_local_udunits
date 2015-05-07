@@ -31,6 +31,29 @@ c()
   return $?
 }
 
+tr_option()
+{
+  local phrase="${!1}"
+
+  local sz i
+  local sz=${#phrase}
+  for((i=0 ; i < sz ; ++i )) ; do
+    test "${phrase:i:1}" = '=' && break
+  done
+
+  if [ ${i} -eq ${sz} ] ; then
+    phrase=$( echo "${phrase/% /}" | tr "[:lower:]" "[:upper:]" )
+  else
+    local tmp0="${phrase:0:i}"
+    tmp0="${tmp0//QC/QA}"
+    tmp0=$( echo "${tmp0/% /}" | tr "[:lower:]" "[:upper:]" )
+    phrase="${tmp0}""${phrase:i}"
+  fi
+
+  eval ${1}=\${phrase}
+  return
+}
+
 # main
 
 QA_SRC=${0%/*}
@@ -41,20 +64,23 @@ out=$QA_SRC/local/source/INSTALL_udunits.log
 
 while getopts hp:q-: option ${args[*]}
 do
+  UOPTARG="$OPTARG"
+  tr_option UOPTARG
+
   case $option in
     h)  descript
         exit ;;
     q)  QUIET=t ;;
-    -)  if [ "${OPTARG%%=*}" = "prefix" ] ; then
+    -)  if [ "${UOPTARG%%=*}" = PREFIX ] ; then
            prefix=${OPTARG#*=}
-        elif [ "$OPTARG" = "help" ] ; then
+        elif [ "$UOPTARG" = HELP ] ; then
            descript
            exit
-        elif [ "${OPTARG%=*}" = "debug" ] ; then
-           test ${OPTARG} = debug -o ${OPTARG#*=} = ${0##*/} && set -x
-        elif [ "$OPTARG" = "distclean" ] ; then
+        elif [ "${UOPTARG%=*}" = DEBUG ] ; then
+           test "${UOPTARG}" = DEBUG -o ${OPTARG#*=} = ${0##*/} && set -x
+        elif [ "$UOPTARG" = DISTCLEAN ] ; then
            isDistClean=t
-        elif [ "${OPTARG%%=*}" = "src" ] ; then
+        elif [ "${UOPTARG%%=*}" = SRC ] ; then
            src=${OPTARG#*=}
         fi
         ;;
