@@ -723,6 +723,29 @@ xtractSrcPath()
   return
 }
 
+tr_option()
+{
+  local phrase="${!1}"
+
+  local sz i
+  local sz=${#phrase}
+  for((i=0 ; i < sz ; ++i )) ; do
+    test "${phrase:i:1}" = '=' && break
+  done
+
+  if [ ${i} -eq ${sz} ] ; then
+    phrase=$( echo "${phrase/% /}" | tr "[:lower:]" "[:upper:]" )
+  else
+    local tmp0="${phrase:0:i}"
+    tmp0="${tmp0//QC/QA}"
+    tmp0=$( echo "${tmp0/% /}" | tr "[:lower:]" "[:upper:]" )
+    phrase="${tmp0}""${phrase:i}"
+  fi
+
+  eval ${1}=\${phrase}
+  return
+}
+
 # ++++++++++++   main   +++++++++++++++
 
 #extract the path to QA from $0
@@ -734,48 +757,51 @@ prefix=${QA_SRC}/local
 
 while getopts hq-: option ${args[*]}
 do
+  UOPTARG="$OPTARG"
+  tr_option UOPTARG
+
   case $option in
     h)  descript
         exit 1 ;;
     q)  QUIET=t ;;
-    -)  if [ "${OPTARG%%=*}" = "autofix" ] ; then
-           if [ "${OPTARG#*=}" = disable ] ; then
+    -)  if [ "${UOPTARG%%=*}" = AUTOFIX ] ; then
+           if [ "${UOPTARG#*=}" = DISABLE ] ; then
               sed -i '/autofix/ d' .conf &> /dev/null
               test ! -s .conf && \rm .conf
            else
-              if ! grep -q autofix .conf &> /dev/null; then
+              if ! grep -i -q autofix .conf &> /dev/null; then
                  echo autofix=enabled >> .conf
               fi
            fi
-        elif [ "${OPTARG}" = "continue_log" ] ; then
+        elif [ "${UOPTARG}" = CONTINUE_LOG ] ; then
            isContLog=t
-        elif [ "${OPTARG%=*}" = "debug" ] ; then
-           if [ ${OPTARG} = debug -o ${OPTARG#*=} = ${0##*/} ] ; then
+        elif [ "${UOPTARG%=*}" = DEBUG ] ; then
+           if [ "${UOPTARG}" = DEBUG -o ${OPTARG#*=} = ${0##*/} ] ; then
              set -x
              isDebug=t
            fi
-        elif [ "${OPTARG}" = "distclean" ] ; then
+        elif [ "${UOPTARG}" = DISTCLEAN ] ; then
            isDistClean=t
-        elif [ "$OPTARG" = "help" ] ; then
+        elif [ "$UOPTARG" = HELP ] ; then
            descript
            exit 1
-        elif [ "${OPTARG%%=*}" = "lib-dest" ] ; then
+        elif [ "${UOPTARG%%=*}" = LIB-DEST ] ; then
            prefix=${OPTARG#*=}
-        elif [ "${OPTARG%%=*}" = "link" ] ; then
+        elif [ "${UOPTARG%%=*}" = LINK ] ; then
            link=${OPTARG#*=}
-        elif [ "${OPTARG%%=*}" = "package" ] ; then
+        elif [ "${UOPTARG%%=*}" = PACKAGE ] ; then
            package=${OPTARG#*=}
-        elif [ "${OPTARG%%=*}" = "src-path" ] ; then
+        elif [ "${UOPTARG%%=*}" = SRC-PATH ] ; then
            srcPath=${OPTARG#*=}
 
         #undocumented; default from install overrides internal default
-        elif [ "${OPTARG%=*}" = "hdf5" ] ; then
+        elif [ "${UOPTARG%=*}" = HDF5 ] ; then
           curr_hdf5=${OPTARG#hdf5=}
-        elif [ "${OPTARG%=*}" = "netcdf" ] ; then
+        elif [ "${UOPTARG%=*}" = NETCDF ] ; then
           curr_netcdf=${OPTARG#netcdf=}
-        elif [ "${OPTARG%=*}" = "zlib" ] ; then
+        elif [ "${UOPTARG%=*}" = ZLIB ] ; then
           curr_zlib=${OPTARG#zlib=}
-        elif [ "${OPTARG%=*}" = "udunits" ] ; then
+        elif [ "${UOPTARG%=*}" = UDUNITS ] ; then
           curr_udunits=${OPTARG#udunits=}
         fi
 
