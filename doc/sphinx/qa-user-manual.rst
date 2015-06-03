@@ -78,7 +78,7 @@ The tool is distributed in two versions:
     --ts          Run the CF Test Suite located within the package (file names
                   may be given additionally).
 
-    [path/]files  files
+  [path/]files  files
 
   - CF Test Suite
 

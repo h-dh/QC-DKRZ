@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # QA-DKRZ documentation build configuration file, created by
-# sphinx-quickstart on Tue Jun  2 11:08:46 2015.
+# sphinx-quickstart on Wed Jun  3 13:22:27 2015.
 #
 # This file is execfile()d with the current directory set to its
 # containing dir.
@@ -32,7 +32,7 @@ import shlex
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
-    'sphinx.ext.doctest',
+    'sphinx.ext.viewcode',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
