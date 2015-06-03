@@ -43,7 +43,7 @@ analyseExec()
 
     elif [ $status -gt 4 ] ; then
 
-      sTxt[${#sTxt[*]}]="text: qC-${PROJECT_AS}.x: run-time error. \
+      sTxt[${#sTxt[*]}]="text: qA-${PROJECT_AS}.x: run-time error. \
 Note: possibly due to a bug in NetCDF 4.1.2 F90 lib. \
 However, the check was successful."
 
@@ -59,9 +59,9 @@ However, the check was successful."
     status=5
     initLog
 
-    sessText="qC-${PROJECT_AS}.x: run-time error, exit status: ${status}"
+    sessText="qA-${PROJECT_AS}.x: run-time error, exit status: ${status}"
 
-    local s_out="${ans}qC-${PROJECT_AS}.x: run-time error"
+    local s_out="${ans}qA-${PROJECT_AS}.x: run-time error"
 
     s_out="${s_out}\nfile: ${NEXT_FILE}"
     s_out="${s_out}\ndata_path: ${PROJECT_DATA}/${SUB_PATH}"
@@ -154,17 +154,17 @@ callPing()
 
 clearBackUp()
 {
-  local isClearQcBackUp isClearFdBackUp
-  isClearQcBackUp=f
+  local isClearQABackUp isClearFdBackUp
+  isClearQaBackUp=f
   isClearFdBackUp=f
 
   if [ $status -lt 4 ] ; then
-    isClearQcBackUp=t
+    isClearQaBackUp=t
     isClearFdBackUp=t
   else
     # If nothing has changed, then clear back-up.
     if cmp z_qa_${name}.nc qa_${name}.nc &> /dev/null ; then
-      isClearQcBackUp=t
+      isClearQaBackUp=t
     fi
     if [ -d Z_fd_${name} ] ; then
       isClearFdBackUp=t
@@ -180,7 +180,7 @@ clearBackUp()
 
   # a rule of thumb mechanism to secure files against corruption,
   # even in case of a system-crash: Part II:
-  if [ ${isClearQcBackUp} = t ] ; then
+  if [ ${isClearQaBackUp} = t ] ; then
    \rm -f z_qa_${name}.nc &> /dev/null
   fi
   if [ ${isClearFdBackUp} = t -a -d "Z_fd_${name}" ] ; then
@@ -209,7 +209,7 @@ clearProcPool()
 
 ##//! THE QA of a netCDF file
 
-run()
+runQA()
 {
   # this is the ultimately last check
   if [ "$QA_RESULTS/data/${SUB_PATH}" = "${PROJECT_DATA}$SUB_PATH" ] ; then
@@ -270,7 +270,7 @@ and PROJECT_DATA/SUB_PATH must not be identical"
    fi
  fi
 
- # define parameter setting for qC.x; stored in file param_file_$$.txt
+ # define parameter setting for qA.x; stored in file param_file_$$.txt
 #trace \
  setParameter
 
@@ -1095,7 +1095,7 @@ reportFindings()
 run()
 {
   local cmdText
-  cmdText="$NICE qC-${PROJECT_AS}.x  --file=param_file_$$.txt"
+  cmdText="$NICE qA-${PROJECT_AS}.x  --file=param_file_$$.txt"
 
   sessText="run: ${cmdText}\n"
 
@@ -1155,7 +1155,7 @@ $(echo -e "\n-----------------------------------------------------")
 $(echo -e "\nContents of ${qaExceptionFile}:" )
 $(cat ${qaExceptionFile} )
 $(echo -e "\n-----------------------------------------------------")
-$(echo -e "\nqC-${PROJECT}.x called with parameter setting:")
+$(echo -e "\nqA-${PROJECT}.x called with parameter setting:")
 $(cat param_file_$$.txt )
 !
 
@@ -1213,7 +1213,7 @@ setParameter()
 
   # freqency distribution, if requested
   if [ "${FREQ_DIST:-f}" = 't' ] ; then
-    set_fd_par # construct directive sequence for qC
+    set_fd_par # construct directive sequence for qA
     par_str="${par_str}\n${par}"
   fi
 
@@ -1234,10 +1234,16 @@ set_CF_par()
   test ${#CF_STANDARD_NAMES} -gt 0 && \
     par=${par}":cFSN=${CF_STANDARD_NAMES}"
 
+  test ${#CF_AREA_TYPES} -gt 0 && \
+    par=${par}":cFAT=${AREA_TYPES}"
+
+  test ${#CF_STD_REGION_NAMES} -gt 0 && \
+    par=${par}":cFSRN=${CF_STD_REGION_NAMES}"
+
   test ${#CF} -gt 0 && \
     par=${par}":cF=${CF}"
 
-  test ${#FOLLOW_CF_RECOMMENDATIONS} -gt 0 && \
+  test ${#CF_FOLLOW_RECOMMENDATIONS} -gt 0 && \
     par=${par}':fR'
 
   return
@@ -1246,7 +1252,7 @@ set_CF_par()
 ##//! Input paramters of the FreqDist class.
 set_fd_par()
 {
-  # construct directive sequence for qC. Called from run
+  # construct directive sequence for qA. Called from run
   par="FD::0:useAreaWeight"
 
   # output: saved as fd-build-file by default
@@ -1316,7 +1322,7 @@ set_IN_par()
   fi
 
   # grep specific flags in order to discard
-  if grep '^Infinite' $TABLE_PATH/$CHECK_LIST 2> /dev/null | grep -q D ; then
+  if grep '^Infinite' $TABLE_PATH/$QA_CHECK_LIST 2> /dev/null | grep -q D ; then
      par=${par}":dIN"
   fi
 }
@@ -1462,8 +1468,8 @@ set_X_par()
   if [ $# -eq 0 ] ; then
     par=${par}0
 
-    test ${#CHECK_LIST} -gt 0 && \
-      par=${par}":"cL=${CHECK_LIST}
+    test ${#QA_CHECK_LIST} -gt 0 && \
+      par=${par}":"cL=${QA_CHECK_LIST}
   else
     par=${par}"$1"
 
@@ -1994,7 +2000,7 @@ init ; then
 fi
 
 # action: the quality control
-run
+runQA
 
 # clear working space and exit
 #trace \

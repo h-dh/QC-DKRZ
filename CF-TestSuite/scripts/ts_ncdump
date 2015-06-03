@@ -65,7 +65,7 @@ getPath()
   local tmp
   while [ "${qPath}" != "${qPath%/*}" ] ; do
     tmp=${qPath##*/}
-    test ${tmp:0:3} = 'QC-' && return
+    test ${tmp:0:3} = 'QA-' && return
 
     qPath=${qPath%/*}
   done
@@ -74,9 +74,9 @@ getPath()
     echo -e "\nPlease, check option -x; found ${xPath}."
   else
     local str
-    str="\nThis script was executed from out-side of the QC package."
+    str="\nThis script was executed from out-side of the QA package."
     str="${str}\nIt was probably copied or hard-linked. Please, use a"
-    str="${str}\nsymbolic link, or call it directly from /path/QC-package/scripts,"
+    str="${str}\nsymbolic link, or call it directly from /path/QA-DKRZ/scripts,"
     str="${str}\nor use option -x."
 
     echo -e "${str}"

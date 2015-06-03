@@ -81,7 +81,7 @@ compilerSetting()
   if [ ! -f install_configure ] ; then
     log "create install_configure" DONE
 
-    test "${isBuild:-f}" = f && \
+    test ${isBuild:-f} = f && \
       echo "Please, edit file install_configure."
 
   fi
@@ -459,12 +459,12 @@ makeProject()
     else
       if [ $(ps -ef | grep -c qa-DKRZ) -gt 1 ] ; then
         ##protect running sessions, but not really thread save
-        export PRJ_NAME=qqC-${PROJECT}
-        test -f $BIN/qC-${PROJECT}.x && \
-          cp -a $BIN/qC-${PROJECT}.x $BIN/${PRJ_NAME}.x
+        export PRJ_NAME=qqA-${PROJECT}
+        test -f $BIN/qA-${PROJECT}.x && \
+          cp -a $BIN/qA-${PROJECT}.x $BIN/${PRJ_NAME}.x
       else
         # nothing to protect
-        export PRJ_NAME=qC-${PROJECT}
+        export PRJ_NAME=qA-${PROJECT}
       fi
     fi
 
@@ -481,7 +481,7 @@ makeProject()
     fi
 
     if [ ${PROJECT} != CF -a ${PROJECT} != MODIFY ] ; then
-      test ${PRJ_NAME:0:3} = qqC && mv $BIN/${PRJ_NAME}.x $BIN/qC-${PROJECT}.x
+      test ${PRJ_NAME:0:3} = qqA && mv $BIN/${PRJ_NAME}.x $BIN/qA-${PROJECT}.x
     fi
   done
 
@@ -563,7 +563,7 @@ projectLinks()
 runExample()
 {
   # running the example requires qa-CORDEX.x
-  test ! -e bin/qC-CORDEX.x && return
+  test ! -e bin/qA-CORDEX.x && return
 
   # prepare the example, if not done, yet
   if [ ! -e example/qa-test.task ] ; then

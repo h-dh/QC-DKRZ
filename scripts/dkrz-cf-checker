@@ -170,7 +170,8 @@ param_T="\\n-t ${qPath}/tables/projects/CF"
 param_IN="\\nIN::oCF"
 
 param_CF="\\nCF::cFSN=cf-standard-name-table.xml"
-param_CF="${param_CF}:rT=cf-standardized-region-names.txt"
+param_CF="${param_CF}:cFAT=CF_area-type-table.txt"
+param_CF="${param_CF}:cFSRN=CF_standardized-region-names.txt"
 param_CF="${param_CF}${CF:+:cF=}${CF}${RC:+:fR}"
 
 param_X="${param_X}\\nX::cL=CF_check-list.conf:nCR:nLL=L1:oP:d"

@@ -246,6 +246,7 @@ template <typename T>
   ut_system*   unitSystem;
 
   std::string std_name_table;
+  std::string area_table;
   std::string region_table;
   std::string tablePath;
 

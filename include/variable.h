@@ -83,8 +83,8 @@ class VariableMeta
 
   bool isDATA;
   bool isAUX;
-  int   countData;
-  int   countAux;
+  int  countData;
+  int  countAux;
   int  indication_DV;
 
   bool isArithmeticMean; // externally set

@@ -1,10 +1,10 @@
 #! /bin/bash
 
 asdf=$(pwd)
-asdf=${asdf#*QC-DKRZ/}
+asdf=${asdf#*QA-DKRZ/}
 
 if [ "${asdf}" != test ] ; then
-  echo "please, cd to QC-DKRZ/test"
+  echo "please, cd to QA-DKRZ/test"
   exit
 fi
 
@@ -23,7 +23,7 @@ while read line ; do
     fi
   done
 
-done < /hdh/hdh/QC-DKRZ/tables/projects/CF/CF_check-list.conf
+done < /hdh/hdh/QA-DKRZ/tables/projects/CF/CF_check-list.conf
 
 while read line ; do
 

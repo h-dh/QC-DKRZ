@@ -29,6 +29,23 @@ CF::applyOptions(void)
        }
      }
 
+     if( split[0] == "cFAT"
+          || split[0] == "area_table" )
+     {
+       if( split.size() == 2 )
+       {
+          size_t p;
+          if( (p=split[1].rfind('/')) < std::string::npos )
+          {
+             tablePath = split[1].substr(0, p);
+             std_name_table = split[1].substr(p+1);
+          }
+          else
+            area_table=split[1];
+          continue;
+       }
+     }
+
      if( split[0] == "cFSN"
           || split[0] == "standard_name_table" )
      {
@@ -46,7 +63,7 @@ CF::applyOptions(void)
        }
      }
 
-     if( split[0] == "rT"
+     if( split[0] == "cFSRN"
           || split[0] == "region_table" )
      {
        if( split.size() == 2 )
@@ -1006,6 +1023,16 @@ CF::entry(void)
 
   // a few post-check considerations about combinations of annotations
   postAnnotations();
+
+  for( size_t i=0 ; i < pIn->varSz ; ++i )
+  {
+    Variable& var = pIn->variable[i] ;
+
+    if( var.isDataVar() )
+      var.isDATA = true;
+    else
+      var.isAUX = true;
+  }
 
   return true;
 }
@@ -4207,7 +4234,7 @@ CF::chap2_5_1(void)
         if( notes->inq(bKey + "251c", NO_MT) )
         {
           std::string capt("reco for CF-1.4: " + captAtt(n_missing_value));
-          capt += "is deprecated";
+          capt += " is deprecated";
 
           (void) notes->operate(capt) ;
           notes->setCheckCF_Str( fail );
@@ -7119,7 +7146,6 @@ CF::chap6(void)
     if( ! vs_region_table.size() && region_table.size() )
     {
       std::string file(tablePath + "/");
-
       ReadLine ifs( file + region_table ) ;
 
       if( ifs.isOpen() )
@@ -8453,34 +8479,23 @@ CF::chap7_3_3(std::string &method, Variable& var, std::string mode)
     return true;  // no where |over clause specified
   }
 
-  std::vector<std::string> areaType;
+  // only read once
+  std::vector<std::string> vs_areaType;
 
-  areaType.push_back("all_area_types");
-  areaType.push_back("bare_ground");
-  areaType.push_back("burnt_vegetation");
-  areaType.push_back("c3_plant_functional_types");
-  areaType.push_back("c4_plant_functional_types");
-  areaType.push_back("clear_sky");
-  areaType.push_back("cloud");
-  areaType.push_back("crops");
-  areaType.push_back("floating_ice");
-  areaType.push_back("ice_free_land");
-  areaType.push_back("ice_free_sea");
-  areaType.push_back("lake_ice_or_sea_ice");
-  areaType.push_back("land");
-  areaType.push_back("land_ice");
-  areaType.push_back("natural_grasses");
-  areaType.push_back("pastures");
-  areaType.push_back("primary_deciduous_trees");
-  areaType.push_back("primary_evergreen_trees");
-  areaType.push_back("sea");
-  areaType.push_back("sea_ice");
-  areaType.push_back("secondary_deciduous_trees");
-  areaType.push_back("secondary_evergreen_trees");
-  areaType.push_back("shrubs");
-  areaType.push_back("snow");
-  areaType.push_back("trees");
-  areaType.push_back("vegetation");
+  if( ! vs_areaType.size() && region_table.size() )
+  {
+    std::string file(tablePath + "/");
+    ReadLine ifs( file + area_table ) ;
+
+    if( ifs.isOpen() )
+    {
+      std::string line;
+      while( ! ifs.getLine(line) )
+        vs_areaType.push_back(line);
+
+      ifs.close();
+    }
+  }
 
   // two conventions are available (chap 7.3.3). The one with a
   // type-variable takes precedence
@@ -8532,7 +8547,7 @@ CF::chap7_3_3(std::string &method, Variable& var, std::string mode)
   else
   {
      // check for the first convention
-     if( !hdhC::isAmong(type, areaType) )
+     if( !hdhC::isAmong(type, vs_areaType) )
      {
         if( notes->inq(bKey + "733c", var.name) )
         {
@@ -8586,7 +8601,7 @@ CF::chap7_3_3(std::string &method, Variable& var, std::string mode)
     {
       vs[l] = hdhC::stripSurrounding(vs[l]);
 
-      if( !hdhC::isAmong(vs[l], areaType) )
+      if( !hdhC::isAmong(vs[l], vs_areaType) )
         tvFail.push_back(vs[l]);
     }
 

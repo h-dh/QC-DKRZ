@@ -40,7 +40,7 @@ setDefaults()
   # to the calling qaDirector
 
   # you should not leave this unchanged in the config file
-  test ${#QA_RESULTS} -eq 0 && setKWL QA_RESULTS=${QA_SRC}/data
+  test ${#QA_RESULTS} -eq 0 && setKWL QA_RESULTS=${QA_SRC}/results
 
   setKWL QA_MANAGER_HOST=$HOSTNAME
 
@@ -221,7 +221,7 @@ checkTools()
   done
 
   local cpp
-  for cpp in getNC_att.x qC-${PROJECT_AS}.x syncFiles.x testValidNC.x ; do
+  for cpp in getNC_att.x qA-${PROJECT_AS}.x syncFiles.x testValidNC.x ; do
     if tryExist com $cpp ; then
       test $CHECK_TOOLS = t && std_out "${cpp}\t\t available"
     else
@@ -453,7 +453,7 @@ displayComLineOptions()
       ONLY_SUMMARY          Post-processed by default when ever a check
                             was performed (usually not necessary, because
                             this is performed at the end of a run).
-      SHOW_CALL             Show the qC_main.x call; no execution.
+      SHOW_CALL             Show the qA_main.x call; no execution.
       SHOW_CONF             Show configuration and exit.
       SHOW_EXP              Show names of paths with scheduled variables.
       SHOW_NEXT[=num}       Show num next scheduled variables and paths.
@@ -565,6 +565,8 @@ getConfPriority()
 {
   # the first two items of array 'task_priority' would have been
   # set while performing getops().
+
+  test "${PROJECT}" = NONE && return
 
   local i item qaResults swp sz1 sz
 
@@ -847,9 +849,26 @@ loadSetting()
 
 
   if [ ${#PROJECT_DATA} -eq 0 ]  ; then
-    std_out "missing PROJECT_DATA assignment."
-    std_out flush
-    exit 1
+    local isRoot=t
+    for(( i=0 ; i < ${#pathList[*]} ; ++i )) ; do
+      test ${pathList[i]:0:1} != '/' && isRoot=f && break
+    done
+
+    if [ ${isRoot} = t ] ; then
+      # get it from SELECT with absolute path
+      for(( i=0 ; i < ${#pathList[*]} ; ++i )) ; do
+        test ${#PROJECT_DATA} -gt 0 && PROJECT_DATA="${PROJECT_DATA},"
+
+        PROJECT_DATA="${PROJECT_DATA}${pathList[i]%/*}"
+        pathList[i]=${pathList[i]##*/}
+      done
+
+      setKWL PROJECT_DATA=${PROJECT_DATA}
+    else
+      std_out "missing PROJECT_DATA assignment."
+      std_out flush
+      exit 1
+    fi
   fi
 
   # Naming and placement of the base dirs in QA_RESULTS.
@@ -899,7 +918,7 @@ parseConfigurationFile()
   # connect filename to input; keep it open for the while-loop
   exec 0< $confFile
 
-  setF -f
+  set -f
 
   while parseLines ; do
     if [ $isBlockBeg = t -a ${#line} -gt 0 ] ; then
@@ -957,7 +976,7 @@ parseConfigurationFile()
     parseKeyWordList
   done
 
-  setF +f
+  set +f
   # disconnect filename to input
   exec 0<&-
 }
@@ -1207,13 +1226,21 @@ sel_lock()
 
   local i p v z
 
-  z=$2
+  # this is very special: a fully qualified file
+  if [ -f $2 ] ; then
+    z=${2%/*}=${2##*/}
+  elif [ -f ${2:1} ] ; then
+    z=${2%/*}=${2##*/}
+  else
+    z=$2
+  fi
+
   while : ; do
     if [ ${z:0:1} = '=' ] ; then
-      if [ $1 = 'S' ] ; then
+      if [ $1 = S ] ; then
         pathList=
         varList=
-      elif [ $1 = 'L' ] ; then
+      elif [ $1 = L ] ; then
         lockPathList=
         lockVarList=
       fi
@@ -1222,17 +1249,18 @@ sel_lock()
     elif [ ${z:0:2} = '+=' ] ; then
       z=${z:2}
     elif [ ${z//=/} = ${z} -a ${z//\//} != ${z} ] ; then
-      z=${z}= # 7b), thus again
-      continue
+#     z=${z}= # 7b), thus again
+      break
     else
-      if [ $1 = 'S' ] ; then
-        if [ ${#pathList[*]} -gt 0 ] ; then
+      if [ $1 = S ] ; then
+        # only variable, no path
+        if [ ${#pathList[*]} -gt 0 -a "${z//=/}" = "${z}" ] ; then
           z="${pathList[$((${#pathList[*]} -1 ))]}=${z}"
           pathList=
           varList=
         fi
-      elif [ $1 = 'L' ] ; then
-        if [ ${#lockPathList[*]} -gt 0 ] ; then
+      elif [ $1 = L ] ; then
+        if [ ${#lockPathList[*]} -gt 0 -a "${z//=/}" = "${z}" ] ; then
           z="${lockPathList[$((${#lockPathList[*]} -1 ))]}=${z}"
           lockPathList=
           lockVarList=
@@ -1243,7 +1271,7 @@ sel_lock()
     break;
   done;
 
-  # now assignment mode is determined; parse syntax further
+  # now assignment mode is determined; parse on
   v=${z#*=}
   p=${z%=*}
 
@@ -1291,6 +1319,8 @@ sel_lock()
     lockPathList=( ${lockPathList[*]} ${p[*]} )
     lockVarList=( ${lockVarList[*]} ${v[*]} )
   fi
+
+  return
 }
 
 sendEMail()
@@ -1341,42 +1371,6 @@ FS data directory: ${PROJECT_DATA[*]}
   return
 }
 
-setF()
-{
-  # toggle between set -f and set +f in a way that
-  # restores the original setting after calling twice
-
-  #Note: set -f  disables pathname expansion; corresponds to on
-  #Note: set +f   enables pathname expansion; corresponds to off
-
-  # restore previous setting
-  if [ ${isSetF_first:-t} = f ] ; then
-    if [ $stateF = on ] ; then
-      set -f
-    else
-      set +f
-    fi
-
-    isSetF_first=t
-    return
-  fi
-
-  # the initial state
-  if [ ${isSetF_first:-t} = t ] ; then
-    isSetF_first=f
-    stateF=$(set -o |grep noglob | awk '{print $2}')
-  fi
-
-  # set temporarily
-  # switch to a state valid until the next call
-  if [ "$1" = '-f' -a ${stateF} = off ] ; then
-    set -f
-  elif [ "$1" = '+f' -a ${stateF} = on ] ; then
-    set +f
-  fi
-
-  isSetF=t  # ready for the next pair of calls
-}
 
 ##//! Convert assignment literals to Bash variables.
 
@@ -1403,7 +1397,7 @@ setKWL()
   value="${item#*=}"
 
   # disable --> f
-  test ${value:0:7} = disable && value=f
+  test "${value:0:7}" = disable && value=f
 
   # take deprecated SHOW_EXP_NAME into account
   test "${key:0:8}" = SHOW_EXP && key=SHOW_EXP
@@ -1669,6 +1663,29 @@ tr_option()
   return
 }
 
+unsetKWL()
+{
+  local key
+  item="$*"
+
+  key=$( echo "${item}" | tr "[:lower:]" "[:upper:]" )
+
+  # was key already defined?
+  local i
+  for(( i=0 ; i < ${#keyWordList[*]} ; ++i )) ; do
+     if [ "${keyWordList[i]}" = "$key" ] ; then
+
+      # plain assignments require to unset before reassignments
+      eval unset $key
+      unset keyWordList[$i]
+      break
+    fi
+  done
+
+  return
+}
+
+
 ##main()
 ##{
 
@@ -1702,7 +1719,7 @@ for(( i=1 ; i <= $# ; ++i )) ; do
 done
 
 # stage 0: scan for configuration files etc.
-while getopts :c:e:E:f:hmP:p:QqL:S:s:T:Vx-: option
+while getopts :c:d:D:e:E:f:hmP:p:QqL:S:s:T:Vx-: option
 do
   UOPTARG=${OPTARG}
   tr_option UOPTARG
@@ -1768,11 +1785,11 @@ test ${#QA_CONFS} -gt 0 && setKWL QA_CONF=${QA_CONFS}
 
 # Note: option -T is used internally, when the qa-DKRZ
 #       executes the qaConfiguration script.
-setF -f
+set -f
 
 # stage1
 unset OPTIND
-while getopts c:e:E:f:hmP:p:QqL:S:s:T:x-: option
+while getopts c:d:D:e:E:f:hmP:p:QqL:S:s:T:x-: option
 do
   UOPTARG=$OPTARG
   tr_option UOPTARG
@@ -1780,6 +1797,8 @@ do
   case $option in
     c)  # already done
         ;;
+    d|D) # disable previously enabled options
+         unsetKWL ${OPTARG} ;;
     e|E) # Enable features or set parameters
         test ${UOPTARG:0:8} != '_DEBUG_C' && parseOPTARG ${UOPTARG/=/ }
         ;;
@@ -1797,8 +1816,7 @@ do
         setKWL PROJECT=$UOPTARG ;;
     Q)  setKWL NO_STATUS=t ;;
     q)  setKWL QUIET=t ;;
-    S)  sel_lock S ${OPTARG}
-        set +f
+    S)  sel_args=( ${OPTARG//,/} )
         ;;
     s)  setKWL SESSION_DATE=${OPTARG} ;;
     T)  # already caught
@@ -1845,7 +1863,10 @@ do
   esac
 done
 
-setF +f
+shift $(( $OPTIND - 1 ))
+test $# -gt 0 && sl_args=( ${sl_args[*]} ${*//,/ } )
+
+set +f
 
 # for downward compatibility
 test ${#QA_DATA_ROOT} -gt 0 && setKWL QA_RESULTS=${QA_DATA_ROOT}
@@ -1857,10 +1878,22 @@ loadSetting
 # Return the configuration and selected experiments
 # and parameters to the calling director.
 
-# NOTE: arrays of experiments and parameters are provided
-#       by the file LOGIDR/cache_request_SESSION.txt.
+set -f
 
-setF -f
+# selection on the command-line
+for(( i=0 ; i < ${#sl_args[*]} ; ++i )) ; do
+  if [ ${sl_args[i]:0:1} = '/' ] ; then
+    # rule: if absolute path on cmd-line, then cancel previous settings
+    unsetKWL PROJECT_DATA
+    pathList=
+    varList=
+  fi
+
+  sel_lock S ${sl_args[i]}
+done
+
+# NOTE: arrays of experiments and parameters are provided
+#       by the file LOGIDR/cache_request_SESSION.txt
 
 # Synchronise QA_EXEC_HOSTS and NUM_EXEC_THREADS
 if [ ${#NUM_EXEC_THREADS[*]} -lt ${#QA_EXEC_HOSTS[*]} ] ; then
@@ -1878,6 +1911,8 @@ fi
 # Note: echo add a blank between items
 #       thus, the leading blank in the "" expression is required.
 keyWordList=( $(echo -e " ${keyWordList[*]/%/\\n}" | sort -b | uniq ) )
+
+test ${unset_PD:-f} = t && unsetKWL PROJECT_DATA
 
 # Prepare the settings as key=val, where val could also be an array.
 for key in ${keyWordList[*]} ; do

@@ -1,0 +1,193 @@
+#! /bin/bash
+
+org=http://cfconventions.org
+
+cf_html()
+{
+  # htmnl page containing access to cf related tables
+  local html=standard-names.html
+  wget -q -N $org/$html
+
+  if [ ! -f ${file} ] ; then
+    echo "failed wget -N $org/$html" > /dev/stderr
+    exit
+  fi
+
+  parse_html "Standard Name Table" xml
+  parse_html "Area Type Table" xml
+  parse_html "Standardized Region List" html
+
+  return
+}
+
+convert_html2txt()
+{
+  if [ "${2}" = "Standardized Region List" ] ; then
+    convert_html2txt_region "$1"
+  fi
+
+  return
+}
+
+convert_html2txt_region()
+{
+  local htmlFile=${1}
+  local txtFile=CF_${1%html}txt
+
+  if [ -f ${txtFile} ] ; then
+    local h_date=$(ls -l --time-style='+%Y%m%d' ${htmlFile} | awk '{print $6}')
+    local t_date=$(ls -l --time-style='+%Y%m%d' ${txtFile} | awk '{print $6}')
+
+    test ${h_date} -lt ${t_date} && return
+  fi
+
+  # convert html to plain text
+
+  rm -f ${txtFile}
+  isSearchBeg=t
+  local txt
+  while read line ; do
+    txt=
+    for(( i=0 ; i < ${#line} ; ++i )) ; do
+      if [ ${isSearchBeg} = t ] ; then
+        test "${line:i:4}" = '</p>' && isSearchBeg=f
+        continue
+      fi
+
+      # rm leading
+      test "${line:i:1}" = ' ' && continue
+      test "${line:i:6}" = '</div>' && return
+      if [ "${line:i:1}" = '<' ] ; then
+        echo "${txt}" >> ${txtFile}
+        txt=
+        continue 2
+      fi
+
+      txt=${txt}"${line:i:1}"
+    done
+  done < ${htmlFile}
+
+  return
+}
+
+convert_xml2txt()
+{
+  if [ "${2}" = "Area Type Table" ] ; then
+    convert_xml2txt_area "$1"
+  fi
+
+  return
+}
+
+convert_xml2txt_area()
+{
+  local xmlFile=${1}
+  local txtFile=CF_${1%xml}txt
+
+  if [ -f ${txtFile} ] ; then
+    local h_date=$(ls -l --time-style='+%Y%m%d' ${xmlFile} | awk '{print $6}')
+    local t_date=$(ls -l --time-style='+%Y%m%d' ${txtFile} | awk '{print $6}')
+
+    test ${h_date} -lt ${t_date} && return
+  fi
+
+  # convert html to plain text
+
+  rm -f ${txtFile}
+  local txt
+  while read line ; do
+    for(( i=0 ; i < ${#line} ; ++i )) ; do
+      # rm leading blanks
+      test "${line:i:1}" = ' ' && continue
+
+      if [ "${line:i:10}" = '<entry id=' ] ; then
+        line=${line#*=}
+        line=${line:1:$((${#line}-3))}
+        echo "${line}" >> ${txtFile}
+
+        continue 2
+      fi
+
+      break  #get next line
+    done
+  done < ${xmlFile}
+
+  return
+}
+
+parse_html()
+{
+  local table="$1"
+  local type=$2
+
+  # extract the relative path to the latest version
+  local line="$(grep -A 3 "$table" $html | grep $type)"
+  local i cf_table_name
+  local isSearchBeg=t
+
+  for(( i=0 ; i < ${#line} ; ++i )) ; do
+    if [ ${isSearchBeg} = t ] ; then
+      test "${line:i:1}" = '"' && isSearchBeg=f
+
+      continue
+    fi
+
+    test "${line:i:1}" = '"' && break
+
+    cf_table_name=${cf_table_name}"${line:i:1}"
+  done
+
+  if [ ${#cf_table_name} -eq 0 ] ; then
+    echo "grep failed to find string ${table} in file $html" > /dev/stderr
+    return
+  fi
+
+  test ${#cf_table_name} -gt 0 && ! wget -q -N $org/${cf_table_name} && return
+
+  if [ ${cf_table_name##*.} = html ] ; then
+    convert_html2txt ${cf_table_name##*/} "${table}"
+  elif [ ${cf_table_name##*.} = xml ] ; then
+    convert_xml2txt ${cf_table_name##*/} "${table}"
+  fi
+
+  return
+}
+
+
+updateDotConf()
+{
+  local name=$1
+  local newDate=$2
+  local savedDate=$3
+
+  test "${savedDate}" = "${newDate}" && return 1
+
+  # init
+  if [ ${#savedDate} -eq 0 ] ; then
+    echo "${name}=${newDate}" >> ${QA_SRC}/.conf
+  else
+    sed -i "s/${name}.*/${name}=${newDate}/" ${QA_SRC}/.conf
+  fi
+
+  return 0
+}
+
+# main
+
+QA_SRC=${0%/script*}
+
+if [ $# -eq 1 ] ; then
+  cd $1 &> /dev/null
+fi
+
+exit
+# search for updates only once a day
+today=$( date '+%Y%m%d' )
+lastCheck=$( grep CF_LAST_UPDATE_CHECK ${QA_SRC}/.conf )
+
+if ! updateDotConf CF_LAST_UPDATE_CHECK $today ${lastCheck#*=} ; then
+  exit
+fi
+
+cf_html
+

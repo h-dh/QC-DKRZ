@@ -79,7 +79,7 @@ descript()
   echo "Manual installation:"
   echo "   Command-line: ./install [options] [--prefix=path]"
   echo "     Path where QA-DKRZ is to be installed; current directory by default."
-  echo "     Note that with --only-qc there is no downloading of libraries or compilation,"
+  echo "     Note that with --only-qa there is no downloading of libraries or compilation,"
   echo "     but only of the QA sources and the creation of a file ${package}/install_configure."
   echo ''
   echo "     File install_configure with compiler settings."
@@ -88,7 +88,7 @@ descript()
   echo "           CXXFLAGS prevail."
   echo "       3)  if 1) and 2) fail, then the user is prompted to edit"
   echo "           file install_configure."
-  echo "     Note that if 'weird' compiler settings are required, use --only-qc"
+  echo "     Note that if 'weird' compiler settings are required, use --only-qa"
   echo "     and edit ${package}/install_configure."
   echo ''
   echo "     Access to zlib, hdf5, and/or netcdf libraries may be accomplished in three ways:"
@@ -110,9 +110,9 @@ descript()
   echo "  Automatically:"
   echo "    Once ./install was executed with option --auto-up, then the package"
   echo "    is synchronised to the svn repositroy at the beginning of each"
-  echo "    QA session, i.e. started by ${package}/scripts/qc-DKRZ [opts]."
+  echo "    QA session, i.e. started by ${package}/scripts/qa-DKRZ [opts]."
   echo "    This mode may be disabled by option --auto-up=d[isable]."
-  echo "    Enabling/disabling the auto-mode works also with qc-DKRZ calls."
+  echo "    Enabling/disabling the auto-mode works also with qa-DKRZ calls."
   echo "  Local changes."
   echo "    If neither auto-mode is enabled nor --update was provided, then."
   echo "    ./install will compile sources for any local changes done."
@@ -124,11 +124,11 @@ descript()
   echo ''
   echo "Note for examination of executables in a debugger:"
   echo "Enable compilation with '-g' in 'install_configure', touch"
-  echo "${package}/src/qC_main.cpp, and run './install [PROJECT]'"
-  echo "Executable is ${package}/bin/qc-PROJECT.x."
+  echo "${package}/src/qA_main.cpp, and run './install [PROJECT]'"
+  echo "Executable is ${package}/bin/qa-PROJECT.x."
   echo "In order to get parameters for a specific QA run, please configure"
   echo "data selection accordingly and run on the command-line:"
-  echo "${package}/scripts/qc-DKRZ -f qc-conf.file -E_NEXT -E_SHOW_CALL [opts]."
+  echo "${package}/scripts/qa-DKRZ -f qa-conf.file -E_NEXT -E_SHOW_CALL [opts]."
   echo "Then, read the parameter file displayed within the debugger (either"
   echo "by '--file=param_file' or the contents itself)."
   echo ''
@@ -200,7 +200,7 @@ resetBuild()
   \rm -rf local
 
   \rm -rf example/test_I
-  \rm -rf example/qc-test.task
+  \rm -rf example/qa-test.task
 
   return
 }
@@ -266,7 +266,7 @@ svn_fnct()
 
   if [ ${packRev_1:-0} -gt 0 ] ; then
     # force compilation
-    test ${packRev_0:-0} -lt ${packRev_1} && \rm -f bin/qC-*.x
+    test ${packRev_0:-0} -lt ${packRev_1} && \rm -f bin/qA-*.x
     packRev=${packRev_1}
   else
     # an up-to-date revision, but without entry in .conf
