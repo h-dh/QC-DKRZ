@@ -180,7 +180,6 @@ if [ $# -eq 1 ] ; then
   cd $1 &> /dev/null
 fi
 
-exit
 # search for updates only once a day
 today=$( date '+%Y%m%d' )
 lastCheck=$( grep CF_LAST_UPDATE_CHECK ${QA_SRC}/.conf )
