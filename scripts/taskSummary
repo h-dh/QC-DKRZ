@@ -6,6 +6,10 @@
 ## Annotations in QA_RESULTS/check_logs/Annotations.yaml/experiment are explored.
 ##*/
 
+# names of the directories
+period=Period.yaml
+annotations=Annotations.yaml
+
 descript()
 {
   echo -e "\nUsage: QA/scripts/taskSummary opts list-of-experiments"
@@ -36,7 +40,7 @@ period()
     /bin/bash ${prg} ${DEBUG_X} -P ${PROJECT} -Q $exp.log
 
   isPeriodFault=f
-  if grep -q 'FAIL' Period.yaml/${exp}.period &> /dev/null ; then
+  if grep -q 'FAIL' $period/${exp}.period &> /dev/null ; then
     isPeriodFault=t
   fi
 
@@ -91,7 +95,7 @@ txt="Annotation summary of the QA of experiment\n \
     if [ "${line[1]}" = atomic_name: -a ${#line[2]} -gt ${max_len} ] ; then
       max_len=${#line[2]}
     fi
-  done < Period.yaml/${exp}.period
+  done < $period/${exp}.period
 
   mkdir -p Summary/$exp
 
@@ -99,7 +103,7 @@ txt="Annotation summary of the QA of experiment\n \
   echo -n '' > $outP
 
   exec 9<&0
-  exec 0< Period.yaml/${exp}.period
+  exec 0< $period/${exp}.period
 
   # skip 1st and 2nd line
   read -a line
@@ -162,7 +166,7 @@ txt="Annotation summary of the QA of experiment\n \
     echo -e "\n"  >> $outA
 
     if [ ${isPeriodFault:-f} = t ] ; then
-      mv  $outP Summary/$exp/failed_periods
+      mv  $outP Summary/$exp/failed_periods.txt
     else
       # now its done with the human readable periods
       \rm $outP &> /dev/null
@@ -188,7 +192,7 @@ txt="Annotation summary of the QA of experiment\n \
 
       tags[${#tags[*]}]="${line[1]}"
     fi
-  done < Annotations.yaml/${exp}.log
+  done < $annotations/${exp}.log
 
   # clear old results
   \rm -f Summary/$exp/L*
@@ -239,7 +243,7 @@ txt="Annotation summary of the QA of experiment\n \
         unset line[0]
         impct="${line[*]}"
       fi
-    done < Annotations.yaml/${exp}.log
+    done < $annotations/${exp}.log
   done
 
   local f fc
@@ -329,7 +333,7 @@ summaryY()
     period
 
     # yaml annotations are sorted corresponding to the flag;
-    # output in Annotatins.yaml/EXP_NAME/annotation_summary.txt.
+    # output in $annotation/EXP_NAME/annotation_summary.txt.
     summaryY
 
     # summary of annotations for humann reqaders.
@@ -337,6 +341,6 @@ summaryY()
   done
 
   # when there was no annotation
-#  rmdir Annotatinss.yaml &> /dev/null
+  rmdir $annotations &> /dev/null
 
 ##}
