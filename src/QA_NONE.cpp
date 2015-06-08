@@ -811,9 +811,9 @@ QA::initDefaults(void)
   // file sequence: f[first], s[equence], l[ast]
   fileSequenceState='x' ;  // 'x':= undefined
 
-#ifdef SVN_VERSION
+#ifdef REVISION
   // -1 by default
-  svnVersion=hdhC::double2String(static_cast<int>(SVN_VERSION));
+  revision=hdhC::double2String(static_cast<int>(REVISION));
 #endif
 
   // set pointer to member function init()

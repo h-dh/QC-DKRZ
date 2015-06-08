@@ -58,7 +58,7 @@ ${PRJ_NAME}.x: ${BASE_SOURCE} ${BASE_HEADER} $(QA_SOURCE) $(QA_HEADER) $(UTIL_SO
            -I $(QA_PATH)/include $(INCLUDE) \
            $(LIB) $(LIBDL) -ludunits2 -lnetcdf -lhdf5_hl -lhdf5 -lz
 
-#          -DSVN_VERSION=$(SVN_VERSION) \
+#          -DREVISION=$(REVISION) \
 
 CF-checker: cf-checker.x
 

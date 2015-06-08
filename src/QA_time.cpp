@@ -1318,33 +1318,31 @@ QA_Time::testTimeBounds(NcAPI &nc)
 
     if( (tb0 - tb1 ) < 0. )
     {
-      std::string key=("R16");
+      std::string key;
+      bool isAcrossFiles = pIn->currRec == 0 ;
+
+      if( isAcrossFiles || timeTableMode == CYCLE )
+      {
+        if( parseTimeTable(pIn->currRec) )
+        {
+          prevTimeBoundsValue[0]=currTimeBoundsValue[0];
+          prevTimeBoundsValue[1]=currTimeBoundsValue[1];
+          return ;  // no error messaging
+        }
+
+        key="65_1";
+      }
+      else
+      {
+        key="R16";
+        sharedRecordFlag.currFlag += 16;
+      }
+
       if( notes->inq( key) )
       {
-        sharedRecordFlag.currFlag += 16;
-
-        std::string capt("overlapping time bounds ranges");
-        if( pIn->currRec == 0 )
-        {
-          if( parseTimeTable(pIn->currRec) )
-          {
-            prevTimeBoundsValue[0]=currTimeBoundsValue[0];
-            prevTimeBoundsValue[1]=currTimeBoundsValue[1];
-            return ;  // no error messaging
-          }
-
-          capt += " across files";
-        }
-
-        if( timeTableMode == CYCLE )
-        {
-          if( parseTimeTable(pIn->currRec) )
-          {
-            prevTimeBoundsValue[0]=currTimeBoundsValue[0];
-            prevTimeBoundsValue[1]=currTimeBoundsValue[1];
-            return ;  // no error messaging
-          }
-        }
+        std::string capt("overlapping time bounds");
+        if( isAcrossFiles )
+          capt = " across files" ;
 
         std::ostringstream ostr(std::ios::app);
         ostr.setf(std::ios::fixed, std::ios::floatfield);
@@ -1388,14 +1386,22 @@ QA_Time::testTimeBounds(NcAPI &nc)
 
     if( (tb1 - tb0 ) > 0. )
     {
-      std::string key=("R32");
+      std::string key;
+      bool isAcrossFiles = pIn->currRec == 0 ;
+
+      if( isAcrossFiles )
+        key="65_2";
+      else
+      {
+        key="R32";
+        sharedRecordFlag.currFlag += 32 ;
+      }
+
       if( notes->inq( key) )
       {
-        sharedRecordFlag.currFlag += 32 ;
-        std::string capt("gap between adjacent time bounds ranges");
-        std::ostringstream ostr(std::ios::app);
+        std::string capt("gap between time bounds ranges");
 
-        if( pIn->currRec == 0 )
+        if( timeTableMode == CYCLE || isAcrossFiles )
         {
           if( parseTimeTable(pIn->currRec) )
           {
@@ -1407,16 +1413,7 @@ QA_Time::testTimeBounds(NcAPI &nc)
           capt += " across files";
         }
 
-        if( timeTableMode == CYCLE )
-        {
-          if( parseTimeTable(pIn->currRec) )
-          {
-            prevTimeBoundsValue[0]=currTimeBoundsValue[0];
-            prevTimeBoundsValue[1]=currTimeBoundsValue[1];
-            return ;  // no error messaging
-          }
-        }
-
+        std::ostringstream ostr(std::ios::app);
         ostr.setf(std::ios::fixed, std::ios::floatfield);
         ostr << "rec#="  << pIn->currRec << std::setprecision(0);
         ostr << "\nprev time values=[" << prevTimeBoundsValue[0] << " - " ;
@@ -1509,7 +1506,9 @@ QA_Time::testTimeStep(void)
 
   if( dif < 0. )
   {
-    if( timeTableMode == CYCLE )
+    bool isAcrossFiles = pIn->currRec == 0 ;
+
+    if( timeTableMode == CYCLE || isAcrossFiles)
     {
       // varMeDa[0] provides the name of the MIP table
       if( parseTimeTable(pIn->currRec) )
@@ -1519,28 +1518,24 @@ QA_Time::testTimeStep(void)
       }
     }
 
-    std::string capt("negative time step");
-    if( pIn->currRec == 0 )
+    std::string key;
+    if( isAcross )
+      key="66_1";
+    else
     {
-      // varMeDa[0] provides the MIP table
-      if( parseTimeTable(pIn->currRec) )
-      {
-        prevTimeValue=currTimeValue;
-        return false ;  // no error messaging
-      }
-
-      capt +=" across files";
+      key="R1";
+      sharedRecordFlag.currFlag += 1;
     }
 
-    std::string key=("R1");
     if( notes->inq( key) )
     {
-      sharedRecordFlag.currFlag += 1;
-
+      std::string capt ;
       std::ostringstream ostr(std::ios::app);
 
-      if( pIn->currRec == 0 )
+      if( isAcrossFiles )
       {
+        capt = "overlapping time values across files");
+
         ostr << "last time of previous file=";
         ostr << prevTimeValue ;
         ostr << ", first time of this file=" ;
@@ -1548,6 +1543,8 @@ QA_Time::testTimeStep(void)
       }
       else
       {
+        capt = "negative time step" ;
+
         ostr << "prev rec# ";
         ostr << (pIn->currRec-1) << ", time: " ;
         ostr << prevTimeValue ;
@@ -1570,12 +1567,11 @@ QA_Time::testTimeStep(void)
   }
 
   // identical time step
-
   if( prevTimeValue==currTimeValue  )
   {
-    std::string capt("identical time step");
+    bool isAcrossFiles = pIn->currRec == 0 ;
 
-    if( pIn->currRec == 0 )
+    if( timeTableMode == CYCLE || isAcrossFiles )
     {
       // varMeDa[0] provides the MIP table
       if( parseTimeTable(pIn->currRec) )
@@ -1583,47 +1579,49 @@ QA_Time::testTimeStep(void)
         prevTimeValue=currTimeValue;
         return false ;  // no error messaging
       }
-
-      capt += " across files";
     }
 
-    if( timeTableMode == CYCLE )
+    std::string key ;
+    if( isAcrossFiles )
+      key="66_3";
+    else
+      key="R4";
+
+    if( ! isSingleTimeValue )
     {
-      if( parseTimeTable(pIn->currRec) )
+      if( isAcrossFiles )
+        sharedRecordFlag.currFlag += 4 ;
+
+      if( notes->inq( key) )
       {
-        prevTimeValue=currTimeValue;
-        return false ;  // no error messaging
-      }
-    }
+        std::string capt("identical time values");
+        std::ostringstream ostr(std::ios::app);
 
-    std::string key=("R4");
-    if( ! isSingleTimeValue && notes->inq( key) )
-    {
-      sharedRecordFlag.currFlag += 4 ;
+        if( isAcrossFiles )
+           capt += " across files";
 
-      std::ostringstream ostr(std::ios::app);
-
-      if( isNoCalendar )
-      {
-        if( pIn->currRec == 0 )
+        if( isNoCalendar )
         {
-          ostr << "last time of previous file=" << prevTimeValue ;
-          ostr << ", first time of this file=" << currTimeValue  ;
+          if( isAcrossFiles )
+          {
+            ostr << "last time of previous file=" << prevTimeValue ;
+            ostr << ", first time of this file=" << currTimeValue  ;
+          }
+          else
+          {
+            ostr << "prev rec# " << (pIn->currRec-1) ;
+            ostr << ", time=" << prevTimeValue ;
+            ostr << ", curr rec# " << pIn->currRec ;
+            ostr << ", time=" << currTimeValue ;
+          }
         }
-        else
+
+        if( notes->operate(capt, ostr.str()) )
         {
-          ostr << "prev rec# " << (pIn->currRec-1) ;
-          ostr << ", time=" << prevTimeValue ;
-          ostr << ", curr rec# " << pIn->currRec ;
-          ostr << ", time=" << currTimeValue ;
+          notes->setCheckTimeStr( fail );
+
+          pQA->setExit( notes->getExitValue() ) ;
         }
-      }
-
-      if( notes->operate(capt, ostr.str()) )
-      {
-         notes->setCheckTimeStr( fail );
-
-         pQA->setExit( notes->getExitValue() ) ;
       }
     }
 
@@ -1632,14 +1630,13 @@ QA_Time::testTimeStep(void)
     return true;
   }
 
-      // missing time step(s)
-
+  // missing time step(s)
   if( isRegularTimeSteps &&
          dif > (1.25*referenceTimeStep ))
   {
-    std::string capt("missing time step");
+    bool isAcrossFiles = pIn->currRec == 0 ;
 
-    if( pIn->currRec == 0 )
+    if( timeTableMode == CYCLE || isAcrossFiles )
     {
       // varMeDa[0] provides the MIP table
       if( parseTimeTable(pIn->currRec) )
@@ -1647,28 +1644,30 @@ QA_Time::testTimeStep(void)
         prevTimeValue=currTimeValue;
         return false ;  // no error messaging
       }
-
-      capt +=" across files";
     }
 
-    if( timeTableMode == CYCLE )
-    {
-      if( parseTimeTable(pIn->currRec) )
-      {
-        prevTimeValue=currTimeValue;
-        return false ;  // no error messaging
-      }
-    }
+    std::string key ;
+    if( isAcrossFiles )
+      key="66_2";
+    else
+      key="R2";
 
-    std::string key=("R2");
     if( notes->inq( key) )
     {
-      sharedRecordFlag.currFlag += 2 ;
+      std::string capt;
       std::ostringstream ostr(std::ios::app);
+
+      if( isAcrossFiles )
+        capt = "gap between time values across files";
+      else
+      {
+        capt = "missing time step";
+        sharedRecordFlag.currFlag += 2 ;
+      }
 
       if( isNoCalendar )
       {
-        if( pIn->currRec == 0 )
+        if( isAcrossFiles )
         {
           ostr << "last time of previous file=";
           ostr << prevTimeValue ;
@@ -1685,7 +1684,7 @@ QA_Time::testTimeStep(void)
       }
       else
       {
-        if( pIn->currRec == 0 )
+        if( isAcrossFiles )
         {
            std::string cT( hdhC::double2String(prevTimeValue) );
            ostr << "last time of previous file=" << prevTimeValue;

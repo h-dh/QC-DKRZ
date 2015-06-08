@@ -184,7 +184,11 @@ bind_checksum()
      email="-m ${email// /,}"
   fi
 
-  getExperimentName ${subPath}
+  if [ ${#EXP_PATH_INDEX[*]} -gt 0 ] ; then
+    getExperimentName ${subPath}
+  else
+    getExperimentName ${fs[0]}
+  fi
 
   # calculate the checksum(s)
   ${QA_SRC}/scripts/checkSum -b ${QA_BIN#*:} $type \
@@ -1202,7 +1206,12 @@ getAllExps()
       PROJECT_DATA=${PROJECT_DATAV[${line[0]}]}
 
       # generate an experiment name; CURR_EXP_NAME gets a 'return value'
-      getExperimentName ${subPath}
+      if [ ${#EXP_PATH_INDEX[*]} -gt 0 ] ; then
+        getExperimentName ${subPath}
+      else
+        local fs=( $( ls ${PROJECT_DATA}/${subPath}/*.nc 2> /dev/null) )
+        getExperimentName ${fs[0]##*/}
+      fi
 
       if [ ${SHOW_EXP:-f} = t ] ; then
         std_out ttyOnly "\r${blank}\r"
@@ -1274,11 +1283,14 @@ getDateRange()
 
 getExperimentName()
 {
-  if [ ${#EXP_PATH_INDEX} -gt 0 ] ; then
-    # find and set CURR_EXP_NAME
+  # find and set CURR_EXP_NAME
+
+  if [ ${#EXP_NAME} -gt 0 ] ; then
+    CURR_EXP_NAME=${EXP_NAME:-all-scope}
+  elif [ ${#EXP_FNAME_PATTERN} -gt 0 ] ; then
+    getExperimentNameFromFile $1
+  elif [ ${#EXP_PATH_INDEX} -gt 0 ] ; then
     getExperimentNameFromPath $1
-  else
-    CURR_EXP_NAME=${EXP_NAME:-unnamedExp}
   fi
 
   local iex
@@ -1293,6 +1305,38 @@ getExperimentName()
 
   copyPreamble
 
+  return
+}
+
+getExperimentNameFromFile()
+{
+  # see function initExperimentName()
+
+  # EXP_NAME was defined in initExperimentName() and will never be
+  # changed again
+
+  # decompose the path
+  local pc=${1%.nc}
+  local pcs=( ${pc//${EXP_PAT_SEP}/ } )
+
+  local i
+  CURR_EXP_NAME=
+  for(( i=EXP_PAT_BEG ; i < ${EXP_PAT_END:-${#pcs[*]}} ; ++i )) ; do
+    if expr match ${pcs[i]} 'v[[:digit:]]' &> /dev/null
+    then
+      continue
+    fi
+
+    if expr match ${pcs[i]} '[[:digit:]]*-[[:digit:]]*' &> /dev/null
+    then
+      continue
+    fi
+
+    CURR_EXP_NAME=${CURR_EXP_NAME}${pcs[i]}_
+  done
+  CURR_EXP_NAME=${CURR_EXP_NAME%_}
+
+  test ${#CURR_EXP_NAME} -eq 0 && CURR_EXP_NAME=no-exp-name-found
   return
 }
 
@@ -2467,7 +2511,7 @@ init()
   # automatic package update
   if [ "${AUTO_UPDATE}" = t ] ; then
      ${QA_SRC}/install --auto-up --update
-  elif [ "${AUTO_UPDATE}" = f ] ; then
+  elif [ "${AUTO_UPDATE}" = f -o "${AUTO_UPDATE:0:1}" = d ] ; then
      ${QA_SRC}/install --auto-up=disable
   elif grep -q auto-up=enabled ${QA_SRC}/.conf 2> /dev/null ; then
      ${QA_SRC}/install --update
@@ -2657,29 +2701,47 @@ initExperimentName()
 {
   # provided EXP_NAME has preference
   if [ ${#EXP_NAME} -gt 0 ] ; then
+    unset EXP_FNAME_PATTERN
     unset EXP_PATH_INDEX
-    return
+
+  elif [ ${#EXP_FNAME_PATTERN} -gt 0 ] ; then
+    local items=( ${EXP_FNAME_PATTERN//\// } )
+    local item
+    EXP_PAT_BEG=0
+    EXP_PAT_SEP=_
+
+    for item in ${items[*]} ; do
+      if [ ${item:0:1} = b ] ; then
+        EXP_PAT_BEG=${item:1}
+      elif [ ${item:0:1} = e ] ; then
+        EXP_PAT_END=${item:1}
+      elif [ ${item:0:1} = s ] ; then
+        EXP_PAT_SEP=${item:1}
+      fi
+    done
+
+    unset EXP_PATH_INDEX
+
+  elif [ ${#EXP_PATH_INDEX} -gt 0 ] ; then
+    # extract the name of the experiment from subPath
+    # Explanation: look for EXP_PATH_INDEX in a configuration file
+
+    # we need a real array
+    EXP_PATH_INDEX=( ${EXP_PATH_INDEX//,/ } )
+    EXP_PATH_INDEX_MAX=100  # exceeds any number of path components
+
+    # note: the highest number points to the most left-side
+    # path component
+
+    EXP_PATH_INDEX_MAX=0
+
+    local t
+    for t in ${EXP_PATH_INDEX[*]} ; do
+      test ${t} -gt ${EXP_PATH_INDEX_MAX} && EXP_PATH_INDEX_MAX=${t}
+    done
+  else
+    EXP_NAME='all-scope'
   fi
-
-  # extract the name of the experiment from subPath
-  # Explanation: look for EXP_PATH_INDEX in a configuration file
-
-  # we need a real array
-  EXP_PATH_INDEX=( ${EXP_PATH_INDEX//,/ } )
-
-  EXP_PATH_INDEX_MAX=100  # exceeds any number of path components
-
-  test ${#EXP_PATH_INDEX} -eq 0 && return
-
-  # note: the highest number points to the most left-side
-  # path component
-
-  EXP_PATH_INDEX_MAX=0
-
-  local t
-  for t in ${EXP_PATH_INDEX[*]} ; do
-    test ${t} -gt ${EXP_PATH_INDEX_MAX} && EXP_PATH_INDEX_MAX=${t}
-  done
 
   return
 }
@@ -3127,7 +3189,11 @@ log()
   fi
 
   local out
-  getExperimentName ${subPath}
+  if [ ${#EXP_PATH_INDEX[*]} -gt 0 ] ; then
+    getExperimentName ${subPath}
+  else
+    getExperimentName ${netxFile[0]}
+  fi
   out=$EXP_LOGDIR/${CURR_EXP_NAME}.log
 
   s_out="${s_out} - date: $( date +'%FT%T' )"
@@ -3435,7 +3501,12 @@ operatePipes()
 
     # generate an experiment name; CURR_EXP_NAME gets a 'return value'
 #trace \
-    getExperimentName ${subPath}
+    if [ ${#EXP_PATH_INDEX[*]} -gt 0 ] ; then
+      getExperimentName ${subPath}
+    else
+      getExperimentName ${netxFile[0]}
+    fi
+
 #trace \
     getProjectTableName ${subPath}
 
@@ -4499,46 +4570,42 @@ wait_fnct()
 
 xtractSrcPath()
 {
-  # Note: each executable invoked on a bash command-line
-  # gets its name in parameter $0, which is available
-  # in functions.
+  # extract the path to the root of the QA package
 
-  if [ ${#QA_SRC} -eq 0 ] ; then
-    # init
-    if [ ${0:0:1} = '/' ] ; then
-      QA_SRC=${0%/*}
-    else
-      QA_SRC=$(pwd)/${0%/*}
-    fi
-
-    qaDKRZ=${0##*/}
+  local target
+  if [ ${1:0:1} != '/' ] ; then
+    target=$(pwd)/$1
+  else
+    target=$1
   fi
 
-  if [ -h $QA_SRC/$qaDKRZ ] ; then
+  if [ -h $target ] ; then
 
-    QA_SRC=$(ls -l $QA_SRC/${qaDKRZ} | awk  '{print $(NF)}')
-    qaDKRZ=${QA_SRC##*/}
-    QA_SRC=${QA_SRC%/*}
+    # get the link
+    local link=$(ls -l $target | awk  '{print $(NF)}')
 
-    xtractSrcPath
+    # link is relative, so make it absolute
+    test ${link:0:1} != '/' && link=${target%/*}/${link}
+
+    xtractSrcPath ${link}
 
   else
 
     # resolve .. and .
-    local arr=( ${QA_SRC//\// } )
+    local arr=( ${target//\// } )
 
-    # any //, ., or .. in the middle of QA_SRC?
+    # any ., or .. in the middle of QA_SRC?
     local i j sz
     sz=${#arr[*]}
 
     for(( i=1 ; i < sz ; ++i )) ; do
-      j=$((i-1))
 
-      if [ "${arr[i]}" = '/' -a "${arr[j]}" = '/' ] ; then
-        unset arr[j]
-      elif [ "${arr[i]}" = '.' ] ; then
+      if [ "${arr[i]}" = '.' ] ; then
         unset arr[i]
       elif [ "${arr[i]}" = '..' ] ; then
+        j=$((i-1))
+
+        # this takes into account adjacent . and/or .. with any depth
         while [ ${#arr[j]} -eq 0 ] ; do
           j=$((j-1))
         done
@@ -4551,7 +4618,6 @@ xtractSrcPath()
     arr=( ${arr[*]} )
 
     sz=${#arr[*]}
-    QA_SRC=
 
     for(( i=0 ; i < sz ; ++i )) ; do
       QA_SRC=${QA_SRC}/${arr[i]}
@@ -4559,15 +4625,15 @@ xtractSrcPath()
   fi
 
   local tmp
-  while [ "${QA_SRC}" != "${QA_SRC%/*}" ] ; do
+  while : ; do
     tmp=${QA_SRC##*/}
-    test ${tmp:0:3} = 'QA-' && return
+    test "${tmp:0:3}" = 'QA-' && return
 
     QA_SRC=${QA_SRC%/*}
   done
 
   local str
-  str="\nThis script was executed from out-side of the QA package."
+  str="\nqa-DKRZ was executed from out-side of the QA package."
   str="${str}\nIt was probably copied or hard-linked. Please, use a"
   str="${str}\nsymbolic link or call directly from /path/QA-package/scripts"
 
@@ -4601,7 +4667,7 @@ rootPID=$$
 
 #extract the path to QA from $0
 # get execution path of QA scripts
-xtractSrcPath
+xtractSrcPath $0
 
 init $*
 

@@ -1880,17 +1880,20 @@ loadSetting
 
 set -f
 
-# selection on the command-line
-for(( i=0 ; i < ${#sl_args[*]} ; ++i )) ; do
-  if [ ${sl_args[i]:0:1} = '/' ] ; then
-    # rule: if absolute path on cmd-line, then cancel previous settings
-    unsetKWL PROJECT_DATA
-    pathList=
-    varList=
-  fi
+# selection on the command-line cancels any selection in config-files
+if [ ${#sl_args[*]} -gt 0 ] ; then
+  pathList=
+  varList=
 
-  sel_lock S ${sl_args[i]}
-done
+  for(( i=0 ; i < ${#sl_args[*]} ; ++i )) ; do
+    if [ ${sl_args[i]:0:1} = '/' ] ; then
+      # rule: if absolute path on cmd-line, then cancel previous
+      unsetKWL PROJECT_DATA
+    fi
+
+    sel_lock S ${sl_args[i]}
+  done
+fi
 
 # NOTE: arrays of experiments and parameters are provided
 #       by the file LOGIDR/cache_request_SESSION.txt

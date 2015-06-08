@@ -477,7 +477,7 @@ class QA : public IObj
   char        fileSequenceState;
   std::string prevVersionFile;
   std::vector<std::string> srcStr;
-  std::string svnVersion;
+  std::string revision;
 
   std::string fail;
   std::string notAvailable;

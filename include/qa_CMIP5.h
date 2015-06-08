@@ -477,7 +477,7 @@ public:
   std::string filename;
   std::string fVarname;
   std::vector<std::string> srcStr;
-  std::string svnVersion;
+  std::string revision;
 
   std::string fail;
   std::string fileStr;

@@ -962,7 +962,7 @@ Ensemble::testAmbiguity( std::string &str,
   // test modification time against the target
   if( isModificationTest && isWithTarget )
   {
-    bool isFirst=true;
+    int rV=0;
     for( size_t i=0 ; i < sz ; ++i)
     {
        // note: 'later than' is equivalent to 'greater than'
@@ -972,9 +972,11 @@ Ensemble::testAmbiguity( std::string &str,
          member[i]->enableModTimeNote();
 
          member[i]->putState("modification time") ;
-         if( isFirst)
-           returnVal += 2;
-         isFirst=false;
+         if(!rV)
+         {
+           rV=2;
+           returnVal += rV;
+         }
        }
     }
   }
@@ -1061,7 +1063,7 @@ Ensemble::testAmbiguity( std::string &str,
   // check temporal coverage; any identical begin or end?
   for( size_t i=1 ; i < sz ; ++i)
   {
-     bool isFirst=true;
+     int rV=0;
      if( member[i-1]->begin == member[i]->begin )
      {
        enablePrintEnsemble();
@@ -1069,9 +1071,11 @@ Ensemble::testAmbiguity( std::string &str,
        member[i-1]->putState("identical begin");
        member[i]->putState("identical begin");
 
-       if( isFirst )
-         returnVal += 2;
-       isFirst=false;
+         if(!rV)
+         {
+           rV=4;
+           returnVal += rV;
+         }
      }
      if( member[i-1]->end == member[i]->end )
      {
@@ -1079,25 +1083,30 @@ Ensemble::testAmbiguity( std::string &str,
 
        member[i-1]->putState("identical end");
        member[i]->putState("identical end");
-       if( isFirst )
-         returnVal += 4;
-       isFirst=false;
+
+       if(!rV)
+       {
+         rV=4;
+         returnVal += rV;
+       }
      }
   }
 
   // test for overlapping temporal coverage
   for( size_t i=1 ; i < sz ; ++i)
   {
-     bool isFirst=true;
+     int rV=0;
      if( member[i-1]->end > member[i]->begin )
      {
        enablePrintEnsemble();
 
        member[i-1]->putState("misaligned time across files");
 
-       if(isFirst)
-         returnVal += 8;
-       isFirst=false;
+       if(!rV)
+       {
+         rV=8;
+         returnVal += rV;
+       }
      }
   }
 

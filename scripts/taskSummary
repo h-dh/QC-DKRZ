@@ -3,7 +3,7 @@
 ##/*! \file taskSummary.h
 ## \brief Summary of all processed variables of a given experiment
 
-## Annotations in QA_RESULTS/check_logs/_Notes/experiment are explored.
+## Annotations in QA_RESULTS/check_logs/Annotations.yaml/experiment are explored.
 ##*/
 
 descript()
@@ -36,7 +36,7 @@ period()
     /bin/bash ${prg} ${DEBUG_X} -P ${PROJECT} -Q $exp.log
 
   isPeriodFault=f
-  if grep -q 'FAIL' _Period/${exp}.period &> /dev/null ; then
+  if grep -q 'FAIL' Period.yaml/${exp}.period &> /dev/null ; then
     isPeriodFault=t
   fi
 
@@ -68,6 +68,8 @@ processBlk()
 
 summaryHR()
 {
+  local p=_Notes/${exp}.log
+
 txt="Annotation summary of the QA of experiment\n \
     ${exp}\
 \n\nAccess to all QA results:\n \
@@ -75,7 +77,7 @@ txt="Annotation summary of the QA of experiment\n \
 \n\nAccess to the logfiles:\n \
    ${QA_RESULTS}/check_logs \
 \n\nPath to the annotations in YAML format:\n\
-   $(pwd)/_Notes/${exp}\n\
+   $(pwd)/${p}\n\
 \n\n"
 
   # convert periods to human readers
@@ -89,7 +91,7 @@ txt="Annotation summary of the QA of experiment\n \
     if [ "${line[1]}" = atomic_name: -a ${#line[2]} -gt ${max_len} ] ; then
       max_len=${#line[2]}
     fi
-  done < _Period/${exp}.period
+  done < Period.yaml/${exp}.period
 
   mkdir -p Summary/$exp
 
@@ -97,7 +99,7 @@ txt="Annotation summary of the QA of experiment\n \
   echo -n '' > $outP
 
   exec 9<&0
-  exec 0< _Period/${exp}.period
+  exec 0< Period.yaml/${exp}.period
 
   # skip 1st and 2nd line
   read -a line
@@ -153,25 +155,28 @@ txt="Annotation summary of the QA of experiment\n \
     fi
   fi
 
-  if [ ${isPeriodFault:-f} = t ] ; then
-    echo -e " \n\n==== Time Range Annotations =========================\n" \
-           >> $outA
+  if [ -e $outP ] ; then
+    echo -e " \n\n==== Atomic Time Ranges =========================\n" \
+                  >> $outA
+    cat $outP     >> $outA
+    echo -e "\n"  >> $outA
 
-    if [ -e $outP ] ; then
-      grep -B 3 'FAIL:' _Period/${exp}.period >> $outA
-      grep -B 3 'FAIL:' _Period/${exp}.period >> Summary/$exp/failed_periods
-      echo -e "\n"                            >> $outA
+    if [ ${isPeriodFault:-f} = t ] ; then
+      mv  $outP Summary/$exp/failed_periods
+    else
+      # now its done with the human readable periods
+      \rm $outP &> /dev/null
     fi
-  else
-    echo -e "\n\nPeriods of atomic variables in\n\"
-    ${QA_RESULTS}/check_logs/_Period/${exp}.period" >> $outA
-    echo -e "\nno evidence" >> $outA
   fi
 
-  # now its done with the human readable periods
-  \rm -f $outP 2> /dev/null
+  # find tags of the yaml annotation file, if any
+  if [ ! -f $p ] ; then
+    echo -e " \n\n==== Annotation: none =========================\n" \
+              >> $outA
 
-  # find tags of the yaml annotation file
+    return
+  fi
+
   local ix tags
   declare -a tags
 
@@ -183,7 +188,7 @@ txt="Annotation summary of the QA of experiment\n \
 
       tags[${#tags[*]}]="${line[1]}"
     fi
-  done < _Notes/${exp}.note
+  done < Annotations.yaml/${exp}.log
 
   # clear old results
   \rm -f Summary/$exp/L*
@@ -234,7 +239,7 @@ txt="Annotation summary of the QA of experiment\n \
         unset line[0]
         impct="${line[*]}"
       fi
-    done < _Notes/${exp}.note
+    done < Annotations.yaml/${exp}.log
   done
 
   local f fc
@@ -324,7 +329,7 @@ summaryY()
     period
 
     # yaml annotations are sorted corresponding to the flag;
-    # output in _Notes/EXP_NAME/annotation_summary.txt.
+    # output in Annotatins.yaml/EXP_NAME/annotation_summary.txt.
     summaryY
 
     # summary of annotations for humann reqaders.
@@ -332,6 +337,6 @@ summaryY()
   done
 
   # when there was no annotation
-#  rmdir _Notes &> /dev/null
+#  rmdir Annotatinss.yaml &> /dev/null
 
 ##}

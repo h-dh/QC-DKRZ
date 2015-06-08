@@ -3963,11 +3963,9 @@ QA::initDefaults(void)
 
   exitCode=0;
 
-#ifdef SVN_VERSION
+#ifdef REVISION
   // -1 by default
-  svnVersion=hdhC::double2String(static_cast<int>(SVN_VERSION));
-#else
-  svnVersion="-1";
+  revision=hdhC::double2String(static_cast<int>(REVISION));
 #endif
 
   // set pointer to member function init()

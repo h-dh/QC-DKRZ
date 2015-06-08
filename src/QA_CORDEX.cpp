@@ -4082,9 +4082,9 @@ QA::initDefaults(void)
   // file sequence: f[first], s[equence], l[ast]
   fileSequenceState='x' ;  // 'x':= undefined
 
-#ifdef SVN_VERSION
+#ifdef REVISION
   // -1 by default
-  svnVersion=hdhC::double2String(static_cast<int>(SVN_VERSION));
+  revision=hdhC::double2String(static_cast<int>(REVISION));
 #endif
 
   // set pointer to member function init()
@@ -5686,8 +5686,14 @@ QA::testPeriod(void)
   std::vector<Date> period;
   qaTime.getDRSformattedDateRange(period, sd);
 
+  period.push_back( Datum(refDate) );
+  period.push_back( Datum(refDate) );
+
+  Datum* fN_left = &period[0];
+  Datum* fN_right = &period[1];
+
   // necessary for validity (not sufficient)
-  if( period[0] > period[1] )
+  if( *fN_left > *fN_right )
   {
      std::string key("42_4");
      if( notes->inq( key, fileStr) )
@@ -5706,27 +5712,100 @@ QA::testPeriod(void)
      return false;
   }
 
+  Datum* tB_left = 0 ;
+  Datum* tB_right = 0 ;
+  Datum* tV_left = 0 ;
+  Datum* tV_right = 0;
+
+  bool isLeft_fT_not_tV ;
+  bool isRight_fT_not_tV ;
+
   if( qaTime.isTimeBounds)
   {
-    period.push_back( qaTime.getDate("first", "left") );
-    period.push_back( qaTime.getDate("last", "right") );
+    tB_left = &qaTime.firstTimeBoundsDate[0];
+    tB_right = &qaTime.lastTimeBoundsDate[1];
+
+    isLeft_fT_not_tV = *tB_left != *fN_left ;
+    isRight_fT_not_tV = *tB_right != *fN_right ;
+
+    double db_centre=(qaTime.firstTimeBoundsValue[0]
+                        + qaTime.firstTimeBoundsValue[1])/2. ;
+    if( db_centre != qaTime.firstTimeValue )
+    {
+      std::string key("16_11");
+      if( notes->inq( key, fVarname) )
+      {
+        std::string capt("Range of variable time_bnds is not centred around variable time.");
+
+        (void) notes->operate(capt) ;
+        notes->setCheckMetaStr( fail );
+      }
+    }
   }
   else
   {
-    period.push_back( qaTime.getDate("first") );
-    period.push_back( qaTime.getDate("last") );
+    tV_left = &qaTime.firstDate;
+    tV_right = &qaTime.lastDate;
+
+    isLeft_fT_not_tV = *tV_left != *fN_left ;
+    isRight_fT_not_tV = *tV_right != *fN_right ;
+
+    std::string key("16_12");
+    if( notes->inq( key, fVarname) )
+    {
+      std::string capt("Variable time_bnds is missing");
+
+      (void) notes->operate(capt) ;
+      notes->setCheckMetaStr( fail );
+    }
   }
 
-  if( period[2] != period[0] )
+  if( isLeft_fT_not_tV )
+  {
+    // CMOR isn't capable of working with the time_bounds. Hence, an exception
+    // rule is added to the CORDEX archive design as to the period in filenames:
+    // "It is also allowed to use time values of the first and last records
+    // in NetCDF files for averaged data." However, this does not lead to a
+    // working solution. In fact, CMOR sets StartTime to the beginning  of
+    // the month bearing the first time value.
+    // So, here is a LEX CMOR
+    if ( !tV_left )
+    {
+      period.push_back( Datum(refDate) );
+      tV_left = &period.back();
+      if( qaTime.firstTimeValue != 0. )
+        tV_left->addTime( hdhC::double2String(qaTime.firstTimeValue) );
+
+      double monDaysNum = tV_left->getMonthDaysNum();
+      tV_left->addTime( hdhC::double2String(-monDaysNum) );
+    }
+
+    if ( !tV_right )
+    {
+      period.push_back( Datum(refDate) );
+      tV_right = &period.back();
+      if( qaTime.lastTimeValue != 0. )
+        tV_right->addTime( hdhC::double2String(qaTime.lastTimeValue) );
+    }
+
+    isLeft_fT_not_tV = *tV_left != *fN_left ;
+    isRight_fT_not_tV = *tV_right != *fN_right ;
+  }
+
+  // the annotation
+  if( isLeft_fT_not_tV )
   {
      std::string key("16_2");
      if( notes->inq( key, fileStr) )
      {
-       std::string capt("period in filename (1st date) is misaligned to time values");
+       std::string capt("First date in filename is misaligned to time ");
+       if( tB_left )
+          capt += "bounds ";
+       capt += "values";
 
-       std::string text("from time data=");
+       std::string text("time varible=: ");
        text += period[2].getDate();
-       text += "\nfilename=" ;
+       text += "\nfilename=: " ;
        text += period[0].getDate() ;
 
        (void) notes->operate(capt, text) ;
@@ -5735,12 +5814,15 @@ QA::testPeriod(void)
   }
 
   // test completeness: the end of the file
-  if( isFileComplete && period[3] != period[1] )
+  if( isFileComplete && isRight_fT_not_tV )
   {
      std::string key("16_3");
      if( notes->inq( key, fileStr) )
      {
-       std::string capt("period in filename (2nd date) is misaligned to time values");
+       std::string capt("Second date in filename is misaligned to time ");
+       if( tB_right )
+          capt += "bounds ";
+       capt += "values";
 
        std::string text;
        if( period[3] > period[1] )
@@ -5748,9 +5830,9 @@ QA::testPeriod(void)
        else
          text = "Period in filename exceeds time values." ;
 
-       text += "\ndata=" ;
+       text += "\ntime variable=: " ;
        text += period[3].getDate() ;
-       text += "\nfilename=" ;
+       text += "\nfilename=: " ;
        text += period[1].getDate();
 
        (void) notes->operate(capt, text) ;

@@ -253,7 +253,7 @@ class QA : public IObj
   std::string project_as;
   std::string prevVersionFile;
   std::vector<std::string> srcStr;
-  std::string svnVersion;
+  std::string revision;
 
   std::string fail;
   std::string notAvailable;
