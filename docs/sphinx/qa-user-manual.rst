@@ -470,7 +470,7 @@ Best Practise
         if the NetCDF-4 library with HDF5 support is available:
         ./install
 
-        if supported libs should be protected against deletion (by hard-links):
+        if supported libs should be protected (by hard-links) against deletion:
         ./install --link=path
 
         if NetCDF libs have to be built:
@@ -488,7 +488,7 @@ Best Practise
 
 .. code-block:: text
 
-    Most of the configuration options have a useful default and some only
+    Most of the configuration options have a useful default and some are only
     for very specific conditions occurring at different sites.
     Note that all (specified and/or by default) config-opts are recorded
     in the log-files.
@@ -518,7 +518,8 @@ Best Practise
 
     - The CORDEX_check-list.conf file provides directives, how to issue annotations.
       If a level of severity was rated higher than the L1 level, then a QA session
-      may stop. The option NOTE_LEVEL_LIMIT=[L]1 would prevent this.
+      may stop to process the given atomic data set any further.
+      The option NOTE_LEVEL_LIMIT=[L]1 would prevent this.
 
 **Operational Mode**
 
@@ -536,13 +537,13 @@ Best Practise
        Path and and filename of every SELECTed item will be displayed below
        the executed command-line call. Searching the data base may take a
        somewhat long time, depending on the number of data files attached
-       by option PROJECT_DATA alone.
+       by option PROJECT_DATA without any SELECT search.
 
      - Command-line: /package-path/scripts/qa_DKRZ -f file -E_next
 
-       Only the first path-variable resulting from the SELECT evaluation will
-       be checked. If everything appears fine in folder QA_RESULTS/check_logs,
-       then restart the call without e_next. This will resume the session.
+       Only the first file of an atomic data set resulting from the SELECT evaluation
+       will be checked. If everything appears fine in folder QA_RESULTS/check_logs,
+       then restart the call without -e_next. This will resume the session.
 
      - Use nohup for long-term execution in the background. If the script is run
        in the foreground, then command-line option '-m' may be helpful by showing
