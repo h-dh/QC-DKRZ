@@ -93,7 +93,8 @@ QA_Time::finally(NcAPI *nc)
   timeOutputBuffer.flush();
   sharedRecordFlag.flush();
 
-  if( firstDate <= currDate )
+  if( refDate.getJulianDate(firstTimeValue)
+        <= refDate.getJulianDate(currTimeValue) )
   {
     // not true for a gap across a file, because then currDate
     // represents the last date from the previous file.
@@ -102,15 +103,15 @@ QA_Time::finally(NcAPI *nc)
     // if bounds are available, then use them
     if( isTimeBounds )
     {
-      out += firstTimeBoundsDate[0].getDate();
+      out += getDateStr(firstTimeBoundsValue[0]);
       out += " - " ;
-      out += lastTimeBoundsDate[1].getDate();;
+      out += getDateStr(lastTimeBoundsValue[1]);
     }
     else
     {
-      out += firstDate.getDate() ;
+      out += getDateStr(firstTimeValue) ;
       out += " - " ;
-      out += lastDate.getDate() ;
+      out += getDateStr(lastTimeValue) ;
     }
 
     out += "PERIOD-END";  // mark of the end of an output line
@@ -119,7 +120,7 @@ QA_Time::finally(NcAPI *nc)
 
   // write internal data to variable time
   nc->setAtt( "time", "last_time", lastTimeValue);
-  nc->setAtt( "time", "last_date", lastDate.getDate() );
+  nc->setAtt( "time", "last_date", getDateStr(lastTimeValue) );
   nc->setAtt( "time", "isTimeBoundsTest", static_cast<double>(isTimeBounds));
 
   if( pIn->currRec )
@@ -129,7 +130,7 @@ QA_Time::finally(NcAPI *nc)
     // the time step is twice as long.
     double tmp;
 
-    if( pQA->currQcRec == 1 )  // due to the final loop increment
+    if( pQA->currQARec == 1 )  // due to the final loop increment
     {
       referenceTimeStep *= 2. ;
       tmp=2.*currTimeStep;
@@ -146,75 +147,34 @@ QA_Time::finally(NcAPI *nc)
   return;
 }
 
-Date
-QA_Time::getDate(std::string id, std::string bound)
+void
+QA_Time::getDate(Date& d, double t)
 {
-  if( bound.size() == 0 )
+/*
+  if( isFormattedDate )
   {
-    if( id == "first" )
-       return firstDate;
-    else if( id == "curr" )
-       return currDate;
-    else if( id == "last" )
-       return lastDate;
+     d.setDate( Date::getIso8601(t), calendar ) ;
   }
-  else if( isTimeBounds )
+  else
   {
-    size_t pos=0;
-    if( bound == "right" )
-       pos=1;
+*/
+    d=refDate;
+    d.addTime(t) ;
+//  }
 
-    if( id == "first" )
-    {
-       if( ! firstTimeBoundsDate[pos].size() )
-       {
-         if( isFormattedDate )
-           firstTimeBoundsDate[pos].setDate(
-              Date::getIso8601(firstTimeBoundsValue[pos]), calendar) ;
-         else
-         {
-           firstTimeBoundsDate[pos] = refDate ;
-           firstTimeBoundsDate[pos].addTime(firstTimeBoundsValue[pos]);
-         }
-       }
+  return ;
+}
 
-       return firstTimeBoundsDate[pos];
-    }
-    else if( id == "curr" )
-    {
-       if( ! currTimeBoundsDate[pos].size() )
-       {
-         if( isFormattedDate )
-           currTimeBoundsDate[pos].setDate(
-              Date::getIso8601(currTimeBoundsValue[pos]), calendar) ;
-         else
-         {
-           currTimeBoundsDate[pos] = refDate ;
-           currTimeBoundsDate[pos].addTime(currTimeBoundsValue[pos]);
-         }
-       }
-
-       return currTimeBoundsDate[pos];
-    }
-    else if( id == "last" )
-    {
-       if( ! lastTimeBoundsDate[pos].size() )
-       {
-         if( isFormattedDate )
-           lastTimeBoundsDate[pos].setDate(
-              Date::getIso8601(lastTimeBoundsValue[pos]), calendar) ;
-         else
-         {
-           lastTimeBoundsDate[pos] = refDate ;
-           lastTimeBoundsDate[pos].addTime(lastTimeBoundsValue[pos]);
-         }
-       }
-
-       return lastTimeBoundsDate[pos];
-    }
+std::string
+QA_Time::getDateStr(double val, bool isAbsolute)
+{
+  if(isAbsolute || isFormattedDate)
+  {
+    Date d(Date::getIso8601(val), calendar );
+    return d.getDate();
   }
-
-  return Date();
+  else
+    return refDate.getDate(val) ;
 }
 
 void
@@ -322,24 +282,22 @@ QA_Time::getDRSformattedDateRange(std::vector<Date> &period,
   return;
 }
 
-bool
-QA_Time::getTimeBounds(double *b, size_t curr)
+void
+QA_Time::getTimeBoundsValues(double* pair, size_t rec, double offset)
 {
-  std::string name_bnds;
+  int mv_ix = pIn->nc.getData(mv_tb, timeBoundsName, rec );
 
-  for( size_t i=0 ; i < pIn->variable.size() ; ++i )
-  {
-     if( pIn->variable[i].name == "time" )
-     {
-       if( pIn->variable[i].bounds.size() )
-       {
-         name_bnds = pIn->variable[i].bounds ;
-         break;
-       }
-     }
-  }
+  double** m2D =mv_tb.getM();
+  pair[0]=m2D[mv_ix][0] + offset;
+  pair[1]=m2D[mv_ix][1] + offset;
 
-  if( name_bnds.size() == 0 )
+  return ;
+}
+
+bool
+QA_Time::initTimeBounds(double offset)
+{
+  if( timeBounds_ix == -1 )
   {
     firstTimeBoundsValue[0]=0.;
     firstTimeBoundsValue[1]=0.;
@@ -348,15 +306,16 @@ QA_Time::getTimeBounds(double *b, size_t curr)
     return false;
   }
 
-  size_t start_x[2];
-  size_t count_x[2];
-  start_x[0] = curr;
-  start_x[1] = 0;
-  count_x[0] = 1;
-  count_x[1] = 2;
+  (void) pIn->nc.getData(mv_tb, timeBoundsName, 0 );
+  double** m2D =mv_tb.getM();
+  firstTimeBoundsValue[0]=m2D[0][0] + offset;
+  firstTimeBoundsValue[1]=m2D[0][1] + offset;
 
-  nc_get_vara_double(
-       pIn->nc.getNcid(), pIn->nc.getVarID(name_bnds), start_x, count_x, b );
+  int mv_ix = pIn->nc.getData(mv_tb, timeBoundsName,
+                                  pIn->nc.getNumOfRows(timeBoundsName)-1);
+  m2D =mv_tb.getM();
+  lastTimeBoundsValue[0]=m2D[mv_ix][0] + offset;
+  lastTimeBoundsValue[1]=m2D[mv_ix][1] + offset;
 
   return true;
 }
@@ -368,15 +327,38 @@ QA_Time::init(InFile *p, Annotation *n, QA *q)
    pQA = q;
    notes = n;
 
-   time=pIn->timeName;
+   if( pIn->cF )
+   {
+     timeName = pIn->cF->timeName;
+     time_ix  = pIn->cF->time_ix;
+     timeBoundsName = pIn->variable[time_ix].bounds ;
+   }
+   else
+   {
+     size_t i;
+     for( i=0 ; i < pIn->varSz ; ++i )
+     {
+       if( pIn->variable[i].name == "time" )
+       {
+         timeName = pIn->variable[i].name ;
+         time_ix = static_cast<int>(i) ;
 
-   timeInputBuffer.init(pIn);
+         timeBoundsName = pIn->variable[i].bounds ;
+       }
+     }
+   }
+   timeBounds_ix = pIn->getVarIndex(timeBoundsName);
 
-   timeOutputBuffer.initBuffer(pQA->nc, pQA->currQcRec);
-   timeOutputBuffer.setName(time);
+   // time_bnds available? Yes, then enable a check
+   if( timeBoundsName.size() )
+      if( ! pIn->variable[timeBounds_ix].isExcluded )
+         enableTimeBoundsTest();
 
-   sharedRecordFlag.initBuffer(pQA->nc, pQA->currQcRec);
-   sharedRecordFlag.setName( time + "_flag" );
+   timeOutputBuffer.initBuffer(pQA->nc, pQA->currQARec);
+   timeOutputBuffer.setName(timeName);
+
+   sharedRecordFlag.initBuffer(pQA->nc, pQA->currQARec);
+   sharedRecordFlag.setName( timeName + "_flag" );
 
    // set date to a reference time
    std::string str(pIn->getTimeUnit());
@@ -385,12 +367,12 @@ QA_Time::init(InFile *p, Annotation *n, QA *q)
      return ;
    else if( str.find("%Y") < std::string::npos )
    {
-     if( initTimeAbsolute(str) )
+     if( initAbsoluteTime(str) )
         return;
    }
    else
    {
-     if( initTimeRelative(str) )
+     if( initRelativeTime(str) )
        return;  // could  not read any time value
    }
 
@@ -433,7 +415,10 @@ QA_Time::initDefaults(void)
    isSingleTimeValue=false;
    isTimeBounds=false;
 
-   refTimeDelay=0.; // !=0, if there are different reference dates
+   time_ix = -1 ;
+   timeBounds_ix = -1 ;
+
+   refTimeOffset=0.; // !=0, if there are different reference dates
 
    bufferCount=0;
    maxBufferSize=1500;
@@ -442,33 +427,24 @@ QA_Time::initDefaults(void)
 }
 
 bool
-QA_Time::initTimeAbsolute(std::string &units)
+QA_Time::initAbsoluteTime(std::string &units)
 {
   size_t i;
-  for( i=0 ; i < pIn->variable.size() ; ++i)
-    if( pIn->variable[i].name == time )
+  for( i=0 ; i < pIn->varSz ; ++i)
+    if( pIn->variable[i].name == timeName )
        break;
 
-  if( i == pIn->variable.size() )
+  if( i == pIn->varSz )
      return true;  // no time
 
   isFormattedDate = true;
 
   // proleptic Gregorian, no-leap, 360_day
-  calendar = pIn->nc.getAttString("calendar", time);
+  calendar = pIn->nc.getAttString("calendar", timeName);
   if( calendar.size() )
   {
      isNoCalendar=false;
      refDate.setCalendar(calendar);
-     firstDate.setCalendar(calendar);
-     currDate.setCalendar(calendar);
-     lastDate.setCalendar(calendar);
-     firstTimeBoundsDate[0].setCalendar(calendar);
-     firstTimeBoundsDate[1].setCalendar(calendar);
-     currTimeBoundsDate[0].setCalendar(calendar);
-     currTimeBoundsDate[1].setCalendar(calendar);
-     lastTimeBoundsDate[0].setCalendar(calendar);
-     lastTimeBoundsDate[1].setCalendar(calendar);
   }
 
   // time_bounds
@@ -480,7 +456,7 @@ QA_Time::initTimeAbsolute(std::string &units)
      if( ! pIn->variable[i].isExcluded )
         enableTimeBoundsTest();
 
-  refTimeDelay=0.;
+  refTimeOffset=0.;
 
   Split x_units(units);
   for( size_t i=0 ; i< x_units.size() ; ++i )
@@ -492,37 +468,32 @@ QA_Time::initTimeAbsolute(std::string &units)
      }
   }
 
-  if( (currTimeValue=Base::getTime(pIn->nc, 0, time, refTimeDelay)) == MAXDOUBLE)
+  if( mv_t[ pIn->nc.getData(mv_t, timeName, 0) ] == MAXDOUBLE)
      return true;
 
-  currDate.setDate( currTimeValue ) ;
-
+  currTimeValue += refTimeOffset;
   firstTimeValue = currTimeValue;
-  firstDate = currDate ;
 
-  lastTimeValue = Base::getTime( pIn->nc, pIn->nc.getNumOfRecords()-1,
-                     time, refTimeDelay);
-  lastDate.setDate( Date::getIso8601(lastTimeValue), calendar ) ;
+  size_t recSz = pIn->nc.getNumOfRows(timeName) ;
+  lastTimeValue=mv_t[ pIn->nc.getData(mv_t, timeName, recSz-1) ] + refTimeOffset;
 
   if( prevTimeValue == MAXDOUBLE )
   {
-     size_t sz = pIn->getNumOfRecords() ;
-
      // 0) no value; caught elsewhere
-     if( sz == 0 )
+     if( recSz == 0 )
        return false;
 
      // 1) out of two time values within a file
-     if( sz > 1 )
+     if( recSz > 1 )
      {
-       if( pIn->currRec < pIn->getNumOfRecords() )
-       {
-         prevTimeValue=Base::getTime(pIn->nc, 1, time, refTimeDelay);
-         prevDate.setDate(prevTimeValue, calendar);
-       }
+       if( pIn->currRec < recSz )
+         prevTimeValue = mv_t[ pIn->nc.getData(mv_t, timeName, 1) ]
+                            + refTimeOffset ;
 
        // an arbitrary setting that would pass the first test;
        // the corresponding results is set to FillValue
+       Date prevDate(prevTimeValue, calendar);
+       Date currDate(currTimeValue, calendar);
        referenceTimeStep=fabs(prevDate.getJulianDay() - currDate.getJulianDay());
        prevDate.addTime( -2.*referenceTimeStep ) ;
 
@@ -539,104 +510,77 @@ QA_Time::initTimeAbsolute(std::string &units)
      else
      {
        prevTimeValue = 0. ;
-       prevDate=currDate;
        referenceTimeStep=0.;
      }
 
      if( isTimeBounds )
      {
-       Base::getTime(pIn->nc, pIn->currRec, timeBoundsName, tmp_mv, refTimeDelay) ;
-       Date d[2];
-       d[0].setDate(tmp_mv[0], calendar);
-       d[1].setDate(tmp_mv[1], calendar);
-       double dtb = fabs( d[1].getJulianDay() - d[0].getJulianDay() );
-
-       // valid for isFormatted true and false
-       prevTimeBoundsDate[0]=d[0] ;
-       prevTimeBoundsDate[0].addTime(-dtb) ;
-       prevTimeBoundsDate[1]=d[1] ;
-       prevTimeBoundsDate[1].addTime(-dtb) ;
+       getTimeBoundsValues(currTimeBoundsValue, pIn->currRec, refTimeOffset) ;
+       double dtb = currTimeBoundsValue[1] - currTimeBoundsValue[0] ;
+       prevTimeBoundsValue[0] = currTimeBoundsValue[0] - dtb ;
+       prevTimeBoundsValue[0] = currTimeBoundsValue[1] ;
      }
   }
 
   if( isTimeBounds )
   {
-    getTimeBounds( firstTimeBoundsValue, 0 ) ;
-    firstTimeBoundsDate[0].setDate(firstTimeBoundsValue[0]);
-    firstTimeBoundsDate[1].setDate(firstTimeBoundsValue[1]);
-
-    getTimeBounds( lastTimeBoundsValue, pIn->getNumOfRecords() - 1 ) ;
-    lastTimeBoundsDate[0].setDate(lastTimeBoundsValue[0]);
-    lastTimeBoundsDate[1].setDate(lastTimeBoundsValue[1]);
+    getTimeBoundsValues( firstTimeBoundsValue, 0, refTimeOffset ) ;
+    getTimeBoundsValues( lastTimeBoundsValue, recSz-1, refTimeOffset ) ;
   }
 
   return false;
 }
 
 bool
-QA_Time::initTimeRelative(std::string &units)
+QA_Time::initRelativeTime(std::string &units)
 {
-   size_t i;
-   for( i=0 ; i < pIn->variable.size() ; ++i)
-     if( pIn->variable[i].name == time )
-        break;
-
-   if( i == pIn->variable.size() )
-      return true;  // no time
+   if( time_ix == -1 )
+     return true;  // no time
 
    // proleptic Gregorian, no-leap, 360_day
-   calendar = pIn->nc.getAttString("calendar", time);
+   calendar = pIn->nc.getAttString("calendar", timeName);
 
    if( calendar.size() )
    {
       isNoCalendar=false;
       refDate.setCalendar(calendar);
-      currDate.setCalendar(calendar);
    }
    refDate.setDate( units );
 
-   // time_bounds
-   disableTimeBoundsTest();
-   timeBoundsName = pIn->variable[i].bounds;
-
-   // time_bnds available? Yes, then enable a check
-   if( timeBoundsName.size() )
-      if( ! pIn->variable[i].isExcluded )
-         enableTimeBoundsTest();
-
-   if( (currTimeValue=Base::getTime(pIn->nc, 0, time, refTimeDelay)) == MAXDOUBLE)
+   currTimeValue=mv_t[ pIn->nc.getData(mv_t, timeName, 0) ] ;
+   if( currTimeValue == MAXDOUBLE)
       return true;
 
-   currDate   = refDate.getDate( hdhC::double2String(currTimeValue) ) ;
-   firstDate = currDate ;
+   currTimeValue += refTimeOffset;
    firstTimeValue = currTimeValue ;
 
-   lastDate = refDate ;
-   lastTimeValue = Base::getTime( pIn->nc, pIn->nc.getNumOfRecords()-1,
-                     time, refTimeDelay);
-   lastDate.addTime( hdhC::double2String(lastTimeValue));
+   size_t recSz = pIn->nc.getNumOfRows(timeName) ;
+
+   lastTimeValue=mv_t[ pIn->nc.getData(mv_t, timeName, recSz-1) ]
+                    + refTimeOffset ;
+
+   if( isTimeBounds )
+     initTimeBounds(refTimeOffset) ;
 
    if( prevTimeValue == MAXDOUBLE )
    {
-     size_t sz = pIn->getNumOfRecords() ;
-
      // 0) no value; caught elsewhere
-     if( sz == 0 )
+     if( recSz == 0 )
        return false;
 
      // 1) out of two time values within a file
-     if( sz > 1 )
+     if( recSz > 1 )
      {
-       double t1;
-       if( pIn->currRec < pIn->getNumOfRecords() )
-         t1=Base::getTime(pIn->nc, 1, time, refTimeDelay);
-       else
-         t1=2.*currTimeValue ;  // will raise an error message. ok.
+       double t1=2.*currTimeValue;
+
+       if( pIn->currRec < recSz )
+       {
+         if( mv_t.getDimSize() == 1 && mv_t.size() > (pIn->currRec +1) )
+           t1=mv_t[pIn->currRec+1] + refTimeOffset ;
+       }
 
        // an arbitrary setting that would pass the first test;
        // the corresponding results is set to FillValue
-       prevTimeValue = 2.*currTimeValue -t1 ;
-
        referenceTimeStep=fabs(t1 - currTimeValue);
      }
 
@@ -665,25 +609,17 @@ QA_Time::initTimeRelative(std::string &units)
        }
        else
          referenceTimeStep=currTimeValue;
-
-       prevTimeValue = currTimeValue - referenceTimeStep ;
      }
+
+     prevTimeValue = currTimeValue - referenceTimeStep ;
 
      if( isTimeBounds )
      {
-       Base::getTime(pIn->nc, pIn->currRec, timeBoundsName, tmp_mv, refTimeDelay) ;
-       double dtb = tmp_mv[1] - tmp_mv[0];
+       double dtb = firstTimeBoundsValue[1] - firstTimeBoundsValue[0];
 
-       prevTimeBoundsValue[0]=tmp_mv[0] - dtb ;
-       prevTimeBoundsValue[1]=tmp_mv[1] - dtb  ;
+       prevTimeBoundsValue[0]=firstTimeBoundsValue[0] - dtb ;
+       prevTimeBoundsValue[1]=firstTimeBoundsValue[0]  ;
      }
-   }
-
-
-   if( isTimeBounds )
-   {
-     getTimeBounds( firstTimeBoundsValue, 0 ) ;
-     getTimeBounds( lastTimeBoundsValue, pIn->getNumOfRecords() - 1 ) ;
    }
 
    return false;
@@ -702,21 +638,21 @@ QA_Time::initResumeSession(void)
    // Note: this fails, if the previous file has a
    //       different reference date AND the QA resumes the
    //       current file after an error.
-   pQA->nc->getAttValues( dv, "last_time", time);
+   pQA->nc->getAttValues( dv, "last_time", timeName);
    prevTimeValue=dv[0];
 
-   pQA->nc->getAttValues( dv, "last_time_bnd_0", time);
+   pQA->nc->getAttValues( dv, "last_time_bnd_0", timeName);
    prevTimeBoundsValue[0]=dv[0];
 
-   pQA->nc->getAttValues( dv, "last_time_bnd_1", time);
+   pQA->nc->getAttValues( dv, "last_time_bnd_1", timeName);
    prevTimeBoundsValue[1]=dv[0];
 
-   pQA->nc->getAttValues( dv, "last_time_step", time + "_step");
+   pQA->nc->getAttValues( dv, "last_time_step", timeName + "_step");
    referenceTimeStep=dv[0];
 
    // case: two different reference dates are effective.
-   std::string tu_0(pQA->nc->getAttString("units", time));
-   std::string tu_1(pIn->nc.getAttString("units", time));
+   std::string tu_0(pQA->nc->getAttString("units", timeName));
+   std::string tu_1(pIn->nc.getAttString("units", timeName));
    if( ! (tu_0 == tu_1 ) )
    {
       if( ! isFormattedDate )
@@ -732,13 +668,13 @@ QA_Time::initResumeSession(void)
         // adjust all time values of the current file to
         // the reference date of the first chunk, which is
         // stored in the qa-nc file
-        refTimeDelay= d_x0.getSince( d_x1 );
+        refTimeOffset= d_x0.getSince( d_x1 );
       }
    }
 
    // get internal values
    isTimeBounds =
-     static_cast<bool>(pQA->nc->getAttValue("isTimeBoundsTest", time));
+     static_cast<bool>(pQA->nc->getAttValue("isTimeBoundsTest", timeName));
 
    return;
 }
@@ -894,17 +830,17 @@ QA_Time::initTimeTable(std::string id_1st, std::string id_2nd)
 
      getDRSformattedDateRange(tt_dateRange, sd);
 
-     if( currDate < tt_dateRange[0] )
+     if( refDate.getJulianDate(currTimeValue) < tt_dateRange[0].getJulianDate() )
      { // error: time record out of range (before)
        std::string key("63_1");
-       if( notes->inq( key, time) )
+       if( notes->inq( key, timeName) )
        {
          std::string capt("time value before the first time-table range");
 
          std::ostringstream ostr(std::ios::app);
          ostr << "frequency=" << id_1st;
          ostr << "\nrec#=0" ;
-         ostr << "\ndate in record=" << currDate.getDate() ;
+         ostr << "\ndate in record=" << getDateStr(currTimeValue) ;
          ostr << "\nrange from time-table=" ;
          ostr << tt_dateRange[0].getDate() << " - " ;
          ostr << tt_dateRange[1].getDate() ;
@@ -955,7 +891,9 @@ QA_Time::parseTimeTable(size_t rec)
      return true;
    }
 
-   if( timeTableMode == CYCLE && currDate < tt_dateRange[1])
+   if( timeTableMode == CYCLE
+          && refDate.getJulianDate(currTimeValue)
+                  < tt_dateRange[1].getJulianDate() )
      return false; //an error happened within the range
 
   // other modes are updated in cycles
@@ -968,14 +906,14 @@ QA_Time::parseTimeTable(size_t rec)
      if( tt_count_recs > num )
      {  // issue an error flag; number of records too large
         std::string key("63_4");
-        if( notes->inq( key, time) )
+        if( notes->inq( key, timeName) )
         {
           std::string capt("too many time values compared to the time-table");
 
           std::ostringstream ostr(std::ios::app);
           ostr << "frequency=" << tt_id;
           ostr << "\nrec#=" << rec;
-          ostr << "\ndate in record=" << currDate.getDate() ;
+          ostr << "\ndate in record=" << getDateStr(currTimeValue) ;
           ostr << "\nvalue from time-table=" << tt_xmode[tt_index] ;
 
           if( notes->operate(capt, ostr.str()) )
@@ -1001,7 +939,7 @@ QA_Time::parseTimeTable(size_t rec)
   {  // singular values must match; but this could happen
      // several times (e.g. 12 months a year)
      // update the static index
-     std::string currDateStr( currDate.getDate());
+     std::string currDateStr(getDateStr(currTimeValue));
      std::string t0( currDateStr.substr(0,4) );
      while( t0 > tt_xmode[tt_index] )
        ++tt_index;
@@ -1009,14 +947,14 @@ QA_Time::parseTimeTable(size_t rec)
      if( tt_index == tt_xmode.size() || t0 != tt_xmode[tt_index] )
      {
        std::string key("63_3");
-       if( notes->inq( key, time) )
+       if( notes->inq( key, timeName) )
        {
          std::string capt("time record does not match time-table value");
 
          std::ostringstream ostr(std::ios::app);
          ostr << "frequency=" << tt_id;
          ostr << "\nrec#=" << rec;
-         ostr << "\ndate in record=" << currDate.getDate() ;
+         ostr << "\ndate in record=" << getDateStr(currTimeValue) ;
          ostr << "\nvalue from time-table=" << tt_xmode[tt_index] ;
 
          if( notes->operate(capt, ostr.str()) )
@@ -1043,14 +981,14 @@ QA_Time::parseTimeTable(size_t rec)
     if( tt_index == tt_xmode.size() )
     { // error: not enough ranges or misplaced
        std::string key("63_2");
-       if( notes->inq( key, time) )
+       if( notes->inq( key, timeName) )
        {
          std::string capt("time record after the last time-table range");
 
          std::ostringstream ostr(std::ios::app);
          ostr << "frequency=" << tt_id;
          ostr << "\nrec#=" << rec;
-         ostr << "\ndate in record=" << currDate.getDate() ;
+         ostr << "\ndate in record=" << getDateStr(currTimeValue) ;
          ostr << "\nrange from time-table="
               << tt_dateRange[0].getDate() << " - "
               << tt_dateRange[1].getDate() ;
@@ -1072,7 +1010,8 @@ QA_Time::parseTimeTable(size_t rec)
     sd[1] = splt_range[1];
 
     getDRSformattedDateRange(tt_dateRange, sd);
-  } while( currDate > tt_dateRange[1] ) ;
+  } while( refDate.getJulianDate(currTimeValue)
+              > tt_dateRange[1].getJulianDate() ) ;
 
   tt_block_rec = rec ;
   tt_isBlock=true;
@@ -1082,7 +1021,7 @@ QA_Time::parseTimeTable(size_t rec)
 
 
 void
-QA_Time::openQcNcContrib(NcAPI *nc)
+QA_Time::openQA_NcContrib(NcAPI *nc)
 {
    // dimensions
    nc->defineDim("time");
@@ -1100,14 +1039,9 @@ QA_Time::openQcNcContrib(NcAPI *nc)
    vs.clear();
    vs.push_back( "time");
 
-   currTimeValue=Base::getTime(pIn->nc, 0, "time", refTimeDelay);
+   currTimeValue=mv_t[ pIn->nc.getData(mv_t, timeName, 0) ] + refTimeOffset;
    nc->setAtt( "time", "first_time", currTimeValue);
-
-   if( isFormattedDate )
-     nc->setAtt( "time", "first_date", Date::getIso8601(currTimeValue) );
-   else
-     nc->setAtt( "time", "first_date",
-            refDate.getDate( hdhC::double2String(currTimeValue) ));
+   nc->setAtt( "time", "first_date", getDateStr(currTimeValue) );
 
    nc->defineVar( "time_step", NC_DOUBLE, vs);
    nc->setAtt( "time_step", "long_name", "time_step") ;
@@ -1116,8 +1050,8 @@ QA_Time::openQcNcContrib(NcAPI *nc)
    nc->setAtt( "time", "isTimeBoundsTest", static_cast<double>(0.));
 
    vs.clear();
-   std::string str0( time + "_flag") ;
-   vs.push_back(time);
+   std::string str0( timeName + "_flag") ;
+   vs.push_back(timeName);
    nc->defineVar( str0, NC_INT, vs);
    vs[0]="accumulated record-tag number";
    nc->setAtt( str0, "long_name", vs[0]);
@@ -1151,7 +1085,7 @@ QA_Time::setTable(std::string &p, std::string t)
 }
 
 bool
-QA_Time::sync(bool isCheckData, bool enablePostProc )
+QA_Time::sync(bool isCheckData, bool enabledPostProc )
 {
   // Synchronise the in-file and the qa-netCDF file.
   // Failure: call setExit(error_code).
@@ -1166,7 +1100,7 @@ QA_Time::sync(bool isCheckData, bool enablePostProc )
   if( (qaRecNum=pQA->nc->getNumOfRecords() ) == 0 )
   {
     // for a file with fixed variable(s)
-    if( ! enablePostProc )
+    if( ! enabledPostProc )
       return true;
   }
 
@@ -1187,23 +1121,20 @@ QA_Time::sync(bool isCheckData, bool enablePostProc )
 
   for( size_t inRec=0 ; inRec < inRecNum ; ++inRec )
   {
-    inTime = timeInputBuffer.getTimeValue(inRec, refTimeDelay) ;
+    inTime = mv_t[ pIn->nc.getData(mv_t, timeName, inRec) ] + refTimeOffset ;
 
     if( qa_t == inTime )
     {
       if( (inRec+1) == inRecNum )
       {
         //nothing has changed since the last QA
-        if( ! enablePostProc )
+        if( ! enabledPostProc )
           return true;
       }
 
       // case b)
       pIn->setCurrRec(inRec+1);
 
-      // read for the changed record number
-      if( isCheckData )
-        pIn->getData( pIn->currRec );
       return false ;
     }
 
@@ -1215,7 +1146,7 @@ QA_Time::sync(bool isCheckData, bool enablePostProc )
   // arriving here is an error, because the infile production
   // was reset or the file was shortened.
   std::string key("80");
-  if( notes->inq( key, time) )
+  if( notes->inq( key, timeName) )
   {
      std::string capt("renewal of a file?") ;
 
@@ -1247,7 +1178,7 @@ QA_Time::testTimeBounds(NcAPI &nc)
     return ;
   }
 
-  timeInputBuffer.getTimeBnds(currTimeBoundsValue, pIn->currRec);
+  getTimeBoundsValues(currTimeBoundsValue, pIn->currRec, refTimeOffset);
 
   double diff;
 
@@ -1265,7 +1196,7 @@ QA_Time::testTimeBounds(NcAPI &nc)
   if( diff <= 0. )
   {
     std::string key=("R8");  // no multiple
-    if( notes->inq( key) )
+    if( notes->inq( key, timeName, "NO_MT") )
     {
       sharedRecordFlag.currFlag += 8 ;
 
@@ -1279,18 +1210,8 @@ QA_Time::testTimeBounds(NcAPI &nc)
       ostr << ", tb0= " << currTimeBoundsValue[0];
       ostr << ", tb1= " << currTimeBoundsValue[1] ;
 
-      if( isFormattedDate )
-      {
-        ostr  << " " << Date::getIso8601(currTimeBoundsValue[0]);
-        ostr  << " " << Date::getIso8601(currTimeBoundsValue[1]);
-      }
-      else
-      {
-        std::string cT( hdhC::double2String(currTimeBoundsValue[0]) );
-        ostr  << " " << refDate.getDate( cT );
-        cT = hdhC::double2String(currTimeBoundsValue[1]) ;
-        ostr  << " " << refDate.getDate( cT ) ;
-      }
+      ostr  << " " << getDateStr(currTimeBoundsValue[0]);
+      ostr  << " " << getDateStr(currTimeBoundsValue[1]);
 
       (void) notes->operate(capt, ostr.str()) ;
       notes->setCheckTimeStr(fail);
@@ -1338,7 +1259,7 @@ QA_Time::testTimeBounds(NcAPI &nc)
         sharedRecordFlag.currFlag += 16;
       }
 
-      if( notes->inq( key) )
+      if( notes->inq( key, timeBoundsName, "NO_MT") )
       {
         std::string capt("overlapping time bounds");
         if( isAcrossFiles )
@@ -1350,23 +1271,14 @@ QA_Time::testTimeBounds(NcAPI &nc)
         ostr << "\nprev time values=[" << prevTimeBoundsValue[0] << " - " ;
         ostr                           << prevTimeBoundsValue[1] << "]" ;
 
-        if( ! isFormattedDate )
-        {
-          std::string cT( hdhC::double2String(prevTimeBoundsValue[0]) );
-          ostr << ", dates=[" << refDate.getDate( cT ) << " - ";
-          cT = hdhC::double2String(prevTimeBoundsValue[1]) ;
-          ostr << refDate.getDate( cT ) << "]" ;
-        }
+        ostr << ", dates=[" << getDateStr(prevTimeBoundsValue[0]) << " - ";
+        ostr << getDateStr(prevTimeBoundsValue[1]) << "]" ;
 
         ostr << "\ncurr time values=[" << currTimeBoundsValue[0]
                                        << " - " << currTimeBoundsValue[1] << "]" ;
-        if( ! isFormattedDate )
-        {
-          std::string cT( hdhC::double2String(currTimeBoundsValue[0]) );
-          ostr << ", dates=[" << refDate.getDate( cT ) << " - ";
-          cT = hdhC::double2String(currTimeBoundsValue[1]) ;
-          ostr << refDate.getDate( cT ) << "]";
-        }
+        std::string cT( hdhC::double2String(currTimeBoundsValue[0]) );
+        ostr << ", dates=[" << getDateStr(currTimeBoundsValue[0]) << " - ";
+        ostr << getDateStr(currTimeBoundsValue[1]) << "]";
 
         (void) notes->operate(capt, ostr.str()) ;
         notes->setCheckTimeStr(fail);
@@ -1397,7 +1309,7 @@ QA_Time::testTimeBounds(NcAPI &nc)
         sharedRecordFlag.currFlag += 32 ;
       }
 
-      if( notes->inq( key) )
+      if( notes->inq( key, timeBoundsName, "NO_MT") )
       {
         std::string capt("gap between time bounds ranges");
 
@@ -1419,24 +1331,13 @@ QA_Time::testTimeBounds(NcAPI &nc)
         ostr << "\nprev time values=[" << prevTimeBoundsValue[0] << " - " ;
         ostr                           << prevTimeBoundsValue[1] << "]" ;
 
-        if( ! isFormattedDate )
-        {
-          std::string cT( hdhC::double2String(prevTimeBoundsValue[0]) );
-          ostr << ", dates=[" << refDate.getDate( cT ) << " - ";
-          cT = hdhC::double2String(prevTimeBoundsValue[1]) ;
-          ostr << refDate.getDate( cT ) << "]" ;
-        }
+        ostr << ", dates=[" << getDateStr(prevTimeBoundsValue[0]) << " - ";
+        ostr << getDateStr(prevTimeBoundsValue[1]) << "]" ;
 
         ostr << "\ncurr time values=[" << currTimeBoundsValue[0] << " - "
                                        << currTimeBoundsValue[1] << "]";
-
-        if( ! isFormattedDate )
-        {
-          std::string cT( hdhC::double2String(currTimeBoundsValue[0]) );
-          ostr << ", dates=[" << refDate.getDate( cT ) << " - ";
-          cT = hdhC::double2String(currTimeBoundsValue[1]) ;
-          ostr << refDate.getDate( cT ) << "]";
-        }
+        ostr << ", dates=[" << getDateStr(currTimeBoundsValue[0]) << " - ";
+        ostr << getDateStr(currTimeBoundsValue[1]) << "]";
 
         (void) notes->operate(capt, ostr.str()) ;
         notes->setCheckTimeStr( fail );
@@ -1453,22 +1354,18 @@ QA_Time::testTimeBounds(NcAPI &nc)
 void
 QA_Time::testDate(NcAPI &nc)
 {
-  currTimeValue = timeInputBuffer.getTimeValue(pIn->currRec, refTimeDelay) ;
-
-  if( isFormattedDate )
-  {
-    currDate.setDate( currTimeValue ) ;
-  }
-  else
-  {
-    currDate   = refDate.getDate( currTimeValue ) ;
-  }
+  currTimeValue = mv_t[ pIn->nc.getData(mv_t, timeName, pIn->currRec) ]
+                    + refTimeOffset ;
 
   // is current time reasonable?
   (void) testTimeStep() ;
 
   if( isTimeBounds  )
     testTimeBounds(nc);
+
+  prevTimeValue=currTimeValue;
+
+  return;
 }
 
 bool
@@ -1481,10 +1378,7 @@ QA_Time::testTimeStep(void)
 
   // no time checks
   if( timeTableMode == DISABLE )
-  {
-    prevTimeValue=currTimeValue;
     return false;
-  }
 
   // time step(s) into the past
   // method returns true in case of error
@@ -1512,14 +1406,11 @@ QA_Time::testTimeStep(void)
     {
       // varMeDa[0] provides the name of the MIP table
       if( parseTimeTable(pIn->currRec) )
-      {
-        prevTimeValue=currTimeValue;
         return false ;  // no error messaging
-      }
     }
 
     std::string key;
-    if( isAcross )
+    if( isAcrossFiles )
       key="66_1";
     else
     {
@@ -1527,14 +1418,14 @@ QA_Time::testTimeStep(void)
       sharedRecordFlag.currFlag += 1;
     }
 
-    if( notes->inq( key) )
+    if( notes->inq( key, timeName, "NO_MT") )
     {
       std::string capt ;
       std::ostringstream ostr(std::ios::app);
 
       if( isAcrossFiles )
       {
-        capt = "overlapping time values across files");
+        capt = "overlapping time values across files" ;
 
         ostr << "last time of previous file=";
         ostr << prevTimeValue ;
@@ -1575,10 +1466,7 @@ QA_Time::testTimeStep(void)
     {
       // varMeDa[0] provides the MIP table
       if( parseTimeTable(pIn->currRec) )
-      {
-        prevTimeValue=currTimeValue;
         return false ;  // no error messaging
-      }
     }
 
     std::string key ;
@@ -1592,7 +1480,7 @@ QA_Time::testTimeStep(void)
       if( isAcrossFiles )
         sharedRecordFlag.currFlag += 4 ;
 
-      if( notes->inq( key) )
+      if( notes->inq( key, timeName, "NO_MT") )
       {
         std::string capt("identical time values");
         std::ostringstream ostr(std::ios::app);
@@ -1625,8 +1513,6 @@ QA_Time::testTimeStep(void)
       }
     }
 
-    prevTimeValue=currTimeValue;
-
     return true;
   }
 
@@ -1640,10 +1526,7 @@ QA_Time::testTimeStep(void)
     {
       // varMeDa[0] provides the MIP table
       if( parseTimeTable(pIn->currRec) )
-      {
-        prevTimeValue=currTimeValue;
         return false ;  // no error messaging
-      }
     }
 
     std::string key ;
@@ -1652,7 +1535,7 @@ QA_Time::testTimeStep(void)
     else
       key="R2";
 
-    if( notes->inq( key) )
+    if( notes->inq( key, timeName, "NO_MT") )
     {
       std::string capt;
       std::ostringstream ostr(std::ios::app);
@@ -1686,19 +1569,18 @@ QA_Time::testTimeStep(void)
       {
         if( isAcrossFiles )
         {
-           std::string cT( hdhC::double2String(prevTimeValue) );
            ostr << "last time of previous file=" << prevTimeValue;
-           ostr << " (date=" << refDate.getDate( cT ) ;
+           ostr << " (date=" << getDateStr(prevTimeValue) ;
            ostr << "), first time of this file=" << currTimeValue
-                << " (date=" << currDate.getDate() << ")" ;
+                << " (date=" << getDateStr(currTimeValue) << ")" ;
 
         }
         else
         {
-           std::string cT( hdhC::double2String(prevTimeValue) );
            ostr << "prev=" << prevTimeValue;
-           ostr << " (date=" << refDate.getDate( cT ) ;
-           ostr << ")\ncurr=" << currTimeValue << " (date:" << currDate.getDate() ;
+           ostr << " (date=" << refDate.getDate(prevTimeValue) ;
+           ostr << ")\ncurr=" << currTimeValue << " (date:"
+                << getDateStr(currTimeValue) ;
            ostr << ")" ;
         }
       }
@@ -1711,188 +1593,10 @@ QA_Time::testTimeStep(void)
       }
     }
 
-    prevTimeValue=currTimeValue;
-
     return true;
   }
 
-  prevTimeValue=currTimeValue;
-
   return false;
-}
-
-// ===========  class TimeInputBuffer ===============
-
-void
-TimeInputBuffer::getTimeBnds(double *b, size_t curr, double offset)
-{
-  if( ! hasBnds )
-    return;
-
-  if( curr < sz_passed )
-  {
-    size_t start_x[2];
-    size_t count_x[2];
-    start_x[0] = curr;
-    start_x[1] = 0;
-    count_x[0] = 1;
-    count_x[1] = 2;
-
-    nc_get_vara_double(
-       pInNc->getNcid(), pInNc->getVarID(name_bnds), start_x, count_x, b );
-
-    return;
-  }
-
-  // b is a pointer to a 2-elem variable
-  while( curr >= start[0] )
-    update(offset);
-
-  size_t c = 2*(curr - sz_passed ) ;
-  b[0] = pBnds[c] ;
-  b[1] = pBnds[c+1] ;
-
-  return ;
-}
-
-double
-TimeInputBuffer::getTimeValue(size_t curr, double offset)
-{
-  if( hasNoTime )
-    return 0.;
-
-  if( curr < sz_passed )
-  {
-    // reading a value which is out of scope and not ready for an update
-    size_t start_x = curr;
-    size_t count_x;
-    start_x = curr;
-    count_x = 1;
-    double v;
-
-    nc_get_vara_double(
-       pInNc->getNcid(), pInNc->getVarID(name), &start_x, &count_x, &v );
-    return v + offset ;
-  }
-
-  while( curr >= start[0] )
-    update(offset);
-
-  return pTime[curr - sz_passed] ;
-}
-
-void
-TimeInputBuffer::init(InFile *pIn)
-{
-  pInNc = &pIn->nc;
-  if( (remainingRecs=static_cast<int>(pInNc->getNumOfRecords()) ) )
-    isValid=true;
-  else
-    isValid=false;
-
-  hasNoTime = true;
-  hasBnds = false;
-
-  name = pInNc->getUnlimitedDimVarName() ;
-  if( name.size() )
-    hasNoTime = false;
-
-  for( size_t i=0 ; i < pIn->variable.size() ; ++i )
-  {
-     if( pIn->variable[i].name == name )
-     {
-       name_bnds = pIn->variable[i].bounds ;
-       if( name_bnds.size() )
-       {
-         hasBnds = true;
-         break;
-       }
-     }
-  }
-
-  if( hasNoTime )
-    return;
-
-  // constrain memory allocation to a buffer size
-  sz_chunk=10000;
-  if(remainingRecs < sz_chunk)
-    sz_chunk = remainingRecs +1 ;
-
-  start = new size_t [1];
-  count = new size_t [1];
-  start[0] = 0 ;
-
-  pTime = new double [sz_chunk] ;
-  if( name_bnds.size() )
-  {
-    pBnds = new double [2 * sz_chunk] ;
-
-    start_b = new size_t [2];
-    count_b = new size_t [2];
-    start_b[0] = 0 ;
-    start_b[1] = 0 ;
-    count_b[1] = 2;
-  }
-
-  sz_passed=0 ; // forces first time approach with first time reading
-}
-
-void
-TimeInputBuffer::update(double offset)
-{
-  // read data from file, leg by leg
-  if(remainingRecs > 0)
-  {
-    int nnRecs=remainingRecs;
-    sz = nnRecs > sz_chunk ? sz_chunk : nnRecs;
-    remainingRecs -= sz ;
-
-    count[0] = sz ;
-    sz_passed = start[0];
-
-    nc_get_vara_double(
-       pInNc->getNcid(), pInNc->getVarID(name), start, count, pTime );
-
-    if( offset != 0. )
-       for(size_t i = *start ; i < ( *start + *count ) ; ++i )
-          pTime[i] += offset ;
-
-    if( hasBnds )
-    {
-      count_b[0] = sz ;
-
-      nc_get_vara_double(
-         pInNc->getNcid(), pInNc->getVarID(name_bnds), start_b, count_b, pBnds );
-
-      if( offset != 0. )
-      {
-         size_t end= *start_b + 2* *count_b;
-         for(size_t i = *start_b ; i < end ; ++i )
-            pBnds[i] += offset ;
-      }
-
-      start_b[0] += sz ;
-    }
-
-    start[0] += sz ;
-    return;
-  }
-
-  delete [] pTime ;
-  delete [] start ;
-  delete [] count ;
-  pTime = 0 ;  // pointer is set
-
-  if( hasBnds )
-  {
-    delete [] pBnds ;
-    pBnds = 0 ;  // pointer is set
-
-    delete [] start_b ;
-    delete [] count_b ;
-  }
-
-  return;
 }
 
 // ===========  class TimeOutputBuffer ===============

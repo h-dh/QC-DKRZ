@@ -135,7 +135,7 @@ public:
 
 //! Is stream open?
   bool
-    isOpen(void) { return FStream->is_open(); }
+    isOpen(void) { return opened; }
 
 //! Open file or stream.
 /*! Only if a filename was set previously, the file is opened.*/
@@ -256,6 +256,7 @@ private:
   double rangeLast ;      // Ende des Spektrums ...
   int    rangeCol ;       // Spalte fuer range Bestimmung
   bool   isRange ;        // true: range wird abgefragt
+  bool   opened;
 
   bool isBreakpoint;
   bool isClearSurroundingSpaces;

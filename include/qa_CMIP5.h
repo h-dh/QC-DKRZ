@@ -124,7 +124,7 @@ public:
    the data of fields.*/
   bool   init(void) ;
   void   linkObject(IObj *);
-  void   setFilename(std::string n){filename=n;}
+  void   setFilename(std::string);
   void   setFilePath(std::string s){;}
   void   setTablePath(std::string p){ tablePath=p; }
 
@@ -234,14 +234,6 @@ public:
             VariableMetaData &var,
             std::vector<struct DimensionMetaData>& );
 
-  //! Check for the hybrid sigma pressure coordinates.*/
-  /*! lev contains the added coefficients a(k) and b(k). A check
-      for the sum does not make much sense, but, the existance of
-      a(k) and b(k) does.*/
-  void   checkSigmaPressureCoordinates(
-            VariableMetaData &,
-            std::vector<std::string> &);
-
   //! Check dimensional bounds: layout and size
   /*! Number of values and checksum of the bounds*/
   void   checkStandardTableDimBounds(InFile &in, Split &splt_line,
@@ -326,6 +318,13 @@ public:
   std::string
        getObjName(void) { return objName; }
 
+  //! Get path componenents.
+  /*! mode: "total": filename with total path, "file": filename,
+      "base": filename without extension, "ext": extension without '.',
+      "path": the path component without trailing '/'.*/
+  std::string
+         getPath(std::string& f, std::string mode="total");
+
   std::string
        getStandardTable(void){ return standardTable ; }
 
@@ -367,7 +366,7 @@ public:
    Collect some properties of the in-netcdf-file in
    struct varMeDa. Also check properties against tables.
   */
-  void   openQcNc(InFile&);
+  void   openQA_Nc(InFile&);
 
 //  //! Print results to a text file.
 //  /*! Not for CMIP5 or CORDEX */
@@ -424,7 +423,7 @@ public:
   NcAPI *nc;
   QA_Time qaTime;
 
-  size_t currQcRec;
+  size_t currQARec;
   size_t importedRecFromPrevQA; // initial num of recs in the write-to-nc-file
   MtrxArr<double> tmp_mv;
 
@@ -456,7 +455,8 @@ public:
   std::vector<std::string> outlierOpts;
   std::vector<std::string> replicationOpts;
 
-  std::string dataPath;
+  struct hdhC::FileComponent dataFileComponent;
+
   std::string maxDateRange;
 
   std::string cfStndNames;

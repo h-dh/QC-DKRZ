@@ -284,9 +284,11 @@ public:
 
   //! Get the julian date.
   long double
-         getJulianDay(void) const { return jul.getJulianDay() ;}
+         getJulianDay(long double add=0.) const
+            { return jul.getJulianDay() + add ;}
   long double
-         getJulianDate(void) const { return jul.getJulianDay() ;}
+         getJulianDate(long double add=0.) const
+            { return jul.getJulianDay() + add ;}
 
   //! Get double representation of the integer minute.
   double getMinute( void );

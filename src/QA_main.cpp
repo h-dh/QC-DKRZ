@@ -280,8 +280,7 @@ void getCPUSeconds(void)
 
 template <typename Type>
 void
-instantiateObject(std::vector<Type> &obj, std::string &name, int id, std::string &param,
-    IObjContainer &ioc )
+instantiateObject(std::vector<Type> &obj, std::string &name, int id, std::string &param)
 {
   // Create instance of obj and append to vector.
   obj.push_back( Type() );
@@ -353,23 +352,23 @@ makeObject(std::vector<std::vector<std::string> > &list, IObjContainer &ioc)
     (void) Parse::getListObj( list[i0][0], name, id, param);
 
     if( name == "X" )
-      instantiateObject(ioc.an, name, id, param, ioc );
+      instantiateObject(ioc.an, name, id, param );
     else if( name == "CS" )
-      instantiateObject(ioc.cS, name, id, param, ioc );
+      instantiateObject(ioc.cS, name, id, param );
     else if( name == "CF" )
-      instantiateObject(ioc.cF, name, id, param, ioc );
+      instantiateObject(ioc.cF, name, id, param );
     else if( name == "FD" )
-      instantiateObject(ioc.fDI, name, id,  param, ioc );
+      instantiateObject(ioc.fDI, name, id,  param );
     else if( name == "IN" )
-      instantiateObject(ioc.in, name, id,  param, ioc );
+      instantiateObject(ioc.in, name, id,  param );
     else if( name == "OP" )
-      instantiateObject(ioc.op, name, id,  param, ioc );
+      instantiateObject(ioc.op, name, id,  param );
     else if( name == "OUT" )
-      instantiateObject(ioc.out, name, id,  param, ioc );
+      instantiateObject(ioc.out, name, id,  param );
     else if( name == "QA" )
-      instantiateObject(ioc.qA, name, id,  param, ioc );
+      instantiateObject(ioc.qA, name, id,  param );
     else if( name == "TC" )
-      instantiateObject(ioc.tC, name, id,  param, ioc );
+      instantiateObject(ioc.tC, name, id,  param );
   }
 
   // append the obj pointers to the list of IObj-casted pointers

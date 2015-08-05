@@ -16,6 +16,7 @@ VariableMeta::VariableMeta()
   isExcluded=false;
   isFixed=false;
   isFillValue=false;
+  isFormulaTermsVar=false;
   isLabel=false;
   isMapVar=false;
   isMissingValue=false;
@@ -151,12 +152,12 @@ Variable::getData(MtrxArr<T>& ma, int rec, int leg )
   if( leg < 0 )
     return;
 
-  (void) pNc->getData(ma, name, rec,leg) ;
+  (void) pNc->getData(ma, name, rec) ;
   return;
 }
 
 bool
-Variable::getData(int rec, int leg )
+Variable::getData(int rec)
 {
   // prevent unlimited variables to get data beyond
   // available records; also if the data section is totally empty
@@ -175,58 +176,58 @@ Variable::getData(int rec, int leg )
   {
     case NC_CHAR:   // signed char
     {
-      is=pNc->getData(*mvCHAR, name, rec, leg);
+      is=pNc->getData(*mvCHAR, name, rec);
     }
     break;
     case NC_BYTE:   // signed char
     {
-      is=pNc->getData(*mvBYTE, name, rec, leg);
+      is=pNc->getData(*mvBYTE, name, rec);
     }
     break;
     case NC_SHORT:  // short
     {
-      is=pNc->getData(*mvSHORT, name, rec, leg);
+      is=pNc->getData(*mvSHORT, name, rec);
     }
     break;
     case NC_INT:    // int
     {
-      is=pNc->getData(*mvINT, name, rec, leg);
+      is=pNc->getData(*mvINT, name, rec);
     }
     break;
     case NC_FLOAT:  // float
     {
-      is=pNc->getData(*mvFLOAT, name, rec, leg);
+      is=pNc->getData(*mvFLOAT, name, rec);
     }
     break;
     case NC_DOUBLE: // double
     {
-      is=pNc->getData(*mvDOUBLE, name, rec, leg);
+      is=pNc->getData(*mvDOUBLE, name, rec);
     }
     break;
 #ifdef NC4
     case NC_UBYTE:  // unsigned char
     {
-      is=pNc->getData(*mvUBYTE, name, rec, leg);
+      is=pNc->getData(*mvUBYTE, name, rec);
     }
     break;
     case NC_USHORT: // unsigned short
     {
-      is=pNc->getData(*mvUSHORT, name, rec, leg);
+      is=pNc->getData(*mvUSHORT, name, rec);
     }
     break;
     case NC_INT64:  // long long
     {
-      is=pNc->getData(*mvINT64, name, rec, leg);
+      is=pNc->getData(*mvINT64, name, rec);
     }
     break;
     case NC_UINT:   // unsigned int
     {
-      is=pNc->getData(*mvUINT, name, rec, leg);
+      is=pNc->getData(*mvUINT, name, rec);
     }
     break;
     case NC_UINT64: // unsigned long long
     {
-      is=pNc->getData(*mvUINT64, name, rec, leg);
+      is=pNc->getData(*mvUINT64, name, rec);
     }
     break;
 //    case NC_STRING:

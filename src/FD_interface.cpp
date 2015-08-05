@@ -148,7 +148,7 @@ FD_interface::entry(void)
 
   // used in finally and here
   if( pIn->isTime )
-    currTime=Base::getTime(pIn->nc, pIn->currRec, "time");
+    currTime=pIn->nc.getData(w, "time", pIn->currRec);
 
   if( timeWindowWidth.size() > 0 )
   {
@@ -409,7 +409,8 @@ FD_interface::init(void)
     // set reference date
     refDate.setDate( str );
 
-    double startTime=Base::getTime(pIn->nc, pIn->currRec, "time",0.);
+    MtrxArr<double> mv_d;
+    double startTime=pIn->nc.getData(mv_d, "time", pIn->currRec);
 
     std::string cTime = hdhC::double2String(startTime);
     beginDate.setDate( refDate.getDate(cTime) );

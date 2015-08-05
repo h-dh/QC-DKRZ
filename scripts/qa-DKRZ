@@ -234,7 +234,7 @@ callQaConfig()
   OLD_IFS="$IFS"
   IFS="%"
 
-  setF -f
+#  set -f
 
 # calling the configuration script
   if ! items=( $( $QA_SRC/scripts/$QA_CONFIGURATOR -p $QA_SRC $* ) ) ; then
@@ -308,7 +308,7 @@ callQaConfig()
 
   QA_DATADIR=${QA_RESULTS}/data
 
-  setF +f
+#  set +f
 
   if [ ${#SHOW_CLEAR} -gt 0 -a "${SHOW_CLEAR}" != t ] ; then
     # SHOW_CLEAR may contain same assignment than CLEAR itself
@@ -448,10 +448,11 @@ callQaExecutor()
           SESSION_LOGDIR \
           SHOW_CALL \
           SLEEP_TIME \
-          STANDARD_TABLE \
+          TABLE_VAR_REQ \
+          TABLE_CAD \
           TABLE_GCM_NAME \
           TABLE_PATH \
-          TABLE_REQUIREMENTS \
+          TABLE_VAR_REQ \
           TABLE_RCM_NAME \
           TIME_LIMIT \
           TIME_TABLE \
@@ -536,6 +537,8 @@ check()
 
   local line subPath
   declare -a line
+
+#  set +f
 
   # save stdin
   exec 9<&0
@@ -1623,6 +1626,8 @@ getNextVariable()
     return 0
   fi
 
+  local num=${#nV_fls[*]}
+
   # check for broken symbolic links
   local f l is
 
@@ -1642,6 +1647,7 @@ getNextVariable()
     fi
   done
   if [ ${is:-f} = t ] ; then
+    progressFileNum=$(( ${progressFileNum:-0} + num ))
     nextFile=  # ignore, try next
     return 0
   fi
@@ -1649,7 +1655,6 @@ getNextVariable()
   for(( l=0 ;  l < ${#nV_fls[*]} ; ++l )) ; do
     f=$nextPath/${nV_fls[l]}
     local num=${#nV_fls[*]}
-    progressFileNum=$(( ${progressFileNum:-0} + num ))
 
     if [ ! -s $nextPath/${nV_fls[l]} ] ; then
       if [ ${QUERY_EMPTY_FILE:-f} = t ] ; then
@@ -1673,6 +1678,7 @@ getNextVariable()
     fi
   done
   if [ ${is:-f} = t ] ; then
+    progressFileNum=$(( ${progressFileNum:-0} + num ))
     nextFile=  # ignore, try next
     return 0
   fi
@@ -1699,6 +1705,7 @@ getNextVariable()
   # there is no warning, when all files of a given variable
   # are broken links.
   if [ ${IGNORE_BROKEN_LINKS:-f} = t -a ${#nV_fls[*]} -eq 0 ] ; then
+    progressFileNum=$(( ${progressFileNum:-0} + num ))
     nextFile=  # ignore, try next
     return 0
   fi
@@ -1711,6 +1718,7 @@ getNextVariable()
   # only, if there are more than one qa-files backup files.
   # The function shall clear such.
   if checkValidNcFile ${QA_RESULTS}/data/${subPath} $1 ; then
+    progressFileNum=$(( ${progressFileNum:-0} + num ))
     nextFile=  # ignore, try next
     return 0
   fi
@@ -1744,6 +1752,7 @@ getNextVariable()
     test $status -gt 1 && \rm ${QA_RESULTS}/data/${subPath}/qa_${1}.* 2> /dev/null
 
     if [ $status -eq 6 ] ; then
+      progressFileNum=$(( ${progressFileNum:-0} + num ))
       # creation_date and/or tracking_id was kept
       nextFile=  # ignore, try next
       return 0
@@ -2033,6 +2042,8 @@ getPaths()
 
   test ${SHOW_PATH_SEARCH:-f} = t && set -x
 
+  set -f
+
   # filename
   pathListFile=${SESSION_LOGDIR}/path-list.txt
 
@@ -2122,6 +2133,8 @@ getPaths()
     getSelectedPaths ${PROJECT_DATAV[*]} &
     getPathPID=$!
   fi
+
+  set +f
 
   if [ ${SHOW_PATH_SEARCH:-f} = t ] ; then
     set +x
@@ -2247,6 +2260,8 @@ getSelectedPaths()
 
   local e i j k l s
 
+  set +f
+
   if [ ${isStart:-t} = t ] ; then
     isStart=f
 
@@ -2308,7 +2323,6 @@ getSelectedPaths()
         projectDataIndex[${#projectDataIndex[*]}]=$k
       fi
     done
-    set +f
   else
     # deeper recurrence level
     currDirs=( $* )
@@ -2348,7 +2362,7 @@ getSelectedPaths()
     # check for a variable selection (which is also a directory)
     for(( s=0 ; $s < $splCount ; ++s )) ; do
       # case that a filename is appended
-      if [ -f ${currDir}/${SELECT_PATH_LIST[s]##*/} ] ; then
+      if [ -f "${currDir}/${SELECT_PATH_LIST[s]##*/}" ] ; then
         # write sub-path with a leading  slash
         echo "${prjDataIndex} ${currDir#${basePath}/}" >> $pathListFile
         break
@@ -2361,7 +2375,9 @@ getSelectedPaths()
           # check only netCDF files
           test -d $entry && continue
 
-          if [ ${QUERY_ALIEN_FILE:-f} = f ] ; then
+          if [ ${QUERY_ONLY_NC:-f} = t ] ; then
+             test ${entry} = ${entry%.nc} && continue
+          elif [ ${QUERY_ALIEN_FILE:-f} = f ] ; then
             test -d $entry -o ".${entry##*.}" != ".nc" && continue
           fi
 
@@ -2565,7 +2581,7 @@ init()
   # convert special characters to escaped ones.
   local i
 
-  setF -f
+#  set -f
 
   maxNumExecThreads=0
   local nET
@@ -2652,8 +2668,6 @@ init()
 
   # identifier for semaphore file (incremented)
   EX_ID=$rootPID  # just a starting point
-
-  setF +f
 
   # get all selected, non-locked paths
   getPaths
@@ -2855,11 +2869,11 @@ initTables()
   #    projects are updated and are applied.
   # 5) 4) also for option USE_STRICT.
 
-  initT STANDARD_TABLE=${STANDARD_TABLE}
+  initT TABLE_VAR_REQ=${TABLE_VAR_REQ}
   initT TIME_TABLE=${TIME_TABLE}
   initT TABLE_GCM_NAME=${TABLE_GCM_NAME}
   initT TABLE_RCM_NAME=${TABLE_RCM_NAME}
-  initT TABLE_REQUIREMENTS=${TABLE_REQUIREMENTS}
+  initT TABLE_CAD=${TABLE_CAD}
   initT QA_CHECK_LIST=${QA_CHECK_LIST}
   initT CF_CHECK_LIST=${CF_CHECK_LIST}
 
@@ -3768,45 +3782,6 @@ $sendT
   return
 }
 
-setF()
-{
-  # toggle between set -f and set +f in a way that
-  # restores the original setting after calling twice
-
-  #Note: set -f  disables pathname expansion; corresponds to on
-  #Note: set +f   enables pathname expansion; corresponds to off
-
-  # restore previous setting
-  if [ ${isSetF_first:-t} = f ] ; then
-    if [ $stateF = on ] ; then
-      set -f
-    else
-      set +f
-    fi
-
-    isSetF_first=t
-    return
-  fi
-
-  # the initial state
-  if [ ${isSetF_first:-t} = t ] ; then
-    isSetF_first=f
-    stateF=$(set -o |grep noglob | awk '{print $2}')
-  fi
-
-  # set temporarily
-  # switch to a state valid until the next call
-  if [ "$1" = '-f' -a ${stateF} = off ] ; then
-    set -f
-  elif [ "$1" = '+f' -a ${stateF} = on ] ; then
-    set +f
-  fi
-
-  isSetF=t  # ready for the next pair of calls
-
-  return
-}
-
 rmEmptyPaths()
 {
   local subPath
@@ -3967,7 +3942,7 @@ taskSum()
     tcl="-t ${TABLE_PATH}/${QA_CHECK_LIST}"
     tcfcl="-c ${TABLE_PATH}/${QA_CHECK_LIST}"
     test ${FIND_NOT_DELIVERED:-t} = t &&
-      cvr="-s ${TABLE_PATH}/${STANDARD_TABLE}"
+      cvr="-s ${TABLE_PATH}/${TABLE_VAR_REQ}"
   fi
 
   if [ ${#EMAIL_SUMMARY[*]} -gt 0 ] ; then

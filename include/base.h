@@ -78,15 +78,6 @@ class Base : public IObj
   /*! If errCode>0 is provided, the program shall exit with this number.*/
   void finally(int errCode=0, std::string s="");
 
-  //! Return the time value of record 'rec' out of the nc-file.
-  static double
-       getTime(NcAPI &, size_t rec, std::string, double offset=0.);
-
-  //! Put all the time values of record 'rec' to the Matval obj.
-  /*! This method gives access to time bound values.*/
-  static bool
-       getTime(NcAPI &, size_t rec, std::string, MtrxArr<double>&, double offset=0.);
-
   //!  Get the name of the variable indicated by 'varname=...', 'vname=...',  'variable=...', or 'v=...'
   std::vector<std::string>
        getVarname( std::string &s);

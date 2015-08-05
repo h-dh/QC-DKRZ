@@ -205,7 +205,9 @@ for(( i=0 ; i < ${#fs[*]} ; ++i )) ; do
 
   param="${param}${param_X}:note="
   if [ ${isTestSuite:-f} = t ] ; then
-    test ${fs[i]##*/} != cf_0f.nc && param="${param},{CF_0f,D},{CF_12e,D}"
+    if [ ${fs[i]##*/} != cf_0f.nc ] ; then
+      param="${param},{CF_0d,D},{CF_0e,D},{CF_0f,D},{CF_12e,D}"
+    fi
   fi
 
   if [ ${isParamFileOnly:-f} = t ] ; then

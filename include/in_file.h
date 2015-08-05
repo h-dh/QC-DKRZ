@@ -28,7 +28,7 @@ public:
 
   //! Default constructor
   InFile() ;
-  ~InFile(){;}
+  ~InFile(){nc.close();}
 
   //! coresponding to virtual methods in IObj
   bool   entry(void);
@@ -58,7 +58,7 @@ public:
 /*! If no unlimited variable is defined but time is provided, then
     try for all variables, not depending on time.*/
     std::vector<std::string>
-         getLimitedVarNames(void);
+         getLimitedVarName(void);
 
 //! Get the number of records.
 /*! If there is no unlimited variable, but time is defined, then

@@ -95,6 +95,7 @@ class VariableMeta
   bool isExcluded;
   bool isFixed;  // isTime==false && isDataVar==true
   bool isFillValue;
+  bool isFormulaTermsVar;
   bool isLabel;
   bool isMapVar;
   bool isMissingValue;
@@ -147,7 +148,7 @@ class Variable : public VariableMeta
   int  getCoordinateType(void);  // X: 0, Y: 1, Z: 2, T: 3, any: 4, none: -1
   template<typename T>
   void getData(MtrxArr<T>&, int rec, int leg=0);
-  bool getData(int rec, int leg=0);
+  bool getData(int rec);
   std::string
        getDimNameStr(bool isWithVar=false, char sep=',');
   int  getVarIndex(){ return id ;}

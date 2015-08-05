@@ -98,8 +98,7 @@ bool
 This is done in a separate function due to the template capability.*/
 template <typename Type>
 void
-  instantiateObject(std::vector<Type> &, std::string &name, int id, std::string &options,
-        IObjContainer & );
+  instantiateObject(std::vector<Type> &, std::string &name, int id, std::string &options);
 
 /*! Link obj referenced in the link-list to the calling obj.*/
   void

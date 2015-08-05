@@ -1079,82 +1079,102 @@ uint32_t fletcher32_LE_clear( T *data, size_t len, bool *reset, size_t nShift )
 
 // ----------------------------------------------------
 
+struct FileComponent
+splitFile(std::string& f)
+{
+   struct FileComponent fC;
+
+   if( f.size() == 0 )
+   {
+     fC.is=false;
+     return fC;
+   }
+
+   fC.is=true;
+   fC.file=f;
+
+   size_t pos ;
+
+   // path
+   if( (pos = f.rfind('/') ) < std::string::npos )
+   {
+     if( pos == 0 )
+     {
+       fC.path = "/";
+       fC.filename = f;
+     }
+     else
+     {
+       fC.path = f.substr( 0, pos ) ;
+       fC.filename = f.substr(++pos);
+     }
+   }
+   else
+   {
+     fC.filename = f;
+     pos=0;
+   }
+
+   // file components
+   if( (pos = fC.file.rfind('.') ) < std::string::npos )
+   {
+     if( pos == 0 )
+       fC.extension = fC.filename;
+     else
+     {
+       fC.basename = fC.filename.substr( 0, pos ) ;
+       fC.extension  = fC.filename.substr(++pos);
+     }
+   }
+   else
+     fC.basename = fC.filename ;
+
+   return fC;
+}
+
 std::string getBasename(std::string &str)
 {
-  std::string path, filename, basename, extension ;
+  struct FileComponent fC = splitFile(str);
 
-  getPathComponents(str, path, filename, basename, extension);
-
-  return basename;
+  return fC.basename;
 }
 
 std::string getExtension(std::string &str)
 {
-  std::string path, filename, basename, extension ;
+  struct FileComponent fC = splitFile(str);
 
-  getPathComponents(str, path, filename, basename, extension );
-
-  return extension;
+  return fC.extension;
 }
 
 std::string getFilename(std::string &str)
 {
-  std::string path, filename, basename, extension ;
+  struct FileComponent fC = splitFile(str);
 
-  getPathComponents(str, path, filename, basename, extension);
-
-  return filename;
+  return fC.filename;
 }
 
 std::string getPath(std::string &str, bool isWithSlash)
 {
-  std::string path, filename, basename, extension ;
-
-  getPathComponents(str, path, filename, basename, extension);
+  struct FileComponent fC = splitFile(str);
 
   if( isWithSlash )
-    path += '/' ;
+    fC.path += '/' ;
 
-  return path;
+  return fC.path;
 }
 
 void getPathComponents(std::string &str,
-             std::string &path,   //path no trailing '/', except if root.
-                                  //if no path, then '.'
+             std::string &path,   //path no trailing
              std::string &fName,  //complete filename
              std::string &base,   //filename without extension
-             std::string &ext)    //the extension with leading '.'
+             std::string &ext)    //the extension without '.'
 {
-  std::string::size_type pos0, pos1 ;
+  struct FileComponent fC = splitFile(str);
 
-  // path
-  if( (pos0 = str.rfind('/') ) == std::string::npos )
-    path.clear() ;  // empty path
-  else
-    if( pos0 == 0 )
-      path = "/";
-    else
-      path = str.substr( 0, pos0 ) ;
-
-  // filename
-  if( pos0  == std::string::npos )
-    fName = str ;                 // str is filename
-  else if( pos0 == str.size() )
-    fName = "" ;                  // str is just a path
-  else
-    fName = str.substr( pos0+1) ;
-
-  // basename
-  if( (pos1 = fName.rfind('.')) == std::string::npos )
-    base = fName ;
-  else
-    base = fName.substr( 0 , pos1  ) ;
-
-  // extension
-  if( pos1 >= fName.size() )
-    ext = "" ;
-  else
-    ext = fName.substr( pos1+1, fName.size() - pos1 -1 ) ;
+  path  = fC.path;
+  fName = fC.filename;
+  base  = fC.basename;
+  ext   = fC.extension;
 
   return;
 }
@@ -1187,11 +1207,11 @@ T invertBits ( T val )
 
 bool isWhiteString( std::string &str )
 {
-  // a string only of spaces and tabs
+  // a string only of spaces, tabs or empty
   size_t pE=str.size();
 
   if( pE == 0 )
-    return false;
+    return true;
 
   for( size_t p=0 ; p < pE ; ++p )
   {
@@ -1508,6 +1528,137 @@ bool isNumber( std::string &str )
 
   return false ;
 }
+
+// ----------------------------------------------------
+//! formatting of attribute|variable name in combination with value etc.
+
+std::string
+tf_att(std::string p1, std::string p2, std::string p3,
+    std::string p4, std::string p5, std::string p6)
+{
+  bool isColon=false;
+  bool isBlank=true;
+  bool isUpper=false;
+
+  std::vector<std::string*> ps;
+  ps.push_back(&p1);
+  ps.push_back(&p2);
+  ps.push_back(&p3);
+  ps.push_back(&p4);
+  ps.push_back(&p5);
+  ps.push_back(&p6);
+
+  std::vector<std::string*> vs_str;
+
+  for( size_t i=0 ; i < ps.size() ; ++i )
+  {
+    if( *ps[i] == s_colon )
+      isColon=true;
+    else if( *ps[i] == no_blank )
+      isBlank=false;
+    else if( *ps[i] == s_upper )
+      isUpper=true;
+    else if( *ps[i] != s_void )
+      vs_str.push_back(ps[i]) ;
+  }
+
+  return tf_att(vs_str, isColon, isBlank, isUpper );
+}
+
+std::string
+tf_att(std::vector<std::string*>& p,
+       bool isColon, bool isBlank, bool isUpper)
+{
+  std::string s;
+
+  if( p.size() == 0 )
+    return s;
+
+  s = "attribute ";
+
+  if( p.size() == 1 )
+    s += *(p[0]);
+  else if( p.size() > 1 )
+  {
+    if( p[0]->size() )
+      s += "<" + *(p[0]) + ">:" + *(p[1]);
+    else
+      s += *(p[1]) ;
+  }
+
+  if( p.size() == 3 )
+    s += " = <" + *(p[2]) + ">";
+
+  if(isUpper )
+    s[0] = 'A' ;
+
+  if(isColon)
+    s += s_colon;
+
+  if(isBlank)
+    s += s_blank;
+
+  return s ;
+}
+
+std::string
+tf_val(std::string v, std::string no_blnk)
+{
+  std::string s(" <" + v + ">" );
+  if(no_blnk.size() == 0)
+    s += " ";
+
+  return s ;
+}
+
+std::string
+tf_var(std::string p1, std::string p2, std::string p3, std::string p4)
+{
+  bool isColon=false;
+  bool isBlank=true;
+  bool isUpper=false;
+
+  std::vector<std::string*> ps;
+  ps.push_back(&p2);
+  ps.push_back(&p3);
+  ps.push_back(&p4);
+
+  for( size_t i=0 ; i < ps.size() ; ++i )
+  {
+    if( *ps[i] == s_colon || *ps[i] == ":" )
+      isColon=true;
+    else if( *ps[i] == no_blank || *ps[i] == "" )
+      isBlank=false;
+    else if( *ps[i] == s_upper )
+      isUpper=true;
+  }
+
+  return tf_var(p1, isColon, isBlank, isUpper );
+}
+
+std::string
+tf_var(std::string& v,
+       bool isColon, bool isBlank, bool isUpper)
+{
+  std::string s;
+
+  if( v.size() == 0 )
+    return s;
+
+  s = "variable <" + v + ">";
+
+  if(isUpper )
+    s[0] = 'A' ;
+
+  if(isColon)
+    s += s_colon;
+
+  if(isBlank)
+    s += s_blank;
+
+  return s ;
+}
+
 
 // ----------------------------------------------------
 

@@ -148,30 +148,6 @@ class CF : public IObj
   void   applyOptions(void);
   void   attributeSpellCheck(void);
 
-  std::string
-         captAtt(std::string a);
-  std::string
-         captAtt(std::string v, std::string a);
-  std::string
-         captAtt(std::string v, std::string a, std::string&);
-  std::string
-         captAtt(std::string v, std::string a, std::string&, std::string&);
-  std::string
-         captAtt(std::string v, std::string a,
-                 std::string&, std::string&, std::string&);
-  std::string
-         captAtt(std::string& v, std::string& a, bool colon, bool blank, bool isUpper);
-
-  std::string
-         captVal(std::string v, bool trailingBlank=true);
-
-  std::string
-         captVar(std::string v, bool is_colon=true, bool is_blank=true);
-  std::string
-         captVar(std::string v, std::string&);
-  std::string
-         captVar(std::string v, std::string&, std::string&);
-
   void   checkCoordinateValues(Variable&, bool isFormTermAux=false) ;
 template <typename T>
   void   checkCoordinateValues(Variable&, bool, T);
@@ -251,8 +227,8 @@ template <typename T>
   std::string tablePath;
 
   std::string timeName;  // the name of the unlimited/time variable
-  int         timeIx;
-  int         compressIx;
+  int         time_ix;
+  int         compress_ix;
 
   // a few names of attributes used throughout the checks
   std::string n_ancillary_variables;
@@ -300,7 +276,7 @@ template <typename T>
 
   std::string blank;
   std::string no_blank;
-  std::string no_colon;
+  std::string s_colon;
   std::string s_empty;
   std::string s_upper;
   std::string s_lower;

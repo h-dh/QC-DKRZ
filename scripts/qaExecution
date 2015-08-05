@@ -1235,7 +1235,7 @@ set_CF_par()
     par=${par}":cFSN=${CF_STANDARD_NAMES}"
 
   test ${#CF_AREA_TYPES} -gt 0 && \
-    par=${par}":cFAT=${AREA_TYPES}"
+    par=${par}":cFAT=${CF_AREA_TYPES}"
 
   test ${#CF_STD_REGION_NAMES} -gt 0 && \
     par=${par}":cFSRN=${CF_STD_REGION_NAMES}"
@@ -1425,14 +1425,14 @@ set_qa_par()
  test ${#PROJECT_TABLE} -gt 0 && \
    par=${par}"${s}"tPr=${PROJECT_TABLE}
 
- test ${#TABLE_REQUIREMENTS} -gt 0 && \
-   par=${par}"${s}"tR="${TABLE_REQUIREMENTS}"
+ test ${#TABLE_CAD} -gt 0 && \
+   par=${par}"${s}"tCAD="${TABLE_CAD}"
 
  test ${#TABLE_RCM_NAME} -gt 0 && \
    par=${par}"${s}"tRCM="${TABLE_RCM_NAME}"
 
- test ${#STANDARD_TABLE} -gt 0 && \
-   par=${par}"${s}"tStd=${STANDARD_TABLE}
+ test ${#TABLE_VAR_REQ} -gt 0 && \
+   par=${par}"${s}"tVR=${TABLE_VAR_REQ}
 
  test ${#TIME_TABLE} -gt 0 && \
    par=${par}"${s}"tTR=${TIME_TABLE}

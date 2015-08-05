@@ -21,7 +21,7 @@ NcAPI::NcAPI( std::string in, std::string mode)
 NcAPI::~NcAPI(void)
 {
   clearLayout();
-//  delete ncErr ;
+  close();
 }
 
 void
@@ -30,18 +30,18 @@ NcAPI::addAttToLayout( int varid, std::string attName, nc_type type,
 {
    if( varid == NC_GLOBAL )
    {
-      layout.globalAttNames.push_back( attName );
+      layout.globalAttName.push_back( attName );
       layout.globalAttType.push_back( type );
       layout.globalAttValSize.push_back( len );
-      layout.globalAttMap[attName] = layout.globalAttNames.size() -1;
+      layout.globalAttMap[attName] = layout.globalAttName.size() -1;
       return;
    }
 
    // For each variable, even if there are no attributes,
    // vectors and map have been pushed elsewhere
 
-   layout.varAttNames[varid].push_back( attName );
-   // don't use varAttNames.size(), it's already one too long
+   layout.varAttName[varid].push_back( attName );
+   // don't use varAttName.size(), it's already one too long
    layout.varAttMap[varid][attName] = layout.varAttType[varid].size();
    layout.varAttType[varid].push_back( type );
    layout.varAttValSize[varid].push_back( len );
@@ -62,34 +62,35 @@ void
 NcAPI::clearLayout(void)
 {
   // clear global attributes
-  layout.globalAttNames.clear() ;
+  layout.globalAttName.clear() ;
   layout.globalAttMap.clear() ;
   layout.globalAttType.clear() ;
   layout.globalAttValSize.clear() ;
 
   // clear attributes
-  for( size_t i=0 ; i < layout.varAttNames.size() ; ++i)
+  for( size_t i=0 ; i < layout.varAttName.size() ; ++i)
   {
-    layout.varAttNames[i].clear() ;
+    layout.varAttName[i].clear() ;
     layout.varAttMap[i].clear() ;
     layout.varAttType[i].clear() ;
     layout.varAttValSize[i].clear() ;
   }
 
-  layout.varAttNames.clear() ;
+  layout.varAttName.clear() ;
   layout.varAttMap.clear() ;
   layout.varAttType.clear() ;
   layout.varAttValSize.clear() ;
 
   // clear variables
-  for( size_t i=0 ; i < layout.varNames.size() ; ++i)
+  for( size_t i=0 ; i < layout.varName.size() ; ++i)
   {
-    layout.varNames[i].clear();
-    for( size_t j=0 ; j < layout.varDimNames[i].size() ; ++j)
-      layout.varDimNames[i][j].clear();
-    layout.varDimNames[i].clear();
+    layout.varName[i].clear();
+    for( size_t j=0 ; j < layout.varDimName[i].size() ; ++j)
+      layout.varDimName[i][j].clear();
+    layout.varDimName[i].clear();
+    layout.varDimSize[i].clear();
 
-    layout.hasVarUnlimitedDim.clear();
+    layout.varIsRecordType.clear();
     layout.noData.clear();
     hasEffVarUnlimitedDim.clear();
     delete [] layout.rec_start[i] ;
@@ -98,15 +99,16 @@ NcAPI::clearLayout(void)
     delete [] layout.varChunkSize[i] ;
   }
 
-  layout.varNames.clear();
+  layout.varName.clear();
   layout.varType.clear();
   layout.varMap.clear();
   layout.varidMap.clear();
   layout.varTypeMap.clear();
-  layout.hasVarUnlimitedDim.clear();
+  layout.varIsRecordType.clear();
   layout.noData.clear();
   hasEffVarUnlimitedDim.clear() ;
-  layout.varDimNames.clear();
+  layout.varDimName.clear();
+  layout.varDimSize.clear();
   layout.rec_start.clear();
   layout.rec_count.clear();
   layout.rec_index.clear();
@@ -120,7 +122,7 @@ NcAPI::clearLayout(void)
   layout.varFletcher32.clear();
 
   // clear dimensions
-  layout.dimNames.clear();
+  layout.dimName.clear();
   layout.dimSize.clear();
 
   return;
@@ -143,6 +145,8 @@ NcAPI::close(void)
 
       exceptionHandling(key, capt, "", checkType);
     }
+
+    isThisOpen=false;
   }
 
   isDefineMode=false;
@@ -442,7 +446,7 @@ NcAPI::copyAtts(NcAPI &from, int varid_from, int varid,
 
   std::string aName;
 
-  for( size_t j=0 ; j < from.layout.varAttNames[varid_from].size() ; ++j)
+  for( size_t j=0 ; j < from.layout.varAttName[varid_from].size() ; ++j)
   {
     // only those atts given in pvs
     if( paN )
@@ -451,7 +455,7 @@ NcAPI::copyAtts(NcAPI &from, int varid_from, int varid,
        std::string t;
        for( int i=0 ; i < attNum ; ++i )
        {
-         if(  (*paN)[i] == from.layout.varAttNames[varid_from][j] )
+         if(  (*paN)[i] == from.layout.varAttName[varid_from][j] )
          {
            isContinue=false;
            aName = (*paN)[i];
@@ -462,12 +466,12 @@ NcAPI::copyAtts(NcAPI &from, int varid_from, int varid,
          continue;
     }
     else
-      aName = from.layout.varAttNames[varid_from][j];
+      aName = from.layout.varAttName[varid_from][j];
 
     copyAtt(from, varid_from, varid, aName );
 
 //    nc_copy_att(ncid_from, varid_from,
-//           from.layout.varAttNames[varid_from][j].c_str(), ncid, varid );
+//           from.layout.varAttName[varid_from][j].c_str(), ncid, varid );
 
     addAttToLayout( varid, aName,
                         from.layout.varAttType[varid_from][j],
@@ -519,7 +523,7 @@ NcAPI::copyGlobalAtts(NcAPI &from, int varid_from, int varid,
 
   std::string aName;
 
-  for( size_t j=0 ; j < from.layout.globalAttNames.size() ; ++j)
+  for( size_t j=0 ; j < from.layout.globalAttName.size() ; ++j)
   {
     // only those atts given in pvs
     if( paN )
@@ -528,7 +532,7 @@ NcAPI::copyGlobalAtts(NcAPI &from, int varid_from, int varid,
        std::string t;
        for( int i=0 ; i < attNum ; ++i )
        {
-         if(  (*paN)[i] == from.layout.globalAttNames[j] )
+         if(  (*paN)[i] == from.layout.globalAttName[j] )
          {
            isContinue=false;
            aName = (*paN)[i];
@@ -539,7 +543,7 @@ NcAPI::copyGlobalAtts(NcAPI &from, int varid_from, int varid,
          continue;
     }
     else
-      aName = from.layout.globalAttNames[j];
+      aName = from.layout.globalAttName[j];
 
     copyAtt(from, varid_from, varid, aName );
 
@@ -557,7 +561,7 @@ NcAPI::copyChunking(NcAPI &from, int varid_from, int varid_to)
   // Pushes have been done in defineVar().
   enableDefMode();
 
-  size_t sz = layout.varDimNames[varid_to].size();
+  size_t sz = layout.varDimName[varid_to].size();
 
   if( from.layout.format == NC_FORMAT_NETCDF4 )
   {
@@ -571,17 +575,16 @@ NcAPI::copyChunking(NcAPI &from, int varid_from, int varid_to)
   {
     layout.varStorage[varid_to] = NC_CONTIGUOUS ;
 
-    for( size_t i=0 ; i < layout.varDimNames[varid_to].size() ; ++i )
+    for( size_t i=0 ; i < layout.varDimName[varid_to].size() ; ++i )
     {
       // true for strict
-      if( isDimUnlimited(layout.varDimNames[varid_to][i]), true )
+      if( isDimUnlimited(layout.varDimName[varid_to][i]), true )
       {
         layout.varChunkSize[varid_to][i] = 1 ;
         layout.varStorage[varid_to] = NC_CHUNKED ;
       }
       else
-        layout.varChunkSize[varid_to][i]
-           = getDimSize( layout.varDimNames[varid_to][i] ) ;
+        layout.varChunkSize[varid_to][i] = layout.varDimSize[varid_to][i] ;
     }
   }
 
@@ -613,9 +616,9 @@ NcAPI::copyData(NcAPI &from, size_t rec_in, size_t rec_out)
 {
   // Copy data of the rec-th record for all variables
 
-  for( size_t i=0 ; i < from.layout.varNames.size() ; ++i )
-    if( from.layout.hasVarUnlimitedDim[i] )
-      copyData(from, from.layout.varNames[i], rec_in, rec_out);
+  for( size_t i=0 ; i < from.layout.varName.size() ; ++i )
+    if( from.layout.varIsRecordType[i] )
+      copyData(from, from.layout.varName[i], rec_in, rec_out);
 
   return;
 }
@@ -631,7 +634,7 @@ NcAPI::copyData(NcAPI &from, std::string srcVName, std::string vName)
 
   size_t numRec=1;  // for non-record data sets
 
-  if( layout.hasVarUnlimitedDim[varid] )
+  if( layout.varIsRecordType[varid] )
     numRec = from.getNumOfRecords();
 
   for( size_t rec=0 ; rec < numRec ; ++rec )
@@ -769,9 +772,9 @@ NcAPI::copyDim(NcAPI &from, std::string dName)
   std::string uName;
 
   // loop over dimensions and pick the one with name==d
-  for( size_t i=0 ; i < from.layout.dimNames.size() ; ++i)
+  for( size_t i=0 ; i < from.layout.dimName.size() ; ++i)
   {
-    uName=from.layout.dimNames[i];
+    uName=from.layout.dimName[i];
 
     // find the right one or take them all
     if( dName.size() > 0 && uName != dName )
@@ -939,12 +942,12 @@ NcAPI::copyGlobalAtts(NcAPI &from)
 
   int ncid_from=from.getNcid();
 
-  for( size_t j=0 ; j < from.layout.globalAttNames.size() ; ++j)
+  for( size_t j=0 ; j < from.layout.globalAttName.size() ; ++j)
     nc_copy_att(ncid_from, NC_GLOBAL,
-           from.layout.globalAttNames[j].c_str(), ncid, NC_GLOBAL );
+           from.layout.globalAttName[j].c_str(), ncid, NC_GLOBAL );
 
   // copy global attributes
-  layout.globalAttNames    = from.layout.globalAttNames;
+  layout.globalAttName    = from.layout.globalAttName;
   layout.globalAttMap     = from.layout.globalAttMap;
   layout.globalAttType    = from.layout.globalAttType;
   layout.globalAttValSize = from.layout.globalAttValSize;
@@ -958,17 +961,17 @@ NcAPI::copyLayout(NcAPI &from)
   // Copy definitions and settings from 'from'.
 
   // retains the order of dimensions
-//  for( int i=0 ; i < from.layout.dimNames.size() ; ++i )
-//    defineDim(&from, from.layout.dimNames[i]);
+//  for( int i=0 ; i < from.layout.dimName.size() ; ++i )
+//    defineDim(&from, from.layout.dimName[i]);
   copyDim(from);
 
-  for( size_t i=0 ; i < from.layout.varNames.size() ; ++i )
+  for( size_t i=0 ; i < from.layout.varName.size() ; ++i )
   {
-    if( from.layout.hasVarUnlimitedDim[i] )
+    if( from.layout.varIsRecordType[i] )
       // definitions and attribute (leaving define mode at return)
-      copyVarDef(from,from.layout.varNames[i]);
+      copyVarDef(from,from.layout.varName[i]);
     else // also the data
-      copyVar(from,from.layout.varNames[i]);
+      copyVar(from,from.layout.varName[i]);
   }
 
   copyGlobalAtts(from);
@@ -981,9 +984,9 @@ NcAPI::copyRecord(NcAPI &from, size_t rec_in, size_t rec_out)
 {
   // Copy records of unlimited vars from 'from'.
 
-  for( size_t i=0 ; i < from.layout.varNames.size() ; ++i )
+  for( size_t i=0 ; i < from.layout.varName.size() ; ++i )
     if( from.hasEffVarUnlimitedDim[i] )
-      copyData(from,from.layout.varNames[i], rec_in, rec_out);
+      copyData(from,from.layout.varName[i], rec_in, rec_out);
 
   return;
 }
@@ -1015,33 +1018,33 @@ NcAPI::copyVarDef(NcAPI &from, std::string srcVName ,std::string newVarName, boo
   // Was variable already copied?
   // This will mainly prevent multiple trials
   // if a dimension is also a variable.
-  for( size_t i=0 ; i < layout.varNames.size() ; ++i)
+  for( size_t i=0 ; i < layout.varName.size() ; ++i)
   {
-    if( vName == layout.varNames[i] )
+    if( vName == layout.varName[i] )
       return false;
   }
 
-  size_t from_dimSz=from.layout.varDimNames[varid_from].size() ;
+  size_t from_dimSz=from.layout.varDimName[varid_from].size() ;
 
   // get dimensions of a variable
   for( size_t j=0 ; j < from_dimSz ; ++j)
   {
     // Is dim from source also dim of *this? Call is safe.
-    defineDim( from.layout.varDimNames[varid_from][j],
+    defineDim( from.layout.varDimName[varid_from][j],
        from.layout.dimSize[ from.layout.dimMap[
-                from.layout.varDimNames[varid_from][j] ] ] );
+                from.layout.varDimName[varid_from][j] ] ] );
   }
 
   //define variables:
   //1. Is any dim of current var also a var? Yes, then
   //   copy the var with the name of the dim by recursion.
   //   This may scatter the original sequence.
-  if( ! isKeepOrder && vName == from.layout.varNames[varid_from] )
+  if( ! isKeepOrder && vName == from.layout.varName[varid_from] )
   {
-    std::string sV(from.layout.varNames[varid_from]);
+    std::string sV(from.layout.varName[varid_from]);
     for( size_t j=0 ; j < from_dimSz ; ++j)
     {
-      std::string sD(from.layout.dimNames[j]);
+      std::string sD(from.layout.dimName[j]);
       // if next is true, then a dim is also a variable.
       // ... > 1 prevents a dead-lock.
 
@@ -1053,7 +1056,7 @@ NcAPI::copyVarDef(NcAPI &from, std::string srcVName ,std::string newVarName, boo
   // 2. Define the variable.
   // Return value was checked in defineVar()
   int varid=defineVar(vName, from.layout.varType[varid_from],
-                  from.layout.varDimNames[varid_from]) ;
+                  from.layout.varDimName[varid_from]) ;
 
   // chunking. Vectors were adjusted in defineVar().
   if( isChunking )
@@ -1186,8 +1189,8 @@ NcAPI::defineDim(std::string name, size_t dimsize)
   int dim_ID;
 
   // test whether a dimension is already defined
-  for( size_t j=0 ; j < layout.dimNames.size() ; ++j)
-     if( name == layout.dimNames[j] )
+  for( size_t j=0 ; j < layout.dimName.size() ; ++j)
+     if( name == layout.dimName[j] )
        return -1;
 
   enableDefMode();
@@ -1217,7 +1220,7 @@ NcAPI::defineDim(std::string name, size_t dimsize)
   }
 
   // update layout
-  layout.dimNames.push_back( name );
+  layout.dimName.push_back( name );
   layout.dimMap[name] = dim_ID ;
   layout.dimSize.push_back( dimsize ) ;
 
@@ -1233,8 +1236,8 @@ NcAPI::defineLayout(NcAPI &from)
 int
 NcAPI::defineVar(std::string vName, nc_type type)
 {
-  std::vector<std::string> dimNames;
-  return defineVar(vName, type, dimNames);
+  std::vector<std::string> dimName;
+  return defineVar(vName, type, dimName);
 }
 
 int
@@ -1244,19 +1247,23 @@ NcAPI::defineVar(std::string vName, nc_type type,
   int varid;
 
   // test whether a variable is already defined
-  for( size_t j=0 ; j < layout.varNames.size() ; ++j)
-     if( vName == layout.varNames[j] )
+  for( size_t j=0 ; j < layout.varName.size() ; ++j)
+     if( vName == layout.varName[j] )
        return -1;
 
   enableDefMode();
 
   // test whether all partial dimensions are defined
+  std::vector<size_t> currDimSize;
+  for( size_t i=0 ; i < currDimName.size() ; ++i )
+    currDimSize.push_back( getDimSize(currDimName[i]) );
+
   for( size_t i=0 ; i < currDimName.size() ; ++i )
   {
     bool is=false;
-    for( size_t j=0 ; j < layout.dimNames.size() ; ++j)
+    for( size_t j=0 ; j < layout.dimName.size() ; ++j)
     {
-       if( currDimName[i] == layout.dimNames[j] )
+       if( currDimName[i] == layout.dimName[j] )
        {
           is=true;
           break;
@@ -1308,14 +1315,15 @@ NcAPI::defineVar(std::string vName, nc_type type,
   }
 
   // update layout contents
-  layout.varNames.push_back( vName );
+  layout.varName.push_back( vName );
   layout.varMap[vName] = varid ;
   layout.varidMap[varid] = vName ;
   layout.varType.push_back( type ) ;
   layout.varTypeMap[vName]= type ;
-  layout.varDimNames.push_back( currDimName );
+  layout.varDimName.push_back( currDimName );
+  layout.varDimSize.push_back( currDimSize );
 
-  layout.hasVarUnlimitedDim.push_back(false) ;
+  layout.varIsRecordType.push_back(false) ;
   layout.noData.push_back(false) ;
   hasEffVarUnlimitedDim.push_back( false) ;
 
@@ -1323,10 +1331,10 @@ NcAPI::defineVar(std::string vName, nc_type type,
   {
     if( currDimName[i] == layout.unlimitedDimName )
     {
-      layout.hasVarUnlimitedDim.back()=true;
+      layout.varIsRecordType.back()=true;
       hasEffVarUnlimitedDim.back()=true;
 
-      if( !layout.hasVarUnlimitedDim.back() )
+      if( !layout.varIsRecordType.back() )
          hasEffVarUnlimitedDim.back()=true ;
     }
   }
@@ -1413,9 +1421,9 @@ NcAPI::delAtt(std::string aName, int varid)
    {
      enableDefMode();
 
-     for( size_t i=0 ; i < layout.globalAttNames.size() ; ++i)
+     for( size_t i=0 ; i < layout.globalAttName.size() ; ++i)
      {
-        if( aName == layout.globalAttNames[i] )
+        if( aName == layout.globalAttName[i] )
         {
           status=nc_del_att(ncid, varid, aName.c_str());
 
@@ -1437,7 +1445,7 @@ NcAPI::delAtt(std::string aName, int varid)
           }
 
           // clear for specific global attribute
-          layout.globalAttNames[i].clear();
+          layout.globalAttName[i].clear();
           layout.globalAttMap.erase("aName");
           layout.globalAttType[i]=NC_NAT;
           layout.globalAttValSize[i] = 0;
@@ -1449,15 +1457,15 @@ NcAPI::delAtt(std::string aName, int varid)
      ;
    else// variable att
    {
-     int i_sz=layout.varAttNames.size();
+     int i_sz=layout.varAttName.size();
      if( i_sz == 0 || i_sz <= varid )
        return UINT_MAX ;
 
      enableDefMode();
 
-     for( size_t i=0 ; i < layout.varAttNames[varid].size() ; ++i)
+     for( size_t i=0 ; i < layout.varAttName[varid].size() ; ++i)
      {
-        if( aName == layout.varAttNames[varid][i] )
+        if( aName == layout.varAttName[varid][i] )
         {
           status=nc_del_att(ncid, varid, aName.c_str());
 
@@ -1478,7 +1486,7 @@ NcAPI::delAtt(std::string aName, int varid)
           }
 
           // clear for specific global attribute
-          layout.varAttNames[varid][i].clear();
+          layout.varAttName[varid][i].clear();
           layout.varAttMap[varid].erase("aName");
           layout.varAttType[varid][i]=NC_NAT;
           layout.varAttValSize[varid][i] = 0;
@@ -2146,8 +2154,8 @@ NcAPI::getAttName(std::string vName)
 
   if( varid < 0 )  // try for global atts
   {
-    if( layout.globalAttNames.size() > 0 )
-      return layout.globalAttNames;
+    if( layout.globalAttName.size() > 0 )
+      return layout.globalAttName;
     else
     {
       std::vector<std::string> vs ;
@@ -2155,7 +2163,7 @@ NcAPI::getAttName(std::string vName)
     }
   }
   else  // atts of a variable. A vector is always defined
-    return layout.varAttNames[varid] ;
+    return layout.varAttName[varid] ;
 }
 
 //! Get names of the attributes of given variable.
@@ -2167,9 +2175,9 @@ NcAPI::getAttSize(std::string vName)
   int varid=getVarID(vName);
 
   if( varid < 0 )  // try for global atts
-    return layout.globalAttNames.size() ;
+    return layout.globalAttName.size() ;
   else  // atts of a variable. A vector is always defined
-    return layout.varAttNames[varid].size() ;
+    return layout.varAttName[varid].size() ;
 }
 
 std::string
@@ -2593,7 +2601,7 @@ NcAPI::getChunking(NcAPI &from, int varid,
 
   storage = from.layout.varStorage[varid] ;
 
-  size_t sz = layout.varDimNames.size();
+  size_t sz = layout.varDimName.size();
 
   for( size_t i=0 ; i < sz ; ++i )
     chunks.push_back( layout.varChunkSize[varid][i] );
@@ -2606,7 +2614,7 @@ NcAPI::getData(int varid, size_t rec, size_t leg)
 {
   // if rec_leg <= rec, then only the requested rec.
 
-  size_t rank = layout.varDimNames[varid].size();
+  size_t rank = layout.varDimName[varid].size();
 
   if( layout.rec_index[varid] < UINT_MAX )
     layout.rec_start[varid][ layout.rec_index[varid] ] = rec;
@@ -2624,16 +2632,9 @@ NcAPI::getData(int varid, size_t rec, size_t leg)
       dim.push_back(layout.rec_count[varid][i]);
       curr_count[i] = layout.rec_count[varid][i] ;
     }
-
-    if( rank == 1 )
-    {
-      size_t n;
-      if( (n=getDimSize(layout.varDimNames[varid][0] )) < leg )
-        leg=n ;
-    }
   }
 
-  if( leg > rec )
+  if( leg > 1 )
      dim[0] = curr_count[0] = leg;
 
   void *p=0;
@@ -2835,37 +2836,64 @@ NcAPI::getData(int varid, size_t rec, size_t leg)
 }
 
 template <typename ToT>
-ToT
-NcAPI::getData(MtrxArr<ToT> &x, std::string vName, size_t rec, size_t leg)
+int
+NcAPI::getData(MtrxArr<ToT> &x, std::string vName, size_t rec)
 {
+   // rec==0 is ok for the unlimited case
    if( rec && getNumOfRecords(vName) < rec )
-   {
-     ToT rv=0;
-     return rv;
-   }
+     return -1;
 
-   return getData(x, getVarID(vName), rec, leg);
+   return getData(x, getVarID(vName), rec);
 }
 
 template <typename ToT>
-ToT
-NcAPI::getData(MtrxArr<ToT> &to, int varid, size_t rec, size_t leg)
+int
+NcAPI::getData(MtrxArr<ToT> &to, int varid, size_t rec)
 {
   // Get netCDF data and store in a MtrxArr object.
   // The first value is returned.
-  ToT rv=0;
+  int rv=-1;
 
   if( varid < 0 )
     return rv;
 
-  // Note: getData allocates memory pointed by rec_val_'type'
-  if( layout.prev_rec[varid] != rec || layout.prev_leg[varid] != leg )
+  // Note: getData allocates memory pointed by rec_val_'type';
+  if( layout.rec_prev[varid] != static_cast<int>(rec) )
   {
-    (void) getData(varid, rec, leg);
+    size_t currLeg = layout.rec_leg_sz[varid];
+    bool isGetData=false;
 
-    layout.prev_rec[varid] = rec ;
-    layout.prev_leg[varid] = leg ;
+    if( rec >= layout.rec_leg_end[varid] )
+    {
+      // outside of the higher index side.
+      layout.rec_leg_begin[varid] = layout.rec_leg_end[varid] ;
+      layout.rec_leg_end[varid] += currLeg ;
+      isGetData=true;
+    }
+    else if( rec < layout.rec_leg_begin[varid] )
+    {
+      // outside of the smaller index side.
+      layout.rec_leg_begin[varid] = rec;
+      layout.rec_leg_end[varid] = rec + currLeg ;
+      isGetData=true;
+    }
+
+    if( layout.rec_leg_end[varid] > layout.varDimSize[varid][0] )
+    {
+      layout.rec_leg_end[varid] = layout.varDimSize[varid][0];
+      currLeg = layout.varDimSize[varid][0] - layout.rec_leg_begin[varid] ;
+      isGetData=true;
+    }
+
+    if( isGetData )
+      (void) getData(varid, rec, currLeg);
+
+    layout.rec_prev[varid] = static_cast<int>(rec);
   }
+
+  // index of MtrxArr relative to rec
+  rv = rec - layout.rec_leg_begin[varid] ;
+
   // Note: is already in data mode
 
   switch ( layout.varType[varid] )
@@ -2928,7 +2956,6 @@ NcAPI::getData(MtrxArr<ToT> &to, int varid, size_t rec, size_t leg)
 
 //  to.testValueException();
 
-  rv=to[0];
   return rv;
 }
 
@@ -2944,13 +2971,10 @@ NcAPI::getData(std::vector<std::string> &v, std::string varName, size_t rec )
     return ;
 
   //get string like attribute values
-  size_t n = layout.varDimNames[varid].size();
+  size_t n = layout.varDimName[varid].size();
 
   if( n == 0 )
     return ;  // no dimension, no data
-
-  if( isNoRecords(varName) )
-    return ;
 
   std::vector<size_t> dim ;
   for( size_t i=0 ; i < n ; ++i)
@@ -3128,25 +3152,25 @@ NcAPI::getDimID(std::string dName)
 }
 
 std::vector<std::string>
-NcAPI::getDimNames(std::string vName)
+NcAPI::getDimName(std::string vName)
 {
   //get dimensions names of a variable
 
   if( vName.size() == 0 )
-    return layout.dimNames ;
+    return layout.dimName ;
 
   int varid=getVarID( vName );
 
   if( varid < 0 )
     return std::vector<std::string>() ;
 
-  return layout.varDimNames[ varid ];
+  return layout.varDimName[ varid ];
 }
 
 int
 NcAPI::getDimSize(int d)
 {
-  if( d < 0 || d >= static_cast<int>(layout.dimNames.size()) )
+  if( d < 0 || d >= static_cast<int>(layout.dimName.size()) )
      return -1;
 
   return layout.dimSize[d];
@@ -3413,7 +3437,7 @@ NcAPI::getLayout(void)
        exceptionHandling(key, capt, text, checkType);
      }
 
-     layout.dimNames.push_back( name_buf );
+     layout.dimName.push_back( name_buf );
      layout.dimSize.push_back( len );
      layout.dimMap[name_buf] = id ;
   }
@@ -3422,7 +3446,7 @@ NcAPI::getLayout(void)
   if( layout.unlimitedDimID > -1 )
   {
     layout.unlimitedDimName=
-       layout.dimNames[layout.unlimitedDimID] ;
+       layout.dimName[layout.unlimitedDimID] ;
   }
   else
      effUnlimitedDimSize=0 ;
@@ -3459,32 +3483,31 @@ NcAPI::getLayout(void)
        exceptionHandling(key, capt, text, checkType, vName);
      }
 
-     layout.varNames.push_back( name_buf);
+     layout.varName.push_back( name_buf);
      layout.varType.push_back( type );
-     layout.varDimNames.push_back( std::vector<std::string>() );
+     layout.varDimName.push_back( std::vector<std::string>() );
+     layout.varDimSize.push_back( std::vector<size_t>() );
      for( int j=0 ; j < dimsp ; ++j )
-       layout.varDimNames[id].push_back(
-          layout.dimNames[dimids[j]]);
+     {
+       layout.varDimName[id].push_back(layout.dimName[dimids[j]]);
+
+       int sz = getDimSize(layout.varDimName[id][j]) ;
+       layout.varDimSize[id].push_back( static_cast<size_t>(sz) );
+     }
+
+     if( dimsp == 0 )  // scalar variable
+        layout.varDimSize[id].push_back(1);
 
      // check for unlimited dim
-     layout.hasVarUnlimitedDim.push_back( false) ;
+     layout.varIsRecordType.push_back( false) ;
      layout.noData.push_back( false) ;
      hasEffVarUnlimitedDim.push_back( false) ;
      for( int j=0 ; j < dimsp ; ++j )
      {
-       if( layout.varDimNames[id][j] == layout.unlimitedDimName )
+       if( layout.varDimName[id][j] == layout.unlimitedDimName )
        {
-         layout.hasVarUnlimitedDim.back()=true;
+         layout.varIsRecordType.back()=true;
          hasEffVarUnlimitedDim.back()=true ;
-       }
-     }
-
-     for( int i=0 ; i < dimsp ; ++i )
-     {
-       if( ! layout.hasVarUnlimitedDim.back() )
-       {
-         if( layout.varDimNames[id][i] == layout.unlimitedDimName )
-            hasEffVarUnlimitedDim.back()=true ;
        }
      }
 
@@ -3557,12 +3580,25 @@ NcAPI::getLayout(void)
      // Record size (times all dimensions except the unlimited
      // one). This contains also the total size of limited vars.
      size_t sz=1;
-     size_t rank = layout.varDimNames[id].size();
+     size_t rank = layout.varDimName[id].size();
 
      // shape of corners and edges of data arrays
      layout.rec_start.push_back( new size_t [rank] );
      layout.rec_count.push_back( new size_t [rank] );
      layout.rec_index.push_back( UINT_MAX );  //indicates non-record
+
+     layout.rec_leg_begin.push_back( 0 );
+     layout.rec_leg_sz.push_back( 1 );  // default for large multi-dim arrays
+     layout.rec_leg_end.push_back( 0 );
+     layout.rec_prev.push_back( -1 );
+
+     if( rank < 3 )
+     {
+       if( layout.varDimSize[id][0] > rec_leg_max )
+         layout.rec_leg_sz.back() = rec_leg_max ;
+       else
+         layout.rec_leg_sz.back() = layout.varDimSize[id][0] ;
+     }
 
      // compression
      int shuffle=0;
@@ -3696,10 +3732,10 @@ NcAPI::getLayout(void)
        layout.varFletcher32.push_back( fletcher32 );
      }
 
-     // rank is size of current dimension of variable
+     // rank is the size of the dimension vector
      for( size_t i=0 ; i < rank ; ++i)
      {
-         size_t m = layout.dimMap[ layout.varDimNames[id][i] ] ;
+         size_t m = layout.dimMap[ layout.varDimName[id][i] ] ;
 
          if( isDimUnlimited()
                 && m == static_cast<size_t>(layout.unlimitedDimID) )
@@ -3765,7 +3801,7 @@ NcAPI::getLayout(void)
        exceptionHandling(key, capt, text, checkType);
      }
 
-     layout.globalAttNames.push_back( name_buf );
+     layout.globalAttName.push_back( name_buf );
      layout.globalAttMap[name_buf] = j;
 
      status=nc_inq_atttype(ncid, NC_GLOBAL, name_buf,  &type) ;
@@ -3809,28 +3845,31 @@ NcAPI::getLayout(void)
 }
 
 std::vector<std::string>
-NcAPI::getLimitedVarNames(void)
+NcAPI::getLimitedVarName(void)
 {
   std::vector<std::string> t0;
-  for( size_t i=0 ; i < layout.varNames.size() ; ++i)
+  for( size_t i=0 ; i < layout.varName.size() ; ++i)
     if( ! hasEffVarUnlimitedDim[i] )
-      t0.push_back( layout.varNames[i] );
+      t0.push_back( layout.varName[i] );
 
   return t0;
 }
 
 size_t
-NcAPI::getNumOfRecords(std::string vName)
+NcAPI::getNumOfRecords(std::string vName, bool force)
 {
-   if( !isNoRecords(vName ) )
-      return getNumOfRecords() ;
+   if( isRecordType(vName) )
+      return getNumOfRecords(force) ;
 
    return 0;
 }
 
 size_t
-NcAPI::getNumOfRecords(void)
+NcAPI::getNumOfRecords(bool force)
 {
+  if( numOfRecords > -1 && !force )
+    return static_cast<size_t>(numOfRecords);
+
   size_t len=0;
 
   if( isDimUnlimited() )
@@ -3852,7 +3891,19 @@ NcAPI::getNumOfRecords(void)
       layout.dimSize[ layout.unlimitedDimID ] = len;
   }
 
+  numOfRecords = static_cast<int>( len );
+
   return len ;
+}
+
+size_t
+NcAPI::getNumOfRows(std::string vName)
+{
+  int varid=getVarID(vName);
+  if( varid < 0 )
+    return 0; // due to scalar variables this will never be a valid number
+
+  return layout.varDimSize[varid][0];
 }
 
 size_t
@@ -3926,7 +3977,7 @@ NcAPI::getUnlimitedDimVarName(void)
   for( size_t i=0 ; i < vn.size() ; ++i)
   {
      // get names of the dimensions of the current variable
-     dn = getDimNames(vn[i]);
+     dn = getDimName(vn[i]);
      if( dn.size() == 1  // only one dim
             && dn[0] == ulimDimName  // dim is unlimited
                 &&  vn[i] == ulimDimName )  // same name
@@ -3941,9 +3992,9 @@ std::vector<std::string>
 NcAPI::getUnlimitedVars(void)
 {
   std::vector<std::string> t0;
-  for( size_t i=0 ; i < layout.varNames.size() ; ++i)
+  for( size_t i=0 ; i < layout.varName.size() ; ++i)
     if( hasEffVarUnlimitedDim[i] )
-      t0.push_back( layout.varNames[i] );
+      t0.push_back( layout.varName[i] );
 
   return t0;
 }
@@ -3954,7 +4005,7 @@ NcAPI::getVarDimSize(std::string vName)
   std::vector<size_t> szs;
 
   // return empty vector, if vName doesn't match
-  std::vector<std::string> vn(getDimNames(vName));
+  std::vector<std::string> vn(getDimName(vName));
 
   for(size_t i=0 ; i < vn.size() ; ++i)
       szs.push_back( getDimSize(vn[i]) );
@@ -4050,7 +4101,7 @@ NcAPI::getVarTypeStr(std::string vName)
 
 /*
 std::vector<std::string>
-NcAPI::getVarNames(void)
+NcAPI::getVarName(void)
 {
   std::vector<std::string> vN;
 
@@ -4134,6 +4185,9 @@ NcAPI::init(void)
 {
   isThisOpen  = false;
 
+  numOfRecords=-1;
+  rec_leg_max=1024;
+
   isChunking  = false ;
   isDeflate   = false ;
   isDefineMode= false;
@@ -4169,9 +4223,9 @@ bool
 NcAPI::isAnyRecord(void)
 {
   if( isDimUnlimited() )
-    for( size_t i=0 ; i < layout.varNames.size() ; ++i )
+    for( size_t i=0 ; i < layout.varName.size() ; ++i )
       if( hasEffVarUnlimitedDim[i] )
-         if( getNumOfRecords(layout.varNames[i]) )
+         if( getNumOfRecords(layout.varName[i]) )
             return true;
 
   return false;
@@ -4291,7 +4345,7 @@ NcAPI::isEmptyData(int varid, T x)
     if( layout.varTypeMap[vName] == NC_STRING
           || layout.varTypeMap[vName] == NC_CHAR )
     {
-      size_t rank = layout.varDimNames[varid].size();
+      size_t rank = layout.varDimName[varid].size();
 
       if( layout.rec_index[varid] < UINT_MAX )
         layout.rec_start[varid][ layout.rec_index[varid] ] = 0;
@@ -4383,7 +4437,7 @@ NcAPI::isEmptyData(int varid, T x)
     else
     {
       MtrxArr<T> ma;
-      getData(ma, varid );
+      (void) getData(ma, varid );
 
       if( ma.validRangeBegin.size() )
         is=false;
@@ -4396,32 +4450,22 @@ NcAPI::isEmptyData(int varid, T x)
 bool
 NcAPI::isDimValid(std::string dName)
 {
-  for( size_t i=0 ; i < layout.dimNames.size() ; ++i )
-    if( dName == layout.dimNames[i] )
+  for( size_t i=0 ; i < layout.dimName.size() ; ++i )
+    if( dName == layout.dimName[i] )
       return true;
 
   return false;
 }
 
 bool
-NcAPI::isNoRecords(std::string vName)
+NcAPI::isRecordType(std::string vName)
 {
-  if( isVarUnlimited(vName) )
-  {
-    int varid=getVarID(vName);
-    if( varid < 0 )
-      return true;
+  int varid=getVarID(vName);
+  if( varid < 0 )
+    return false;
 
-    // if a dimension is empty
-    std::vector<size_t> dimSz( getVarDimSize(vName) );
-
-    if( dimSz.size() == 0 )
-       return true;
-
-    for( size_t i=0 ; i < dimSz.size() ; ++i)
-      if( dimSz[i] == 0 )
-        return true;
-  }
+  if( layout.varIsRecordType[varid] )
+    return true;
 
   return false;
 }
@@ -4429,8 +4473,8 @@ NcAPI::isNoRecords(std::string vName)
 bool
 NcAPI::isVarUnlimited(std::string vName)
 {
-  for( size_t i=0 ; i < layout.varNames.size() ; ++i )
-    if( layout.varNames[i] == vName )
+  for( size_t i=0 ; i < layout.varName.size() ; ++i )
+    if( layout.varName[i] == vName )
       if( hasEffVarUnlimitedDim[i] )
          return true;
 
@@ -4449,8 +4493,8 @@ NcAPI::isVarUnlimited(int varid)
 bool
 NcAPI::isVariableValid(std::string vName)
 {
-  for( size_t i=0 ; i < layout.varNames.size() ; ++i )
-    if( layout.varNames[i] == vName )
+  for( size_t i=0 ; i < layout.varName.size() ; ++i )
+    if( layout.varName[i] == vName )
        return true;
 
   return false;
@@ -4473,7 +4517,7 @@ void
 NcAPI::layoutVarAttPushes(void)
 {
   // attributes
-  layout.varAttNames.push_back( std::vector<std::string>() );
+  layout.varAttName.push_back( std::vector<std::string>() );
   layout.varAttMap.push_back( std::map<std::string, int>() );
   layout.varAttType.push_back( std::vector<nc_type>() );
   layout.varAttValSize.push_back( std::vector<size_t>() );
@@ -4545,9 +4589,6 @@ NcAPI::layoutVarDataPushes(std::string& vName, nc_type type)
     rec_val_string.push_back(*new MtrxArr<char*>()) ;
     layoutVarDataPushesStr(rec_val_string.back(), vName);
   }
-
-  layout.prev_rec.push_back( std::string::npos ) ;
-  layout.prev_leg.push_back( std::string::npos ) ;
 
   // push_back with zero to stay in sync with varid indexes
   layoutVarDataPushesVoid(type);
@@ -5280,7 +5321,7 @@ NcAPI::updateAtts(int varid, std::string aName, size_t attIndex,
    {
      if( attIndex < UINT_MAX )
      {
-       layout.globalAttNames[attIndex]= aName ;
+       layout.globalAttName[attIndex]= aName ;
        layout.globalAttType[attIndex] = ncType ;
        layout.globalAttValSize[attIndex]= len ;
        layout.globalAttMap[aName] = attIndex;
@@ -5292,7 +5333,7 @@ NcAPI::updateAtts(int varid, std::string aName, size_t attIndex,
    {
      if( attIndex < UINT_MAX )
      {
-       layout.varAttNames[varid][attIndex]= aName ;
+       layout.varAttName[varid][attIndex]= aName ;
        layout.varAttType[varid][attIndex] = ncType ;
        layout.varAttValSize[varid][attIndex]= len ;
        layout.varAttMap[varid][aName] = attIndex;

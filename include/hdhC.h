@@ -98,6 +98,16 @@ struct FieldDataMeta
   size_t size;
 };
 
+struct FileComponent
+{
+   bool is;
+   std::string file;
+   std::string filename;
+   std::string basename;
+   std::string extension;
+   std::string path;
+};
+
 //! Struct defining a point coordinate
 struct Point
 {
@@ -249,6 +259,9 @@ uint32_t
 fletcher32_LE_clear( T *data, size_t sz, bool *reset, size_t clear=0);
 
 //! Extract path, discard the filename.
+struct FileComponent
+splitFile(std::string&) ;
+
 std::string
 getPath(std::string&, bool isWithSlash=false );
 
@@ -397,6 +410,32 @@ string2Double( std::string s, size_t nr, int &width,
 double
 string2Double( std::string s, size_t nr ,int *restIndex,
                bool isRetNull=false) ;
+
+//! formatting of attribute|variable name in combination with value etc.
+static std::string s_blank(" ");
+static std::string no_blank("no_blank");
+static std::string s_colon(":");
+static std::string no_colon("no_colon");
+static std::string s_upper("upper");
+static std::string s_empty("");
+static std::string s_void("void_bool");
+
+std::string
+tf_att(std::string v=s_void, std::string a=s_void, std::string val=s_void,
+        std::string b1=s_void, std::string b2=s_void, std::string b3=s_void);
+
+std::string
+tf_att(std::vector<std::string*>& vs,  bool colon, bool blank, bool isUpper);
+
+std::string
+tf_val(std::string v, std::string blnk="");
+
+std::string
+tf_var(std::string v,
+        std::string b1=s_void, std::string b2=s_void, std::string b3=s_void);
+
+std::string
+tf_var(std::string& v,  bool colon, bool blank, bool isUpper);
 
 //! Remove all characters from a str.
 /*! By default, each character in 's' is removed. If isStr==true, then only

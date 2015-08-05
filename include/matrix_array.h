@@ -418,25 +418,27 @@ ValueException<T>::testValueModesFull(T* arr, size_t arr_sz,
 
    // portions of arr are mapped
    size_t chunk=1024;
-   size_t stateArrSz= (arr_sz > chunk) ? chunk : arr_sz ;
-   bool *isInfNaN = new bool [stateArrSz];
+   if( chunk > arr_sz )
+      chunk = arr_sz;
 
-   size_t in_count=0;
+   bool *isInfNaN = new bool [chunk];
+
+   size_t nextStop=0;
    size_t i=0 ;  //arr index
 
    size_t evSz=exceptionValue.size();
 
    bool isLeg=false;  // legs of valid data
 
-   while ( in_count < arr_sz )
+   while ( nextStop < arr_sz )
    {
-      in_count += stateArrSz;
+      nextStop += chunk;
 
-      bool isAnyInvalid = testInfNaN(isInfNaN, stateArrSz, i, arr, arr_sz) ;
+      bool isAnyInvalid = testInfNaN(isInfNaN, chunk, i, arr, arr_sz) ;
 
       for( ; i < arr_sz ; ++i)
       {
-        if( i == stateArrSz )
+        if( i == nextStop )
           break;
 
         // test Inf and NaN block-wise; return true for any
@@ -449,10 +451,10 @@ ValueException<T>::testValueModesFull(T* arr, size_t arr_sz,
             isLeg=false;
           }
 
-          while( i < in_count && isInfNaN[i] )
+          while( i < nextStop && isInfNaN[i] )
             ++i;
 
-          if( i == in_count )
+          if( i == nextStop )
             break;  // no data point found in the entire block, try next
 
           if(!isLeg)
@@ -547,23 +549,25 @@ ValueException<T>::testValueModesPoint(T* arr, size_t arr_sz,
 
   // portions of arr are mapped
    size_t chunk=1024;
-   size_t stateArrSz= (arr_sz > chunk) ? chunk : arr_sz ;
-   bool *isInfNaN = new bool [stateArrSz];
+   if( chunk > arr_sz )
+      chunk = arr_sz;
 
-   size_t in_count=0;
+   bool *isInfNaN = new bool [chunk];
+
+   size_t nextStop=0;
    size_t i=0 ;  //arr index
 
    bool isLeg=false;  // legs of valid data
 
-   while ( in_count < arr_sz )
+   while ( nextStop < arr_sz )
    {
-      in_count += stateArrSz;
+      nextStop += chunk;
 
-      bool isAnyInvalid = testInfNaN(isInfNaN, stateArrSz, i, arr, arr_sz) ;
+      bool isAnyInvalid = testInfNaN(isInfNaN, chunk, i, arr, arr_sz) ;
 
       for( ; i < arr_sz ; ++i)
       {
-        if( i == stateArrSz )
+        if( i == nextStop )
           break;
 
         // test Inf and NaN block-wise; return true for any
@@ -576,10 +580,10 @@ ValueException<T>::testValueModesPoint(T* arr, size_t arr_sz,
             isLeg=false;
           }
 
-          while( i < in_count && isInfNaN[i] )
+          while( i < nextStop && isInfNaN[i] )
             ++i;
 
-          if( i == in_count )
+          if( i == nextStop )
             break;  // no data point found in the entire block, try next
 
           if(!isLeg)
@@ -634,10 +638,12 @@ ValueException<T>::testValueModesPoints(T* arr, size_t arr_sz,
 
    // portions of arr are mapped
    size_t chunk=1024;
-   size_t stateArrSz= (arr_sz > chunk) ? chunk : arr_sz ;
-   bool *isInfNaN = new bool [stateArrSz];
+   if( chunk > arr_sz )
+      chunk = arr_sz;
 
-   size_t in_count=0;
+   bool *isInfNaN = new bool [chunk];
+
+   size_t nextStop=0;
    size_t i=0 ;  //arr index
 
    size_t evSz=exceptionValue.size();
@@ -646,13 +652,13 @@ ValueException<T>::testValueModesPoints(T* arr, size_t arr_sz,
 
    while ( i < arr_sz )
    {
-      in_count += stateArrSz;
+      nextStop += chunk;
 
-      bool isAnyInvalid = testInfNaN(isInfNaN, stateArrSz, i, arr, arr_sz) ;
+      bool isAnyInvalid = testInfNaN(isInfNaN, chunk, i, arr, arr_sz) ;
 
       for( ; i < arr_sz ; ++i)
       {
-        if( i == stateArrSz )
+        if( i == nextStop )
           break;
 
         // test Inf and NaN block-wise; return true for any
@@ -665,10 +671,10 @@ ValueException<T>::testValueModesPoints(T* arr, size_t arr_sz,
             isLeg=false;
           }
 
-          while( i < in_count && isInfNaN[i] )
+          while( i < nextStop && isInfNaN[i] )
             ++i;
 
-          if( i == in_count )
+          if( i == nextStop )
             break;  // no data point found in the entire block, try next
 
           if(!isLeg)
@@ -758,6 +764,7 @@ public:
   size_t arr_sz;
 
   T** m2D;    //matrix access; initialised at 1st call
+  size_t m2D_dim0;
 
 private:      // prevent copying
   MArep(const MArep&);
@@ -770,6 +777,8 @@ MArep<T>::MArep(const T* p, std::vector<size_t> &d )
 {
   // constructor with assignment for p>0
     m2D=0;
+    m2D_dim0=0;
+
     counter=1;
     getDim(d);
     arr=0 ;
@@ -837,11 +846,12 @@ template<typename T>
 void
 MArep<T>::clearM(void)
 {
-    if ( static_cast<bool>(m2D) )
+    if( static_cast<bool>(m2D) )
     {
       delete [] m2D;
       m2D=0;
-     }
+      m2D_dim0=0;
+    }
 
     return;
 }
@@ -988,15 +998,21 @@ template<typename T>
 void
 MArep<T>::setM(void)
 {
-    if( m2D > 0 )
-      return;
-
-    // m2D is freed at a different location
+    if( m2D && m2D_dim0 != dim[0] )
+    {
+      delete [] m2D;
+      m2D=0;
+      m2D_dim0=0;
+    }
 
     // allocate new mem for the 2D shape
     if( dim.size() == 2 )
     { // m x n matrix
-      m2D = new T* [dim[0]];
+      if( m2D == 0 )
+      {
+        m2D = new T* [dim[0]];
+        m2D_dim0=dim[0];
+      }
 
       for(size_t i0=0; i0 < dim[0]; ++i0)
         m2D[i0] = arr + i0 * dim[1] ;
@@ -1174,7 +1190,8 @@ public:
 
   std::vector<size_t>
           getDimensions(void)const { return rep->dim;}
-
+  size_t  getDimSize(){ return rep->dim.size(); }
+  
   size_t  getExceptionCount(size_t i);
   size_t  getExceptionCount(std::string s="all");
 
@@ -1254,7 +1271,7 @@ public:
              { valExcp->testValueException(rep->arr, rep->arr_sz,
                validRangeBegin, validRangeEnd); }
 
-  T *arr ;  // points to &rep->(*pva)[0]
+  T*  arr ;  // points to &rep->(*pva)[0]
   T zero ;  // nomen est omen
 
   // combine to index ranges of valid values

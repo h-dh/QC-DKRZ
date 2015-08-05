@@ -7,8 +7,9 @@
 ##*/
 
 # names of the directories
-period=Period.yaml
 annotations=Annotations.yaml
+period=Period.yaml
+summary=Summary
 
 descript()
 {
@@ -72,7 +73,7 @@ processBlk()
 
 summaryHR()
 {
-  local p=_Notes/${exp}.log
+  local p=$annotations/${exp}.log
 
 txt="Annotation summary of the QA of experiment\n \
     ${exp}\
@@ -84,92 +85,94 @@ txt="Annotation summary of the QA of experiment\n \
    $(pwd)/${p}\n\
 \n\n"
 
+  mkdir -p $summary/$exp
+
+  # create a comprehensive summary
+  outA=$summary/$exp/annotations.txt
+  echo -e ${txt} > $outA
+
   # convert periods to human readers
   local countL line max_len len space
 
-  # find the longest name
-  local max_len=0
-  declare -a line
+  if [ -e $period/${exp}.period ] ; then
+    # find the longest name
+    local max_len=0
+    declare -a line
 
-  while read -a line ; do
-    if [ "${line[1]}" = atomic_name: -a ${#line[2]} -gt ${max_len} ] ; then
-      max_len=${#line[2]}
+    while read -a line ; do
+      if [ "${line[1]}" = atomic_name: -a ${#line[2]} -gt ${max_len} ] ; then
+        max_len=${#line[2]}
+      fi
+    done < $period/${exp}.period
+
+    outP=$summary/$exp/periods.txt
+    echo -n '' > $outP
+
+    exec 9<&0
+    exec 0< $period/${exp}.period
+
+    # skip 1st and 2nd line
+    read -a line
+    read -a line
+
+    local fName begin end failB failE
+
+    while read -a line ; do
+      if [ "${line[1]}" = 'frequency:' ] ; then
+        test ${#fName} -gt 0 && processBlk
+
+        echo -e -n "\nFrequency: ${line[2]}, " >> $outP
+        read -a line
+        echo Number of variables: ${line[1]} >> $outP
+      elif [ "${line[1]}" = 'atomic_name:' ] ; then
+        # process a blk
+        processBlk
+        fName=${line[2]}
+      elif [ ${line[0]} = 'begin:' ] ; then
+        begin=${line[1]}
+      elif [ ${line[0]} = 'end:' ] ; then
+        end=${line[1]}
+      elif [ ${line[0]} = 'status:' ] ; then
+        test ${line[1]:0:6} = "FAIL:B" && failB="--> "
+        test ${line[1]} = "FAIL:E" -o ${line[1]} = "FAIL:BE" && failE=" <--"
+      fi
+    done
+
+    # the last entry
+    if [ ${#fName} -gt 0 ] ; then
+      # process a blk
+      processBlk
     fi
-  done < $period/${exp}.period
 
-  mkdir -p Summary/$exp
+    # restore stdin and free #9
+    exec 0<&9 9<&-
 
-  outP=Summary/$exp/periods.txt
-  echo -n '' > $outP
-
-  exec 9<&0
-  exec 0< $period/${exp}.period
-
-  # skip 1st and 2nd line
-  read -a line
-  read -a line
-
-  local fName begin end failB failE
-
-  while read -a line ; do
-    if [ "${line[1]}" = 'frequency:' ] ; then
-       test ${#fName} -gt 0 && processBlk
-
-       echo -e -n "\nFrequency: ${line[2]}, " >> $outP
-       read -a line
-       echo Number of variables: ${line[1]} >> $outP
-    elif [ "${line[1]}" = 'atomic_name:' ] ; then
-       # process a blk
-       processBlk
-       fName=${line[2]}
-    elif [ ${line[0]} = 'begin:' ] ; then
-       begin=${line[1]}
-    elif [ ${line[0]} = 'end:' ] ; then
-       end=${line[1]}
-    elif [ ${line[0]} = 'status:' ] ; then
-       test ${line[1]:0:6} = "FAIL:B" && failB="--> "
-       test ${line[1]} = "FAIL:E" -o ${line[1]} = "FAIL:BE" && failE=" <--"
-    fi
-  done
-
-  # the last entry
-  if [ ${#fName} -gt 0 ] ; then
-     # process a blk
-     processBlk
-  fi
-
-  # restore stdin and free #9
-  exec 0<&9 9<&-
-
-  # create a comprehensive summary
-  outA=Summary/$exp/annotations.txt
-  echo -e ${txt} > $outA
-
-  # find var-freq cases of the CORE entity not delivered
-  if [ "${PROJECT}" = CORDEX ] ; then
-    if ! expr match "$exp" '.*r0i0p0' &> /dev/null ; then
-      if [ ${#std_table} -gt 0 ] ; then
-         /bin/bash ${QA_SRC}/findNotDelivered  --project=CORDEX ${DEBUG_X} \
-         --period=$outP \
-         --table=${std_table} \
-         --out=$outA \
-         --yaml \
-         isFoundNotDelivered=t
+    # find var-freq cases of the CORE entity not delivered
+    if [ "${PROJECT}" = CORDEX ] ; then
+      if ! expr match "$exp" '.*r0i0p0' &> /dev/null ; then
+        if [ ${#std_table} -gt 0 ] ; then
+          /bin/bash ${QA_SRC}/findNotDelivered  --project=CORDEX ${DEBUG_X} \
+          --period=$outP \
+          --table=${std_table} \
+          --out=$outA \
+          --yaml \
+          isFoundNotDelivered=t
+        fi
       fi
     fi
-  fi
 
-  if [ -e $outP ] ; then
-    echo -e " \n\n==== Atomic Time Ranges =========================\n" \
-                  >> $outA
-    cat $outP     >> $outA
-    echo -e "\n"  >> $outA
+    if [ -e $outP ] ; then
+      echo -e " \n\n==== Atomic Time Ranges =========================\n" \
+                    >> $outA
+      cat $outP     >> $outA
+      echo -e "\n"  >> $outA
 
-    if [ ${isPeriodFault:-f} = t ] ; then
-      mv  $outP Summary/$exp/failed_periods.txt
-    else
-      # now its done with the human readable periods
-      \rm $outP &> /dev/null
+      if [ ${isPeriodFault:-f} = t ] ; then
+        mv  $outP $summary/$exp/failed_periods.txt
+      else
+        # now its done with the human readable periods
+        \rm $outP &> /dev/null
+      fi
     fi
   fi
 
@@ -177,7 +180,6 @@ txt="Annotation summary of the QA of experiment\n \
   if [ ! -f $p ] ; then
     echo -e " \n\n==== Annotation: none =========================\n" \
               >> $outA
-
     return
   fi
 
@@ -195,7 +197,7 @@ txt="Annotation summary of the QA of experiment\n \
   done < $annotations/${exp}.log
 
   # clear old results
-  \rm -f Summary/$exp/L*
+  \rm -f $summary/$exp/L*
   local capt impct pth htag
   local isNotFirst
 
@@ -207,7 +209,7 @@ txt="Annotation summary of the QA of experiment\n \
 
     while read -a line ; do
       if [ "${line[0]}" = 'tag:' -a "${line[1]}" = $tag ] ; then
-        outT=Summary/$exp/${impct}-${tag:1:$(( ${#tag} - 2 ))}
+        outT=$summary/$exp/${impct}-${tag:1:$(( ${#tag} - 2 ))}
 
         # skip at the beginning and (automatically) at the end
         test ${#pth} -gt 0 -a ${isNotFirst} = t && \
@@ -247,7 +249,7 @@ txt="Annotation summary of the QA of experiment\n \
   done
 
   local f fc
-  fc=( $( ls Summary/$exp/L* 2> /dev/null ) )
+  fc=( $( ls $summary/$exp/L* 2> /dev/null ) )
 
   for f in ${fc[*]} ; do
     echo -e " \n\n==== Annotation: ${f##*/} =========================\n" \

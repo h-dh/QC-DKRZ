@@ -51,38 +51,34 @@ class VariableMetaData
 
   std::vector<size_t>  dimVarRep;
 
-  std::string standardName;
-  std::string longName;
-  std::string units;
+  // only used for reading tables
   std::string cellMethods;
   std::string cellMethodsOpt;
+  std::string standardName;
+  std::string longName;
   std::string positive;
+  std::string units;
 
   bool        isUnitsDefined;
   bool        isForkedAnnotation;
 
   std::string name;
-  std::string type;
-  std::string dims;
-  std::string time_units;
-  std::string unlimitedDim;
 
   //! store results temporarily
   DataOutputBuffer dataOutputBuffer;
 
-  Annotation     *notes;
-  Variable *var;
-  QA             *pQA;
-  QA_Data         qaData;
+  Annotation*  notes;
+  Variable*    var;
+  QA*          pQA;
+  QA_Data      qaData;
 
-  //! Check the range for given units
-  /*! Only for a few variables with  plausible ranges. */
-  void   checkRange(void);
+  //! Verify units % or 1 by data range
+  void verifyPercent(void);
 
   int  finally(int errCode=0);
   void forkAnnotation(Annotation *p);
   void setAnnotation(Annotation *p);
-  void   setParent(QA *p){pQA=p;}
+  void setParent(QA *p){pQA=p;}
 };
 
 class QA : public IObj
@@ -286,11 +282,18 @@ class QA : public IObj
 
   int    getExitCode(void){return exitCode;}
 
+  //! Get path componenents.
+  /*! mode: "total": filename with total path, "file": filename,
+      "base": filename without extension, "ext": extension without '.',
+      "path": the path component without trailing '/'.*/
+  std::string
+         getPath(std::string& f, std::string mode="total");
+
   std::string
          getFrequency(void);
 
   std::string
-         getStandardTable(void){ return standardTable ; }
+         getStandardTable(void){ return varReqTable ; }
 
   //! Get the Standard table name from the global attributes
   void   getSubTable(void);
@@ -331,7 +334,7 @@ class QA : public IObj
    Collect some properties of the in-netcdf-file in
    struct varMeDa. Also check properties against tables.
   */
-  void   openQcNc(InFile&);
+  void   openQA_Nc(InFile&);
 
   //! Perform only post-processing
   bool   postProc(void);
@@ -347,8 +350,6 @@ class QA : public IObj
              std::string &aux, std::string &vals) ;
   void   requiredAttributes_checkGlobal(InFile &,
              std::vector<std::string> &atts);
-  void   requiredAttributes_checkTime(InFile &,
-             std::string name, size_t index);
   void   requiredAttributes_checkVariable(InFile &,
              Variable &, std::vector<std::string> &atts);
   void   requiredAttributes_readFile(
@@ -365,14 +366,14 @@ class QA : public IObj
 
   //! Cross-check with standard table.
   /*! Prepare the check for dimensions and variable.*/
-  void   standardTableCheck(InFile &in,
+  void   varReqTableCheck(InFile &in,
             VariableMetaData &var,
             std::vector<struct DimensionMetaData>& );
 
   //! Check dimensional bounds: layout and size
   /*! Number of values and checksum of the bounds*/
 /*
-  void   standardTableCheckDimBounds(InFile &in, Split &splt_line,
+  void   varReqTableCheckDimBounds(InFile &in, Split &splt_line,
             VariableMetaData &var,
             struct DimensionMetaData &dimFE,
             struct DimensionMetaData &dimTE,
@@ -381,7 +382,7 @@ class QA : public IObj
   //! Check dimensional values: layout and size
   /*! Number of values and checksum*/
 /*
-  void   standardTableCheckDimValues(InFile &in, Split &splt_line,
+  void   varReqTableCheckDimValues(InFile &in, Split &splt_line,
             VariableMetaData &var,
             struct DimensionMetaData &file,
             struct DimensionMetaData &table,
@@ -400,8 +401,8 @@ class QA : public IObj
       the file is assumed to be completely qa-processed.
       Syntax of date ranges as given in CORDEX  DRS Syntax.*/
   bool   testPeriod(void);
-  void   testPeriodCut(std::vector<std::string> &sd, std::vector<Date> &period) ;
-  bool   testPeriodFormat( std::vector<std::string> &sd) ;
+  void   testPeriodCut(std::vector<std::string> &sd) ;
+  bool   testPeriodFormat(std::vector<std::string> &sd) ;
 
   //! Name of the netCDF file with results of the quality control
   std::string qaFilename;
@@ -418,12 +419,12 @@ class QA : public IObj
 
   int thisId;
 
-  size_t currQcRec;
+  size_t currQARec;
   size_t importedRecFromPrevQA; // initial num of recs in the write-to-nc-file
   MtrxArr<double> tmp_mv;
 
   // init for test about times
-  bool enablePostProc;
+  bool enabledPostProc;
   bool isUseStrict;
   bool enableVersionInHistory;
   bool isCaseInsensitiveVarName;
@@ -431,7 +432,7 @@ class QA : public IObj
   bool isCheckParentExpRIP;
   bool isClearBits;
   bool isFileComplete;
-  bool isInstantaneous;
+  bool isFirstFile;
   bool isNoProgress;
   bool isNotFirstRecord;
   bool isPrintTimeBoundDates;
@@ -455,12 +456,12 @@ class QA : public IObj
 
   std::string GCM_ModelNameTable;
   std::string RCM_ModelNameTable;
-  std::string requirementsTable;
+  std::string archiveDesignTable;
 
   std::string cfStndNames;
   std::string currTable;
   std::string projectTableName;
-  std::string standardTable;
+  std::string varReqTable;
   std::string tablePath;
 
   std::string frequency;
@@ -470,9 +471,8 @@ class QA : public IObj
   std::string subTable ;
 
   int identNum;
-  std::string dataFile;
-  std::string dataPath;
-  std::string dataFilename;
+  struct hdhC::FileComponent dataFileComponent;
+
   std::string fVarname;
   char        fileSequenceState;
   std::string prevVersionFile;
@@ -481,14 +481,29 @@ class QA : public IObj
 
   std::string fail;
   std::string notAvailable;
-  std::string fileStr;
-  std::string fileTableMismatch;
+  std::string blank;
+  std::string no_blank;
+  std::string s_colon;
+  std::string s_empty;
+  std::string s_upper;
+  std::string s_lower;
 
-  std::string getCaptIntro(std::string &var, std::string att="");
+  std::string n_axis;
+  std::string n_cell_methods;
+  std::string n_long_name;
+  std::string n_outputVarName;
+  std::string n_positive;
+  std::string n_standard_name;
+  std::string n_units;
+
+  std::string fileStr;
+  std::string s_mismatch;
+
   std::string getCaptIntroDim(VariableMetaData &vMD,
                    struct DimensionMetaData &nc_entry,
                    struct DimensionMetaData &tbl_entry, std::string att="");
   void        appendToHistory(size_t);
+  bool        getExit(void);
   std::string getSubjectsIntroDim(VariableMetaData &vMD,
                    struct DimensionMetaData &nc_entry,
                    struct DimensionMetaData &tbl_entry, bool isColon=true);

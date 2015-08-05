@@ -337,7 +337,7 @@ QA::closeEntry(void)
      storeData(fA);
    }
 
-   ++currQcRec;
+   ++currQARec;
 
    return;
 }
@@ -490,7 +490,7 @@ QA::finally_data(int eCode)
   }
 
   if( exitCode == 63 ||
-     ( nc == 0 && exitCode ) || (currQcRec == 0 && pIn->isTime ) )
+     ( nc == 0 && exitCode ) || (currQARec == 0 && pIn->isTime ) )
   { // qa is up-to-date or a forced exit right from the start;
     // no data to write
     nc->close();
@@ -695,7 +695,7 @@ QA::init(void)
      return true;
 
    // open netCDF for creating, continuation or resuming qa_<varname>.nc
-   openQcNc(*pIn);
+   openQA_Nc(*pIn);
 
    if( isExit || isNoProgress )
    {
@@ -748,14 +748,14 @@ QA::initDataOutputBuffer(void)
 {
   if( isCheckTime )
   {
-    qaTime.timeOutputBuffer.initBuffer(nc, currQcRec);
-    qaTime.sharedRecordFlag.initBuffer(nc, currQcRec);
+    qaTime.timeOutputBuffer.initBuffer(nc, currQARec);
+    qaTime.sharedRecordFlag.initBuffer(nc, currQARec);
   }
 
   if( isCheckData )
   {
     for( size_t i=0 ; i < varMeDa.size() ; ++i)
-      varMeDa[i].qaData.initBuffer(nc, currQcRec);
+      varMeDa[i].qaData.initBuffer(nc, currQARec);
   }
 
   return;
@@ -796,7 +796,7 @@ QA::initDefaults(void)
   nextRecords=0;  //see init()
 
   importedRecFromPrevQA=0; // initial #rec in out-nc-file.
-  currQcRec=0;
+  currQARec=0;
 
   // by default
   tablePath="./";
@@ -912,8 +912,8 @@ QA::initResumeSession(void)
   }
 
   // now, resume
-  qaTime.timeOutputBuffer.setNextFlushBeg(currQcRec);
-  qaTime.setNextFlushBeg(currQcRec);
+  qaTime.timeOutputBuffer.setNextFlushBeg(currQARec);
+  qaTime.setNextFlushBeg(currQARec);
 
   if( isCheckTime )
     qaTime.initResumeSession();
@@ -994,7 +994,7 @@ QA::linkObject(IObj *p)
 }
 
 void
-QA::openQcNc(InFile &in)
+QA::openQA_Nc(InFile &in)
 {
   // Generates a new nc file for QA results or
   // opens an existing one for appending data.
@@ -1027,12 +1027,12 @@ QA::openQcNc(InFile &in)
   {
     // continue a previous session
     importedRecFromPrevQA=nc->getNumOfRecords();
-    currQcRec += importedRecFromPrevQA;
-    if( currQcRec )
+    currQARec += importedRecFromPrevQA;
+    if( currQARec )
       isNotFirstRecord = true;
 
     initDataOutputBuffer();
-    qaTime.sharedRecordFlag.initBuffer(nc, currQcRec);
+    qaTime.sharedRecordFlag.initBuffer(nc, currQARec);
 
     initResumeSession();
     isResumeSession=true;
@@ -1045,7 +1045,7 @@ QA::openQcNc(InFile &in)
     return;
   }
 
-  if( currQcRec == 0 && in.nc.getNumOfRecords() == 1 )
+  if( currQARec == 0 && in.nc.getNumOfRecords() == 1 )
     qaTime.isSingleTimeValue = true;
 
   // So, we have to generate a netCDF file from almost scratch;
@@ -1068,7 +1068,7 @@ QA::openQcNc(InFile &in)
       }
     }
 
-    qaTime.openQcNcContrib(nc);
+    qaTime.openQA_NcContrib(nc);
   }
   else if( isCheckTime )
   {
@@ -1079,7 +1079,7 @@ QA::openQcNc(InFile &in)
 
   // create variable for the data statics etc.
   for( size_t m=0 ; m < varMeDa.size() ; ++m )
-    varMeDa[m].qaData.openQcNcContrib(nc, varMeDa[m].var);
+    varMeDa[m].qaData.openQA_NcContrib(nc, varMeDa[m].var);
 
   // global atts at creation.
   initGlobalAtts(in);

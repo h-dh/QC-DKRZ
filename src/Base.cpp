@@ -311,36 +311,6 @@ Base::finally(int errCode, std::string note)
   return;
 }
 
-double
-Base::getTime(NcAPI &ncu, size_t rec, std::string tt, double offset)
-{
-  // the getData method below returns a void*
-  if( ! ncu.getNumOfRecords() )
-    return MAXDOUBLE;
-
-  MtrxArr<double> mv;
-  ncu.getData(mv, tt, rec);
-
-  return mv[0]+offset ;
-}
-
-bool
-Base::getTime(NcAPI &ncu, size_t rec, std::string tt,
-   MtrxArr<double> &mv, double offset)
-{
-  // the getData method below returns a void*
-  if( ! ncu.getNumOfRecords() )
-    return true;
-
-  if( ncu.getData(mv, tt, rec) )
-     return true;
-
-  if( offset != 0. )
-    mv += offset ;
-
-  return false ;
-}
-
 std::vector<std::string>
 Base::getVarname( std::string &s)
 {

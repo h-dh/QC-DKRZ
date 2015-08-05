@@ -225,20 +225,20 @@ InFile::getData( int rec, std::string name )
 }
 
 std::vector<std::string>
-InFile::getLimitedVarNames(void)
+InFile::getLimitedVarName(void)
 {
-  std::vector<std::string> t0( nc.getLimitedVarNames() );
+  std::vector<std::string> t0( nc.getLimitedVarName() );
 
   // If no limited variable is defined and vName is provided, then
   // try for all variables, not depending on dName.*/
   if( !t0.size() && unlimitedName.size() )
   {
-    std::vector<std::string> vs(nc.getVarNames()) ;
+    std::vector<std::string> vs(nc.getVarName()) ;
     std::vector<std::string> vd;
     for( size_t i=0 ; i < vs.size() ; ++i )
     {
        bool is=true;
-       vd = nc.getDimNames(vs[i]);
+       vd = nc.getDimName(vs[i]);
        for( size_t j=0 ; j < vd.size() ; ++j )
        {
          if( vd[j] == unlimitedName )
@@ -290,11 +290,11 @@ InFile::getUnlimitedVars(void)
   // try for all variables, depending on unlimitedName.*/
   if( !t0.size() && unlimitedName.size() )
   {
-    std::vector<std::string> vs(nc.getVarNames()) ;
+    std::vector<std::string> vs(nc.getVarName()) ;
     std::vector<std::string> vd;
     for( size_t i=0 ; i < vs.size() ; ++i )
     {
-       vd = nc.getDimNames(vs[i]);
+       vd = nc.getDimName(vs[i]);
        for( size_t j=0 ; j < vd.size() ; ++j )
        {
          if( vd[j] == unlimitedName )
@@ -445,7 +445,7 @@ InFile::getVariable(void)
     var.pIn = this;
 
     // names of the dimensions
-    ds = nc.getDimNames( var.name );
+    ds = nc.getDimName( var.name );
 
     for( size_t j=0 ; j < ds.size() ; ++j)
       var.dimName.push_back( ds[j] );
@@ -703,11 +703,11 @@ InFile::isVarUnlimited(std::string vName)
   // try for all variables, depending on vName.*/
   if( !is && unlimitedName.size() )
   {
-    std::vector<std::string> vs(nc.getVarNames()) ;
+    std::vector<std::string> vs(nc.getVarName()) ;
     std::vector<std::string> vd;
     for( size_t i=0 ; i < vs.size() ; ++i )
     {
-       vd = nc.getDimNames(vs[i]);
+       vd = nc.getDimName(vs[i]);
        for( size_t j=0 ; j < vd.size() ; ++j )
        {
          if( vd[j] == unlimitedName )
@@ -761,7 +761,7 @@ InFile::openNc(bool isNew)
   isInit=true;
 
   // get and analyse all variables and create Variable objects
-  std::vector<std::string> var( nc.getVarNames() );
+  std::vector<std::string> var( nc.getVarName() );
 
   // effective num of variables without any trqailing NC_GLOBAL
   varSz = var.size();
@@ -1020,8 +1020,8 @@ InFile::setGeoLayer(Variable &var)
 {
   // search for layer defining variables lon/lat
   size_t count=0;
-  std::vector<std::string> lonDimNames;
-  std::vector<std::string> latDimNames;
+  std::vector<std::string> lonDimName;
+  std::vector<std::string> latDimName;
 
   for( size_t i=0 ; i < variable.size() ; ++i )
   {
@@ -1030,13 +1030,13 @@ InFile::setGeoLayer(Variable &var)
     {
       if( variable[i].name.substr(0,3) == "lon" )
       {
-        lonDimNames=nc.getDimNames(variable[i].name) ;
+        lonDimName=nc.getDimName(variable[i].name) ;
         ++count;
       }
 
       if( variable[i].name.substr(0,3) == "lat" )
       {
-        latDimNames=nc.getDimNames(variable[i].name) ;
+        latDimName=nc.getDimName(variable[i].name) ;
         ++count;
       }
     }
@@ -1045,17 +1045,17 @@ InFile::setGeoLayer(Variable &var)
   // both variables must be defined
   if( count == 1 )
   {
-    if( !(latDimNames[0] == "loc" || latDimNames[0] == "site") )
+    if( !(latDimName[0] == "loc" || latDimName[0] == "site") )
       return;  // not a layer
   }
   else if( count == 0 )
     return;  // may-be an implicit layer; not CMIP5
 
   // not for defining layers, but for layers with associated areas
-  if( lonDimNames.size() == latDimNames.size() )
+  if( lonDimName.size() == latDimName.size() )
   {
-    if( lonDimNames.size() > 1 )
-       if( lonDimNames[0] == unlimitedName )
+    if( lonDimName.size() > 1 )
+       if( lonDimName[0] == unlimitedName )
          var.pGM->enableMutableLayerDims();
   }
   else
@@ -1090,19 +1090,19 @@ InFile::setGeoLayer(Variable &var)
     // would be rather amazing; this is not checked.
 
     bool is=false;
-    for( size_t j=0 ; j < latDimNames.size() ; ++j )
+    for( size_t j=0 ; j < latDimName.size() ; ++j )
     {
-      if( latDimNames[j] == unlimitedName )
+      if( latDimName[j] == unlimitedName )
         continue;
-      if( var.dimName[i] == latDimNames[j] )
+      if( var.dimName[i] == latDimName[j] )
         is=true;
     }
 
-    for( size_t j=0 ; j < lonDimNames.size() ; ++j )
+    for( size_t j=0 ; j < lonDimName.size() ; ++j )
     {
-      if( lonDimNames[j] == unlimitedName )
+      if( lonDimName[j] == unlimitedName )
         continue;
-      if( var.dimName[i] == lonDimNames[j] )
+      if( var.dimName[i] == lonDimName[j] )
         is=true;
     }
 

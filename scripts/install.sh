@@ -946,7 +946,7 @@ makeUtilities
 # check projects' qa executables
 projects=( $* )
 
-# the revision number is inserted in Makefile via -DSVN_VERSION
+# the revision number is inserted in Makefile via -DREVISION
 getRevNum REVISION
 export REVISION
 

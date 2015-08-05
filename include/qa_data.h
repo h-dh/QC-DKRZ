@@ -104,6 +104,7 @@ class Outlier
 
   size_t vMDix;
   std::string name;
+  MtrxArr<double> tmp_mv;
 
   Annotation *notes;
 } ;
@@ -139,6 +140,8 @@ class ReplicatedRecord
   std::string name;
   std::vector<std::string> options;
   size_t groupSize;
+
+  MtrxArr<double> tmp_mv;
 
   size_t vMDix;
   Annotation *notes;
@@ -176,7 +179,7 @@ class QA_Data
   //! Initialisiation of a resumed session.
   void   initResumeSession(void);
 
-  void   openQcNcContrib(NcAPI*, Variable *var);
+  void   openQA_NcContrib(NcAPI*, Variable *var);
 
   void   setAnnotation(Annotation *p);
   void   setInFile(InFile *p){ pIn=p;}
@@ -193,6 +196,7 @@ class QA_Data
   bool   testValidity(hdhC::FieldData &);
 
   std::string name;
+  MtrxArr<double> tmp_mv;
 
   size_t bufferCount;
   size_t maxBufferSize;

@@ -219,8 +219,8 @@ TimeControl::findRecAtTime(std::string recVarName, double tLimit,
   size_t rm, rm_save;
 
   // read time from the ncFile
-  double t0 = Base::getTime(pIn->nc, r0, recVarName) ;
-  double t1 = Base::getTime(pIn->nc, r1, recVarName) ;
+  double t0 = pIn->nc.getData(tmp_mv, recVarName, r0) ;
+  double t1 = pIn->nc.getData(tmp_mv, recVarName, r1) ;
   double tm;
 
   // test the location of the window.
@@ -244,7 +244,7 @@ TimeControl::findRecAtTime(std::string recVarName, double tLimit,
   {
     rm_save=rm;
     rm = (r0+r1)/2 ;
-    tm = Base::getTime(pIn->nc, rm, recVarName) ;
+    tm = pIn->nc.getData(tmp_mv, recVarName, rm) ;
 
     if( tm < tLimit )
     {
@@ -274,7 +274,7 @@ TimeControl::findRecAtTime(std::string recVarName, double tLimit,
     //special: value at r1 matches the limit.
     if( (rm+1) == r1)
     {
-      tm = Base::getTime(pIn->nc, r1, recVarName) ;
+      tm = pIn->nc.getData(tmp_mv, recVarName, r1) ;
       if( tm == tLimit )
         rm=r1;
     }
@@ -307,7 +307,7 @@ TimeControl::getCurrDate(NcAPI &nc, size_t rec)
   if( isTime )
   {
     // read time from ncFile
-    currValue = Base::getTime(nc, rec, "time");
+    currValue = nc.getData(tmp_mv, "time", rec) ;
     currDate = refDate.getDate( currValue );
   }
 

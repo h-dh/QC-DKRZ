@@ -277,7 +277,7 @@ bool
 Outlier::isSelected(
      std::vector<std::string> &options,
      std::string &vName,
-     bool isQA_enablePostProc, int effDim )
+     bool isQA_enabledPostProc, int effDim )
 {
   if( options.size() == 1 && options[0] == "t" )
     return true; // default for all
@@ -297,7 +297,7 @@ Outlier::isSelected(
     {
       if( cvs[i] == "POST" )
       {
-        if( ! isQA_enablePostProc )
+        if( ! isQA_enabledPostProc )
          isThis=false ;
       }
       else if( cvs[i] == "no_0-D" && effDim < 1 )
@@ -471,21 +471,14 @@ Outlier::test(QA_Data *pQAD)
   std::vector<size_t> outRec;
   std::vector<double> outVal;
 
-  // do not check all the file, but only the records related to
-  // the current sub-temp file
-
   size_t currRecEnd=pQA->nc->getNumOfRecords();
-
-  // check outlier only if no time value is missing
-  size_t subTempRecs=pQA->pIn->nc.getNumOfRecords();
-  if( currRecEnd < subTempRecs )
-    return 0;
-
+//  size_t subTempRecs=pQA->pIn->nc.getNumOfRecords();
   size_t prevRecEnd ;
-  if( pQA->enablePostProc )
+
+//  if( pQA->enabledPostProc )
     prevRecEnd=0  ;  //forces re-reading of all
-  else
-    prevRecEnd = currRecEnd - subTempRecs ;
+//  else
+//    prevRecEnd = currRecEnd - subTempRecs ;
 
   size_t currRecNum = currRecEnd - prevRecEnd ;
 
@@ -645,20 +638,16 @@ Outlier::test(QA_Data *pQAD)
         outRecMax = outRec[0] ;
         outValMax = outVal[0] ;
 
-        currTime=Base::getTime(*(pQA->nc), outRec[0], "time") ;
-        cTime                 = hdhC::double2String(currTime);
-        pQA->qaTime.currDate   = pQA->qaTime.refDate.getDate( cTime ) ;
-        currDateStrMax        = pQA->qaTime.currDate.getDate();
+        double cT=pQA->pIn->nc.getData(tmp_mv, "time", outRec[0]) ;
+        currDateStrMax        = pQA->qaTime.getDateStr(cT);
 
         for( size_t k=1 ; k < outRec.size() ; ++k )
         {
           if ( outVal[k] < outValMax )
             continue;
 
-          currTime=Base::getTime(*(pQA->nc), outRec[k], "time") ;
-          cTime                 = hdhC::double2String(currTime);
-          pQA->qaTime.currDate   = pQA->qaTime.refDate.getDate( cTime ) ;
-          currDateStrMax        = pQA->qaTime.currDate.getDate();
+          cT=pQA->pIn->nc.getData(tmp_mv, "time", outRec[k]) ;
+          currDateStrMax        = pQA->qaTime.getDateStr(cT);
 
           outValMax = outVal[k] ;
           outRecMax = outRec[k] ;
@@ -679,9 +668,9 @@ Outlier::test(QA_Data *pQAD)
         std::string capt(ostr.str());
 
         ostr.str("");  // clear previous contents
-        ostr << "variable=" << pQA->varMeDa[vMDix].name;
-        ostr << ", " << pQA->varMeDa[vMDix].standardName;
-        ostr << ", units=" << pQA->varMeDa[vMDix].units;
+        ostr << "variable=" << pQA->varMeDa[vMDix].var->name;
+        ostr << ", " << pQA->varMeDa[vMDix].var->std_name;
+        ostr << ", units=" << pQA->varMeDa[vMDix].var->units;
 
         MtrxArr<int> imv;
         for( size_t k=0 ; k < outRec.size() ; ++k )
@@ -689,13 +678,10 @@ Outlier::test(QA_Data *pQAD)
           // adjust coded flags
           pQAD->sharedRecordFlag.adjustFlag(errNum[i], outRec[k] ) ;
 
-          currTime=Base::getTime(*(pQA->nc), outRec[k], "time") ;
-          cTime               = hdhC::double2String(currTime);
-          pQA->qaTime.currDate = pQA->qaTime.refDate.getDate( cTime ) ;
-          cTime               = pQA->qaTime.currDate.getDate();
+          currTime = pQA->pIn->nc.getData(tmp_mv, "time", outRec[k]) ;
 
           ostr << "\nrec#=" << outRec[k];
-          ostr << ", date=" << cTime;
+          ostr << ", date=" << pQA->qaTime.getDateStr(currTime);
           ostr << ", value=";
           ostr << std::setw(12) << std::setprecision(5) << outVal[k];
         }
@@ -726,7 +712,7 @@ bool
 ReplicatedRecord::isSelected(
      std::vector<std::string> &options,
      std::string &vName,
-     bool isQA_enablePostProc, int effDim )
+     bool isQA_enabledPostProc, int effDim )
 {
   if( options.size() == 1 && options[0] == "t" )
     return true; // default for all
@@ -746,7 +732,7 @@ ReplicatedRecord::isSelected(
     {
       if( cvs[i] == "POST" )
       {
-        if( ! isQA_enablePostProc )
+        if( ! isQA_enabledPostProc )
          isThis=false ;
       }
       else if( cvs[i].substr(0,10) == "clear_bits" )
@@ -1054,10 +1040,10 @@ ReplicatedRecord::test(int nRecs, size_t bufferCount, size_t nextFlushBeg,
        {
          range.push_back( hdhC::double2String(arr_prev_index[i] ) );
          range.push_back( hdhC::double2String(arr_curr_index[i] ) );
-         cT  = Base::getTime(*(pQA->nc), arr_prev_index[i], "time");
+         cT  = pQA->pIn->nc.getData(tmp_mv, "time", arr_prev_index[i]) ;
          sCT = hdhC::double2String(cT) ;
          range.push_back(pQA->qaTime.refDate.getDate( sCT ) );
-         cT  = Base::getTime(*(pQA->nc), arr_curr_index[i], "time");
+         cT  = pQA->pIn->nc.getData(tmp_mv, "time", arr_curr_index[i]) ;
          sCT = hdhC::double2String(cT) ;
          range.push_back(pQA->qaTime.refDate.getDate( sCT ) );
          isGroup = false;
@@ -1073,10 +1059,10 @@ ReplicatedRecord::test(int nRecs, size_t bufferCount, size_t nextFlushBeg,
        {
          range.push_back( hdhC::double2String(arr_prev_index[i] ) );
          range.push_back( hdhC::double2String(arr_curr_index[i] ) );
-         cT  = Base::getTime(*(pQA->nc), arr_prev_index[i], "time");
+         cT  = pQA->pIn->nc.getData(tmp_mv, "time", arr_prev_index[i]) ;
          sCT = hdhC::double2String(cT) ;
          range.push_back(pQA->qaTime.refDate.getDate( sCT ) );
-         cT  = Base::getTime(*(pQA->nc), arr_curr_index[i], "time");
+         cT  = pQA->pIn->nc.getData(tmp_mv, "time", arr_curr_index[i]) ;
          sCT = hdhC::double2String(cT) ;
          range.push_back(pQA->qaTime.refDate.getDate( sCT ) );
        }
@@ -1088,10 +1074,10 @@ ReplicatedRecord::test(int nRecs, size_t bufferCount, size_t nextFlushBeg,
        {
          range.push_back( hdhC::double2String(arr_prev_index[i] ) );
          range.push_back( hdhC::double2String(arr_curr_index[i] ) );
-         cT  = Base::getTime(*(pQA->nc), arr_prev_index[i], "time");
+         cT=pQA->pIn->nc.getData(tmp_mv, "time", arr_prev_index[i]) ;
          sCT = hdhC::double2String(cT) ;
          range.push_back(pQA->qaTime.refDate.getDate( sCT ) );
-         cT  = Base::getTime(*(pQA->nc), arr_curr_index[i], "time");
+         cT  = pQA->pIn->nc.getData(tmp_mv, "time", arr_curr_index[i]) ;
          sCT = hdhC::double2String(cT) ;
          range.push_back(pQA->qaTime.refDate.getDate( sCT ) );
          isGroup=true;
@@ -1111,10 +1097,10 @@ ReplicatedRecord::test(int nRecs, size_t bufferCount, size_t nextFlushBeg,
     size_t i = bufferCount -1 ;
     range.push_back( hdhC::double2String(arr_prev_index[i-1] ) );
     range.push_back( hdhC::double2String(arr_curr_index[i-1] ) );
-    cT  = Base::getTime(*(pQA->nc), arr_prev_index[i-1], "time");
+    cT  = pQA->pIn->nc.getData(tmp_mv, "time", arr_prev_index[i]) ;
     sCT = hdhC::double2String(cT) ;
     range.push_back(pQA->qaTime.refDate.getDate( sCT ) );
-    cT  = Base::getTime(*(pQA->nc), arr_curr_index[i-1], "time");
+    cT  = pQA->pIn->nc.getData(tmp_mv, "time", arr_curr_index[i]) ;
     sCT = hdhC::double2String(cT) ;
     range.push_back(pQA->qaTime.refDate.getDate( sCT ) );
 
@@ -1546,7 +1532,7 @@ QA_Data::initResumeSession(void)
 }
 
 void
-QA_Data::openQcNcContrib(NcAPI *nc, Variable *var)
+QA_Data::openQA_NcContrib(NcAPI *nc, Variable *var)
 {
   // a multi-purpose vector
   std::vector<std::string> vs;
@@ -1562,7 +1548,7 @@ QA_Data::openQcNcContrib(NcAPI *nc, Variable *var)
                           "original attributes of the checked variable");
 
   // get original dimensions and convert names into a string
-  vs = pIn->nc.getDimNames(vName);
+  vs = pIn->nc.getDimName(vName);
   std::string str;
 
   Split splt( var->units );
@@ -1586,7 +1572,7 @@ QA_Data::openQcNcContrib(NcAPI *nc, Variable *var)
   if( var->isFixed )
     dimStr = "fixed" ;
   else
-    dimStr = pQA->qaTime.time.c_str() ;
+    dimStr = pQA->qaTime.timeName.c_str() ;
 
   // different, but derived, varnames
   vs.clear();

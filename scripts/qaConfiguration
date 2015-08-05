@@ -1816,7 +1816,7 @@ do
         setKWL PROJECT=$UOPTARG ;;
     Q)  setKWL NO_STATUS=t ;;
     q)  setKWL QUIET=t ;;
-    S)  sel_args=( ${OPTARG//,/} )
+    S)  sl_args=( ${OPTARG//,/} )
         ;;
     s)  setKWL SESSION_DATE=${OPTARG} ;;
     T)  # already caught

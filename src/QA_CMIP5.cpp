@@ -23,8 +23,6 @@ QA::appendToHistory(size_t eCode)
 
   std::string s;
   std::string hst;
-  std::string path( filename.substr(0, filename.rfind('/')) ) ;
-  std::string file( filename.substr(filename.rfind('/')+1) ) ;
   std::string hstVersion;
 
   s = nc->getAttString("history");
@@ -40,12 +38,12 @@ QA::appendToHistory(size_t eCode)
       size_t pos;
       if( (pos=hstPath.rfind("\n")) < std::string::npos )
          hstPath.erase(pos,1);
-      if( path != hstPath )
+      if( dataFileComponent.path != hstPath )
       {
         hst += "\n" ;
         hst += today;
         hst += " changed path to data: ";
-        hst += path + "\n" ;
+        hst += dataFileComponent.path + "\n" ;
       }
     }
   }
@@ -54,7 +52,7 @@ QA::appendToHistory(size_t eCode)
     // the root of the history string
     hst += today;
     hst += " path_to_data: ";
-    hst += path ;
+    hst += dataFileComponent.path ;
 /*
     hst += "\n Filenames and tracking_id in file tid_";
 
@@ -86,14 +84,14 @@ QA::appendToHistory(size_t eCode)
     }
     else
       // not in the history, so take the one from the version attribute
-      tmp = nc->getAttString("svn_revision");
+      tmp = nc->getAttString("QA-revision");
 
-    if( svnVersion != tmp )
+    if( revision != tmp )
     {
       hst += "\n" ;
       hst += today;
-      hst += " changed QA svn revision: " ;
-      hst += svnVersion ;
+      hst += " changed QA revision: " ;
+      hst += revision ;
     }
   }
 
@@ -159,7 +157,7 @@ QA::applyOptions(bool isPost)
        if( split.size() == 2 )
        {
           // path to the directory where the execution takes place
-          dataPath=split[1];
+          dataFileComponent.path=split[1];
           continue;
        }
      }
@@ -628,22 +626,6 @@ BREAK2:
        // switch between the regular objects and the one defined above.
        struct DimensionMetaData *p_dimFE = &dimNcMeDa[index] ;
        VariableMetaData  *p_vMD   = &vMD;
-
-       // dimension 'lev' is usually generic.
-       // special: variable 'lev' contains the added coefficients
-       // a and b of the hybrid sigma pressure coordinates.
-       if( dimTE.outname == "lev" )
-       {
-         if( dimTE.stndname ==
-                "atmosphere_hybrid_sigma_pressure_coordinate" )
-         {
-           std::vector<std::string> vs( in.nc.getVarNames() );
-           checkSigmaPressureCoordinates( *p_vMD, vs);
-         }
-
-         // discard any dim checks
-         return;
-       }
 
        // Purpose: a dim in the table is not defined in the file
        // but given as variable in the file.
@@ -1304,7 +1286,7 @@ QA::checkDimULD(
           return ;  // do not check at all
 
         // do not check at the beginning of a new experiment.
-        if( ! qaTime.isReferenceDateAcrossExp && currQcRec == 0 )
+        if( ! qaTime.isReferenceDateAcrossExp && currQARec == 0 )
           return ;
 
         Date tbl_ref( tbl_entry.units, qaTime.calendar );
@@ -1859,51 +1841,6 @@ QA::check_ProjectName(InFile &in)
   return;
 }
 
-void
-QA::checkSigmaPressureCoordinates(VariableMetaData &vMD,
-           std::vector<std::string> &vs)
-{
-  // special: variable 'lev' contains the added coefficients a and b
-  // of the hybrid sigma pressure coordinates.
-  // This quantity is meaningless.
-  // However, it is good to test for the existance of the
-  // 'a(k)' and 'b(k)' auxiliaries. At present, it seems that
-  // the names a and b are commonly in use.
-
-  size_t countCoeffs=0;
-  for( size_t i=0 ; i < vs.size() ; ++i )
-  {
-    if( vs[i] == "a" )
-      ++countCoeffs;
-    if( vs[i] == "b" )
-      ++countCoeffs;
-  }
-
-  // this comes late, because it has to be outside of the loop
-
-
-  if( countCoeffs != 2 )
-  {
-    std::string key("58_6");
-
-    if( notes->inq( key, vMD.name) )
-    {
-       std::string capt( "no variable a(k) or b(k) found for the hybrid sigma pressure coordinates.") ;
-
-       std::string text("Variable: lev ");
-       text += "\nExpecting auxiliaries a(k) and b(k) for the hybrid sigma pressure coordinates.";
-
-       (void) notes->operate(capt, text) ;
-       {
-         notes->setCheckMetaStr(fail);
-         setExit( notes->getExitValue() ) ;
-       }
-    }
-  }
-
-  return;
-}
-
 bool
 QA::checkStandardTable(InFile &in, VariableMetaData &vMD,
              std::vector<struct DimensionMetaData> &dimNcMeDa)
@@ -2022,7 +1959,7 @@ QA::checkStandardTable(InFile &in, VariableMetaData &vMD,
      checkVarTableEntry(vMD, tbl_entry);
 
      // get dimensions names from nc-file
-     std::vector<std::string> vd( in.nc.getDimNames(vMD.name) );
+     std::vector<std::string> vd( in.nc.getDimName(vMD.name) );
      for(size_t l=0 ; l < vd.size() ; ++l)
      {
        // new instance
@@ -2979,7 +2916,7 @@ QA::closeEntry(void)
      storeData(fA);
    }
 
-   ++currQcRec;
+   ++currQARec;
 
    return;
 }
@@ -3016,7 +2953,7 @@ QA::createVarMetaData(void)
     Split splt(vMD.dims);
     int effDim = splt.size() ;
     for( size_t j=0 ; j < splt.size() ; ++j )
-      if( splt[j] == qaTime.time )
+      if( splt[j] == qaTime.timeName )
         --effDim;
 
     if( replicationOpts.size() )
@@ -3137,7 +3074,7 @@ QA::finally_data(int eCode)
   }
 
   if( exitCode == 63 ||
-     ( nc == 0 && exitCode ) || (currQcRec == 0 && pIn->isTime ) )
+     ( nc == 0 && exitCode ) || (currQARec == 0 && pIn->isTime ) )
   { // qa is up-to-date or a forced exit right from the start;
     // qa_>filename>.nc remains the same
     nc->close();
@@ -3853,7 +3790,7 @@ QA::init(void)
      return true;
 
    // open netCDF for continuation and resuming a session
-   openQcNc(*pIn);
+   openQA_Nc(*pIn);
 
    if( isExit || isNoProgress )
    {
@@ -3910,14 +3847,14 @@ QA::initDataOutputBuffer(void)
 {
   if( isCheckTime )
   {
-    qaTime.timeOutputBuffer.initBuffer(nc, currQcRec);
-    qaTime.sharedRecordFlag.initBuffer(nc, currQcRec);
+    qaTime.timeOutputBuffer.initBuffer(nc, currQARec);
+    qaTime.sharedRecordFlag.initBuffer(nc, currQARec);
   }
 
   if( isCheckData )
   {
     for( size_t i=0 ; i < varMeDa.size() ; ++i)
-      varMeDa[i].qaData.initBuffer(nc, currQcRec);
+      varMeDa[i].qaData.initBuffer(nc, currQARec);
   }
 
   return;
@@ -3951,7 +3888,7 @@ QA::initDefaults(void)
   nextRecords=0;  //see init()
 
   importedRecFromPrevQA=0; // initial #rec in out-nc-file.
-  currQcRec=0;
+  currQARec=0;
 
   // by default
   tablePath="./";
@@ -3982,7 +3919,7 @@ QA::initGlobalAtts(InFile &in)
   nc->setGlobalAtt( "product", "quality check of CMIP5 data set");
 
 //  enableVersionInHistory=false;
-  nc->setGlobalAtt( "QA_svn_revision", svnVersion);
+  nc->setGlobalAtt( "QA_revision", revision);
   nc->setGlobalAtt( "contact", "hollweg@dkrz.de");
 
   std::string t("csv formatted ");
@@ -4013,7 +3950,7 @@ QA::initResumeSession(void)
   // At first, a check over the ensemble of variables.
   // Get the name of the variable(s) used before
   // (only those with a trailing '_ave').
-  std::vector<std::string> vss( nc->getVarNames() ) ;
+  std::vector<std::string> vss( nc->getVarName() ) ;
 
   std::vector<std::string> prevTargets ;
 
@@ -4073,8 +4010,8 @@ QA::initResumeSession(void)
   }
 
   // now, resume
-  qaTime.timeOutputBuffer.setNextFlushBeg(currQcRec);
-  qaTime.setNextFlushBeg(currQcRec);
+  qaTime.timeOutputBuffer.setNextFlushBeg(currQARec);
+  qaTime.setNextFlushBeg(currQARec);
 
   if( isCheckTime )
     qaTime.initResumeSession();
@@ -4230,22 +4167,26 @@ QA::locate( GeoData<float> *gd, double *alat, double *alon, const char* crit )
 */
 
 void
-QA::openQcNc(InFile &in)
+QA::openQA_Nc(InFile &in)
 {
   // Generates a new nc file for QA results or
   // opens an existing one for appending data.
   // Copies time variable from input-nc file.
 
   // name of the file begins with qa_
+  // name of the file begins with qa_
   if ( qaFilename.size() == 0 )
   {
+    if( !dataFileComponent.is )
+      dataFileComponent = hdhC::splitFile(pIn->filename) ;
+
     // use the input filename as basis;
     // there could be a leading path
-    qaFilename = hdhC::getPath(filename);
+    qaFilename = dataFileComponent.path;
     if( qaFilename.size() > 0 )
       qaFilename += '/' ;
     qaFilename += "qa_";
-    qaFilename += hdhC::getBasename(filename);
+    qaFilename += dataFileComponent.basename;
     qaFilename += ".txt";
   }
 
@@ -4263,12 +4204,12 @@ QA::openQcNc(InFile &in)
   {
     // continue a previous session
     importedRecFromPrevQA=nc->getNumOfRecords();
-    currQcRec += importedRecFromPrevQA;
-    if( currQcRec )
+    currQARec += importedRecFromPrevQA;
+    if( currQARec )
       isNotFirstRecord = true;
 
     initDataOutputBuffer();
-    qaTime.sharedRecordFlag.initBuffer(nc, currQcRec);
+    qaTime.sharedRecordFlag.initBuffer(nc, currQARec);
 
     initResumeSession();
     isResumeSession=true;
@@ -4281,7 +4222,7 @@ QA::openQcNc(InFile &in)
     return;
   }
 
-  if( currQcRec == 0 && in.nc.getNumOfRecords() == 1 )
+  if( currQARec == 0 && in.nc.getNumOfRecords() == 1 )
     qaTime.isSingleTimeValue = true;
 
   // So, we have to generate a netCDF file from almost scratch;
@@ -4306,7 +4247,7 @@ QA::openQcNc(InFile &in)
       }
     }
 
-    qaTime.openQcNcContrib(nc);
+    qaTime.openQA_NcContrib(nc);
   }
   else if( isCheckTime )
   {
@@ -4317,7 +4258,7 @@ QA::openQcNc(InFile &in)
 
   // create variable for the data statics etc.
   for( size_t m=0 ; m < varMeDa.size() ; ++m )
-    varMeDa[m].qaData.openQcNcContrib(nc, varMeDa[m].var);
+    varMeDa[m].qaData.openQA_NcContrib(nc, varMeDa[m].var);
 
   // global atts at creation.
   initGlobalAtts(in);
@@ -4663,6 +4604,15 @@ QA::setExit( int e )
 }
 
 void
+QA::setFilename(std::string f)
+{
+  dataFileComponent = hdhC::splitFile(f);
+  dataFileComponent.path.clear();  // to be set by option
+
+  return;
+}
+
+void
 QA::setTable(std::string t, std::string acronym)
 {
   // is is possible that this method is called from a spot,
@@ -4728,7 +4678,7 @@ QA::testPeriod(void)
 
   // Does the filename has a trailing date range?
   // Strip off the extension.
-  std::string f( filename.substr(0, filename.size()-3 ) );
+  std::string f( dataFileComponent.basename );
 
   std::vector<std::string> sd;
   sd.push_back( "" );
@@ -4757,89 +4707,176 @@ QA::testPeriod(void)
   // now we have found two candidates for a date
   // compose ISO-8601 strings
   std::vector<Date> period;
-
-  // convert ascii formated date to class Date
   qaTime.getDRSformattedDateRange(period, sd);
 
+  Date* fN_left = &period[0];
+  Date* fN_right = &period[1];
+
   // necessary for validity (not sufficient)
-  if( period[0] > period[1] )
+  if( *fN_left > *fN_right )
   {
      std::string key("97");
-
      if( notes->inq( key, fileStr) )
      {
-       std::string capt("invalid time-stamp in filename.");
+       std::string capt("invalid time-stamp in the filename, found ");
+       capt += hdhC::tf_val(sd[0] + "-" + sd[1]);
 
        (void) notes->operate(capt) ;
-       {
-         notes->setCheckMetaStr(fail);
-         setExit( notes->getExitValue() ) ;
-       }
+       notes->setCheckMetaStr( fail );
      }
 
      return false;
   }
+
+  Date* tV_left = 0 ;
+  Date* tV_right = 0;
+
+  Date* tV_left_obj = 0 ;
+  Date* tV_right_obj = 0;
+  Date* tB_left_obj = 0 ;
+  Date* tB_right_obj = 0;
+
+  bool isLeft_fT_not_tV ;
+  bool isRight_fT_not_tV ;
 
   if( qaTime.isTimeBounds)
   {
-    period.push_back( qaTime.getDate("first", "left") );
-    period.push_back( qaTime.getDate("last", "right") );
+    tB_left_obj = new Date(qaTime.refDate);
+    tB_left_obj->addTime(qaTime.firstTimeBoundsValue[0]);
+    tV_left = tB_left_obj;
+
+    tB_right_obj = new Date(qaTime.refDate);
+    tB_right_obj->addTime(qaTime.firstTimeBoundsValue[1]);
+    tV_right = tB_right_obj;
+
+    isLeft_fT_not_tV = *tB_left_obj != *fN_left ;
+    isRight_fT_not_tV = *tB_right_obj != *fN_right ;
+
+/*
+    double db_centre=(qaTime.firstTimeBoundsValue[0]
+                        + qaTime.firstTimeBoundsValue[1])/2. ;
+    if( db_centre != qaTime.firstTimeValue )
+    {
+      std::string key("16_11");
+      if( notes->inq( key, fVarname) )
+      {
+        std::string capt("Range of variable time_bnds is not centred around variable time.");
+
+        (void) notes->operate(capt) ;
+        notes->setCheckMetaStr( fail );
+      }
+    }
+*/
   }
   else
   {
-    period.push_back( qaTime.getDate("first") );
-    period.push_back( qaTime.getDate("last") );
+    tV_left_obj = new Date(qaTime.refDate);
+    if( qaTime.firstTimeValue != 0. )
+      tV_left_obj->addTime(qaTime.firstTimeValue);
+    tV_left = tV_left_obj;
+
+    tV_right_obj = new Date(qaTime.refDate);
+    if( qaTime.lastTimeValue != 0. )
+      tV_right_obj->addTime(qaTime.lastTimeValue);
+    tV_right = tV_right_obj;
+
+    isLeft_fT_not_tV = *tV_left != *fN_left ;
+    isRight_fT_not_tV = *tV_right != *fN_right ;
+
+    std::string key("16_12");
+    if( notes->inq( key, fVarname) )
+    {
+      std::string capt("Variable time_bnds is missing");
+
+      (void) notes->operate(capt) ;
+      notes->setCheckMetaStr( fail );
+    }
   }
 
-  if( period[2] != period[0] )
+  if( isLeft_fT_not_tV )
+  {
+    // CMOR isn't capable of working with the time_bounds. Hence, an exception
+    // rule is added to the CORDEX archive design as to the period in filenames:
+    // "It is also allowed to use time values of the first and last records
+    // in NetCDF files for averaged data." However, this does not lead to a
+    // working solution. In fact, CMOR sets StartTime to the beginning  of
+    // the month bearing the first time value.
+    // So, here is a LEX CMOR
+    if( tV_left_obj == 0 )
+    {
+      tV_left_obj = new Date(qaTime.refDate);
+      tV_left = tV_left_obj;
+      if( qaTime.firstTimeValue != 0. )
+        tV_left->addTime(qaTime.firstTimeValue);
+    }
+    double monDaysNum = tV_left->getMonthDaysNum();
+    tV_left->addTime(-monDaysNum, "day");
+
+    if( tV_right_obj == 0 )
+    {
+      tV_right_obj = new Date(qaTime.refDate);
+      tV_right = tV_right_obj;
+      if( qaTime.lastTimeValue != 0. )
+        tV_right->addTime(qaTime.lastTimeValue);
+    }
+
+    isLeft_fT_not_tV = *tV_left != *fN_left ;
+    isRight_fT_not_tV = *tV_right != *fN_right ;
+  }
+
+  // the annotation
+  if( isLeft_fT_not_tV )
   {
      std::string key("95");
-
      if( notes->inq( key, fileStr) )
      {
-       std::string capt("filename time-stamp (1st date): misaligned to time values.");
+       std::string capt("First date ");
+       capt += hdhC::sAssign("(filename)", fN_left->getDate()) ;
+       capt += " and time " ;
+       if( tB_left_obj )
+         capt += "bounds ";
+       capt += hdhC::sAssign("data", tV_left->getDate());
+       capt += " are misaligned";
 
-       std::string text("from time data=");
-       text += period[2].getDate();
-       text += "\nfilename=" ;
-       text += period[0].getDate() ;
-
-       (void) notes->operate(capt, text) ;
-       {
-         notes->setCheckMetaStr(fail);
-         setExit( notes->getExitValue() ) ;
-       }
+       (void) notes->operate(capt) ;
+       notes->setCheckMetaStr( fail );
      }
   }
 
-  if( isFileComplete && period[3] != period[1] )
+  // test completeness: the end of the file
+  if( isFileComplete && isRight_fT_not_tV )
   {
-     std::string key("96");
-
+     std::string key("95");
      if( notes->inq( key, fileStr) )
      {
-       std::string capt("filename time-stamp (2nd date): misaligned to time values.");
+       std::string capt("Second date ");
+       capt += hdhC::sAssign("(filename)", fN_right->getDate()) ;
 
-       std::string text;
-       if( period[3] > period[1] )
-         text = "Time values exceed period in filename." ;
-       else
-         text = "Period in filename exceeds time values." ;
+       capt += " is misaligned to time " ;
+       if( tB_left_obj )
+         capt += "bounds ";
+       capt += hdhC::sAssign("data", tB_right_obj->getDate());
 
-       text += "\ndata=" ;
-       text += period[3].getDate() ;
-       text += "\nfilename=" ;
-       text += period[1].getDate();
-
-       (void) notes->operate(capt, text) ;
-       {
-         notes->setCheckMetaStr(fail);
-         setExit( notes->getExitValue() ) ;
-       }
+       (void) notes->operate(capt) ;
+       notes->setCheckMetaStr( fail );
      }
-
-     return false;
   }
+
+  // format of period dates.
+/*
+  if( testPeriodFormat(sd) )
+    // period requires a cut specific to the various frequencies.
+    testPeriodCut(sd) ;
+*/
+
+  if( tV_left_obj )
+    delete tV_left_obj;
+  if( tV_right_obj )
+    delete tV_right_obj;
+  if( tB_left_obj )
+    delete tB_left_obj;
+  if( tB_right_obj )
+    delete tB_right_obj;
 
   // complete
   return false;
@@ -4876,7 +4913,7 @@ QA::setVarMetaData(VariableMetaData &vMD)
 
   // get original dimensions and convert names into a string
   std::vector<std::string>
-      vs2( pIn->nc.getDimNames(vMD.name) );
+      vs2( pIn->nc.getDimName(vMD.name) );
 
   vMD.dims += vs2[0] ;
   for( size_t k=1; k < vs2.size() ; ++k)

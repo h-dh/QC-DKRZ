@@ -113,6 +113,7 @@ class TimeControl : public IObj
    std::string recVarName;
 
    bool isTime;
+   MtrxArr<double> tmp_mv;
 
    int identNum;
    int argCount;
