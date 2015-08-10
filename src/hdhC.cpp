@@ -1119,7 +1119,7 @@ setFilename(std::string& f)
      fC.filename = f;
 
    // file components
-   if( (pos = fC.file.rfind('.') ) < std::string::npos )
+   if( (pos = fC.filename.rfind('.') ) < std::string::npos )
    {
      if( pos == 0 )
        fC.extension = fC.filename;  // no basename

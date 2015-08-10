@@ -3607,7 +3607,7 @@ CF::chap2_1(void)
      return;
 
   // filename extension
-  if( pIn->filenameItems.extension != ".nc" )
+  if( pIn->filenameItems.extension != "nc" )
   {
     if( notes->inq(bKey + "21a") )
     {
