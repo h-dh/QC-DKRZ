@@ -2959,6 +2959,13 @@ CF::setCheck(std::string &s)
    return;
 }
 
+void
+CF::setFilename(std::string f)
+{
+  filenameItems = hdhC::setFilename(f);
+  return;
+}
+
 bool
 CF::timeUnitsFormat(Variable& var, bool isAnnot)
 {
@@ -3600,7 +3607,7 @@ CF::chap2_1(void)
      return;
 
   // filename extension
-  if( pIn->filename.substr( pIn->filename.size() - 3) != ".nc" )
+  if( pIn->filenameItems.extension != ".nc" )
   {
     if( notes->inq(bKey + "21a") )
     {

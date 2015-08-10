@@ -285,7 +285,7 @@ QA_Time::getDRSformattedDateRange(std::vector<Date> &period,
 void
 QA_Time::getTimeBoundsValues(double* pair, size_t rec, double offset)
 {
-  int mv_ix = pIn->nc.getData(mv_tb, timeBoundsName, rec );
+  int mv_ix = pIn->nc.getData(mv_tb, boundsName, rec );
 
   double** m2D =mv_tb.getM();
   pair[0]=m2D[mv_ix][0] + offset;
@@ -306,13 +306,13 @@ QA_Time::initTimeBounds(double offset)
     return false;
   }
 
-  (void) pIn->nc.getData(mv_tb, timeBoundsName, 0 );
+  (void) pIn->nc.getData(mv_tb, boundsName, 0 );
   double** m2D =mv_tb.getM();
   firstTimeBoundsValue[0]=m2D[0][0] + offset;
   firstTimeBoundsValue[1]=m2D[0][1] + offset;
 
-  int mv_ix = pIn->nc.getData(mv_tb, timeBoundsName,
-                                  pIn->nc.getNumOfRows(timeBoundsName)-1);
+  int mv_ix = pIn->nc.getData(mv_tb, boundsName,
+                                  pIn->nc.getNumOfRows(boundsName)-1);
   m2D =mv_tb.getM();
   lastTimeBoundsValue[0]=m2D[mv_ix][0] + offset;
   lastTimeBoundsValue[1]=m2D[mv_ix][1] + offset;
@@ -329,9 +329,9 @@ QA_Time::init(InFile *p, Annotation *n, QA *q)
 
    if( pIn->cF )
    {
-     timeName = pIn->cF->timeName;
+     name = pIn->cF->timeName;
      time_ix  = pIn->cF->time_ix;
-     timeBoundsName = pIn->variable[time_ix].bounds ;
+     boundsName = pIn->variable[time_ix].bounds ;
    }
    else
    {
@@ -340,25 +340,25 @@ QA_Time::init(InFile *p, Annotation *n, QA *q)
      {
        if( pIn->variable[i].name == "time" )
        {
-         timeName = pIn->variable[i].name ;
+         name = pIn->variable[i].name ;
          time_ix = static_cast<int>(i) ;
 
-         timeBoundsName = pIn->variable[i].bounds ;
+         boundsName = pIn->variable[i].bounds ;
        }
      }
    }
-   timeBounds_ix = pIn->getVarIndex(timeBoundsName);
+   timeBounds_ix = pIn->getVarIndex(boundsName);
 
    // time_bnds available? Yes, then enable a check
-   if( timeBoundsName.size() )
+   if( boundsName.size() )
       if( ! pIn->variable[timeBounds_ix].isExcluded )
          enableTimeBoundsTest();
 
    timeOutputBuffer.initBuffer(pQA->nc, pQA->currQARec);
-   timeOutputBuffer.setName(timeName);
+   timeOutputBuffer.setName(name);
 
    sharedRecordFlag.initBuffer(pQA->nc, pQA->currQARec);
-   sharedRecordFlag.setName( timeName + "_flag" );
+   sharedRecordFlag.setName( name + "_flag" );
 
    // set date to a reference time
    std::string str(pIn->getTimeUnit());
@@ -431,7 +431,7 @@ QA_Time::initAbsoluteTime(std::string &units)
 {
   size_t i;
   for( i=0 ; i < pIn->varSz ; ++i)
-    if( pIn->variable[i].name == timeName )
+    if( pIn->variable[i].name == name )
        break;
 
   if( i == pIn->varSz )
@@ -440,7 +440,7 @@ QA_Time::initAbsoluteTime(std::string &units)
   isFormattedDate = true;
 
   // proleptic Gregorian, no-leap, 360_day
-  calendar = pIn->nc.getAttString("calendar", timeName);
+  calendar = pIn->nc.getAttString("calendar", name);
   if( calendar.size() )
   {
      isNoCalendar=false;
@@ -449,10 +449,10 @@ QA_Time::initAbsoluteTime(std::string &units)
 
   // time_bounds
   disableTimeBoundsTest();
-  timeBoundsName = pIn->variable[i].bounds;
+  boundsName = pIn->variable[i].bounds;
 
   // time_bnds available? Yes, then enable a check
-  if( timeBoundsName.size() )
+  if( boundsName.size() )
      if( ! pIn->variable[i].isExcluded )
         enableTimeBoundsTest();
 
@@ -468,14 +468,14 @@ QA_Time::initAbsoluteTime(std::string &units)
      }
   }
 
-  if( mv_t[ pIn->nc.getData(mv_t, timeName, 0) ] == MAXDOUBLE)
+  if( mv_t[ pIn->nc.getData(mv_t, name, 0) ] == MAXDOUBLE)
      return true;
 
   currTimeValue += refTimeOffset;
   firstTimeValue = currTimeValue;
 
-  size_t recSz = pIn->nc.getNumOfRows(timeName) ;
-  lastTimeValue=mv_t[ pIn->nc.getData(mv_t, timeName, recSz-1) ] + refTimeOffset;
+  size_t recSz = pIn->nc.getNumOfRows(name) ;
+  lastTimeValue=mv_t[ pIn->nc.getData(mv_t, name, recSz-1) ] + refTimeOffset;
 
   if( prevTimeValue == MAXDOUBLE )
   {
@@ -487,7 +487,7 @@ QA_Time::initAbsoluteTime(std::string &units)
      if( recSz > 1 )
      {
        if( pIn->currRec < recSz )
-         prevTimeValue = mv_t[ pIn->nc.getData(mv_t, timeName, 1) ]
+         prevTimeValue = mv_t[ pIn->nc.getData(mv_t, name, 1) ]
                             + refTimeOffset ;
 
        // an arbitrary setting that would pass the first test;
@@ -538,7 +538,7 @@ QA_Time::initRelativeTime(std::string &units)
      return true;  // no time
 
    // proleptic Gregorian, no-leap, 360_day
-   calendar = pIn->nc.getAttString("calendar", timeName);
+   calendar = pIn->nc.getAttString("calendar", name);
 
    if( calendar.size() )
    {
@@ -547,16 +547,16 @@ QA_Time::initRelativeTime(std::string &units)
    }
    refDate.setDate( units );
 
-   currTimeValue=mv_t[ pIn->nc.getData(mv_t, timeName, 0) ] ;
+   currTimeValue=mv_t[ pIn->nc.getData(mv_t, name, 0) ] ;
    if( currTimeValue == MAXDOUBLE)
       return true;
 
    currTimeValue += refTimeOffset;
    firstTimeValue = currTimeValue ;
 
-   size_t recSz = pIn->nc.getNumOfRows(timeName) ;
+   size_t recSz = pIn->nc.getNumOfRows(name) ;
 
-   lastTimeValue=mv_t[ pIn->nc.getData(mv_t, timeName, recSz-1) ]
+   lastTimeValue=mv_t[ pIn->nc.getData(mv_t, name, recSz-1) ]
                     + refTimeOffset ;
 
    if( isTimeBounds )
@@ -638,21 +638,21 @@ QA_Time::initResumeSession(void)
    // Note: this fails, if the previous file has a
    //       different reference date AND the QA resumes the
    //       current file after an error.
-   pQA->nc->getAttValues( dv, "last_time", timeName);
+   pQA->nc->getAttValues( dv, "last_time", name);
    prevTimeValue=dv[0];
 
-   pQA->nc->getAttValues( dv, "last_time_bnd_0", timeName);
+   pQA->nc->getAttValues( dv, "last_time_bnd_0", name);
    prevTimeBoundsValue[0]=dv[0];
 
-   pQA->nc->getAttValues( dv, "last_time_bnd_1", timeName);
+   pQA->nc->getAttValues( dv, "last_time_bnd_1", name);
    prevTimeBoundsValue[1]=dv[0];
 
-   pQA->nc->getAttValues( dv, "last_time_step", timeName + "_step");
+   pQA->nc->getAttValues( dv, "last_time_step", name + "_step");
    referenceTimeStep=dv[0];
 
    // case: two different reference dates are effective.
-   std::string tu_0(pQA->nc->getAttString("units", timeName));
-   std::string tu_1(pIn->nc.getAttString("units", timeName));
+   std::string tu_0(pQA->nc->getAttString("units", name));
+   std::string tu_1(pIn->nc.getAttString("units", name));
    if( ! (tu_0 == tu_1 ) )
    {
       if( ! isFormattedDate )
@@ -674,7 +674,7 @@ QA_Time::initResumeSession(void)
 
    // get internal values
    isTimeBounds =
-     static_cast<bool>(pQA->nc->getAttValue("isTimeBoundsTest", timeName));
+     static_cast<bool>(pQA->nc->getAttValue("isTimeBoundsTest", name));
 
    return;
 }
@@ -832,8 +832,8 @@ QA_Time::initTimeTable(std::string id_1st, std::string id_2nd)
 
      if( refDate.getJulianDate(currTimeValue) < tt_dateRange[0].getJulianDate() )
      { // error: time record out of range (before)
-       std::string key("63_1");
-       if( notes->inq( key, timeName) )
+       std::string key("6_4");
+       if( notes->inq( key, name) )
        {
          std::string capt("time value before the first time-table range");
 
@@ -905,8 +905,8 @@ QA_Time::parseTimeTable(size_t rec)
 
      if( tt_count_recs > num )
      {  // issue an error flag; number of records too large
-        std::string key("63_4");
-        if( notes->inq( key, timeName) )
+        std::string key("6_7");
+        if( notes->inq( key, name) )
         {
           std::string capt("too many time values compared to the time-table");
 
@@ -946,8 +946,8 @@ QA_Time::parseTimeTable(size_t rec)
 
      if( tt_index == tt_xmode.size() || t0 != tt_xmode[tt_index] )
      {
-       std::string key("63_3");
-       if( notes->inq( key, timeName) )
+       std::string key("6_6");
+       if( notes->inq( key, name) )
        {
          std::string capt("time record does not match time-table value");
 
@@ -980,8 +980,8 @@ QA_Time::parseTimeTable(size_t rec)
   {
     if( tt_index == tt_xmode.size() )
     { // error: not enough ranges or misplaced
-       std::string key("63_2");
-       if( notes->inq( key, timeName) )
+       std::string key("6_5");
+       if( notes->inq( key, name) )
        {
          std::string capt("time record after the last time-table range");
 
@@ -1039,7 +1039,7 @@ QA_Time::openQA_NcContrib(NcAPI *nc)
    vs.clear();
    vs.push_back( "time");
 
-   currTimeValue=mv_t[ pIn->nc.getData(mv_t, timeName, 0) ] + refTimeOffset;
+   currTimeValue=mv_t[ pIn->nc.getData(mv_t, name, 0) ] + refTimeOffset;
    nc->setAtt( "time", "first_time", currTimeValue);
    nc->setAtt( "time", "first_date", getDateStr(currTimeValue) );
 
@@ -1050,8 +1050,8 @@ QA_Time::openQA_NcContrib(NcAPI *nc)
    nc->setAtt( "time", "isTimeBoundsTest", static_cast<double>(0.));
 
    vs.clear();
-   std::string str0( timeName + "_flag") ;
-   vs.push_back(timeName);
+   std::string str0( name + "_flag") ;
+   vs.push_back(name);
    nc->defineVar( str0, NC_INT, vs);
    vs[0]="accumulated record-tag number";
    nc->setAtt( str0, "long_name", vs[0]);
@@ -1121,7 +1121,7 @@ QA_Time::sync(bool isCheckData, bool enabledPostProc )
 
   for( size_t inRec=0 ; inRec < inRecNum ; ++inRec )
   {
-    inTime = mv_t[ pIn->nc.getData(mv_t, timeName, inRec) ] + refTimeOffset ;
+    inTime = mv_t[ pIn->nc.getData(mv_t, name, inRec) ] + refTimeOffset ;
 
     if( qa_t == inTime )
     {
@@ -1146,7 +1146,7 @@ QA_Time::sync(bool isCheckData, bool enabledPostProc )
   // arriving here is an error, because the infile production
   // was reset or the file was shortened.
   std::string key("80");
-  if( notes->inq( key, timeName) )
+  if( notes->inq( key, name) )
   {
      std::string capt("renewal of a file?") ;
 
@@ -1196,7 +1196,7 @@ QA_Time::testTimeBounds(NcAPI &nc)
   if( diff <= 0. )
   {
     std::string key=("R8");  // no multiple
-    if( notes->inq( key, timeName, "NO_MT") )
+    if( notes->inq( key, name, "NO_MT") )
     {
       sharedRecordFlag.currFlag += 8 ;
 
@@ -1251,7 +1251,7 @@ QA_Time::testTimeBounds(NcAPI &nc)
           return ;  // no error messaging
         }
 
-        key="65_1";
+        key="6_10";
       }
       else
       {
@@ -1259,7 +1259,7 @@ QA_Time::testTimeBounds(NcAPI &nc)
         sharedRecordFlag.currFlag += 16;
       }
 
-      if( notes->inq( key, timeBoundsName, "NO_MT") )
+      if( notes->inq( key, boundsName, "NO_MT") )
       {
         std::string capt("overlapping time bounds");
         if( isAcrossFiles )
@@ -1302,14 +1302,14 @@ QA_Time::testTimeBounds(NcAPI &nc)
       bool isAcrossFiles = pIn->currRec == 0 ;
 
       if( isAcrossFiles )
-        key="65_2";
+        key="6_11";
       else
       {
         key="R32";
         sharedRecordFlag.currFlag += 32 ;
       }
 
-      if( notes->inq( key, timeBoundsName, "NO_MT") )
+      if( notes->inq( key, boundsName, "NO_MT") )
       {
         std::string capt("gap between time bounds ranges");
 
@@ -1354,7 +1354,7 @@ QA_Time::testTimeBounds(NcAPI &nc)
 void
 QA_Time::testDate(NcAPI &nc)
 {
-  currTimeValue = mv_t[ pIn->nc.getData(mv_t, timeName, pIn->currRec) ]
+  currTimeValue = mv_t[ pIn->nc.getData(mv_t, name, pIn->currRec) ]
                     + refTimeOffset ;
 
   // is current time reasonable?
@@ -1411,14 +1411,14 @@ QA_Time::testTimeStep(void)
 
     std::string key;
     if( isAcrossFiles )
-      key="66_1";
+      key="6_12";
     else
     {
       key="R1";
       sharedRecordFlag.currFlag += 1;
     }
 
-    if( notes->inq( key, timeName, "NO_MT") )
+    if( notes->inq( key, name, "NO_MT") )
     {
       std::string capt ;
       std::ostringstream ostr(std::ios::app);
@@ -1471,7 +1471,7 @@ QA_Time::testTimeStep(void)
 
     std::string key ;
     if( isAcrossFiles )
-      key="66_3";
+      key="6_14";
     else
       key="R4";
 
@@ -1480,7 +1480,7 @@ QA_Time::testTimeStep(void)
       if( isAcrossFiles )
         sharedRecordFlag.currFlag += 4 ;
 
-      if( notes->inq( key, timeName, "NO_MT") )
+      if( notes->inq( key, name, "NO_MT") )
       {
         std::string capt("identical time values");
         std::ostringstream ostr(std::ios::app);
@@ -1531,11 +1531,11 @@ QA_Time::testTimeStep(void)
 
     std::string key ;
     if( isAcrossFiles )
-      key="66_2";
+      key="6_13";
     else
       key="R2";
 
-    if( notes->inq( key, timeName, "NO_MT") )
+    if( notes->inq( key, name, "NO_MT") )
     {
       std::string capt;
       std::ostringstream ostr(std::ios::app);

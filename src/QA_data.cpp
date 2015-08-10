@@ -1254,7 +1254,7 @@ QA_Data::checkFinally(Variable *var)
 {
   if( isEntirelyConst && ! var->isScalar )
   {
-     std::string key("60_1");
+     std::string key("6_1");
      if( notes->inq( key, name, ANNOT_NO_MT) )
      {
        std::string capt("entire file of const value=");
@@ -1276,7 +1276,7 @@ QA_Data::checkFinally(Variable *var)
 
   if( isEntirelyFillValue )
   {
-     std::string key("60_2");
+     std::string key("6_2");
      if( notes->inq( key, name, ANNOT_NO_MT) )
      {
        std::string capt("data set entirely of _FillValue");
@@ -1296,7 +1296,7 @@ QA_Data::checkFinally(Variable *var)
 
    if( replicated && allRecordsAreIdentical && ! pIn->isRecSingle )
    {
-      std::string key("60_3");
+      std::string key("6_3");
       if( notes->inq( key, name, ANNOT_NO_MT) )
       {
         std::string capt("all records (data at given time steps) are identical") ;
@@ -1359,15 +1359,15 @@ QA_Data::disableTests(std::string name)
    // note: R6400 will be disabled in the InFile object. This is
    // invoked by the qaExecutor script.
 
-   key="60_1";
+   key="6_1";
    if( ! notes->inq( key, name, "INQ_ONLY") )
      isEntirelyConst=false;
 
-   key="60_2";
+   key="6_2";
    if( ! notes->inq( key, name, "INQ_ONLY") )
      isEntirelyFillValue=false;
 
-   key="60_3";
+   key="6_3";
    if( ! notes->inq( key, name, "INQ_ONLY") )
      allRecordsAreIdentical=false;
 
@@ -1572,7 +1572,7 @@ QA_Data::openQA_NcContrib(NcAPI *nc, Variable *var)
   if( var->isFixed )
     dimStr = "fixed" ;
   else
-    dimStr = pQA->qaTime.timeName.c_str() ;
+    dimStr = pQA->qaTime.name.c_str() ;
 
   // different, but derived, varnames
   vs.clear();

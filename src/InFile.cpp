@@ -191,13 +191,7 @@ InFile::excludeVars(void)
 std::string
 InFile::getAbsoluteFilename(void)
 {
-  std::string s;
-  if( path.size() > 0 )
-    s = path + "/" ;
-  if( filename.size() > 0 )
-    s += filename;
-
-  return s;
+  return filenameItems.file ;
 }
 
 void
@@ -448,7 +442,10 @@ InFile::getVariable(void)
     ds = nc.getDimName( var.name );
 
     for( size_t j=0 ; j < ds.size() ; ++j)
+    {
       var.dimName.push_back( ds[j] );
+      var.dim_ix.push_back(j);
+    }
 
     // get meta data of variables.
     getVariableMeta(var);
@@ -556,7 +553,7 @@ InFile::init(void)
   isTime=false;
 
   if( notes )
-    notes->setFilename(filename);
+    notes->setFilename(filenameItems.filename);
 
   if( openNc() )
   {
@@ -588,7 +585,7 @@ InFile::init(void)
     {
       std::ostringstream ostr(std::ios::app);
       ostr << "InFile::init()\n";
-      ostr << "Could not open NetCDF file " << filename;
+      ostr << "Could not open NetCDF file " << filenameItems.file;
       exceptionError( ostr.str() );
 
       finally(3, ostr.str());
@@ -742,7 +739,7 @@ InFile::openNc(bool isNew)
     {
       if( path.size() > 0 )
         nc.setPath(str);
-      if( ! nc.open(filename.c_str()) )
+      if( ! nc.open(filenameItems.file.c_str()) )
         throw "Exception";
     }
     catch (char const*)
@@ -808,31 +805,10 @@ InFile::openNc(bool isNew)
 }
 
 void
-InFile::setFilename(std::string fn)
+InFile::setFilename(std::string f)
 {
-  // filename with path
-  if( fn.find('/') == std::string::npos )
-  {
-    if( path.size() )
-      fn = path + "/" + fn;
-  }
-
-  filename=fn;
-
+  filenameItems = hdhC::setFilename(f);
   return;
-}
-
-void
-InFile::setFilePath(std::string pth)
-{
-  size_t sz = pth.size();
-
-  if( sz && pth[ sz-1] == '/' )
-    path = pth.substr(0,sz-1);
-  else
-    path = pth;
-
-  return ;
 }
 
 void

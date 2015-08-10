@@ -73,7 +73,7 @@ FD_interface::applyOptions(void)
         if( split[0][0] == 's' || split[0][0] == 'S' )
         {
           isSaveBuild=true;
-          filename=split[1];
+          setFilename( split[1] );
           continue;
         }
      }
@@ -132,7 +132,7 @@ FD_interface::applyOptions(void)
    if( rebuildFilename.size() && ! isSaveBuild )
    {
       isSaveBuild=true;
-      filename=rebuildFilename.substr(0,rebuildFilename.size()-6);
+      setFilename(rebuildFilename.substr(0,rebuildFilename.size()-6));
    }
 
    return;
@@ -207,10 +207,10 @@ FD_interface::exceptionError(std::string str)
     xcptn.strError = "fd_error" ;
 
      // base name if available, i.e. after the initialisation of the InFile obj
-    if( filename.size() > 0 )
+    if( filenameItems.is )
     {
       xcptn.strError += "_";
-      xcptn.strError += hdhC::getBasename(filename) ;
+      xcptn.strError += filenameItems.basename ;
     }
     xcptn.strError += ".txt";
 
@@ -238,10 +238,10 @@ FD_interface::exceptionWarning(std::string str)
 
     xcptn.strWarning = "fd_warning" ;
 
-    if( filename.size() > 0 )
+    if( filenameItems.is )
     {
       xcptn.strWarning += "_";
-      xcptn.strWarning += hdhC::getBasename(filename) ;
+      xcptn.strWarning += filenameItems.basename ;
     }
     xcptn.strWarning += ".txt";
 
@@ -380,15 +380,12 @@ FD_interface::init(void)
   // varnames in a request (or by default) and using stdout
   // will result in a mess, because several obj write to stdout.
 
-  vName = pIn->variable[0].name ;
+  if( filenameItems.is )
+    setFilename( filenameItems.file + "." + pIn->variable[0].name ) ;
 //  pGM = pIn->variable[0].pGM;
 
-  std::string str(".");
-  str += vName;
 
-  if( filename.size() > 0 )
-     if( filename.find(vName) == std::string::npos )
-       filename += str;
+  std::string str;
 
   // A freqDist for the total domain (by default) or
   // any specified number of regions.
@@ -396,7 +393,7 @@ FD_interface::init(void)
   for( size_t i=0 ; i <= regioStr.size() ; ++i)
   {
     fD.push_back( FreqDist<float>() );
-    fD.back().setOutputFilename( filename) ;
+    fD.back().setOutputFilename( filenameItems.filename) ;
     if( isReadProperties )
       fD.back().setReadOnlyProperties();
   }
@@ -458,7 +455,7 @@ FD_interface::init(void)
     for(size_t i=0 ; i < fD.size() ; ++i)
     {
       str = "#FILE=" ;
-      str += pIn->filename;
+      str += pIn->filenameItems.filename;
       fD[i].setInfo(str);
 
       str ="#VARIABLE=";
@@ -545,7 +542,7 @@ FD_interface::initTimeWindow(void)
    beginDateStr = beginDate.getDate();
    endDateStr = endDate.getDate() ;
 
-   str = hdhC::getBasename( filename);
+   str = filenameItems.basename;
    str = str.substr(3); // ignore leading three; no extension.
 
 // ++++++ Looking for a file +++++++++++++++++++++++
@@ -637,7 +634,7 @@ FD_interface::initTimeWindow(void)
 
    // compose output filename; use only integer years
    // ranging from year A inclusively and year B exclusively.
-   str = hdhC::getBasename( filename);
+   str = filenameItems.basename;
    str += "_" ;
 
    str += beginDateStr.substr(0,4);
@@ -716,8 +713,8 @@ FD_interface::print(std::string fromDate,
 
    std::string str;
 
-   if( filename.size() > 0 )
-     str=filename;
+   if( filenameItems.is )
+     str=filenameItems.filename;
    else
      str="frequencyDist." + vName;
 
@@ -817,3 +814,11 @@ FD_interface::rebuild( std::string f)
 
   return false;  // no rebuild
 }
+
+void
+FD_interface::setFilename(std::string f)
+{
+  filenameItems = hdhC::setFilename(f);
+  return;
+}
+

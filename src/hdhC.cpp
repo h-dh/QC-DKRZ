@@ -1079,10 +1079,10 @@ uint32_t fletcher32_LE_clear( T *data, size_t len, bool *reset, size_t nShift )
 
 // ----------------------------------------------------
 
-struct FileComponent
-splitFile(std::string& f)
+struct FilenameItems
+setFilename(std::string& f)
 {
-   struct FileComponent fC;
+   struct FilenameItems fC;
 
    if( f.size() == 0 )
    {
@@ -1101,29 +1101,36 @@ splitFile(std::string& f)
      if( pos == 0 )
      {
        fC.path = "/";
+       if( ++pos == f.size() )
+         return fC; // only the root path
+
        fC.filename = f;
      }
      else
      {
        fC.path = f.substr( 0, pos ) ;
-       fC.filename = f.substr(++pos);
+       if( ++pos == f.size() )
+         return fC; // only a path
+
+       fC.filename = f.substr(pos);
      }
    }
    else
-   {
      fC.filename = f;
-     pos=0;
-   }
 
    // file components
    if( (pos = fC.file.rfind('.') ) < std::string::npos )
    {
      if( pos == 0 )
-       fC.extension = fC.filename;
+       fC.extension = fC.filename;  // no basename
      else
      {
        fC.basename = fC.filename.substr( 0, pos ) ;
-       fC.extension  = fC.filename.substr(++pos);
+
+       if( ++pos == fC.filename.size() )
+         return fC; // only a basename
+
+       fC.extension  = fC.filename.substr(pos);
      }
    }
    else
@@ -1134,28 +1141,28 @@ splitFile(std::string& f)
 
 std::string getBasename(std::string &str)
 {
-  struct FileComponent fC = splitFile(str);
+  struct FilenameItems fC = setFilename(str);
 
   return fC.basename;
 }
 
 std::string getExtension(std::string &str)
 {
-  struct FileComponent fC = splitFile(str);
+  struct FilenameItems fC = setFilename(str);
 
   return fC.extension;
 }
 
 std::string getFilename(std::string &str)
 {
-  struct FileComponent fC = splitFile(str);
+  struct FilenameItems fC = setFilename(str);
 
   return fC.filename;
 }
 
 std::string getPath(std::string &str, bool isWithSlash)
 {
-  struct FileComponent fC = splitFile(str);
+  struct FilenameItems fC = setFilename(str);
 
   if( isWithSlash )
     fC.path += '/' ;
@@ -1169,7 +1176,7 @@ void getPathComponents(std::string &str,
              std::string &base,   //filename without extension
              std::string &ext)    //the extension without '.'
 {
-  struct FileComponent fC = splitFile(str);
+  struct FilenameItems fC = setFilename(str);
 
   path  = fC.path;
   fName = fC.filename;
@@ -2073,6 +2080,22 @@ std::string clearSpaces(std::string &str )
       s += str[p] ;
 
   return s ;
+}
+
+//! concatenate a string-vector to a comma-separated (with blanks) string
+std::string
+catVector2Str(std::vector<std::string>& vs)
+{
+  std::string s;
+  for( size_t i=0 ; i < vs.size() ; ++i)
+  {
+    if(i)
+      s += ", ";
+
+    s += vs[i];
+  }
+
+  return s;
 }
 
 std::string sAssign(std::string right)

@@ -42,12 +42,12 @@ QA::appendToHistory(size_t eCode)
       size_t pos;
       if( (pos=hstPath.rfind("\n")) < std::string::npos )
          hstPath.erase(pos,1);
-      if( dataFileComponent.path != hstPath )
+      if( filenameItems.path != hstPath )
       {
         hst += "\n" ;
         hst += today;
         hst += " changed path to data=";
-        hst += dataFileComponent.path + "\n" ;
+        hst += filenameItems.path + "\n" ;
       }
     }
   }
@@ -56,15 +56,7 @@ QA::appendToHistory(size_t eCode)
     // the root of the history string
     hst += today;
     hst += " path_to_data=";
-    hst += dataFileComponent.path ;
-/*
-    hst += "\nfilenames and tracking_id in file tid_";
-
-    std::string t0(qaFilename.substr(3));
-    t0 = t0.substr(0, t0.size()-3);
-    hst += t0;
-    hst += ".txt" ;
-*/
+    hst += filenameItems.path ;
   }
 
   // did the package version change? Yes? Then add to history
@@ -165,7 +157,7 @@ QA::applyOptions(bool isPost)
        if( split.size() == 2 )
        {
           // path to the directory where the execution takes place
-          dataFileComponent.path=split[1];
+          filenameItems.path=split[1];
           continue;
        }
      }
@@ -183,7 +175,7 @@ QA::applyOptions(bool isPost)
      {
        if( split.size() == 2 )
        {
-          qaFilename=split[1];
+          setFilename(split[1]);
           continue;
        }
      }
@@ -213,29 +205,6 @@ QA::applyOptions(bool isPost)
        }
      }
 
-     if( split[0] == "pEI" || split[0] == "parentExperimentID"
-         || split[0] == "parent_experiment_id" )
-     {
-       if( split.size() == 2 )
-       {
-          parentExpID=split[1];
-          if( parentExpID == "none" )
-            isCheckParentExpID=false ;
-          continue;
-       }
-     }
-
-     if( split[0] == "pER" || split[0] == "parentExperimentRIP"
-         || split[0] == "parent_experiment_rip" )
-     {
-       if( split.size() == 2 )
-       {
-          parentExpRIP=split[1];
-          if( parentExpRIP == "none" )
-            isCheckParentExpRIP=false ;
-          continue;
-       }
-     }
 
      if( split[0] == "qNF" || split[0] == "qaNcfileFlags"
        || split[0] == "qa_ncfile_flags" )
@@ -372,91 +341,6 @@ QA::applyOptions(bool isPost)
           isUseStrict=true ;
           setCheckMode("meta");
           continue;
-     }
-   }
-
-   return;
-}
-
-void
-QA::checkCoordinatesAtt(void)
-{
-  std::vector<std::string> rqAuxC;
-
-  for( size_t i=0 ; i < pIn->varSz ; ++i )
-  {
-     Variable &var = pIn->variable[i];
-
-     // lon|lat are aux-coords only for rotated coordinates
-     if( var.name == "rlon" )
-       rqAuxC.push_back("lon");
-     else if( var.name == "rlat" )
-       rqAuxC.push_back("lat");
-
-     else if( var.name == "height" )
-       rqAuxC.push_back("height");
-     else if( var.name == "plev" )
-       rqAuxC.push_back("plev");
-  }
-
-  for( size_t i=0 ; i < pIn->varSz ; ++i )
-  {
-    Variable &var = pIn->variable[i];
-
-    if( var.isDATA )
-      for(size_t i=0 ; i < rqAuxC.size() ; ++i )
-        checkCoordinatesAtt(var, rqAuxC[i]);
-  }
-
-  return;
-}
-
-void
-QA::checkCoordinatesAtt(Variable &var, std::string auxVar)
-{
-   size_t j=0;
-
-   for(j=0 ; j < var.attName.size() ; ++j )
-     if( var.attName[j] == "coordinates" )
-        break;
-
-   if( j == var.attName.size() )
-   {
-      std::string key("20_4");
-      if( notes->inq( key, var.name, "NO_MT" ) )
-      {
-        std::string capt(hdhC::tf_att(var.name, "coordinates") );
-        capt += "is missing" ;
-
-        (void) notes->operate( capt ) ;
-        notes->setCheckMetaStr(fail);
-      }
-   }
-   else
-   {
-     Split x_c( var.attValue[j][0] );
-     bool is = true;
-     for(size_t i=0 ; i < x_c.size() ; ++i )
-     {
-        if( x_c[i] == auxVar )
-        {
-           is=false;
-           break;
-        }
-     }
-
-     if(is)
-     {
-        std::string key("20_5");
-        if( notes->inq( key, var.name ) )
-        {
-          std::string capt("auxiliary coordinate ");
-          capt += hdhC::tf_var(auxVar) + "is not included in " ;
-          capt += hdhC::tf_att(var.name, "coordinates",var.attValue[j][0]);
-
-          (void) notes->operate(capt) ;
-          notes->setCheckMetaStr(fail);
-        }
      }
    }
 
@@ -970,7 +854,7 @@ QA::checkDRS(InFile &in)
     checkDRS_ModelName(in, a_name[5], a_value[5], 'R', a_name[1], a_value[1]) ;
 
   // components of the path
-  Split p_items(dataFileComponent.path,"/");
+  Split p_items(filenameItems.path,"/");
 
   // check for identical sequences
   std::string text;
@@ -1099,9 +983,9 @@ QA::checkDRS_ModelName(InFile &in, std::string &aName, std::string &aValue,
       std::string key("70_") ;
 
       if( des == 'G' )
-        key += "5" ;
+        key += "3" ;
       else
-        key += "6" ;
+        key += "4" ;
 
       if( notes->inq( key, fileStr) )
       {
@@ -1292,7 +1176,7 @@ QA::checkPressureCoord(InFile &in)
 
    if( plev_ix == -1 )
    {
-     std::string key("53_3");
+     std::string key("5_3");
      if( notes->inq( key ) )
      {
        std::string capt("Auxiliary " + hdhC::tf_var("plev") + "is missing") ;
@@ -1351,7 +1235,7 @@ QA::checkPressureCoord(InFile &in)
 
      if( pData != pVarname )
      {
-       std::string key("53_4");
+       std::string key("5_4");
        if( notes->inq( key, in.variable[ix].name ) )
        {
          std::string capt(hdhC::tf_var("plev", s_colon));
@@ -1528,7 +1412,7 @@ QA::domainCheck(ReadLine &ifs)
   }
 
   // used domain name not found in Table 1 or 2
-  std::string key = "75_1";
+  std::string key = "7_6";
   if( notes->inq(key, fileStr) )
   {
     std::string capt("Domain not specified neither in Table 1 or 2.") ;
@@ -1671,7 +1555,7 @@ QA::domainCheckData(std::string &var_lon, std::string &var_lat,
 
   if( mv_lon.size() < 2 || mv_lat.size() < 2 )
   {
-    std::string key = "75_5";
+    std::string key = "7_9";
     if( notes->inq(key, fileStr) )
     {
       std::string capt("CORDEX " + hdhC::sAssign("domain", tName)) ;
@@ -1728,7 +1612,7 @@ QA::domainCheckData(std::string &var_lon, std::string &var_lat,
 
   if( is_lon || is_lat )
   {
-    std::string key = "75_6";
+    std::string key = "7_10";
     if( notes->inq(key, fileStr) )
     {
       std::string capt("resolution of CORDEX ");
@@ -1886,7 +1770,7 @@ QA::domainCheckData(std::string &var_lon, std::string &var_lat,
 
   if( is )
   {
-    std::string key = "75_7";
+    std::string key = "7_11";
     if( notes->inq(key, fileStr) )
     {
       std::string capt("unmatched CORDEX boundaries for ");
@@ -1925,7 +1809,7 @@ QA::domainCheckDims(std::string item,
      }
   }
 
-  std::string key = "75_2 (";
+  std::string key = "7_7 (";
   key += item;
   key += ")";
   if( notes->inq(key, fileStr) )
@@ -1997,7 +1881,7 @@ QA::domainCheckPole(std::string item,
   // may-be the names didn't match. Try again more generally.
   if( ix > -1 )
   {
-    std::string key = "75_4 (";
+    std::string key = "7_8 (";
     key += item ;
     key += ")";
     if( notes->inq(key, fileStr) )
@@ -2046,7 +1930,7 @@ QA::domainFindTableType(
    candidate.push_back( (pIn->getAttValue("CORDEX_domain")) ) ;
 
    // b) domain name from the filename, e.g. EUR-11
-   Split fd(dataFileComponent.filename, "_");
+   Split fd(filenameItems.filename, "_");
    if( fd.size() > 1 )
       candidate.push_back( fd[1] );
    else
@@ -2134,7 +2018,7 @@ QA::checkDrivingExperiment(InFile &in)
 
   if( vs.size() != 3 )
   {
-    std::string key("52_1");
+    std::string key("2_9");
     if( notes->inq( key, fileStr ) )
     {
       std::string capt("global " + hdhC::tf_att("driving_experiment") );
@@ -2174,7 +2058,7 @@ QA::checkDrivingExperiment(InFile &in)
     // allow anything for r0i0p0
     if( value != vs[i] && value != "r0i0p0" && vs[i] != "r0i0p0" )
     {
-      std::string key("52_2");
+      std::string key("2_10");
       if( notes->inq( key, fileStr ) )
       {
         std::string capt("global ");
@@ -2268,7 +2152,7 @@ QA::checkHeightValue(InFile &in)
 
      if( is )
      {
-       std::string key("24");
+       std::string key("5_6");
        if( notes->inq( key, var.name ) )
        {
          std::string capt(hdhC::tf_var("height") + "requires a value [0-10]m") ;
@@ -2310,9 +2194,6 @@ QA::checkMetaData(InFile &in)
 
   // optional, but if, then with three prescribed members
   checkDrivingExperiment( in );
-
-  // check aux-coord and the coordinates att
-  checkCoordinatesAtt();
 
   // check existance (and data) of the pressure coordinate for those
   // variables defined on a level indicated by a trailing number
@@ -2379,13 +2260,14 @@ QA::checkNetCDF(InFile &in)
   if( s.size() )
   {
     std::string key("12");
-    if( notes->inq( key, fileStr ) )
+    if( notes->inq( key ) )
     {
-      std::string capt("NetCDF4 classic deflated (compressed) is required") ;
-      capt += ", found" + s;
+      std::string capt("NetCDF4 classic deflated (compressed) required") ;
+      std::string text("this is NetCDF");
+      text += s;
 
-      (void) notes->operate( capt) ;
-      notes->setCheckMetaStr(fail);
+      (void) notes->operate( capt, text ) ;
+      notes->setCheckMetaStr( fail);
     }
   }
 
@@ -2431,7 +2313,7 @@ QA::checkFilename(InFile &in )
 
   // CORDEX filename encoding in the order of below;
   // variable_name is not an attribute
-  std::string f( dataFileComponent.filename);
+  std::string f( filenameItems.filename);
 
   if( f.rfind(".nc" ) )
     f = f.substr( 0, f.size()-3 );  // strip ".nc"
@@ -2972,14 +2854,6 @@ QA::createVarMetaData(void)
 
     VariableMetaData &vMD = varMeDa.back() ;
 
-    // fill vector with pointers to the InFile.variables of the dimensions.
-    for( size_t k=0; k < var.dimName.size() ; ++k)
-    {
-      int l;
-      if( (l=pIn->getVarIndex(var.dimName[k])) > -1 )
-         vMD.dimVarRep.push_back(l);
-    }
-
     for( size_t k=0; k < var.dimName.size() ; ++k)
     {
       int sz;
@@ -3043,7 +2917,7 @@ QA::createVarMetaData(void)
 
     int effDim = vMD.var->dimName.size() ;
     for( size_t j=0 ; j < vMD.var->dimName.size() ; ++j )
-      if( vMD.var->dimName[j] == qaTime.timeName )
+      if( vMD.var->dimName[j] == qaTime.name )
         --effDim;
 
     if( replicationOpts.size() )
@@ -3403,9 +3277,9 @@ QA::getDimMetaData(InFile &in,
      return true;  // nothing was found
 
   // attributes from the file
-  for(size_t l=0 ; l < vMD.dimVarRep.size() ; ++l)
+  for(size_t l=0 ; l < vMD.var->dim_ix.size() ; ++l)
   {
-    Variable &var = pIn->variable[vMD.dimVarRep[l]];
+    Variable &var = pIn->variable[vMD.var->dim_ix[l]];
 
     if( var.name != dName )
        continue;
@@ -3499,13 +3373,7 @@ QA::getFrequency(void)
     // not found, but error issue is handled elsewhere
 
     // try the filename
-    std::string f( pIn->filename );
-    size_t pos;
-    if( (pos=f.rfind('/')) < std::string::npos )
-      f = f.substr(pos+1);
-
-    if( f.rfind(".nc" ) )
-      f = f.substr( 0, f.size()-3 );  // strip ".nc"
+    std::string f( pIn->filenameItems.basename );
 
     Split splt(f, "_");
 
@@ -3590,7 +3458,7 @@ QA::getSubTable(void)
 
   if( is )
   {
-     std::string key("71");
+     std::string key("7_5");
      if( notes->inq( key, fileStr) )
      {
        std::string capt(hdhC::sAssign("frequency","fx"));
@@ -3610,16 +3478,16 @@ QA::getSubTable(void)
   return ;
 }
 
-void
+std::string
 QA::getVarnameFromFilename(std::string &fName)
 {
-  size_t pos;
-  if( (pos = fName.rfind('/')) < std::string::npos )
-    fVarname =fName.substr(pos+1);
-  if( (pos = fVarname.find("_")) < std::string::npos )
-    fVarname = fVarname.substr(0,pos) ;
+  std::string f;
 
-  return;
+  size_t pos;
+  if( (pos = fName.find("_")) < std::string::npos )
+    f = fName.substr(0,pos) ;
+
+  return f;
 }
 
 void
@@ -3642,19 +3510,16 @@ QA::init(void)
 {
    // Open the qa-result.nc file, when available or create
    // it from scratch. Meta data checks are performed.
-   // Initialise time testing and time boundary testing.
+   // Initialisation of time and time boundary testing.
    // Eventually, entry() is called to test the data of fields.
-   // Initial values are set such that they do not cause any
-   // harm in testDate() called in closeEntry().
 
    notes->init();  // safe
-   setFilename(pIn->filename);
-   qaTime.name=pIn->timeName;
+   setFilename(pIn->filenameItems.file);
 
    // apply parsed command-line args
    applyOptions();
 
-   getVarnameFromFilename(pIn->filename);
+   fVarname = getVarnameFromFilename(pIn->filenameItems.file);
    getFrequency();
    getSubTable() ;
 
@@ -3668,7 +3533,7 @@ QA::init(void)
       isCheckData=false;
       isCheckTime=false;
 
-      std::string key("67");
+      std::string key("6_15");
       if( notes->inq( key, fileStr) )
       {
         std::string capt("No records in the file") ;
@@ -3698,7 +3563,7 @@ QA::init(void)
      // coding depends on projects
      if( testPeriod() )
      {
-        std::string key("82");
+        std::string key("9_2");
         if( notes->inq( key, qaTime.name) )
         {
           std::string capt("status is apparently in progress");
@@ -3986,7 +3851,7 @@ QA::inqTables(void)
 
   if( system( testFile.c_str()) )
   {
-     std::string key("70_3");
+     std::string key("7_1");
      if( notes->inq( key, fileStr) )
      {
         std::string capt("no path to the tables, tried " + tablePath) ;
@@ -4112,20 +3977,20 @@ QA::openQA_Nc(InFile &in)
   // opens an existing one for appending data.
   // Copies time variable from input-nc file.
 
-  // name of the file begins with qa_
-  if ( qaFilename.size() == 0 )
+  // name of the result file was set before
+  if ( !filenameItems.is )
   {
-    if( !dataFileComponent.is )
-      dataFileComponent = hdhC::splitFile(pIn->filename) ;
+    std::string key("00");
 
-    // use the input filename as basis;
-    // there could be a leading path
-    qaFilename = dataFileComponent.path;
-    if( qaFilename.size() > 0 )
-      qaFilename += '/' ;
-    qaFilename += "qa_";
-    qaFilename += dataFileComponent.basename;
-    qaFilename += ".txt";
+    if( notes->inq( key) )
+    {
+      std::string capt("openQA_Nc(): undefined filenameItems.") ;
+
+      (void) notes->operate(capt) ;
+      notes->setCheckMetaStr(fail);
+      setExit( notes->getExitValue() ) ;
+      return;
+    }
   }
 
   nc = new NcAPI;
@@ -4137,7 +4002,7 @@ QA::openQA_Nc(InFile &in)
   if( ! isCheckTime )
     return;
 
-  if( nc->open(qaFilename, "NC_WRITE", false) )
+  if( nc->open(filenameItems.file, "NC_WRITE", false) )
 //   if( isQA_open ) // false: do not exit in case of error
   {
     // continue a previous session
@@ -4169,9 +4034,9 @@ QA::openQA_Nc(InFile &in)
 
   // open new netcdf file
   if( qaNcfileFlags.size() )
-    nc->create(qaFilename,  qaNcfileFlags);
+    nc->create(filenameItems.file,  qaNcfileFlags);
   else
-    nc->create(qaFilename,  "Replace");
+    nc->create(filenameItems.file,  "Replace");
 
   if( pIn->isTime )
   {
@@ -4651,7 +4516,7 @@ QA::requiredAttributes_checkCloudVariableValues(InFile &in,
 
   if( isErr )
   {
-    std::string key("53_1");
+    std::string key("5_1");
     if( notes->inq( key, auxName) )
     {
        std::string capt( "auxiliary ");
@@ -4706,7 +4571,7 @@ QA::requiredAttributes_checkGlobal(InFile &in,
     // missing required global attribute
     if( ! glob.isValidAtt(x_reqA[0]) )
     {
-       std::string key("22_1");
+       std::string key("2_6");
 
        if( notes->inq( key, fileStr) )
        {
@@ -4727,7 +4592,7 @@ QA::requiredAttributes_checkGlobal(InFile &in,
 
       if( aV.size() == 0 )
       {
-        std::string key("22_2");
+        std::string key("2_7");
         if( notes->inq( key, fileStr) )
         {
            std::string capt("global attribute=");
@@ -4745,7 +4610,7 @@ QA::requiredAttributes_checkGlobal(InFile &in,
        // there is a value. is it the required one?
        else if( aV != x_reqA[1] )
        {
-         std::string key("22_3");
+         std::string key("2_8");
          if( notes->inq( key, fileStr) )
          {
            std::string capt("global " + hdhC::tf_att(s_empty, x_reqA[0], aV));
@@ -4799,7 +4664,7 @@ QA::requiredAttributes_checkVariable(InFile &in,
     // missing required attribute
     if( jx == -1 && x_reqA[0] != "values" )
     {
-       std::string key("20_1");
+       std::string key("2_1");
 
        if( notes->inq( key, vName) )
        {
@@ -4823,7 +4688,7 @@ QA::requiredAttributes_checkVariable(InFile &in,
       {
          if( !var.isValidAtt("bounds") )
          {
-           std::string key("23");
+           std::string key("2_11");
 
            if( notes->inq( key, vName) )
            {
@@ -4839,7 +4704,7 @@ QA::requiredAttributes_checkVariable(InFile &in,
          // check for auxiliary: plev_bnds
          if( ! in.getVarIndex("plev_bnds") )
          {
-           std::string key("53_2");
+           std::string key("5_2");
 
            if( notes->inq( key, vName) )
            {
@@ -4879,7 +4744,7 @@ QA::requiredAttributes_checkVariable(InFile &in,
 
       if( aV.size() == 0 )
       {
-        std::string key("20_2");
+        std::string key("2_2");
         if( notes->inq( key, vName) )
         {
            std::string capt(hdhC::tf_att(vName, aN, s_colon));
@@ -4912,7 +4777,7 @@ QA::requiredAttributes_checkVariable(InFile &in,
              is=false;
          }
 
-         std::string key("20_3");
+         std::string key("2_3");
          if( is &&  notes->inq( key, vName ) )
          {
            std::string capt(hdhC::tf_att(vName, aN, aV));
@@ -4950,7 +4815,7 @@ QA::requiredAttributes_readFile(
 
    if( ! ifs.isOpen() )
    {
-      std::string key("70_1") ;
+      std::string key("7_2") ;
       if( notes->inq( key, fileStr) )
       {
          std::string capt("could not open the CORDEX_archive_design table, tried") ;
@@ -5053,8 +4918,8 @@ QA::setExit( int e )
 void
 QA::setFilename(std::string f)
 {
-  dataFileComponent = hdhC::splitFile(f);
-  dataFileComponent.path.clear();  // to be set by option
+  filenameItems = hdhC::setFilename(f);
+  filenameItems.path.clear();  // to be set by option
 
   return;
 }
@@ -5090,7 +4955,7 @@ QA::varReqTableCheck(InFile &in, VariableMetaData &vMD,
 
    if( ! ifs.isOpen() )
    {
-      std::string key("70_4") ;
+      std::string key("7_3") ;
       if( notes->inq( key, vMD.var->name) )
       {
          std::string capt("could not open the CORDEX_variables_requirement table, tried") ;
@@ -5129,9 +4994,9 @@ QA::varReqTableCheck(InFile &in, VariableMetaData &vMD,
      // get meta-data of var-reps of dimensions from nc-file
      std::map<std::string, size_t> d_col;
 
-     for(size_t l=0 ; l < vMD.dimVarRep.size() ; ++l)
+     for(size_t l=0 ; l < vMD.var->dim_ix.size() ; ++l)
      {
-       if( pIn->variable[ vMD.dimVarRep[l] ].dimSize == 1 )
+       if( pIn->variable[ vMD.var->dim_ix[l] ].dimSize == 1 )
           continue;
 
        // new instance
@@ -5141,14 +5006,14 @@ QA::varReqTableCheck(InFile &in, VariableMetaData &vMD,
        // note: CORDEX standard tables doesn't provide anything, but
        // it is necessary for writing the project table.
        getDimMetaData(in, vMD, dimNcMeDa.back(),
-                      pIn->variable[ vMD.dimVarRep[l] ].name) ;
+                      pIn->variable[ vMD.var->dim_ix[l] ].name) ;
      }
 
      return;
    }
 
    // no match
-   std::string key("30") ;
+   std::string key("3_1") ;
    if( notes->inq( key, vMD.var->name) )
    {
      std::string capt(hdhC::tf_var(vMD.var->name + " for "
@@ -5215,7 +5080,7 @@ QA::testPeriod(void)
 
   // Does the filename has a trailing date range?
   // Strip off the extension.
-  std::string f( dataFileComponent.basename );
+  std::string f( filenameItems.basename );
 
   std::vector<std::string> sd;
   sd.push_back( "" );
@@ -5819,7 +5684,7 @@ VariableMetaData::verifyPercent(void)
       if( qaData.statMin.getSampleMin() >= 0.
            && qaData.statMax.getSampleMax() <= 1. )
       {
-        std::string key("64_1");
+        std::string key("6_8");
         if( notes->inq( key, var->name) )
         {
           std::string capt( hdhC::tf_var(var->name, ":"));
@@ -5840,7 +5705,7 @@ VariableMetaData::verifyPercent(void)
            qaData.statMax.getSampleMax() > 1.
              && qaData.statMax.getSampleMax() <= 100.)
       {
-        std::string key("64_2");
+        std::string key("6_9");
         if( notes->inq( key, var->name) )
         {
           std::string capt( "Suspicion of percentage data range for units <1>, found range " ) ;

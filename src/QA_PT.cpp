@@ -223,7 +223,7 @@ BREAK:
               break;  // try the next attribute
 
             // different values --> annotation
-            std::string key("51_3");
+            std::string key("8_8");
             if( notes->inq( key, dataVar.name ) )
             {
               std::string capt;
@@ -279,7 +279,7 @@ BREAK:
 
         if( isAttMissing )
         {
-          std::string key("51_2");
+          std::string key("8_7");
           if( notes->inq( key, dataVar.name ) )
           {
             std::string capt;
@@ -313,7 +313,7 @@ BREAK:
 
     if( isMissAux )
     {
-      std::string key("50_1");
+      std::string key("8_4");
       if( notes->inq( key, dataVar.name ) )
       {
         std::string capt;
@@ -390,7 +390,7 @@ BREAK:
         if( isAddAtt )
         {
           // additional attribute of auxiliary in the file
-          std::string key("51_1");
+          std::string key("8_6");
           if( notes->inq( key, dataVar.name ) )
           {
             std::string capt;
@@ -423,7 +423,7 @@ BREAK:
 
     if( isAddAux )
     {
-      std::string key("50_2");
+      std::string key("8_5");
       if( notes->inq( key, dataVar.name) )
       {
         std::string capt("additional auxiliary=");
@@ -684,7 +684,7 @@ ProjectTable::lockFile(std::string &fName )
 
     if( count == 1800 )  // 1/2 hr
     {
-      std::string key("72_2");
+      std::string key("8_3");
       if( notes->inq( key, "PT") )
       {
          std::string capt("project table is locked for 1/2 hour") ;
@@ -698,13 +698,12 @@ ProjectTable::lockFile(std::string &fName )
 
   if( system( lock.c_str() ) )
   {
-     std::string key("72_1");
+     std::string key("8_2");
      if( notes->inq( key, "PT") )
      {
-        std::string capt("could not set a project table lock") ;
-        std::string text("could not create lock-file to protect project table.") ;
+        std::string capt("could not lock the project table") ;
 
-        if( notes->operate(capt, text) )
+        if( notes->operate(capt) )
           qa->setExit( notes->getExitValue() ) ;
      }
 
@@ -774,7 +773,7 @@ ProjectTable::write(Variable &dataVar)
 
   if (! oifs.is_open() )
   {
-    std::string key("70_2");
+    std::string key("8_1");
     if( notes->inq( key, "PT") )
     {
       std::string capt("could not create a project table") ;

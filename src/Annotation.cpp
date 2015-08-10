@@ -751,7 +751,7 @@ Annotation::parse(void)
           continue;
         }
 
-        if( str0 == "ST" )
+        if( str0 == "VR" )
         {
           isST=true;
           continue;
@@ -850,7 +850,7 @@ Annotation::parse(void)
           if( isPT )
             table.push_back("PT") ;
           else if( isST )
-            table.push_back("ST") ;
+            table.push_back("VR") ;
           else
             table.push_back("*") ;
 
@@ -960,8 +960,8 @@ Annotation::printFlags(void)
 
     if( isOutputPASS )
     {
-      out += "path: " + path;
-      out += "\nfile: " + filename;
+      out += "path: " + filenameItems.path;
+      out += "\nfile: " + filenameItems.filename;
       if( mp.begin() == mp.end() )
       {
         out += ":\tPASS\n" ;
@@ -1063,9 +1063,9 @@ Annotation::printHeader(std::ofstream *ofs)
 //   std::string str( where ) ;
    std::string str;
    str +="\nPath: " ;
-   str += path ;
+   str += filenameItems.path ;
    str += "\nFile: " ;
-   str += filename;
+   str += filenameItems.filename;
 
    *ofs << str << std::endl ;
 
@@ -1082,16 +1082,14 @@ Annotation::printNotes(std::string &tag, std::string &caption,
   // But, the calling program unit is due to exit.
   if( ofsNotes == 0 )
   {
-    if( path.size() == 0 )
-      path = "undefined_path" ;
-    if( filename.size() == 0 )
-      filename = "undefined_filename" ;
+    if( filenameItems.path.size() == 0 )
+      filenameItems.path = "undefined_path" ;
+    if( filenameItems.filename.size() == 0 )
+      filenameItems.filename = "undefined_filename" ;
 
     // compose the header of issued messages
     std::string strNotes = "qa_note_" ;
-    size_t pos = filename.rfind( ".nc" );
-    strNotes += filename.substr(0, pos) ;
-    strNotes += ".txt";
+    strNotes += filenameItems.filename + ".txt";
 
     // open file for writing
     if( ! ofsNotes )
@@ -1330,15 +1328,7 @@ Annotation::setConfVector(std::string txt, std::string str0)
 void
 Annotation::setFilename(std::string f)
 {
-  size_t pos;
-  if( (pos = f.rfind('/')) < std::string::npos )
-  {
-    path = f.substr(0,pos) ;
-    filename = f.substr(pos+1) ;
-  }
-  else
-    filename = f;  // path is served separately
-
+  filenameItems = hdhC::setFilename(f);
   return;
 }
 
