@@ -50,8 +50,8 @@ public:
   /*! A previous session might be resumed.*/
   bool         init(void);
   void         linkObject(IObj *);
-  void         setFilename(std::string name){;}
-  void         setFilePath(std::string s){;}
+  void         setFilename(std::string name);
+  void         setFilePath(std::string p) {filenameItems.path=p;}
   void         setTablePath(std::string p){ ; }
 
   //! Settings by options.
@@ -102,7 +102,7 @@ public:
            {srcStr.push_back(s); return;}
 
   int identNum;
-  std::string filename;
+  struct hdhC::FilenameItems filenameItems;
   std::string vName;
   std::vector<std::string> srcStr;
 

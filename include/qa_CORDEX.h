@@ -49,8 +49,6 @@ class VariableMetaData
   VariableMetaData(QA*, Variable *var=0);
   ~VariableMetaData();
 
-  std::vector<size_t>  dimVarRep;
-
   // only used for reading tables
   std::string cellMethods;
   std::string cellMethodsOpt;
@@ -105,7 +103,7 @@ class QA : public IObj
   bool   init(void) ;
   void   linkObject(IObj *);
   void   setFilename(std::string name);
-  void   setFilePath(std::string s){;}
+  void   setFilePath(std::string p) {filenameItems.path=p;}
   void   setTablePath(std::string p){ tablePath=p; }
 
   void   applyOptions(bool isPost=false);
@@ -114,11 +112,6 @@ class QA : public IObj
   /*! Cross-checks with the standard table are performed only once for
    each variable at first time encounter in the CORDEX Project ensuring
    conformance.*/
-
-  //! Check requirements as to the coordinates attribute
-  /*! Explicit auxiliary coordinate variables: plev, height.*/
-  void   checkCoordinatesAtt(void);
-  void   checkCoordinatesAtt(Variable&, std::string auxVar);
 
   void   checkDimStandardTable(ReadLine &tbl, InFile &in,
             VariableMetaData &var,
@@ -405,7 +398,7 @@ class QA : public IObj
   bool   testPeriodFormat(std::vector<std::string> &sd) ;
 
   //! Name of the netCDF file with results of the quality control
-  std::string qaFilename;
+  struct hdhC::FilenameItems filenameItems;
 
   std::string qaNcfileFlags;
 
@@ -471,8 +464,6 @@ class QA : public IObj
   std::string subTable ;
 
   int identNum;
-  struct hdhC::FileComponent dataFileComponent;
-
   std::string fVarname;
   char        fileSequenceState;
   std::string prevVersionFile;
@@ -507,7 +498,7 @@ class QA : public IObj
   std::string getSubjectsIntroDim(VariableMetaData &vMD,
                    struct DimensionMetaData &nc_entry,
                    struct DimensionMetaData &tbl_entry, bool isColon=true);
-  void        getVarnameFromFilename(std::string &str);
+  std::string getVarnameFromFilename(std::string &str);
   bool        not_equal(double x1, double x2, double epsilon);
   void        pushBackVarMeDa(Variable*);
   void        setExit(int);

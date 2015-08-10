@@ -72,8 +72,8 @@ class QA_Time
   bool isSingleTimeValue;
   bool isTimeBounds;
 
-  std::string timeName;  // the name
-  std::string timeBoundsName;
+  std::string name;  // the name
+  std::string boundsName;
   int time_ix;    // the var-index
   int timeBounds_ix;
 
@@ -170,7 +170,6 @@ class QA_Time
 
   MtrxArr<double> mv_tb;
   MtrxArr<double> mv_t;
-  std::string name;
 
   // Time Table: hold the state over a record
   size_t tt_block_rec ;

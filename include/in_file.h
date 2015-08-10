@@ -120,7 +120,7 @@ public:
 
   //! Store the path to the netcdf file.
   void   setFilename(std::string);
-  void   setFilePath(std::string);
+  void   setFilePath(std::string p) {filenameItems.path=p;}
 
   bool   enableEntry;
   bool   isInfNan;

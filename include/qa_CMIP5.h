@@ -63,32 +63,23 @@ class VariableMetaData
   VariableMetaData(QA*, Variable *v=0);
   ~VariableMetaData();
 
-  std::vector<size_t>  dimVarRep;
+  std::string varReqTableSheet;
+  std::string varReqTableSheetAlt;  // special case, cf. Omon, cf3hr, and cfSites
+  std::string varReqTableSheetSub;
 
-  std::string name;
+  bool isOwnVar;
+  bool isForkedAnnotation;
+
+  // these have no instance in the Variable class
   std::string name_alt;  // Table column: output variable name
-  std::string stdTable;
-  std::string stdTableAlt;  // special case, cf. Omon, cf3hr, and cfSites
-  std::string stdSubTable;
-  std::string standardName;
   std::string longName;
-  std::string units;
-
-  bool        isUnitsDefined;
-  bool        isForkedAnnotation;
-
   std::string cellMethods;
   std::string cellMeasures;
-  std::string type;
-  std::string dims;
-  double validMin;
-  double validMax;
-  size_t priority;
-  std::string variableName;
-  std::string time_units;
-  std::string unlimitedDim;
+  std::string typeStr;
 
-  //! store results temporarily
+  size_t priority;
+
+  // buffer results
   DataOutputBuffer dataOutputBuffer;
 
   Annotation     *notes;
@@ -125,10 +116,12 @@ public:
   bool   init(void) ;
   void   linkObject(IObj *);
   void   setFilename(std::string);
-  void   setFilePath(std::string s){;}
+  void   setFilePath(std::string p) {filenameItems.path=p;}
   void   setTablePath(std::string p){ tablePath=p; }
 
   void   applyOptions(bool isPost=false);
+
+  void   checkDataVarNum(void);
 
   //! Check of dimensionless variables
   /*! These are represented by a single-value-dimension in the
@@ -143,18 +136,18 @@ public:
   bool   checkDimSpecialValue(InFile &in, VariableMetaData &vMD,
             struct DimensionMetaData &, std::string &dimName) ;
 
-  //! Comparison of dimensions between file and standard table
+  //! Comparison of dimensions between file and the var-requirements table
   /*! Cross-checks with the standard table are performed only once for
    each variable at first time encounter in the CMIP Project ensuring
    conformance.*/
-  void   checkDimStandardTable(ReadLine &tbl, InFile &in,
+  void   checkDimVarReqTable(ReadLine &tbl, InFile &in,
             VariableMetaData &var,
             std::vector<struct DimensionMetaData>&,
             std::map<std::string, size_t> &col,
             std::string dName, size_t colMax);
 
   //! Check dimensions
-  void   checkDimTableEntry(InFile &in,
+  void   checkDimVarReqTableEntry(InFile &in,
             VariableMetaData &var,
             struct DimensionMetaData &nc,
             struct DimensionMetaData &tbl) ;
@@ -218,8 +211,8 @@ public:
   //! Checks meta-data
   void   checkMetaData(InFile &) ;
 
-  //! Valid project name?
-  void   check_ProjectName(InFile &) ;
+  //! Is it NetCDF-4, is it compressed?
+  void   checkNetCDF(InFile &);
 
   //! Prepare the comparison of dimensions between file and project table.
   /*! This is checked for each chunk or atomic data set in each
@@ -228,15 +221,18 @@ public:
             VariableMetaData &,
             std::vector<struct DimensionMetaData>&);
 
+  //! Starting function for all table cross-checks.
+  void   checkTables(InFile &in, VariableMetaData &v);
+
   //! Cross-check with standard table.
   /*! Prepare the check for dimensions and variable.*/
-  bool   checkStandardTable(InFile &in,
+  bool   checkVarReqTable(InFile &in,
             VariableMetaData &var,
             std::vector<struct DimensionMetaData>& );
 
   //! Check dimensional bounds: layout and size
   /*! Number of values and checksum of the bounds*/
-  void   checkStandardTableDimBounds(InFile &in, Split &splt_line,
+  void   checkVarReqTableDimBounds(InFile &in, Split &splt_line,
             VariableMetaData &var,
             struct DimensionMetaData &dimFE,
             struct DimensionMetaData &dimTE,
@@ -244,17 +240,14 @@ public:
 
   //! Check dimensional values: layout and size
   /*! Number of values and checksum*/
-  void   checkStandardTableDimValues(InFile &in, Split &splt_line,
+  void   checkVarReqTableDimValues(InFile &in, Split &splt_line,
             VariableMetaData &var,
             struct DimensionMetaData &file,
             struct DimensionMetaData &table,
             std::map<std::string, size_t> &col) ;
 
-  //! Starting function for all table cross-checks.
-  void   checkTables(InFile &in, VariableMetaData &v);
-
   //! Apply the cross-check for the variable.
-  void   checkVarTableEntry(
+  void   checkVarReqTableEntry(
              VariableMetaData &,
              VariableMetaData &tbl_entry);
 
@@ -281,20 +274,20 @@ public:
             VariableMetaData &var, std::vector<std::string> &);
 
   //! Find entry of a requested variable in the standard table.
-  bool   findStandardEntry(ReadLine &, std::string &,
+  bool   findVarReqTableEntry(ReadLine &, std::string &,
             VariableMetaData &var,
             std::map<std::string, size_t> &col, size_t col_max,
             std::vector<std::string> & );
 
   //! Find the name of requested sub-table in string str0.
-  bool   findStdTables(ReadLine &, std::string &str0,
+  bool   findVarReqTableSheet(ReadLine &, std::string &str0,
             VariableMetaData &var);
 
-  void   findStdSubTables(std::string &str0,
+  void   findVarReqTableSheetSub(std::string &str0,
             VariableMetaData &vMD, std::vector<std::string> &);
 
   std::string
-       getCurrentTable(void){ return currTable ; }
+         getCurrentTable(void){ return currTable ; }
 
   //! Store properties of a dimension in the struct.
   /*! Note: the name of the dimension is passed by the struct.*/
@@ -304,19 +297,19 @@ public:
 
   //! Get global attribute 'frequency'
   std::string
-       getFrequency(void);
+         getFrequency(void);
 
   //! Get the MIP table name from the global attributes
   std::string
-       getGA_MIP_table(std::vector<std::string>&);
+         getTableSheet(std::vector<std::string>&);
 
   //! get and check MIP table name
   void
-       getMIP_table(VariableMetaData &);
+         getTableSheet(VariableMetaData &);
 
   //! Return the name of the object.
   std::string
-       getObjName(void) { return objName; }
+         getObjName(void) { return objName; }
 
   //! Get path componenents.
   /*! mode: "total": filename with total path, "file": filename,
@@ -326,30 +319,31 @@ public:
          getPath(std::string& f, std::string mode="total");
 
   std::string
-       getStandardTable(void){ return standardTable ; }
+         getVarReqTable(void){ return varReqTableName ; }
 
   std::string
-       getTablePath(void){ return tablePath; }
+         getTablePath(void){ return tablePath; }
 
-  void getVarnameFromFilename(std::string &str);
+  std::string
+         getVarnameFromFilename(std::string &str);
 
   //! Brief description of options
   static void
-       help(void);
+         help(void);
 
   //! Check the path to the tables;
-  void inqTables(void);
+  void   inqTables(void);
 
   //! Initialisation of flushing gathered results to netCDF file.
   /*! Parameter indicates the number of variables. */
-  void initDataOutputBuffer(void);
+  void   initDataOutputBuffer(void);
 
   //! Set default values.
-  void initDefaults(void);
+  void   initDefaults(void);
 
   //! Global attributes of the qa-netCDF file.
   /*! Partly reflecting global attributes from the sources. */
-  void initGlobalAtts(InFile &);
+  void   initGlobalAtts(InFile &);
 
   //! Initialisiation of a resumed session.
   /*! Happens for non-atomic data sets and those that are yet incomplete. */
@@ -388,7 +382,7 @@ public:
   void   setInFilePointer(InFile *p) { pIn = p; }
 
   //! get access to the global exception and annotation handling
-  void setNotes(Annotation *n) {notes = n; }
+  void   setNotes(Annotation *n) {notes = n; }
 
   //! Unused.
   /*! Needed to be conform to a specific Base class functionality */
@@ -412,7 +406,8 @@ public:
   bool   testPeriod(void);
 
   //! Name of the netCDF file with results of the quality control
-  std::string qaFilename;
+  struct hdhC::FilenameItems filenameItems;
+
   std::string qaNcfileFlags;
 
   int exitCode;
@@ -455,14 +450,12 @@ public:
   std::vector<std::string> outlierOpts;
   std::vector<std::string> replicationOpts;
 
-  struct hdhC::FileComponent dataFileComponent;
-
   std::string maxDateRange;
 
   std::string cfStndNames;
   std::string currTable;
   std::string projectTableName;
-  std::string standardTable;
+  std::string varReqTableName;
   std::string tablePath;
   std::string MIP_tableName;
   std::string frequency;
@@ -474,7 +467,6 @@ public:
   std::string experiment_id;
 
   int identNum;
-  std::string filename;
   std::string fVarname;
   std::vector<std::string> srcStr;
   std::string revision;

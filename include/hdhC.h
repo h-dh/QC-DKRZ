@@ -98,7 +98,7 @@ struct FieldDataMeta
   size_t size;
 };
 
-struct FileComponent
+struct FilenameItems
 {
    bool is;
    std::string file;
@@ -259,9 +259,6 @@ uint32_t
 fletcher32_LE_clear( T *data, size_t sz, bool *reset, size_t clear=0);
 
 //! Extract path, discard the filename.
-struct FileComponent
-splitFile(std::string&) ;
-
 std::string
 getPath(std::string&, bool isWithSlash=false );
 
@@ -282,6 +279,9 @@ void
 getPathComponents(std::string &str, std::string &path,
                   std::string &fName, std::string &base,
                   std::string &ext);
+
+struct FilenameItems
+setFilename(std::string&) ;
 
 //! Invert the ordering of bits
 /*! For any type of T*/
@@ -450,6 +450,10 @@ clearInternalMultipleSpaces(std::string &str );
 //! rermove white spaces and newlines
 std::string
 clearSpaces(std::string &str );
+
+//! concatenate a string-vector to a comma-separated (with blanks) string
+std::string
+catVector2Str(std::vector<std::string>&);
 
 std::string
 sAssign(std::string lvalue, std::string rvalue) ;

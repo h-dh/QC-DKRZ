@@ -36,8 +36,8 @@ class CF : public IObj
   bool   entry(void);
   bool   init(void) ;
   void   linkObject(IObj *);
-  void   setFilename(std::string s){;}
-  void   setFilePath(std::string p){;}
+  void   setFilename(std::string s);
+  void   setFilePath(std::string p) {filenameItems.path=p;}
   void   setTablePath(std::string p){ tablePath=p; }
 
 
@@ -218,6 +218,8 @@ template <typename T>
   bool followRecommendations; // false by default
   bool isFeatureType;
   std::string cFVersion;
+
+  struct hdhC::FilenameItems filenameItems;
 
   ut_system*   unitSystem;
 

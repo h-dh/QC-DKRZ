@@ -46,6 +46,7 @@ class VariableMeta
   bool        isUnitsDefined;
   std::string std_name;
   std::string units;
+
   std::vector<std::string>               attName;
   std::map<std::string, int>             attNameMap;
   std::vector<nc_type>                   attType;
@@ -81,13 +82,14 @@ class VariableMeta
   };
   Coordinates coord;
 
-  bool isDATA;
-  bool isAUX;
   int  countData;
   int  countAux;
   int  indication_DV;
+  int  isUnlimited_;  // access by isUnlimited() method
 
   bool isArithmeticMean; // externally set
+  bool isAUX;
+  bool isDATA;
   bool isChecked;
   bool isClimatology;
   bool isCompress;
@@ -101,7 +103,6 @@ class VariableMeta
   bool isMissingValue;
   bool isNoData;
   bool isScalar;
-  int  isUnlimited_;  // access by isUnlimited() method
   bool isVoid;
 
   bool is_1st_X;  // one-time switches in units_lon_lat()
@@ -109,6 +110,8 @@ class VariableMeta
   bool is_1st_rotX;
   bool is_1st_rotY;
 
+  std::vector<std::string> dimName;
+  std::vector<size_t>      dim_ix;
 
 //  std::string associatedTo;
   std::vector<std::string> aux;
@@ -175,12 +178,9 @@ class Variable : public VariableMeta
   MtrxArr<float>              *mvFLOAT;
   MtrxArr<double>             *mvDOUBLE;
 
-  std::vector<std::string>    dimName;
-
   int                id;
   bool               isInfNan;
 
-//    VariableMeta      *pMeta ;
   GeoMetaBase        *pGM;
   DataStatisticsBase *pDS;
   MtrxArrB           *pMA;
