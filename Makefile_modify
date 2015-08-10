@@ -1,0 +1,25 @@
+# Makefile for the QA package
+
+CPPx  =  modifyNc.x
+
+UTIL_SOURCE = hdhC.cpp ReadLine.cpp Split.cpp Statistics.cpp GetOpt_hdh.cpp
+UTIL_HEADER = hdhC.h matrix_array.h readline.h split.h statistics.h getopt_hdh.h
+
+BASE_SOURCE = Annotation.cpp Base.cpp BraceOP.cpp Date.cpp \
+   InFile.cpp NcAPI.cpp TimeControl.cpp Variable.cpp
+BASE_HEADER = annotation.h base.h brace_op.h data_statistics.h date.h \
+   geo_meta.h in_file.h iobj.h matrix_array.h nc_api.h \
+   time_control.h variable.h
+
+#vpath %.c   $(QA_PATH)/src
+#vpath %.cpp $(QA_PATH)/src
+#vpath %.h   $(QA_PATH)/include
+
+VPATH = $(QA_PATH)/src $(QA_PATH)/include
+%.x: %.c
+	$(CC) $(CFLAGS) -o $@ $<
+
+modifyNc.x: modifyNc.cpp modify_nc.h modify_fnct.cpp inquiry_fnct.cpp $(BASE_SOURCE) $(UTIL_SOURCE) $(UTIL_HEADER)
+	$(CXX) $(CXXFLAGS) -o modifyNc.x $(QA_PATH)/src/modifyNc.cpp \
+           -I $(QA_PATH)/include $(INCLUDE) \
+           $(LIB) $(LIBDL) -lnetcdf -lhdf5_hl -lhdf5 -lz -luuid

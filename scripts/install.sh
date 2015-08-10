@@ -7,6 +7,8 @@ prg=install.sh
 defaultProject=CORDEX
 availableProjects=( CORDEX CMIP5 )
 
+MAKEFILE=Makefile
+
 compilerSetting()
 {
   # Notice priority
@@ -518,6 +520,7 @@ makeProject()
     if [ ${PROJECT} = CF ] ; then
       local cfc=CF-checker
     elif [ ${PROJECT} = MODIFY ] ; then
+      MAKEFILE=Makefile_modify
       local cfc=ModifyNc
     else
       if [ $(ps -ef | grep -c qa-DKRZ) -gt 1 ] ; then
@@ -531,11 +534,11 @@ makeProject()
       fi
     fi
 
-    if make ${always} -q -C $BIN -f ${QA_PATH}/Makefile ${cfc} ; then
+    if make ${always} -q -C $BIN -f ${QA_PATH}/$MAKEFILE ${cfc} ; then
        test ${PROJECT} != CF && log "make qa-${PROJECT}.x" DONE=up-to-date
     else
        # not up-to-date
-       if make ${always} ${mk_D} -C $BIN -f ${QA_PATH}/Makefile ${cfc} ; then
+       if make ${always} ${mk_D} -C $BIN -f ${QA_PATH}/$MAKEFILE ${cfc} ; then
          test ${PROJECT} != CF && log "make qa-${PROJECT}.x" DONE
        else
          test ${PROJECT} != CF && log "make qa-${PROJECT}.x" FAIL
@@ -554,18 +557,18 @@ makeProject()
 makeUtilities()
 {
   # small utilities
-  if make ${always} -q -C $BIN -f ${QA_PATH}/Makefile c-prog cpp-prog ; then
+  if make ${always} -q -C $BIN -f ${QA_PATH}/$MAKEFILE c-prog cpp-prog ; then
     status=$?
     log "C/C++ utilities" DONE=up-to-date
   else
     # not up-to-date
     # executes with an error, then again
     text=$(make ${always} ${mk_D} \
-            -C $BIN -f ${QA_PATH}/Makefile c-prog cpp-prog 2>&1 )
+            -C $BIN -f ${QA_PATH}/$MAKEFILE c-prog cpp-prog 2>&1 )
     if [ $? -gt 0 ]; then
       export CFLAGS="${CFLAGS[*]} -DSTATVFS"
       text=$(make ${always} ${mk_D} \
-            -C $BIN -f ${QA_PATH}/Makefile c-prog cpp-prog 2>&1 )
+            -C $BIN -f ${QA_PATH}/$MAKEFILE c-prog cpp-prog 2>&1 )
     fi
 
     status=$?
