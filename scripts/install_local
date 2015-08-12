@@ -2,8 +2,6 @@
 
 package=QA-DKRZ  # default
 
-srcPath=local/source  # by default, absolute path comes later
-
 check_targets()
 {
   local kind=$1
@@ -152,16 +150,16 @@ descript()
 distclean()
 {
   for f in bin include lib lib64 share ; do
-    \rm -rf ${QA_SRC}/local/$f
+    \rm -rf ${QA_PATH}/local/$f
   done
-  \rm -f ${QA_SRC}/local/source/INDSTALL_*.log
+  \rm -f ${QA_PATH}/local/source/INDSTALL_*.log
 
   local name
 
   for t in zlib hdf5 netcdf udunits ; do
     eval name=\${curr_${t}}
 
-    bash ${QA_SRC}/scripts/install_local_${t} --distclean  \
+    bash ${QA_PATH}/scripts/install_local_${t} --distclean  \
        -q --prefix=${prefix} ${QUIET:+-q} --src=$srcPath/$name
   done
 
@@ -170,8 +168,7 @@ distclean()
 
 f()
 {
-  local c dirs is
-  declare -a dirs
+  local c dir is
 
   if [ $1 = zlib ] ; then
     if ls ${prefix}/lib/libz.* &> /dev/null \
@@ -199,10 +196,9 @@ f()
     fi
 
     # instance already available?
-    dirs=( $( ls -d ${srcPath}/${curr_zlib}* 2> /dev/null) )
-  fi
+    dir=$( ls -d ${srcPath}/${curr_zlib}* 2> /dev/null)
 
-  if [ $1 = hdf5 ] ; then
+  elif [ $1 = hdf5 ] ; then
     if ls ${prefix}/lib/libhdf5.* &> /dev/null \
            || ls ${prefix}/lib64/libhdf5.* &> /dev/null ; then
       log hdf5 DONE=up-to-date
@@ -228,10 +224,9 @@ f()
     fi
 
     # instance already available?
-    dirs=( $( ls -d ${srcPath}/${curr_hdf5}* 2> /dev/null) )
-  fi
+    dir=$( ls -d ${srcPath}/${curr_hdf5}* 2> /dev/null)
 
-  if [ $1 = netcdf ] ; then
+  elif [ $1 = netcdf ] ; then
     if ls ${prefix}/lib/libnetcdf.* &> /dev/null \
            || ls ${prefix}/lib64/libnetcdf.* &> /dev/null ; then
       log netcdf DONE=up-to-date
@@ -257,10 +252,9 @@ f()
     fi
 
     # instance already available?
-    dirs=( $( ls -d ${srcPath}/${curr_netcdf}* 2> /dev/null) )
-  fi
+    dir=$( ls -d ${srcPath}/${curr_netcdf}* 2> /dev/null)
 
-  if [ $1 = udunits ] ; then
+  elif [ $1 = udunits ] ; then
     if ls ${prefix}/lib/libudunits2.* &> /dev/null \
            || ls ${prefix}/lib64/libudunits2.* &> /dev/null ; then
       log udunits2 DONE=up-to-date
@@ -286,76 +280,56 @@ f()
     fi
 
     # instance already available?
-    dirs=( $( ls -d ${srcPath}/${curr_udunits}* 2> /dev/null) )
+    dir=$( ls -d ${srcPath}/${curr_udunits}* 2> /dev/null)
   fi
 
   cd ${srcPath}
 
   local dir
 
-  local isDownload isTar isTgz
+  # rebuild
+  test ${#dir} -gt 0 && test ${isForce:-f} = t && \rm -rf $dir
 
-  local isDir isTar isTgz
-
-  if [ ${#dirs[*]} -eq 0 ] ; then
-    # get sources from svn
-: #    isDownload=t
-  else
-    for dir in ${dirs[*]##*/} ; do
-      test -d ${dir} && isDir=t && break
-      if [ -f ${dir} ] ; then
-         test ${dir:$(( ${#dir}-2 ))} = 'gz'  && isTgz=t
-         test ${dir:$(( ${#dir}-3 ))} = 'tar' && isTar=t
-      fi
-    done
-
-    test ${isTar:-f} = t && isTgz=
-  fi
-
-  local vers name
+  local name
   eval name=\${curr_${1}}
 
-  if [ ${isDownload:-f} = t ] ; then
+  if [ ${#dir} -eq 0 ] ; then
+
     local text
     if [ ${name:0:1} = 'n' ] ; then
-      text="www.unidata.ucar.edu./downloads/netcdf/ftp/${name}.tar.gz"
-      wget -l1 -np -nc ${text} &> INSTALL_netcdf.log
+      text="-l1 -np -nc ftp://ftp.unidata.ucar.edu/pub/netcdf/old/${name}.tar.gz"
+      wget ${text} &> INSTALL_netcdf.log
     elif [ ${name:0:1} = 'h' ] ; then
       cd $srcPath
-      text="www.hdfgroup.org/ftp/HDF5/releases/${name}/src/${name}.tar.gz"
-      wget -l1 -np -nc ${text} &> INSTALL_hdf.log
+      text="-l1 -np -nc www.hdfgroup.org/ftp/HDF5/releases/${name}/src/${name}.tar.gz"
+      wget ${text} &> INSTALL_hdf.log
     elif [ ${name:0:1} = 'z' ] ; then
       cd $srcPath
-      text="www.zlib.net/${name}.tar.gz"
-      wget -l1 -np -nc ${text} &> INSTALL_zlib.log
+      text="-l1 -np -nc www.zlib.net/${name}.tar.gz"
+      wget ${text} &> INSTALL_zlib.log
     elif [ ${name:0:1} = 'u' ] ; then
       cd $srcPath
-      text="ftp.unidata.ucar/edu/pub/udunits/udunits-2.2.16.tar.gz"
-      wget -O - ftp://ftp.unidata.ucar.edu/pub/udunits/udunits-2.2.16.tar.gz \
-        | gunzip -c | pax -r
+      text="-O - ftp://ftp.unidata.ucar.edu/pub/udunits/${name}.tar.gz"
+      wget ${text}
     fi
+
     if [ $? -eq 0 ] ; then
-      log "download: $name.tar.gz" DONE
-      isTgz=t
+      log "download: $name" DONE
     else
-      log "wget -l1 -np -nc ${text}" FAIL
+      log "wget ${text}:" FAIL
       exit 1
     fi
-  fi
 
-  if [ ${isTgz:-f} = t ] ; then
-    gzip -d $name.tar.gz
-    isTar=t
-  fi
-
-  if [ ${isTar:-f} = t ] ; then
-    tar xf $name.tar > /dev/null
-    \rm -f $name.tar
+    if [ -f $name.tar.gz ] ; then
+      gzip -d $name.tar.gz 2> /dev/null
+      tar xf $name.tar > /dev/null
+      \rm -f $name.tar
+    fi
   fi
 
   mkdir -p $prefix
 
-  bash ${QA_SRC}/scripts/install_local_${1}  \
+  bash ${QA_PATH}/scripts/install_local_${1}  \
      ${isDebug:+--debug} ${QUIET:+-q} \
      --prefix=${prefix} \
      --src=$srcPath/$name
@@ -368,7 +342,7 @@ f()
     myStat=DONE
   fi
 
-  log ${QA_SRC}/scripts/install_local_${1} ${isDebug:+--debug} \
+  log ${QA_PATH}/scripts/install_local_${1} ${isDebug:+--debug} \
   --prefix=${prefix} ${QUIET:+-q} --src=${srcPath} ${myStat}
 
   test ${myStat} = FAIL && exit 1
@@ -678,51 +652,6 @@ log()
   return $status
 }
 
-xtractSrcPath()
-{
-  # Note: each executable invoked on a bash command-line
-  # gets its name in parameter $0, which is unchanged
-  # in a function.
-
-  # this function is called recursively
-
-  # remember the current path
-  if [ $# -eq 0 ] ; then
-    local oldPath=$(pwd)
-    local p=$0
-  else
-    p=$1
-  fi
-
-  if [ ${p} != "${p//\./}" ] ; then
-    cd ${p%/*}
-    xtractSrcPath ${p##*/}
-  fi
-
-  # Is it a symbolic link?
-  # The symbolic link could point to another symbolic link
-  if [ -h $p ] ; then
-    local tmps
-    tmps=( $( ls -l $p ) )
-
-    # get the target of the symbolic link
-    p=${tmps[$(( ${#tmps[*]}-1 ))]}
-    cd ${p%/*}  # strip command
-
-    xtractSrcPath ${p##*/}
-    return
-  fi
-
-  QA_SRC=$(pwd)
-
-  if [ ${QA_SRC} != ${QA_SRC%/scripts} ] ; then
-    QA_SRC=${QA_SRC%/scripts}
-    cd ..
-  fi
-
-  return
-}
-
 tr_option()
 {
   local phrase="${!1}"
@@ -748,12 +677,10 @@ tr_option()
 
 # ++++++++++++   main   +++++++++++++++
 
-#extract the path to QA from $0
-xtractSrcPath
+#QA_PATH was exported
+srcPath=${QA_PATH}/local/source  # by default
 
-srcPath=${QA_SRC}/${srcPath}  # by default
-
-prefix=${QA_SRC}/local
+prefix=${QA_PATH}/local
 
 while getopts hq-: option ${args[*]}
 do
@@ -843,14 +770,14 @@ if [ ${#link} -eq 0 ] ; then
   if ! $( f hdf5 ) ; then
     exit 1
   fi
-fi
 
-if ! $( f netcdf ) ; then
-  exit 1
-fi
+  if ! $( f netcdf ) ; then
+    exit 1
+  fi
 
-if ! $( f udunits ) ; then
-  exit 1
+  if ! $( f udunits ) ; then
+    exit 1
+  fi
 fi
 
 # adjust install_configure setting
@@ -859,9 +786,9 @@ test -e ${prefix}/lib && lib=${prefix}/lib
 if [ -e ${prefix}/lib64 ] ; then
   lib=${lib}${lib:+:}${prefix}/lib64
 fi
-sed -i "/^[[:space:]]*LIB=/ c LIB=${lib}" install_configure
+sed -i "/LIB=/ a LIB=${lib}" install_configure
 
 incl=${prefix}/include
-sed -i "/^[[:space:]]*INCLUDE=/ c INCLUDE=${incl}" install_configure
+sed -i "/INCLUDE=/ a INCLUDE=${incl}" install_configure
 
 exit 0

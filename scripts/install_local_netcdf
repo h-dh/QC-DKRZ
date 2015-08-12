@@ -56,11 +56,10 @@ tr_option()
 }
 
 # main
-QA_SRC=${0%/*}
-test ${QA_SRC##*/} = scripts && QA_SRC=${QA_SRC%/*}
 
-mkdir -p $QA_SRC/local/source
-out=$QA_SRC/local/source/INSTALL_netcdf.log
+# QA_PATH was exported
+mkdir -p $QA_PATH/local/source
+out=$QA_PATH/local/source/INSTALL_netcdf.log
 
 while getopts hp:q-: option ${args[*]}
 do

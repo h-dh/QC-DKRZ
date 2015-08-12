@@ -289,12 +289,10 @@ atomicConversion()
       good="${path[k]}${dir}good/${f%.log}.note"
       bad="${path[k]}${dir}bad/${f%.log}.note"
 
-      # it is possible that bad files exist without any contents, but a single '',
-      # which is not a word
-      local t
-      t=$( wc -w  ${bad})
-      if [[ ! ( ${t:0:1} = '0' && ${t:1:1} = ' ' ) ]] ; then
-        mv ${bad} ${path[k]}${dir}${f}
+      \rm  -f ${path[k]}${dir}${f%.log}.note
+
+      if [ -s $bad ] ; then
+        mv ${bad} ${path[k]}${dir}${f%.log}.note
       else
         \rm -f $bad
       fi

@@ -2,10 +2,10 @@
 
 package=QA-DKRZ
 
-hdf5=hdf5-1.8.11
-netcdf=netcdf-4.3.0
+hdf5=hdf5-1.8.14
+netcdf=netcdf-4.3.2
 zlib=zlib-1.2.8
-udunits=udunits-2.2.16
+udunits=udunits-2.2.19
 
 defaultProject=CORDEX
 
@@ -78,6 +78,14 @@ getSrcPath()
 {
   # extract the path to the root of the QA package
 
+  # given by environment variable
+  if [ ${#QA_PATH} -gt 0 ] ; then
+    # is it a path to bin?
+    test ${QA_PATH##*/} = 'bin' && export QA_PATH=${QA_PATH%/bin}
+
+    return
+  fi
+
   local target
   if [ ${1:0:1} != '/' ] ; then
     target=$(pwd)/$1
@@ -137,6 +145,8 @@ getSrcPath()
 
     QA_PATH=${QA_PATH%/*}
   done
+
+  export QA_PATH=${QA_PATH}
 
   return
 }

@@ -40,11 +40,11 @@ setDefaults()
   # to the calling qaDirector
 
   # you should not leave this unchanged in the config file
-  test ${#QA_RESULTS} -eq 0 && setKWL QA_RESULTS=${QA_SRC}/results
+  test ${#QA_RESULTS} -eq 0 && setKWL QA_RESULTS=${QA_PATH}/results
 
   setKWL QA_MANAGER_HOST=$HOSTNAME
 
-  setKWL QA_BIN=${HOSTNAME}:${QA_SRC}/bin
+  setKWL QA_BIN=${HOSTNAME}:${QA_PATH}/bin
 
   # A list of machines executing asynchronous jobs.
   setKWL QA_EXEC_HOSTS=$HOSTNAME
@@ -118,7 +118,7 @@ changeGroupPermission()
     if [ ${#sendText} -eq 0 -a ${item:6:1} != s ] ; then
       # It would be amazing if chmod would not be allowed, but chgrp was
       find $1 -type d -exec chmod g+srwx {} \;
-      find $1 -type f -exec $QA_SRC/scripts/cpMod {} \;
+      find $1 -type f -exec $QA_PATH/scripts/cpMod {} \;
     fi
   fi
 }
@@ -137,10 +137,10 @@ checkTools()
   # we know that it's bash
 
   if [ $CHECK_TOOLS = t ] ; then
-    if [ ! -e $QA_SRC ] ; then
-      std_out "$QA_SRC\t\t directory not found"
+    if [ ! -e $QA_PATH ] ; then
+      std_out "$QA_PATH\t\t directory not found"
     else
-      std_out "QA_SRC\t\t $QA_SRC"
+      std_out "QA_PATH\t\t $QA_PATH"
     fi
   fi
 
@@ -305,13 +305,13 @@ descript()
        # session log-file
        com=cat
        localDev='>> $SESSION_LOGDIR/session.log'
-    elif [ ${#QA_SRC} -gt 0 ] ; then
+    elif [ ${#QA_PATH} -gt 0 ] ; then
       # NoDevice
       local str0
       str0="undeliv_$( date +'%FT%T' )_${HOSTNAME%%.*}".txt
-      if mkdir -p $QA_SRC/NoDevice &> /dev/null ; then
+      if mkdir -p $QA_PATH/NoDevice &> /dev/null ; then
         com=cat
-        localDev='>> ${QA_SRC}/NoDevice/$str0'
+        localDev='>> ${QA_PATH}/NoDevice/$str0'
       fi
     fi
   fi
@@ -520,10 +520,10 @@ findEmbeddedConf()
   local pDir  # index 0 -> 3 provides precedence
 
   pDir[0]=''  # absolute or local path
-  pDir[1]=${QA_SRC}/tables
-  pDir[2]=${QA_SRC}/tables/${PROJECT_AS}
-  pDir[3]=${QA_SRC}/tables/projects
-  pDir[4]=${QA_SRC}/tables/projects/${PROJECT_AS}
+  pDir[1]=${QA_PATH}/tables
+  pDir[2]=${QA_PATH}/tables/${PROJECT_AS}
+  pDir[3]=${QA_PATH}/tables/projects
+  pDir[4]=${QA_PATH}/tables/projects/${PROJECT_AS}
   local ix
 
   for(( ix=0 ; ix < 5 ; ++ix )) ; do
@@ -599,8 +599,8 @@ getConfPriority()
   done
 
   # if a config file found so far is not a valid file, then try in
-  #   1) QA_SRC/tables
-  #   2) QA_SRC/tables/projects
+  #   1) QA_PATH/tables
+  #   2) QA_PATH/tables/projects
 
   # go through the chain of config files unless no more
   # is found or a path found before is found again;
@@ -623,7 +623,7 @@ getConfPriority()
     name=${PROJECT_AS}_qa.conf
 
     local p
-    for p in '' ${QA_SRC}/tables/ ${QA_SRC}/tables/projects/ ; do
+    for p in '' ${QA_PATH}/tables/ ${QA_PATH}/tables/projects/ ; do
       if [ -f ${p}${name} ] ; then
          # add to qaConf array preserving uniquness
          if ! add2qaConf ${p}${name} ; then
@@ -775,16 +775,16 @@ loadSetting()
 {
   local tmp
 
-  if [ ${#QA_SRC} -eq 0 ] ; then
+  if [ ${#QA_PATH} -eq 0 ] ; then
     sendSubject='QA: initialisation error'
-    std_out "QA_SRC must be set. Exit."
+    std_out "QA_PATH must be set. Exit."
     std_out flush
     exit 1
   fi
 
-  if [ ! -d "$QA_SRC" ] ; then
+  if [ ! -d "$QA_PATH" ] ; then
     sendSubject='QA: initialisation error'
-    std_out "Source dir $QA_SRC must exist and must be writable. Exit."
+    std_out "Source dir $QA_PATH must exist and must be writable. Exit."
     std_out flush
     exit 1
   fi
@@ -816,7 +816,7 @@ loadSetting()
   tmp="${tmp[*]}"
   PROJECT_DATA=${tmp// /,}
 
-  QA_SRC=${QA_SRC%/}  # rm trailing '/'
+  QA_PATH=${QA_PATH%/}  # rm trailing '/'
 
   QA_RESULTS=${QA_RESULTS%/}  # rm trailing '/'
   if [ ${QA_RESULTS:0:1} != '/' ] ; then
@@ -876,8 +876,8 @@ loadSetting()
   naming
 
   # change permissions
-  changeGroupPermission $QA_SRC
-  if [ "${QA_RESULTS:0:${#QA_SRC}}" != "$QA_SRC" ] ; then
+  changeGroupPermission $QA_PATH
+  if [ "${QA_RESULTS:0:${#QA_PATH}}" != "$QA_PATH" ] ; then
     changeGroupPermission $QA_RESULTS
   fi
 
@@ -1359,7 +1359,7 @@ Command-line parameters:
 $( echo "${comLine[*]}" )
 
 Current Paths:
-Source directory: $QA_SRC
+Source directory: $QA_PATH
 QA data directory: $QA_RESULTS/data
 FS data directory: ${PROJECT_DATA[*]}
 !
@@ -1447,12 +1447,12 @@ setKWL()
 
     QA_BIN=
     # convert relative paths to abolute ones
-    test "${vals[0]:0:1}" != '/' && vals[0]=${QA_SRC}/${vals[0]}
+    test "${vals[0]:0:1}" != '/' && vals[0]=${QA_PATH}/${vals[0]}
     QA_BIN[0]=${vals[0]}
 
     for(( i=1 ; i < ${#vals[*]} ; ++i )) ; do
       # convert relative paths to abolute ones
-      test "${vals[i]:0:1}" != '/' && vals[$i]=${QA_SRC}/${vals[i]}
+      test "${vals[i]:0:1}" != '/' && vals[$i]=${QA_PATH}/${vals[i]}
 
       QA_BIN[${#QA_BIN[*]}]=${hosts[i]}${vals[i]}
     done
@@ -1530,9 +1530,9 @@ std_out()
     else
       # str0 gets the filename for undeliverables
       str0="undeliv_$( date +'%FT%T' )_${HOSTNAME%%.*}".txt
-      if mkdir -p $QA_SRC/NoDevice &> /dev/null ; then
+      if mkdir -p $QA_PATH/NoDevice &> /dev/null ; then
         for(( j=0 ; j < ${#outputText[*]} ; ++j )) ; do
-          echo -e "${outputText[j]}" >> $QA_SRC/NoDevice/$str0
+          echo -e "${outputText[j]}" >> $QA_PATH/NoDevice/$str0
         done
       fi
     fi
@@ -1588,7 +1588,7 @@ tryExist()
     fi
 
     # try a C compilation
-    if [ -e ${QA_SRC}/src/${2%.x}.c ] ; then
+    if [ -e ${QA_PATH}/src/${2%.x}.c ] ; then
       if [ ${#CC} -eq 0 ] ; then
         sendText="${sendText}\nC compiler not found."
         return 1
@@ -1596,7 +1596,7 @@ tryExist()
 
       local answ status
       answ=$( $CC ${CFLAGS[*]} -o ${curr_QA_BIN#*:}/$2 \
-          ${QA_SRC}/src/${2%.x}.c )
+          ${QA_PATH}/src/${2%.x}.c )
 
       status=$?
       if [ ${status} -eq 0 ] ; then
@@ -1607,7 +1607,7 @@ tryExist()
       fi
 
     # try a C++ compilation
-    elif [ -e ${QA_SRC}/src/${2%.x}.cpp ] ; then
+    elif [ -e ${QA_PATH}/src/${2%.x}.cpp ] ; then
       if [ ${#CXX} -eq 0 ] ; then
         sendText="${sendText}\nC++ compiler not found CXX=${CXX}."
         return 1
@@ -1615,7 +1615,7 @@ tryExist()
 
       local answ status
       answ=$( $CXX ${CPPFLAGS[*]} -o ${curr_QA_BIN#*:}/$2 \
-          ${QA_SRC}/src/${2%.x}.cpp &> /dev/null )
+          ${QA_PATH}/src/${2%.x}.cpp &> /dev/null )
 
       status=$?
       if [ ${status} -eq 0 ] ; then
@@ -1626,7 +1626,7 @@ tryExist()
       fi
     else
       if [ ! -e ${curr_QA_BIN#:*}/$2 ] ; then
-        sendText="${sendText}\n${2%.x}.c|cpp not found in ${QA_SRC}/src."
+        sendText="${sendText}\n${2%.x}.c|cpp not found in ${QA_PATH}/src."
         sendText="${sendText} No compilation."
         return 1
       fi
@@ -1740,7 +1740,7 @@ do
         test ! -f ${OPTARG} && noSuchFile=( ${noSuchFile[*]} ${OPTARG} )
         ;;
     h)  isHelp=t ;;
-    p)  setKWL QA_SRC=$OPTARG ;;
+    p)  setKWL QA_PATH=$OPTARG ;;
     P)  setKWL PROJECT=$OPTARG ;;
     T)  TTY=${OPTARG} ;;
     x)  set -x ;;
@@ -1829,10 +1829,10 @@ do
         if [ "${UOPTARG%=*}" = "AUTO-UP" ] ; then
           if [ "${OPTARG#*=}" = disable -o "${OPTARG#*=}" = f -o "${OPTARG#*=}" = d ]
           then
-            if grep -i -q auto-up ${QA_SRC}/.conf &> /dev/null; then
+            if grep -i -q auto-up ${QA_PATH}/.conf &> /dev/null; then
               setKWL AUTO_UPDATE=f
             fi
-          elif ! grep -i -q auto-up ${QA_SRC}/.conf &> /dev/null; then
+          elif ! grep -i -q auto-up ${QA_PATH}/.conf &> /dev/null; then
                 setKWL AUTO_UPDATE=t
           fi
           continue

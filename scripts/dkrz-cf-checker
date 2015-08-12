@@ -28,6 +28,16 @@ getPath()
   # gets its name in parameter $0, which is available
   # in functions.
 
+  # given by environment variable
+  if [ ${#QA_PATH} -gt 0 ] ; then
+    qPath=${QA_PATH}
+
+    # is it a path to bin?
+    test ${QA_PATH##*/} = 'bin' && qPath=${QA_PATH%/bin}
+
+    return
+  fi
+
   if [ ${#qPath} -eq 0 ] ; then
     # init
     if [ ${0:0:1} = '/' ] ; then

@@ -189,6 +189,14 @@ getSrcPath()
 {
   # extract the path to the root of the QA package
 
+  # given by environment variable
+  if [ ${#QA_PATH} -gt 0 ] ; then
+    # is it a path to bin?
+    test ${QA_PATH##*/} = 'bin' && export QA_PATH=${QA_PATH%/bin}
+
+    return
+  fi
+
   local target
   if [ ${1:0:1} != '/' ] ; then
     target=$(pwd)/$1
@@ -249,6 +257,8 @@ getSrcPath()
     QA_PATH=${QA_PATH%/*}
   done
 
+  export QA_PATH=${QA_PATH}
+
   return
 }
 
@@ -258,7 +268,7 @@ libInclSetting()
    INCLUDE=${INCLUDE//-I}
 
    export CC CXX CFLAGS CXXFLAGS FC F90
-   export LIB INCLUDE QA_PATH
+   export LIB INCLUDE
 
    local i
 
@@ -291,10 +301,13 @@ libInclSetting()
    if [ ${isBuild:-f} = t -o ${#link} -gt 0  -o  ${#LIB} -eq 0 ] ; then
      # install zlib, hdf5, and/or netcdf.
      # LIB and INCLUDE, respectively, are colon-separated singles
-     if bash scripts/install_local ${coll[*]} ; then
+     if [ ${isBuild:-f} = t ] && bash scripts/install_local ${coll[*]} ; then
        unset link
        isBuild=f
      else
+       echo "no path to netCDF/hdf/zlib"
+       echo "Please, edit file install_configure or"
+       echo "apply option --build for downloading and building local instances."
        exit 1
      fi
 
@@ -506,16 +519,6 @@ makeProject()
     # link between PROJECT file and a symbolic name
     projectLinks cpp
     projectLinks h
-
-    if [ ${BIN:-f} = f -o ${QA_PATH:-f} = f ] ; then
-       if [ ${BIN:-f} = f ] ; then
-          echo "Please, set BIN variable in the install script."
-       else
-          echo "QA_PATH: unrecognised path to the ${package} package."
-       fi
-
-       exit
-    fi
 
     if [ ${PROJECT} = CF ] ; then
       local cfc=CF-checker
@@ -914,10 +917,8 @@ done
 shift $(( $OPTIND - 1 ))
 
 # get path
-if [ ${#QA_PATH} -eq 0 ] ; then
-  getSrcPath $0
-  cd ${QA_PATH}
-fi
+getSrcPath $0
+cd ${QA_PATH}
 
 # compiler settings
 # import setting; these have been created during first installation
@@ -928,11 +929,7 @@ libInclSetting
 
 store_LD_LIB_PATH
 
-if [ ${#BIN} -gt 0 ] ; then
-  test ${BIN:0:1} != '/' && BIN=${QA_PATH}/$BIN
-else
-  BIN=${QA_PATH}/bin
-fi
+BIN=${QA_PATH}/bin
 
 test ! -d $BIN && mkdir bin
 

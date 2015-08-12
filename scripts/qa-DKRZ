@@ -191,7 +191,7 @@ bind_checksum()
   fi
 
   # calculate the checksum(s)
-  ${QA_SRC}/scripts/checkSum -b ${QA_BIN#*:} $type \
+  ${QA_PATH}/scripts/checkSum -b ${QA_BIN#*:} $type \
       -q ${QA_RESULTS} ${YAML:+--yaml} ${CS_NO_HISTORY:+--no_history} \
       ${CS_STAND_ALONE:+-w}  $email ${CS_TABLE:+-t} ${CS_TABLE} \
       ${CURR_EXP_NAME:+-x} ${CURR_EXP_NAME} \
@@ -237,7 +237,7 @@ callQaConfig()
 #  set -f
 
 # calling the configuration script
-  if ! items=( $( $QA_SRC/scripts/$QA_CONFIGURATOR -p $QA_SRC $* ) ) ; then
+  if ! items=( $( $QA_PATH/scripts/$QA_CONFIGURATOR -p $QA_PATH $* ) ) ; then
     # not necessarily an error; also SHOW_CONF, CHECK_TOOLS and
     # no argument for displaying help will return exit 1
     exit
@@ -440,7 +440,7 @@ callQaExecutor()
           QA_MANAGER_HOST \
           QA_NCFILE_FLAGS \
           QA_RESULTS \
-          QA_SRC \
+          QA_PATH \
           REATTEMPT_LIMIT \
           REPLICATED_RECORD \
           REQUIREMENTS_TABLE \
@@ -491,7 +491,7 @@ callQaExecutor()
     text="${text}\nIMPORTED_PATH=${QA_BIN#*:}"
     echo -e "$text" > $procFile
 
-    $QA_SRC/scripts/$QA_EXECUTOR "${ca}QA_SRC=${QA_SRC} PROC_POOL=$PROC_POOL PROC_FILE=${procFile##*/} PAR_PID=${rootPID}" &
+    $QA_PATH/scripts/$QA_EXECUTOR "${ca}QA_PATH=${QA_PATH} PROC_POOL=$PROC_POOL PROC_FILE=${procFile##*/} PAR_PID=${rootPID}" &
   else
     local bin
     for bin in ${QA_BIN[*]} ; do
@@ -505,7 +505,7 @@ callQaExecutor()
     echo -e "$text" > $procFile
 
     if callPing ; then
-      ssh $nextHost $QA_SRC/scripts/$QA_EXECUTOR "PROC_POOL=$PROC_POOL PROC_FILE=${procFile##*/} PAR_PID=${rootPID} &" &> /dev/null
+      ssh $nextHost $QA_PATH/scripts/$QA_EXECUTOR "PROC_POOL=$PROC_POOL PROC_FILE=${procFile##*/} PAR_PID=${rootPID} &" &> /dev/null
     fi
   fi
 
@@ -931,7 +931,7 @@ QA result path: ${target}\nRemoved QA results by following links."
     # also delete table entries
     if [ $isClearTables = t ] ; then
       local prg
-      prg=${QA_SRC}/scripts/xtractNotes_from_log
+      prg=${QA_PATH}/scripts/xtractNotes_from_log
 
       test ${#prg} -gt 0 && \
         /bin/bash ${prg} -Q -r ${fBase[ix]} $EXP_LOGDIR/$CURR_EXP_NAME.log
@@ -1241,7 +1241,7 @@ getAllExps()
 getCF_STD_NAME()
 {
   local p
-  p=${QA_SRC}/tables/projects/CF
+  p=${QA_PATH}/tables/projects/CF
 
   local name=cf-standard-name-table.xml
 
@@ -2226,9 +2226,9 @@ getProjectTableName()
 
 getRevNum()
 {
-  # get the number saved in QA_SRC/.conf as revision=num
+  # get the number saved in QA_PATH/.conf as revision=num
   local rev revs
-  revs=( $( grep 'revision=' ${QA_SRC}/.conf 2> /dev/null \
+  revs=( $( grep 'revision=' ${QA_PATH}/.conf 2> /dev/null \
        | awk -F= '{print $2}' ) )
 
   if [ ${#revs[*]} -eq 0 ] ; then
@@ -2439,6 +2439,88 @@ getSelectedPaths()
   return
 }
 
+getSrcPath()
+{
+  # extract the path to the root of the QA package
+
+  # given by environment variable
+  if [ ${#QA_PATH} -gt 0 ] ; then
+    # is it a path to bin?
+    test ${QA_PATH##*/} = 'bin' && QA_PATH=${QA_PATH%/bin}
+
+    return
+   fi
+
+  local target
+  if [ ${1:0:1} != '/' ] ; then
+    target=$(pwd)/$1
+  else
+    target=$1
+  fi
+
+  if [ -h $target ] ; then
+
+    # get the link
+    local link=$(ls -l $target | awk  '{print $(NF)}')
+
+    # link is relative, so make it absolute
+    test ${link:0:1} != '/' && link=${target%/*}/${link}
+
+    getSrcPath ${link}
+
+  else
+
+    # resolve .. and .
+    local arr=( ${target//\// } )
+
+    # any ., or .. in the middle of QA_PATH?
+    local i j sz
+    sz=${#arr[*]}
+
+    for(( i=1 ; i < sz ; ++i )) ; do
+
+      if [ "${arr[i]}" = '.' ] ; then
+        unset arr[i]
+      elif [ "${arr[i]}" = '..' ] ; then
+        j=$((i-1))
+
+        # this takes into account adjacent . and/or .. with any depth
+        while [ ${#arr[j]} -eq 0 ] ; do
+          j=$((j-1))
+        done
+        unset arr[j]
+        unset arr[i]
+      fi
+    done
+
+    # get rid of empty items
+    arr=( ${arr[*]} )
+
+    sz=${#arr[*]}
+
+    for(( i=0 ; i < sz ; ++i )) ; do
+      QA_PATH=${QA_PATH}/${arr[i]}
+    done
+  fi
+
+  local tmp
+  while : ; do
+    tmp=${QA_PATH##*/}
+    test "${tmp:0:3}" = 'QA-' && return
+
+    QA_PATH=${QA_PATH%/*}
+  done
+
+  local str
+  str="\nqa-DKRZ was executed from out-side of the QA package."
+  str="${str}\nIt was probably copied or hard-linked. Please, use a"
+  str="${str}\nsymbolic link or call directly from /path/QA-package/scripts"
+
+  echo -e -n "${str}" > $TTY
+
+  exit
+}
+
 has()
 {
   local c i j t
@@ -2526,15 +2608,15 @@ init()
 
   # automatic package update
   if [ "${AUTO_UPDATE}" = t ] ; then
-     ${QA_SRC}/install --auto-up --update
+     ${QA_PATH}/install --auto-up --update
   elif [ "${AUTO_UPDATE}" = f -o "${AUTO_UPDATE:0:1}" = d ] ; then
-     ${QA_SRC}/install --auto-up=disable
-  elif grep -q auto-up=enabled ${QA_SRC}/.conf 2> /dev/null ; then
-     ${QA_SRC}/install --update
+     ${QA_PATH}/install --auto-up=disable
+  elif grep -q auto-up=enabled ${QA_PATH}/.conf 2> /dev/null ; then
+     ${QA_PATH}/install --update
   fi
 
   # this will be performed only once a day
-  ${QA_SRC}/scripts/get_cfconventions ${QA_SRC}/tables/projects/CF
+  ${QA_PATH}/scripts/get_cfconventions ${QA_PATH}/tables/projects/CF
 
   # expand comma-sep-list to arrays
   EMAIL_SUMMARY=( ${EMAIL_SUMMARY//,/ } )
@@ -2591,7 +2673,7 @@ init()
 
   initProjectTableName
 
-  # QA_SRC/tables -> QA_Results/tables
+  # QA_PATH/tables -> QA_Results/tables
   initTables
 
   # save the configuration and init the session logfile
@@ -2861,8 +2943,8 @@ initTables()
   #   tables/${PROJECT}
   #   tables
 
-  # 1) default tables are provided in ${QA_SRC}/tables/projects/PROJECT.
-  # 2) a table of the same name provided in ${QA_SRC}/tables gets
+  # 1) default tables are provided in ${QA_PATH}/tables/projects/PROJECT.
+  # 2) a table of the same name provided in ${QA_PATH}/tables gets
   #    priority, thus may be persistently modified.
   # 3) tables from 2) or 1) are copied to ${QA_Results}/tables.
   # 4) Option TABLE_AUTO_UPDATE is the default, i.e. tables in
@@ -2900,20 +2982,20 @@ initT()
    pDir[3]=tables
 
    if [ "$table" = TABLE_RCM_NAME ] ; then
-     if [ -d ${QA_SRC}/${pDir[0]}/IS-ENES-Data.github.io ] ; then
-       ( cd ${QA_SRC}/${pDir[0]}/IS-ENES-Data.github.io && \
+     if [ -d ${QA_PATH}/${pDir[0]}/IS-ENES-Data.github.io ] ; then
+       ( cd ${QA_PATH}/${pDir[0]}/IS-ENES-Data.github.io && \
          git pull origin ) &> /dev/null
      else
-       ( cd ${QA_SRC}/${pDir[0]} && \
+       ( cd ${QA_PATH}/${pDir[0]} && \
          git clone  https://github.com/IS-ENES-Data/IS-ENES-Data.github.io ) \
          &> /dev/null
      fi
 
-     test ! -d ${QA_SRC}/${pDir[0]}/cordex_specs \
-                   && mkdir ${QA_SRC}/${pDir[0]}/cordex_specs
+     test ! -d ${QA_PATH}/${pDir[0]}/cordex_specs \
+                   && mkdir ${QA_PATH}/${pDir[0]}/cordex_specs
 
      wget --tries=3 -q -N \
-     --directory-prefix=${QA_SRC}/${pDir[0]}/cordex_specs \
+     --directory-prefix=${QA_PATH}/${pDir[0]}/cordex_specs \
      http://cordex.dmi.dk/joomla/images/CORDEX/RCMModelName.txt \
      &> /dev/null
    fi
@@ -2933,14 +3015,14 @@ initT()
      test -f ${value} && break
 
      # explicitly in a sub-dir path
-     if [ -f ${QA_SRC}/${value} ] ; then
-       p=${QA_SRC}/${value%/*}/
+     if [ -f ${QA_PATH}/${value} ] ; then
+       p=${QA_PATH}/${value%/*}/
        break
      fi
 
      # scan through the precedence chain
-     if [ -f ${QA_SRC}/${pDir[ix]}/${value} ] ; then
-       p=${QA_SRC}/${pDir[ix]}/
+     if [ -f ${QA_PATH}/${pDir[ix]}/${value} ] ; then
+       p=${QA_PATH}/${pDir[ix]}/
        break
      fi
    done
@@ -2948,8 +3030,8 @@ initT()
    value=${value##*/}
 
    if [ ${table} = TABLE_RCM_NAME ] ; then
-     cat ${QA_SRC}/${pDir[0]}/IS-ENES-Data.github.io/CORDEX_RCMs_ToU.txt \
-         ${QA_SRC}/${pDir[0]}/cordex_specs/RCMModelName.txt \
+     cat ${QA_PATH}/${pDir[0]}/IS-ENES-Data.github.io/CORDEX_RCMs_ToU.txt \
+         ${QA_PATH}/${pDir[0]}/cordex_specs/RCMModelName.txt \
          > ${TABLE_PATH}/CORDEX_RCMModelName.txt
    elif [ -f "${p}${value}" ] ; then
      if ! diff ${p}${value} ${TABLE_PATH}/${value} \
@@ -3797,7 +3879,7 @@ setLD_LIB_PATH()
   # location of shared libraries not in default paths
   # get those used for the compilation stored in .conf
   local tmp
-  tmp=($( grep 'LD_LIBRARY_PATH=' ${QA_SRC}/.conf 2> /dev/null))
+  tmp=($( grep 'LD_LIBRARY_PATH=' ${QA_PATH}/.conf 2> /dev/null))
   tmp=( ${tmp[*]//LD_LIBRARY_PATH=/} )
   tmp=( ${tmp[*]//:/ } )
 
@@ -3914,15 +3996,15 @@ std_out()
   # neither email nor session logfile. Store in dir NoDevice
 #  if [ ${isSent} = f ] ; then
 #    # str0 gets the filename for undeliverables
-#    if mkdir -p $QA_SRC/NoDevice &> /dev/null ; then
+#    if mkdir -p $QA_PATH/NoDevice &> /dev/null ; then
 #      str0="undeliv_$( date +'%FT%T' )_${HOSTNAME%%.*}".txt
-#      echo "$str0" >> $QA_SRC/NoDevice/$str0
+#      echo "$str0" >> $QA_PATH/NoDevice/$str0
 
 #      for(( j=0 ; j < ${#outputText[*]} ; ++j )) ; do
-#        echo -e -n "${outputText[j]}" >> $QA_SRC/NoDevice/$str0
+#        echo -e -n "${outputText[j]}" >> $QA_PATH/NoDevice/$str0
 
 #      for(( j=0 ; j < ${#outputText[*]} ; ++j )) ; do
-#        echo -e -n "${outputText[j]}" >> $QA_SRC/NoDevice/$str0
+#        echo -e -n "${outputText[j]}" >> $QA_PATH/NoDevice/$str0
 #      done
 #    fi
 #  fi
@@ -3951,7 +4033,7 @@ taskSum()
   fi
 
   if [ ${#EXP_NAMES[*]} -gt 0 ] ; then
-    /bin/bash ${QA_SRC}/scripts/taskSummary ${DEBUG_X} \
+    /bin/bash ${QA_PATH}/scripts/taskSummary ${DEBUG_X} \
        -p ${QA_RESULTS}/check_logs \
        ${cvr} ${ers} ${prj} ${qrs} ${tcl} ${EXP_NAMES[*]}
   fi
@@ -4288,13 +4370,13 @@ traceCalibration()
   local prg
 
   if [ ${HOSTNAME} = surge ] ; then
-    prg="${QA_SRC}/bin/unixTime.x dec"
+    prg="${QA_PATH}/bin/unixTime.x dec"
   elif [ ${HOSTNAME:0:3} = liz ] ; then
-    prg="${QA_SRC}/bin_l/unixTime.x dec"
+    prg="${QA_PATH}/bin_l/unixTime.x dec"
   elif [ ${HOSTNAME:0:4} = pass ] ; then
-    prg="${QA_SRC}/bin_p/unixTime.x dec"
+    prg="${QA_PATH}/bin_p/unixTime.x dec"
   elif [ ${HOSTNAME:0:4} = bliz ] ; then
-    prg="${QA_SRC}/bin_b/unixTime.x dec"
+    prg="${QA_PATH}/bin_b/unixTime.x dec"
   else
     echo "traceCalibration: executable unixTime.x not found"
     exit
@@ -4543,79 +4625,6 @@ wait_fnct()
 
 ##//! Determine the path to QA-0.4/scripts from $0
 
-xtractSrcPath()
-{
-  # extract the path to the root of the QA package
-
-  local target
-  if [ ${1:0:1} != '/' ] ; then
-    target=$(pwd)/$1
-  else
-    target=$1
-  fi
-
-  if [ -h $target ] ; then
-
-    # get the link
-    local link=$(ls -l $target | awk  '{print $(NF)}')
-
-    # link is relative, so make it absolute
-    test ${link:0:1} != '/' && link=${target%/*}/${link}
-
-    xtractSrcPath ${link}
-
-  else
-
-    # resolve .. and .
-    local arr=( ${target//\// } )
-
-    # any ., or .. in the middle of QA_SRC?
-    local i j sz
-    sz=${#arr[*]}
-
-    for(( i=1 ; i < sz ; ++i )) ; do
-
-      if [ "${arr[i]}" = '.' ] ; then
-        unset arr[i]
-      elif [ "${arr[i]}" = '..' ] ; then
-        j=$((i-1))
-
-        # this takes into account adjacent . and/or .. with any depth
-        while [ ${#arr[j]} -eq 0 ] ; do
-          j=$((j-1))
-        done
-        unset arr[j]
-        unset arr[i]
-      fi
-    done
-
-    # get rid of empty items
-    arr=( ${arr[*]} )
-
-    sz=${#arr[*]}
-
-    for(( i=0 ; i < sz ; ++i )) ; do
-      QA_SRC=${QA_SRC}/${arr[i]}
-    done
-  fi
-
-  local tmp
-  while : ; do
-    tmp=${QA_SRC##*/}
-    test "${tmp:0:3}" = 'QA-' && return
-
-    QA_SRC=${QA_SRC%/*}
-  done
-
-  local str
-  str="\nqa-DKRZ was executed from out-side of the QA package."
-  str="${str}\nIt was probably copied or hard-linked. Please, use a"
-  str="${str}\nsymbolic link or call directly from /path/QA-package/scripts"
-
-  echo -e -n "${str}" > $TTY
-
-  exit
-}
 
 ##//! Entry to this script
 
@@ -4642,7 +4651,7 @@ rootPID=$$
 
 #extract the path to QA from $0
 # get execution path of QA scripts
-xtractSrcPath $0
+getSrcPath $0
 
 init $*
 

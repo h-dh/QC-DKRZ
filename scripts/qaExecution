@@ -1536,6 +1536,7 @@ signalParent()
      ssh ${QA_MANAGER_HOST} kill -${1} $PAR_PID &> /dev/null
    fi
 }
+
 terminate()
 {
   isTERM=t

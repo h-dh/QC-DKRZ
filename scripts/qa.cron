@@ -5,7 +5,7 @@
 
 # Actions for I) take priority of II)
 
-# Note: Variable QA_SRC below is derived from $0
+# Note: Variable QA_PATH below is derived from $0
 #       If you change the location of the qa.cron script
 #       from directory QA-DKRZ/scripts to somewhere else, then
 #       you have to provide the absolute path to the QA source
@@ -21,7 +21,7 @@
 # temporal ProcPool-ident.number(s) directories.
 # A message is written to the continued session log-file.
 
-# Note: the script checks the validity of the QA_SRC path. If it is
+# Note: the script checks the validity of the QA_PATH path. If it is
 # invalid and an email address was provided, the named recipient
 # will be notified. If invalid, this script exits without further action.
 
@@ -40,10 +40,10 @@
 #49 23 * * * path/QA-DKRZ/scripts/qa.cron
 
 if [ $# -eq 1 ] ; then
-  QA_SRC=$1
+  QA_PATH=$1
 else
   this=$0
-  QA_SRC=${this%/scripts/qa.cron}
+  QA_PATH=${this%/scripts/qa.cron}
 fi
 
 #EMAIL_TO=name@xyz.de)
@@ -127,7 +127,7 @@ task()
 {
   # the script requires the number of currently active runs
   # in order to prevent flooding
-  $QA_SRC/scripts/qaTask ${#runs[*]} > /dev/null # >> .qa_task.log
+  $QA_PATH/scripts/qaTask ${#runs[*]} > /dev/null # >> .qa_task.log
 
   exit
 }
@@ -143,23 +143,23 @@ elif [ ${HOSTNAME%.*} = lizard6 ] ; then
   sleep 40
 fi
 
-if [ ! -d $QA_SRC ] ; then
+if [ ! -d $QA_PATH ] ; then
   sendSubject="qa.cron: path to QA not found"
-  sendText="${QA_SRC}: No such directory"
+  sendText="${QA_PATH}: No such directory"
   sendEMail
   exit
 fi
 
-if [ ! -d $QA_SRC/PID ] ; then
+if [ ! -d $QA_PATH/PID ] ; then
   # No active session running.
 
   #run the task launching script
-  $QA_SRC/scripts/qaTask
+  $QA_PATH/scripts/qaTask
   exit
 fi
 
 # Get files with appended pid of the corresponding qa-DKRZ process.
-files=( $( ls $QA_SRC/PID/* 2> /dev/null) )
+files=( $( ls $QA_PATH/PID/* 2> /dev/null) )
 
 # Get pid(s) of running qa-DKRZ processes; store in runs
 declare -a runs
@@ -202,7 +202,7 @@ for f in ${files[*]} ; do
   done
 
   # clear ProcPool remnants
-  fs=( $( ls -d $QA_SRC/ProcPool*.$fp 2> /dev/null ) )
+  fs=( $( ls -d $QA_PATH/ProcPool*.$fp 2> /dev/null ) )
   for(( i=0 ; i < ${#fs[*]} ; ++i )) ; do
     \rm -r -f ${fs[i]}
   done
@@ -231,10 +231,10 @@ for f in ${files[*]} ; do
 
     # Re-launch. Any output to a console is discarded
     # because a cron job would not know where to direct.
-    $QA_SRC/scripts/qa-DKRZ ${args[*]} &> /dev/null &
+    $QA_PATH/scripts/qa-DKRZ ${args[*]} &> /dev/null &
 
     #collect messages
-    message="${message}\nstarted: $QA_SRC/scripts/qa-DKRZ ${args[*]}\nremoved: $f"
+    message="${message}\nstarted: $QA_PATH/scripts/qa-DKRZ ${args[*]}\nremoved: $f"
 
     break # loop was just used to keep the file open
   done < $f
