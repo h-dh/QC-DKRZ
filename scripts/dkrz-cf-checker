@@ -6,74 +6,85 @@ descript()
   echo "Purpose: Check for CF Conventions Compliance."
   echo "The checker is part of the QA-DKRZ package and must have been compiled"
   echo "by '/your-path-to-QA-DKRZ/install CF'."
-  echo " -C str  CF Convention string; taken from global attributes by default."
-  echo " -F path Find all nc-files in sub-dirs of path."
-  echo " -p str  Path to one or more netCDF Files; this is prefixed"
-  echo "         only to files without any path component."
-  echo " -R      Apply also CF recommendations."
-  echo " -x str  Path to QA-DKRZ/bin; required if this script"
-  echo "         is located outside QA-DKRZ/scripts."
-  echo " --debug"
+  echo " -C str    CF Convention string; taken from global attributes by default."
+  echo " -F path   Find recursively all nc-files from starting point 'path'."
+  echo " -p str    Path to one or more netCDF Files; this is prefixed"
+  echo "           only to netCDF-files without any path component."
+  echo " -R        Apply also recommendations given by CF conventions."
+  echo " --debug   Show execution commands."
   echo " --help"
-  echo " --param-file-only"
-  echo " --with-comments"
+  echo " --param   Only for program development."
+  echo " --ts      Run the files provided in the Test-Suite for CF conventions"
+  echo "           rules in QA-DKRZ/CF_TestSuite. If particular netCDF files are"
+  echo "           provided additionally, then only these are used."
   echo " netCDF-file(s)"
 
   exit
 }
 
-getPath()
+getSrcPath()
 {
-  # Note: each executable invoked on a bash command-line
-  # gets its name in parameter $0, which is available
-  # in functions.
+  # extract the path to the root of the QA package
 
   # given by environment variable
   if [ ${#QA_PATH} -gt 0 ] ; then
-    qPath=${QA_PATH}
-
     # is it a path to bin?
-    test ${QA_PATH##*/} = 'bin' && qPath=${QA_PATH%/bin}
-
-    return
-  fi
-
-  if [ ${#qPath} -eq 0 ] ; then
-    # init
-    if [ ${0:0:1} = '/' ] ; then
-      qPath=${0%/*}
-    else
-      qPath=$(pwd)/${0%/*}
+    if [ ${QA_PATH##*/} = 'bin' ] ; then
+      QA_PATH=${QA_PATH%/bin}
+      isWithBin=t
     fi
 
-    xName=${0##*/}
+    # is something wrong?
+    if [ ! -f ${QA_PATH}/.install_configure ] ; then
+      str="\nQA_PATH=${QA_PATH}${isWithBin:+/bin} is no path to the QA-DKRZ root"
+      str="\nPlease, check environment variable QA_PATH"
+      echo -e "${str}"
+      exit
+    fi
+
+    return
+   fi
+
+  local target isInvalid
+
+  if [ ${1:0:1} = '/' ] ; then
+    target=$1
+  else
+    target=$(pwd)/$1
   fi
 
-  if [ -h $qPath/$xName ] ; then
+  if [ -h $target ] ; then
 
-    qPath=$(ls -l $qPath/${xName} | awk  '{print $(NF)}')
-    xName=${qPath##*/}
-    qPath=${qPath%/*}
+    # get the link
+    local link=$(ls -l $target 2> /dev/null | awk  '{print $(NF)}')
 
-    getPath
+    # link is relative, so make it absolute
+    test ${link:0:1} != '/' && link=${target%/*}/${link}
 
-  else
+    getSrcPath ${link}
 
-    # resolve .. and .
-    local arr=( ${qPath//\// } )
+  elif [ -f $target ] ; then
 
-    # any //, ., or .. in the middle of the path?
+    # a real instance, at first resolve .. and .
+    # works also for . or .. in the middle of the path
+
+    local xname=${target##*/}
+    target=${target%/*}  # remove the name of the script
+    target=${target%/*}  # remove the name directory scripts
+
+    local arr=( ${target//\// } )
+
     local i j sz
     sz=${#arr[*]}
 
     for(( i=1 ; i < sz ; ++i )) ; do
-      j=$((i-1))
 
-      if [ "${arr[i]}" = '/' -a "${arr[j]}" = '/' ] ; then
-        unset arr[j]
-      elif [ "${arr[i]}" = '.' ] ; then
+      if [ "${arr[i]}" = '.' ] ; then
         unset arr[i]
       elif [ "${arr[i]}" = '..' ] ; then
+        j=$((i-1))
+
+        # this takes into account adjacent . and/or .. with any depth
         while [ ${#arr[j]} -eq 0 ] ; do
           j=$((j-1))
         done
@@ -86,37 +97,40 @@ getPath()
     arr=( ${arr[*]} )
 
     sz=${#arr[*]}
-    qPath=
 
+    local tmp
     for(( i=0 ; i < sz ; ++i )) ; do
-      qPath=${qPath}/${arr[i]}
+      tmp=${tmp}/${arr[i]}
     done
 
-  fi
+    if [ -f ${tmp}/.install_configure ] ; then
+      QA_PATH=$tmp
+    else
+      isInvalid=t
+    fi
 
-  local tmp
-  while [ "${qPath}" != "${qPath%/*}" ] ; do
-    tmp=${qPath##*/}
-    test ${tmp:0:3} = 'QA-' && return
-
-    qPath=${qPath%/*}
-  done
-
-  descript
-
-  if [ ${#xPath} -gt 0 ] ; then
-    echo -e "\nPlease, check option -x; found ${xPath}."
   else
-    local str
-    str="\nThis script was executed from out-side of the QA package."
-    str="${str}\nIt was probably copied or hard-linked. Please, use a"
-    str="${str}\nsymbolic link, or call it directly from /path/QA-DKRZ/scripts,"
-    str="${str}\nor use option -x."
-
-    echo -e "${str}"
+    isInvalid=t
   fi
 
-  exit
+  if [ ${isInvalid:-f} = t ] ; then
+
+    local str=$(ls -l $target 2> /dev/null | awk  '{print $(NF)}')
+
+    if [ ${#str} -gt 0 ] ; then
+      str="invalid path=$0"
+    else
+      str="broken path=$0"
+    fi
+
+    echo "${str}"
+
+    exit 1
+  fi
+
+#  export QA_PATH=${QA_PATH}
+
+  return
 }
 
 # -------  main -----
@@ -124,25 +138,19 @@ test $# -eq 0 && descript
 
 # get execution path of QA scripts
 
-while getopts C:F:hp:Rx:-: option ${args[*]}
+while getopts C:F:hp:R-: option ${args[*]}
 do
   case $option in
-    C)  CF=${OPTARG}
-#        test ${CF:0:2} = CF && CF=${CF:2}
-#        test ${CF:0:1} = '-' && CF=${CF:1}
-        ;;
-    F)  findPath=$OPTARG ;;
+    C)  CF=${OPTARG} ;;
+    F)  startingDir=$OPTARG ;;
     h)  descript ;;
     p)  fPath=${OPTARG} ;;
     R)  RC=t ;;
-    x)  xPath=${OPTARG}
-        qPath=$xPath
-        ;;
     -)  if [ "$OPTARG" = "help" ] ; then
           descript
         elif [ "${OPTARG}" = "debug" ] ; then
           set -x
-        elif [ "${OPTARG:0:5}" = "param" ] ; then
+        elif [ "${OPTARG}" = "param" ] ; then
           isParamFileOnly=t
         elif [ "${OPTARG}" = "test-suite" ] ; then
           isTestSuite=t
@@ -156,26 +164,24 @@ done
 
 shift $(( $OPTIND - 1 ))
 
-getPath
+getSrcPath $0
 
-cd $qPath
-./install CF &> /dev/null
-cd - &> /dev/null
+$QA_PATH/install CF &> /dev/null
 
 # files
 if [ ${isTestSuite:-f} = t ] ; then
-  # only these fomr the set of test files
+  # only for the set of test files
   ts_fs=( $* )
 else
   fs=( $* )
 fi
 
-if [ ${#findPath} -gt 0 ] ; then
-  fs=( ${fs[*]} $( find ${findPath} -name "*.cn" ) )
-  fs=( ${fs[*]} $( find ${findPath} -name "*.nc" | sort ) )
+if [ ${#startingDir} -gt 0 ] ; then
+  fs=( ${fs[*]} $( find ${startingDir} -name "*.cn" ) )
+  fs=( ${fs[*]} $( find ${startingDir} -name "*.nc" | sort ) )
 fi
 
-param_T="\\n-t ${qPath}/tables/projects/CF"
+param_T="\\n-t ${QA_PATH}/tables/projects/CF"
 
 param_IN="\\nIN::oCF"
 
@@ -226,7 +232,7 @@ for(( i=0 ; i < ${#fs[*]} ; ++i )) ; do
   fi
 
   param="$(echo -e $param)"
-  $qPath/bin/cf-checker.x ${param}
+  $QA_PATH/bin/cf-checker.x ${param}
 
   if [ ${isTestSuite:-f} = t ] && echo ${fs[i]} | grep -q Fail ; then
     asdf="$(ncdump -h ${fs[i]} | grep :comment[^[:digit:]])"

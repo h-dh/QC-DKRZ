@@ -192,16 +192,28 @@ getSrcPath()
   # given by environment variable
   if [ ${#QA_PATH} -gt 0 ] ; then
     # is it a path to bin?
-    test ${QA_PATH##*/} = 'bin' && export QA_PATH=${QA_PATH%/bin}
+    if [ ${QA_PATH##*/} = 'bin' ] ; then
+      QA_PATH=${QA_PATH%/bin}
+      isWithBin=t
+    fi
+
+    # is something wrong?
+    if [ ! -f ${QA_PATH}/.install_configure ] ; then
+      str="\nQA_PATH=${QA_PATH}${isWithBin:+/bin} is no path to the QA-DKRZ root"
+      str="\nPlease, check environment variable QA_PATH"
+      echo -e -n "${str}" > $TTY
+      exit
+    fi
 
     return
-  fi
+   fi
 
-  local target
-  if [ ${1:0:1} != '/' ] ; then
-    target=$(pwd)/$1
-  else
+  local target isInvalid
+
+  if [ ${1:0:1} = '/' ] ; then
     target=$1
+  else
+    target=$(pwd)/$1
   fi
 
   if [ -h $target ] ; then
@@ -214,12 +226,17 @@ getSrcPath()
 
     getSrcPath ${link}
 
-  else
+  elif [ -f $target ] ; then
 
-    # resolve .. and .
+    # a real instance, at first resolve .. and .
+    # works also for . or .. in the middle of the path
+
+    local xname=${target##*/}
+    target=${target%/*}  # remove the name of the script
+    target=${target%/*}  # remove the name directory scripts
+
     local arr=( ${target//\// } )
 
-    # any ., or .. in the middle of QA_PATH?
     local i j sz
     sz=${#arr[*]}
 
@@ -244,18 +261,35 @@ getSrcPath()
 
     sz=${#arr[*]}
 
+    local tmp
     for(( i=0 ; i < sz ; ++i )) ; do
-      QA_PATH=${QA_PATH}/${arr[i]}
+      tmp=${tmp}/${arr[i]}
     done
+
+    if [ -f ${tmp}/.install_configure ] ; then
+      QA_PATH=$tmp
+    else
+      isInvalid=t
+    fi
+
+  else
+    isInvalid=t
   fi
 
-  local tmp
-  while : ; do
-    tmp=${QA_PATH##*/}
-    test ${#tmp} -eq 0 -o "${tmp:0:3}" = 'QA-' && break
+  if [ ${isInvalid:-f} = t ] ; then
 
-    QA_PATH=${QA_PATH%/*}
-  done
+    local str=$(ls -l $target 2> /dev/null | awk  '{print $(NF)}')
+
+    if [ ${#str} -gt 0 ] ; then
+      str="invalid path=$0"
+    else
+      str="broken path=$0"
+    fi
+
+    echo "${str}"
+
+    exit 1
+  fi
 
   export QA_PATH=${QA_PATH}
 
@@ -317,10 +351,12 @@ libInclSetting()
      return
    fi
 
+set -x
+echo $LIB
    LIB="${LIB/#/-L}"
    LIB="${LIB/ / -L}"
    LIB="${LIB/:/ -L}"
-
+set +x
    INCLUDE=${INCLUDE/#/-I}
    INCLUDE=${INCLUDE/ / -I}
    INCLUDE=${INCLUDE/:/ -I}
