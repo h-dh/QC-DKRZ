@@ -9,22 +9,6 @@ udunits=udunits-2.2.19
 
 defaultProject=CORDEX
 
-auto-up()
-{
-  local item=$1
-
-  if [ "${item#*=}" = disable -o "${item#*=}" = d ] ; then
-    sed -i '/auto-up/ d' .conf &> /dev/null
-    test ! -s .conf && \rm .conf
-  else
-    if ! grep -i -q auto-up .conf &> /dev/null; then
-      echo auto-up=enabled >> .conf
-    fi
-    isUpdateQA=t
-  fi
-  return
-}
-
 descript()
 {
   echo "Usage: install [options] [project[s]]"
@@ -41,23 +25,16 @@ descript()
   echo "  --build           Download and build required libraries."
   echo "  --debug[=script]  Display execution commands. If the name of a script"
   echo "                    called internally is assigned, then debug only this one."
-  echo "  --distclean       For a re-installation of zlib, hdf5 and netcdf."
   echo "  --help            Display usage and exit."
   echo "  --link=path       Hard links of external NetCDF installations from the directories"
   echo "                    in 'your-path/${package}/local'."
   echo "                    Shared by all hdf, netcdf, udunits  and zlib."
-  echo "  --prefix=path     Path for installing the ${package} package;"
-  echo "                    current directory by default. "
-  echo "  --reset           Clear library setting and start from scratch."
+  echo "  --link_type=path  Same as for 'link' but just for type=netcdf, hdf, zlib, or udunits"
   echo "  --show-inst       Display properties of the current installation."
-  echo "  --src-path=path   To the place were all three libs reside."
-  echo "  --lib-dest=path   Destination for libs and includes; [${package}/local]."
-  echo "                    Note: probably in combination with: --prefix=path."
   echo "  --up[date]        Update the QA package from the repository."
   echo "                    Note: not for netCDF, HDF5, udunits2 or zlib."
   echo ""
-  echo "    project-name    At present CMIP5 and CORDEX; the latter by default."
-  echo "                    Note: no '--'."
+  echo "  project-name      At present CF, CMIP5, and CORDEX; the latter by default."
 }
 
 getRevNum()
@@ -79,6 +56,7 @@ getSrcPath()
   # extract the path to the root of the QA package
 
   # given by environment variable
+  if [ ${#QA_PATH} -gt 0 ] ; then
     # is it a path to bin?
     if [ ${QA_PATH##*/} = 'bin' ] ; then
       QA_PATH=${QA_PATH%/bin}
@@ -188,30 +166,14 @@ getSrcPath()
 
 git_update()
 {
-  # is git available
-  # revision of the current package: branch-shortIdentifier
-  getRevNum packRev_0
-
   git pull origin
 
+  test $? -gt 0 && return
+
   # revison num of the updated package
-  getRevNum packRev_1
+  getRevNum packRev
 
-  # save current svn revision number, if new
-  savedRev=$( grep 'revision=' .conf 2> /dev/null \
-            | awk -F= '{print $2}' )
-
-  if [ "${packRev_1}" != "${packRev_1}" ] ; then
-    # force compilation
-    \rm -f bin/qC-*.x
-  fi
-
-  if [ ${savedRev:-0} -eq 0 ] ; then
-    getRevNum packRev_1
-    echo revision=${packRev} >> .conf
-  elif [ ${savedRev} -lt ${packRev_1} ] ; then
-    sed -i "s/revision=\(.*\)/revision=${packRev_1}/" .conf &> /dev/null
-  fi
+  set_dot_conf QA-DKRZ_REVISION=$packRev
 
   return
 }
@@ -228,12 +190,60 @@ log()
   echo -e "install $*" >> install.log
 }
 
-resetBuild()
+saveAsCycle()
 {
-  \rm -rf local
+  for f in $* ; do
+    if [ ! \( -f $f -o -d $f \) ] ; then
+      echo "install.saveAsCycle: no such file or directory $f"
+      return
+    fi
 
-  \rm -rf example/test_I
-  \rm -rf example/qa-test.task
+    local ext val x
+    local maxVal fs fx
+
+    maxVal=0
+    fs=( $(ls -d $f.* 2> /dev/null) )
+
+    for fx in ${fs[*]} ; do
+      ext=${fx##*.}
+
+      if val=$(expr match $ext '\([[:digit:]]\+$\)' 2> /dev/null) ; then
+        test ${val:-0} -gt ${maxVal} && maxVal=$val
+      fi
+    done
+
+    mv $f ${f}.$((++maxVal)) 2> /dev/null
+  done
+}
+
+set_dot_conf()
+{
+  local args item name
+
+  args=($*)
+  args=(${args[*]//=/ })
+
+  if [ ${#args[*]} -eq 0 ] ; then
+    return  # this is a fault
+  elif [ $${#args[*]} -eq 1 ] ; then
+    name=${args[0]}
+    item=enabled
+  else
+    name=${args[0]}
+    item=${args[1]}
+  fi
+
+  if grep -i -q $name=$item .conf &> /dev/null; then
+    return
+  fi
+
+  if [ "${item#*=}" = disable -o "${item#*=}" = d ] ; then
+    sed -i "/${name}/ d" .conf &> /dev/null
+    test ! -s .conf && \rm .conf
+  elif grep -i -q ${name} .conf &> /dev/null; then
+    sed -i "/${name}/ d" .conf &> /dev/null
+    echo ${name}=enabled >> .conf
+  fi
 
   return
 }
@@ -264,7 +274,6 @@ tr_option()
 
 # ----- main ------
 
-currPath=$(pwd)
 zeroArg=$0
 
 if [ $# -gt 0 ] ; then
@@ -273,31 +282,50 @@ if [ $# -gt 0 ] ; then
   allArgs="$*"
 
   # higher priority options
-  for a in $* ; do
-    A="$a"
+  for(( i=0 ; i < ${#sArgs[*]} ; ++i )) ; do
+    # some args are accepted without '--'
+    isAccepted=f
+    if [ "${sArgs[${i}]:0:7}" = auto-up ] ; then
+      isAccepted=t
+    elif [ "${sArgs[${i}]:0:5}" = debug ] ; then
+      isAccepted=t
+    elif [ "${sArgs[${i}]:0:4}" = help ] ; then
+      isAccepted=t
+    elif [ "${sArgs[${i}]:0:4}" = link ] ; then
+      isAccepted=t
+    elif [ "${sArgs[${i}]:0:6}" = only-q ] ; then
+      isAccepted=t
+    elif [ "${sArgs[${i}]:0:3}" = src ] ; then
+      isAccepted=t
+    elif [ "${sArgs[${i}]:0:2}" = up ] ; then
+      isAccepted=t
+    fi
+
+    test ${isAccepted} = t && sArgs[${i}]=--${sArgs[${i}]}
+
+    A="${sArgs[i]}"
     tr_option A
 
     if [ "${A%=*}" = '--DEBUG' ] ; then
       test ${A} = '--DEBUG' -o ${A#*=} = ${0##*/} && set -x
     elif [ "${A%%=*}" = "--PREFIX" ] ; then
-      if [ ! -d ${a#*=} ] ; then
-        if ! mkdir -p ${a#*=} ; then
-          echo "Could not mkdir -p ${a#*=}"
-          exit
-        fi
+      if [ -d ${sArgs[i]#*=} ] ; then
+         mv ${sArgs[i]#*=} ${sArgs[i]#*=}.save
+         echo "--prefix=${sArgs[i]#*=} exists; saved as ${sArgs[i]#*=}.save"
       fi
 
-      zeroArg=${a#*=}
-      if [ ${zeroArg:0:1} != '/' ] ; then
-        zeroArg=$currPath/$zeroArg
+      zeroArg=${sArgs[i]#*=}
+      if mkdir -p $zeroArg ; then
+        cd $zeroArg
+      else
+        echo "Could not mkdir -p $zeroArg"
+        exit
       fi
-
-      cd $zeroArg
     fi
   done
 fi
 
-while getopts Bdh-: option ${args[*]}
+while getopts Bdh-: option ${sArgs[*]}
 do
   UOPTARG="${OPTARG}"
   tr_option UOPTARG
@@ -307,15 +335,24 @@ do
     d)  coll[${#coll[*]}]=-d ;;
     h)  descript
         exit ;;
-    -)  test "${UOPTARG%=*}" = "AUTO_UP" && auto-up $OPTARG && continue
-        test "${UOPTARG}" = "DEBUG" && debug='--debug' && continue
-        test "${UOPTARG%%=*}" = "HELP" && descript && exit
-        test "${UOPTARG:0:6}" = "ONLY-Q" && continue
-        test "${UOPTARG}" = "reset" && resetBuild && continue
-        test "${UOPTARG}" = "SRC" && continue  # for backward compatibilty
-        test "${UOPTARG:0:2}" = "UP" && isUpdateQA=t && continue
+    -)  if [ "${UOPTARG%=*}" = "AUTO_UP" ] ; then
+          set_dot_conf ${OPTARG}
+          continue
+        elif [ ${UOPTARG:0:5} = DEBUG -o ${UOPTARG} = 'DEBUG=install' ] ; then
+          set -x
+        elif [ "${UOPTARG%%=*}" = "HELP" ] ; then
+          descript
+          exit
+        elif [ "${UOPTARG:0:6}" = "ONLY-Q" ] ; then
+          continue  # for backward compatibilty
+        elif [ "${UOPTARG}" = "SRC" ] ; then
+          continue  # for backward compatibilty
+        elif [ "${UOPTARG:0:2}" = "UP" ] ; then
+          isUpdateQA=t
+          continue
+        fi
 
-        # collect options, which hav not been proceesed so far
+        # collect options, which have not been processed above
         coll[${#coll[*]}]=--${OPTARG}
         ;;
    \?)  descript
@@ -326,40 +363,12 @@ done
 
 shift $(( $OPTIND - 1 ))
 
-# accept some args with missing '--'
-item=( $* )
-for(( i=${#item[*]}-1 ; i >= 0 ; --i )) ; do
-  UITEM="${item[i]}"
-  tr_option UITEM
-
-  if [ "${UITEM%=*}" = AUTO-UP ] ; then
-    auto-up ${item[i]}
-  elif [ "${UITEM}" = HELP ] ; then
-    descript
-    exit
-  elif [ "${UITEM:0:4}" = LINK ] ; then
-    coll[${#coll[*]}]=--${item[i]}
-  elif [ "${UITEM:0:2}" = UP ] ; then
-    isUpdateQA=t
-  else
-    continue
-  fi
-
-  unset item[i]
-done
-item=( ${item[*]} )
-test ${#item[*]} -eq 0 && item=(${defaultProject})
-
-getSrcPath $0
-
-test ${#QA_PATH} -eq 0  && QA_PATH=$currPath/$package
-coll[${#coll[*]}]="-q ${QA_PATH}"
-test ${QA_PATH} != ${currPath} && cd ${QA_PATH}
+getSrcPath $zeroArg
 
 log ${allArgs}
 
-if grep -i -q auto-up .conf &> /dev/null; then
-  isUpdateQC=t
+if grep -i -q AUTO-UP .conf &> /dev/null; then
+  isUpdateQA=t
 fi
 
 test ${isUpdateQA:-f} = t && git_update

@@ -74,10 +74,6 @@ compilerSetting()
     cp .install_configure install_configure
     log "create install_configure" DONE
 
-    local revision
-    getRevNum revision
-    echo revision=${revision} >> .conf
-
     test ${isBuild:-f} = f && \
       echo "Please, edit file install_configure."
 
@@ -463,37 +459,12 @@ set +x
   return
 }
 
-localClean()
-{
-  if [ "${1}" = a ] ; then
-    for f in bin include lib lib64 share ; do
-      \rm -rf local/$f
-    done
-  elif [ "${1}" = h ] ; then
-     \rm -f local/bin/gifh25     local/bin/h5*
-     \rm -f local/include/H5*    local/include/hdf5*
-     \rm -f local/lib/libhdf*
-     \rm -rf local/share
-  elif [ "${1}" = n ] ; then
-     \rm -f local/bin/nc*
-     \rm -f local/include/netcdf*
-     \rm -f local/lib/libnetcdf* local/lib/pkconfig/netcdf.pc
-  elif [ "${1}" = z ] ; then
-    \rm -f local/include/z*
-    \rm -f local/lib/libz.a      local/lib/pkconfig/zlib.pc
-  fi
-
-  return
-}
-
 log()
 {
   test ${isDebug:-f} = t && set +x
 
   # get status from last process
   local status=$?
-
-#  test ${isDebug:-f} = t && set +x
 
   local n p
   local pEnd=80
@@ -665,6 +636,16 @@ projectLinks()
   return
 }
 
+resetBuild()
+{
+  \rm -rf local
+
+  \rm -rf example/test_I
+  \rm -rf example/qa-test.task
+
+  return
+}
+
 runExample()
 {
   # running the example requires qa-CORDEX.x
@@ -681,6 +662,119 @@ runExample()
 
     logPwd=../
     log "Example run" DONE
+  fi
+
+  return
+}
+
+saveAsCycle()
+{
+  for f in $* ; do
+    if [ ! \( -f $f -o -d $f \) ] ; then
+      echo "install.saveAsCycle: no such file or directory $f"
+      return
+    fi
+
+    local ext val x
+    local maxVal fs fx
+
+    maxVal=0
+    fs=( $(ls -d $f.* 2> /dev/null) )
+
+    for fx in ${fs[*]} ; do
+      ext=${fx##*.}
+
+      if val=$(expr match $ext '\([[:digit:]]\+$\)' 2> /dev/null) ; then
+        test ${val:-0} -gt ${maxVal} && maxVal=$val
+      fi
+    done
+
+    mv $f ${f##*/}.$((++maxVal)) 2> /dev/null
+  done
+}
+
+saveLocal()
+{
+  test -d $QC_PATH/local && saveAsCycle $QC_PATH/local
+
+  return
+}
+
+saveLocal_h()
+{
+  saveAsCycle $QA_PATH/local/bin/gif2h5
+  saveAsCycle $QA_PATH/local/bin/h5*
+
+  saveAsCycle $QA_PATH/local/include/H5*
+  saveAsCycle $QA_PATH/local/include/hdf5*
+
+  saveAsCycle $QA_PATH/local/lib64/libhdf5*
+
+  return
+}
+
+saveLocal_n()
+{
+  saveAsCycle $QA_PATH/local/bin/nc*
+
+  saveAsCycle $QA_PATH/local/include/netcdf*
+
+  saveAsCycle $QA_PATH/local/lib64/libnetcdf*
+  saveAsCycle $QA_PATH/local/lib64/pkgconfig/netcdf*
+
+  return
+}
+
+saveLocal_u()
+{
+  saveAsCycle $QA_PATH/local/bin/ud*
+
+  saveAsCycle $QA_PATH/local/include/udunits*
+  saveAsCycle $QA_PATH/local/include/converter.h
+
+  saveAsCycle $QA_PATH/local/lib64/libudunits*
+
+  return
+}
+
+saveLocal_z()
+{
+  saveAsCycle $QA_PATH/local/include/zconf.h
+  saveAsCycle $QA_PATH/local/include/zlib.h
+
+  saveAsCycle $QA_PATH/local/lib/libz*
+  saveAsCycle $QA_PATH/local/lib/pkgconfig/z*
+
+  return
+}
+
+set_dot_conf()
+{
+  local args item name
+
+  args=($*)
+  args=(${args[*]//=/ })
+
+  if [ ${#args[*]} -eq 0 ] ; then
+    return  # this is a fault
+  elif [ $${#args[*]} -eq 1 ] ; then
+    name=${args[0]}
+    item=enabled
+  else
+    name=${args[0]}
+    item=${args[1]}
+  fi
+
+  if grep -i -q $name=$item .conf &> /dev/null; then
+    return
+  fi
+
+  if [ "${item#*=}" = disable -o "${item#*=}" = d ] ; then
+    sed -i "/${name}/ d" .conf &> /dev/null
+    test ! -s .conf && \rm .conf
+  elif grep -i -q ${name} .conf &> /dev/null; then
+    sed -i "/${name}/ d" .conf &> /dev/null
+    echo ${name}=enabled >> .conf
   fi
 
   return
@@ -836,17 +930,8 @@ store_LD_LIB_PATH()
     ldp=${ldp}${lib[i]}
   done
 
-  # get those used for the compilation stored in .conf
-  local tmp tmps
-  tmp="$( grep 'LD_LIBRARY_PATH=' .conf 2> /dev/null)"
-  tmp="${tmp[*]#LD_LIBRARY_PATH=}"
-
-  if [ ${#tmp} -eq 0 ] ; then
-    # initial write
-    echo "LD_LIBRARY_PATH=${ldp}" >> .conf
-  elif [ "$tmp" != "$ldp" ] ; then
-    sed -i "/LD_LIBRARY_PATH=/ c LD_LIBRARY_PATH=${ldp}" .conf
-  fi
+  # store/update LD_LIBRARY_PATH in .conf
+  set_dot_conf LD_LIBRARY_PATH=${ldp}
 
    # current LD_LIB_PATH paths
   local ld_lp
@@ -914,23 +999,29 @@ do
            # make libraries in ${package}/local
            isBuild=t
            continue
-        elif [ "$UOPTARG" = DEBUG ] ; then
-           if [ ${UOPTARG} = DEBUG -o ${OPTARG#*=} = 'install' ] ; then
-             set -x
-             isDebug=t
-           fi
+        elif [ ${UOPTARG:0:5} = DEBUG -o ${UOPTARG} = 'DEBUG=install.sh' ] ; then
+           set -x
+           isDebug=t
         elif [ "${UOPTARG}" = DISPLAY_COMP ] ; then
            displayComp=t
            continue
         elif [ "${UOPTARG}" = DISTCLEAN ] ; then
            isDistClean=t
         elif [ "${UOPTARG%%=*}" = LINK ] ; then
-           localClean a
+           saveLocal ${OPTARG#*=}
            link=${OPTARG#*=}
-        elif [ "${UOPTARG:0:6}" = ONLY-Q ] ; then
-           # get only QA sources [is the default]
-           isBuild=f
-           continue
+        elif [ "${UOPTARG%%=*}" = LINK_HDF ] ; then
+           saveLocal_h ${OPTARG#*=}
+           link_h=${OPTARG#*=}
+        elif [ "${UOPTARG%%=*}" = LINK_NETCDF ] ; then
+           saveLocal_n ${OPTARG#*=}
+           link_n=${OPTARG#*=}
+        elif [ "${UOPTARG%%=*}" = LINK_UDUNITS ] ; then
+           saveLocal_u ${OPTARG#*=}
+           link_u=${OPTARG#*=}
+        elif [ "${UOPTARG%%=*}" = LINK_ZLIB ] ; then
+           saveLocal_z ${OPTARG#*=}
+           link_z=${OPTARG#*=}
         elif [ "${UOPTARG%%=*}" = PACKAGE ] ; then
            package=${OPTARG#=*}
         elif [ "${UOPTARG}" = RESET_TABLES ] ; then

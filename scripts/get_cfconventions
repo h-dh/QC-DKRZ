@@ -164,9 +164,9 @@ updateDotConf()
 
   # init
   if [ ${#savedDate} -eq 0 ] ; then
-    echo "${name}=${newDate}" >> ${QA_SRC}/.conf
+    echo "${name}=${newDate}" >> ${QA_PATH}/.conf
   else
-    sed -i "s/${name}.*/${name}=${newDate}/" ${QA_SRC}/.conf
+    sed -i "s/${name}.*/${name}=${newDate}/" ${QA_PATH}/.conf
   fi
 
   return 0
@@ -174,7 +174,7 @@ updateDotConf()
 
 # main
 
-QA_SRC=${0%/script*}
+QA_PATH=${0%/script*}
 
 if [ $# -eq 1 ] ; then
   cd $1 &> /dev/null
@@ -182,7 +182,7 @@ fi
 
 # search for updates only once a day
 today=$( date '+%Y%m%d' )
-lastCheck=$( grep CF_LAST_UPDATE_CHECK ${QA_SRC}/.conf )
+lastCheck=$( grep CF_LAST_UPDATE_CHECK ${QA_PATH}/.conf )
 
 if ! updateDotConf CF_LAST_UPDATE_CHECK $today ${lastCheck#*=} ; then
   exit
