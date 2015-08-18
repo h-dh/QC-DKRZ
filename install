@@ -30,6 +30,9 @@ descript()
   echo "                    in 'your-path/${package}/local'."
   echo "                    Shared by all hdf, netcdf, udunits  and zlib."
   echo "  --link_type=path  Same as for 'link' but just for type=netcdf, hdf, zlib, or udunits"
+  echo "  --local=path      Path where lib and include directories are to be installed"
+  echo "                    [default: QA_DKRZ/local] for both real and hard-links."
+  echo "                    Note: unneccesary when install_configure points outside."
   echo "  --show-inst       Display properties of the current installation."
   echo "  --up[date]        Update the QA package from the repository."
   echo "                    Note: not for netCDF, HDF5, udunits2 or zlib."
@@ -180,14 +183,14 @@ git_update()
 
 log()
 {
-  if [ -f install.log ] ; then
-    logTxt="\n === Rebuild: $(date +'%F_%T') ===\n"
-  else
-    logTxt1="\n === Installation of ${package}: $(date +'%F_%T') ===\n"
+  if [ ${isContinueLog:-f} = f ] ; then
+    isContinueLog=t
+
+    local logTxt="\n$(date +'%F_%T'):"
+    echo -e "${logTxt} install $*" >> install.log
   fi
 
-  echo -e ${logTxt} >> install.log
-  echo -e "install $*" >> install.log
+  return
 }
 
 saveAsCycle()
@@ -275,11 +278,11 @@ tr_option()
 # ----- main ------
 
 zeroArg=$0
+allArgs=($*)
 
 if [ $# -gt 0 ] ; then
   # save arguments
   sArgs=($*)
-  allArgs="$*"
 
   # higher priority options
   for(( i=0 ; i < ${#sArgs[*]} ; ++i )) ; do
@@ -338,6 +341,10 @@ do
     -)  if [ "${UOPTARG%=*}" = "AUTO_UP" ] ; then
           set_dot_conf ${OPTARG}
           continue
+        elif [ "${UOPTARG:0:5}" = "BUILD" ] ; then
+          isBuild=t
+        elif [ "${UOPTARG:0:4}" = "LINK" ] ; then
+          isLink=t
         elif [ ${UOPTARG:0:5} = DEBUG -o ${UOPTARG} = 'DEBUG=install' ] ; then
           set -x
         elif [ "${UOPTARG%%=*}" = "HELP" ] ; then
@@ -365,14 +372,40 @@ shift $(( $OPTIND - 1 ))
 
 getSrcPath $zeroArg
 
-log ${allArgs}
-
 if grep -i -q AUTO-UP .conf &> /dev/null; then
   isUpdateQA=t
 fi
 
 test ${isUpdateQA:-f} = t && git_update
 
-exec scripts/install.sh ${debug} --pack=${package} --continue_log \
-  --zlib=${zlib} --hdf5=${hdf5} --netcdf=${netcdf} --udunits=${udunits} \
-  ${coll[*]} ${item[*]}
+for pck in $* ; do
+  PCK="${pck}"
+  tr_option PCK
+
+  if [ ${PCK:0:4} = ZLIB ] ; then
+    zlib=${pck}
+  elif [ ${PCK:0:4} = HDF5 ] ; then
+    hdf5=${pck}
+  elif [ ${PCK:0:6} = NETCDF ] ; then
+    netcdf=${pck}
+  elif [ ${PCK:0:7} = UDUNITS ] ; then
+    udunits=${pck}
+  else
+    coll[${#coll[*]}]=$pck  # collect project names
+  fi
+done
+
+pcks="--zlib=$zlib --hdf5=$hdf5 --netcdf=$netcdf --udunits=$udunits"
+
+if [ ${isBuild:-f} = t -a ${isLink:-f} = t ] ; then
+  echo "scripts/install.sh: options --build and --link exclude each other"
+  exit 1
+elif [ ${isBuild:-f} = t -o ${isLink:-f} = t ] ; then
+  log ${allArgs[*]}
+else
+  pcks=
+fi
+
+exec scripts/install.sh ${debug} --pack=${package} \
+${isContinueLog:+--continue_log} ${pcks} \
+${coll[*]}

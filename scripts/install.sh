@@ -24,24 +24,19 @@ compilerSetting()
   # Anything given in the install_configure file?
   if [ -f install_configure ] ; then
     . install_configure
-
-    log "apply install_configure settings" DONE
   fi
 
   if [ ${#locCC} -gt 0 ] ; then
     CC="${locCC}"
-    log "export CC=${locCC}" DONE
   fi
   if [ ${#locCFLAGS} -gt 0 ] ; then
     CFLAGS="${locCFLAGS}"
   fi
   if [ ${#locCXX} -gt 0 ] ; then
     CXX="${locCXX}"
-    log "export CXX=${locCXX}" DONE
   fi
   if [ ${#locCXXFLAGS} -gt 0 ] ; then
     CXXFLAGS="${locCXXFLAGS}"
-    log "export CXXFLAGS=${locCXXFLAGS}" DONE
   fi
 
   # no external setting, try for gcc/g++
@@ -74,9 +69,8 @@ compilerSetting()
     cp .install_configure install_configure
     log "create install_configure" DONE
 
-    test ${isBuild:-f} = f && \
+    test ${isBuild:-f} = f -a ${isLink:-f} = f && \
       echo "Please, edit file install_configure."
-
   fi
 
   FC=""
@@ -91,7 +85,6 @@ descript()
   echo "  -B                Unconditionally re-make all"
   echo "  -d                Execute 'make' with debugging info."
   echo "  --build           Download and build required libraries."
-  echo "  --continue_log    Iternal processing option."
   echo "  --debug[=script]  Display execution commands."
   echo "  --help            Also option -h."
   echo "  --link=path       Link lib and include files, respectively, of external netcdf"
@@ -294,68 +287,64 @@ getSrcPath()
 
 libInclSetting()
 {
-   LIB="${LIB//-L}"
-   INCLUDE=${INCLUDE//-I}
-
    export CC CXX CFLAGS CXXFLAGS FC F90
    export LIB INCLUDE
 
    local i
 
-   if [ ${#link} -eq 0 ] ; then
-     local isEmpty lib
-     isEmpty=t
-     lib=( ${LIB//:/ } )
+#   if [ ${isLink:-f} = f ] ; then
+#     local isEmpty lib
+#     isEmpty=t
+#     lib=( ${LIB//:/ } )
 
-     # any netcdf lib in the path of install_configure?
-     for(( i=0 ; i < ${#lib[*]} ; ++i )) ; do
-       if ls  ${lib[i]}/libnetcdf.* &> /dev/null ; then
-          isEmpty=f
-       fi
-     done
+#     # any netcdf lib in the path of install_configure?
+#     for(( i=0 ; i < ${#lib[*]} ; ++i )) ; do
+#       if ls  ${lib[i]}/libnetcdf.* &> /dev/null ; then
+#          isEmpty=f
+#       fi
+#     done
 
-     if [ ${isEmpty} = t ] ; then
-        # any netcdf lib in QA/local?
-        lib=( local/lib local/lib )
+#     if [ ${isEmpty} = t ] ; then
+#        # any netcdf lib in QA/local?
+#        lib=( local/lib local/lib )
 
-        for(( i=0 ; i < ${#lib[*]} ; ++i )) ; do
-          if ls  ${lib[i]}/libnetcdf.* &> /dev/null ; then
-             isEmpty=f
-          fi
-        done
+#        for(( i=0 ; i < ${#lib[*]} ; ++i )) ; do
+#          if ls  ${lib[i]}/libnetcdf.* &> /dev/null ; then
+#             isEmpty=f
+#          fi
+#        done
 
-        test ${isEmpty} = t && LIB=
-     fi
-   fi
+#        test ${isEmpty} = t && LIB=
+#     fi
+#   fi
 
-   if [ ${isBuild:-f} = t -o ${#link} -gt 0  -o  ${#LIB} -eq 0 ] ; then
+   if [ ${isBuild:-f} = t -o ${isLink:-f} = t ] ; then
      # install zlib, hdf5, and/or netcdf.
      # LIB and INCLUDE, respectively, are colon-separated singles
-     if [ ${isBuild:-f} = t ] && bash scripts/install_local ${coll[*]} ; then
-       unset link
-       isBuild=f
+     if [ ${isBuild:-f} = t -o ${isLink:-f} = t ] && \
+             bash scripts/install_local ${coll[*]} --saveLocal ; then
+       isBuild=
+       isLink=
      else
-       echo "no path to netCDF/hdf/zlib"
+       echo "no path to netCDF, hdf, zlib, udunits2"
        echo "Please, edit file install_configure or"
        echo "apply option --build for downloading and building local instances."
        exit 1
      fi
 
-     compilerSetting
+     compilerSetting NO_EXPORT_LOG
      libInclSetting
 
      return
    fi
 
-set -x
-echo $LIB
    LIB="${LIB/#/-L}"
    LIB="${LIB/ / -L}"
-   LIB="${LIB/:/ -L}"
-set +x
+   LIB="${LIB//:/ -L}"
+
    INCLUDE=${INCLUDE/#/-I}
    INCLUDE=${INCLUDE/ / -I}
-   INCLUDE=${INCLUDE/:/ -I}
+   INCLUDE=${INCLUDE//:/ -I}
 
    local is
 
@@ -472,12 +461,9 @@ log()
   local term
 
   if [ ${isContLog:-f} = f ] ; then
-     echo -e -n "\n === Rebuild: $(date +'%F_%T') ===\n" \
-        >> ${logPwd}install.log
-     isContLog=t
+    echo -e "\n$(date +'%F_%T'):" >> ${logPwd}install.log
+    isContLog=t
   fi
-
-  test "$1" = '--continue_log' && shift 1
 
   n=$#
   local lastWord=${!n}
@@ -569,7 +555,7 @@ makeUtilities()
   # small utilities
   if make ${always} -q -C $BIN -f ${QA_PATH}/$MAKEFILE c-prog cpp-prog ; then
     status=$?
-    log "C/C++ utilities" DONE=up-to-date
+#    log "C/C++ utilities" DONE=up-to-date
   else
     # not up-to-date
     # executes with an error, then again
@@ -669,7 +655,14 @@ runExample()
 
 saveAsCycle()
 {
+  local keep=f
+
   for f in $* ; do
+    if [ ${f} = KEEP-A-COPY ] ; then
+       keep=t
+       continue
+    fi
+
     if [ ! \( -f $f -o -d $f \) ] ; then
       echo "install.saveAsCycle: no such file or directory $f"
       return
@@ -689,63 +682,12 @@ saveAsCycle()
       fi
     done
 
-    mv $f ${f##*/}.$((++maxVal)) 2> /dev/null
+    if [ ${keep} = t ] ; then
+      cp $f ${f##*/}.$((++maxVal)) 2> /dev/null
+    else
+      mv $f ${f##*/}.$((++maxVal)) 2> /dev/null
+    fi
   done
-}
-
-saveLocal()
-{
-  test -d $QC_PATH/local && saveAsCycle $QC_PATH/local
-
-  return
-}
-
-saveLocal_h()
-{
-  saveAsCycle $QA_PATH/local/bin/gif2h5
-  saveAsCycle $QA_PATH/local/bin/h5*
-
-  saveAsCycle $QA_PATH/local/include/H5*
-  saveAsCycle $QA_PATH/local/include/hdf5*
-
-  saveAsCycle $QA_PATH/local/lib64/libhdf5*
-
-  return
-}
-
-saveLocal_n()
-{
-  saveAsCycle $QA_PATH/local/bin/nc*
-
-  saveAsCycle $QA_PATH/local/include/netcdf*
-
-  saveAsCycle $QA_PATH/local/lib64/libnetcdf*
-  saveAsCycle $QA_PATH/local/lib64/pkgconfig/netcdf*
-
-  return
-}
-
-saveLocal_u()
-{
-  saveAsCycle $QA_PATH/local/bin/ud*
-
-  saveAsCycle $QA_PATH/local/include/udunits*
-  saveAsCycle $QA_PATH/local/include/converter.h
-
-  saveAsCycle $QA_PATH/local/lib64/libudunits*
-
-  return
-}
-
-saveLocal_z()
-{
-  saveAsCycle $QA_PATH/local/include/zconf.h
-  saveAsCycle $QA_PATH/local/include/zlib.h
-
-  saveAsCycle $QA_PATH/local/lib/libz*
-  saveAsCycle $QA_PATH/local/lib/pkgconfig/z*
-
-  return
 }
 
 set_dot_conf()
@@ -757,7 +699,7 @@ set_dot_conf()
 
   if [ ${#args[*]} -eq 0 ] ; then
     return  # this is a fault
-  elif [ $${#args[*]} -eq 1 ] ; then
+  elif [ ${#args[*]} -eq 1 ] ; then
     name=${args[0]}
     item=enabled
   else
@@ -846,7 +788,7 @@ showInst()
    for(( j=0 ; j < ${#typ[*]} ; ++j )) ; do
      is=( f f f f )
 
-     for item in ${LIB} ; do
+     for item in ${LIB[*]//:/ } ; do
        test -e ${item:2}/libz.${typ[j]} && is[0]=t
        test -e ${item:2}/libhdf5_cpp.${typ[j]} && is[1]=t
        test -e ${item:2}/libnetcdf.${typ[j]} && is[2]=t
@@ -865,7 +807,7 @@ showInst()
 
    # ----check ncdump executable
    is=f
-   for item in ${LIB} ; do
+   for item in ${LIB[*]//:/ } ; do
      item=${item:2}
      if [ -e ${item%/*}/bin/ncdump ] ; then
        is=t
@@ -995,7 +937,7 @@ do
     q)  QA_PATH=${OPTARG} ;;
     -)  if [ "${UOPTARG}" = CONTINUE_LOG ] ; then
            isContLog=t
-        elif [ "${UOPTARG}" = BUILD ] ; then
+        elif [ "${UOPTARG:0:5}" = BUILD ] ; then
            # make libraries in ${package}/local
            isBuild=t
            continue
@@ -1005,28 +947,10 @@ do
         elif [ "${UOPTARG}" = DISPLAY_COMP ] ; then
            displayComp=t
            continue
-        elif [ "${UOPTARG}" = DISTCLEAN ] ; then
-           isDistClean=t
-        elif [ "${UOPTARG%%=*}" = LINK ] ; then
-           saveLocal ${OPTARG#*=}
-           link=${OPTARG#*=}
-        elif [ "${UOPTARG%%=*}" = LINK_HDF ] ; then
-           saveLocal_h ${OPTARG#*=}
-           link_h=${OPTARG#*=}
-        elif [ "${UOPTARG%%=*}" = LINK_NETCDF ] ; then
-           saveLocal_n ${OPTARG#*=}
-           link_n=${OPTARG#*=}
-        elif [ "${UOPTARG%%=*}" = LINK_UDUNITS ] ; then
-           saveLocal_u ${OPTARG#*=}
-           link_u=${OPTARG#*=}
-        elif [ "${UOPTARG%%=*}" = LINK_ZLIB ] ; then
-           saveLocal_z ${OPTARG#*=}
-           link_z=${OPTARG#*=}
+        elif [ "${UOPTARG:0:4}" = LINK ] ; then
+           isLink=t
         elif [ "${UOPTARG%%=*}" = PACKAGE ] ; then
            package=${OPTARG#=*}
-        elif [ "${UOPTARG}" = RESET_TABLES ] ; then
-           tableReset=t
-           continue
         elif [ "${UOPTARG%=*}" = SHOW-INST ] ; then
            isShowInst=t
            test "${UOPTARG#*=}" = FULL && isShowInstFull

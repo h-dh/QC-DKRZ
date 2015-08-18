@@ -7,7 +7,6 @@ descript()
   echo "  --debug[=script] Display execution commands."
   echo "  --help           Also option -h."
   echo "  --prefix=path    Path to the installation dir."
-  echo "  --src_name=path  Package name."
 }
 
 c()
@@ -78,8 +77,6 @@ do
            test "${UOPTARG}" = DEBUG -o ${OPTARG#*=} = ${0##*/} && set -x
         elif [ "$UOPTARG" = DISTCLEAN ] ; then
            isDistClean=t
-        elif [ "${UOPTARG%%=*}" = SRC ] ; then
-           src=${OPTARG#*=}
         fi
         ;;
    \?)  descript
@@ -88,6 +85,8 @@ do
 done
 
 shift $(( $OPTIND - 1 ))
+
+src=$installPath/source
 
 if [ -d "$src" ] ; then
   cd $src &> /dev/null
