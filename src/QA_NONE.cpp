@@ -38,12 +38,12 @@ QA::appendToHistory(size_t eCode)
       size_t pos;
       if( (pos=hstPath.rfind("\n")) < std::string::npos )
          hstPath.erase(pos,1);
-      if( dataPath != hstPath )
+      if( qaFile.path != hstPath )
       {
         hst += "\n" ;
         hst += today;
         hst += " changed path to data=";
-        hst += dataPath + "\n" ;
+        hst += qaFile.path + "\n" ;
       }
     }
   }
@@ -52,11 +52,11 @@ QA::appendToHistory(size_t eCode)
     // the root of the history string
     hst += today;
     hst += " path_to_data=";
-    hst += dataPath ;
+    hst += qaFile.path ;
 /*
     hst += "\nfilenames and tracking_id in file tid_";
 
-    std::string t0(qaFilename.substr(3));
+    std::string t0(qaFile.substr(3));
     t0 = t0.substr(0, t0.size()-3);
     hst += t0;
     hst += ".txt" ;
@@ -86,14 +86,14 @@ QA::appendToHistory(size_t eCode)
       tmp = splt[++index] ;
     else
       // not in the history, so take the one from the version attribute
-      tmp = nc->getAttString("QA_svn_revision");
+      tmp = nc->getAttString("QA_revision");
 
-    if( svnVersion != tmp )
+    if( revision != tmp )
     {
       hst += "\n" ;
       hst += today;
-      hst += " changed QA svn revision=" ;
-      hst += svnVersion ;
+      hst += " changed QA revision=" ;
+      hst += revision ;
     }
   }
 
@@ -159,7 +159,7 @@ QA::applyOptions(bool isPost)
        if( split.size() == 2 )
        {
           // path to the directory where the execution takes place
-          dataPath=split[1];
+          setFilename(split[1]);
           continue;
        }
      }
@@ -177,7 +177,7 @@ QA::applyOptions(bool isPost)
      {
        if( split.size() == 2 )
        {
-          qaFilename=split[1];
+          setFilename(split[1]);
           continue;
        }
      }
@@ -188,6 +188,26 @@ QA::applyOptions(bool isPost)
        if( split.size() == 2 )
        {
           fileSequenceState=split[1][0];
+          continue;
+       }
+     }
+
+     if( split[0] == "fq" || split[0] == "Frequency"
+         || split[0] == "frequency" )
+     {
+       if( split.size() == 2 )
+       {
+          frequency=split[1];
+          continue;
+       }
+     }
+
+     if( split[0] == "fqp" || split[0] == "FrequencyPosition"
+         || split[0] == "frequency_position" )
+     {
+       if( split.size() == 2 )
+       {
+          frequency_pos = split.toInt(1);
           continue;
        }
      }
@@ -369,7 +389,7 @@ QA::createVarMetaData(void)
     Split splt(vMD.dims);
     int effDim = splt.size() ;
     for( size_t j=0 ; j < splt.size() ; ++j )
-      if( splt[j] == qaTime.time )
+      if( splt[j] == qaTime.name )
         --effDim;
 
     if( replicationOpts.size() )
@@ -539,70 +559,20 @@ QA::getFrequency()
 
   if( frequency.size() )
     return frequency;
-  else
+  else if( frequency_pos > -1 )
   {
-    // not found, but error issue is handled elsewhere
+    // try the frequency posdition within the filename
+    std::string f( pIn->file.basename );
+    Split splt;
+    splt.enableEmptyItems();
+    splt.setSeparator("_");
 
-    // try the filename
-    std::string f( pIn->filename );
-    size_t pos;
-    if( (pos=f.rfind('/')) < std::string::npos )
-      f = f.substr(pos+1);
-
-    if( f.rfind(".nc" ) )
-      f = f.substr( 0, f.size()-3 );  // strip ".nc"
-
-    Split splt(f, "_");
+    splt = f ;
 
     // test the last two items for time type. If both are,
     // then this would mean that they are separated by '_'.
-    // This would be a fault for CORDEX.
-    size_t off=0;  // takes into account a period separator '_'
-    if( splt.size() > 2 &&
-           hdhC::isDigit( splt[ splt.size() -1 ])
-             && hdhC::isDigit( splt[ splt.size() -2 ]) )
-      off=1;
-
-    if( splt.size() > 7 )
-    {
-      if( splt.size() == (9+off) )
-        frequency = splt[7] ;
-      else if( splt.size() == (8+off) )
-      {
-         if( hdhC::isDigit( splt[7][0] ) )
-           // with period; no RCMVersionID
-           frequency = splt[6] ;
-         else
-           // no period; with RCMVersionID
-           frequency = splt[7] ;
-      }
-      else if( splt.size() == (7+off) )
-         // no period; no RCMVersionID
-         frequency = splt[6] ;
-    }
-
-    if( frequency.size() )
-       return frequency;
-  }
-
-  // last resort: automatically from time values
-  if( pIn->nc.getNumOfRecords() > 1 )
-  {
-    double t0 = Base::getTime(pIn->nc, 0, pIn->timeName);
-    double t1 = Base::getTime(pIn->nc, 1, pIn->timeName);
-    double dt=t1-t0;
-
-    // only for units day (since ...)
-    if ( dt > 27 && dt < 32)
-      frequency = "mon";
-    else if ( dt > 89. && dt < 93. )
-      frequency = "sem";
-    else if ( dt > 0.9 && dt < 1.1 )
-      frequency = "day";
-    else if ( dt > 0.2 && dt < 0.3 )
-      frequency = "6hr";
-    else if ( dt > 0.1 && dt < 0.15)
-      frequency = "3hr";
+    if( static_cast<int>(splt.size()) > frequency_pos )
+      frequency = splt[ frequency_pos ] ;
   }
 
   return frequency ;
@@ -635,7 +605,7 @@ QA::init(void)
    // harm in testDate() called in closeEntry().
 
    notes->init();  // safe
-   setFilename(pIn->filename);
+   setFilename(pIn->file.file);
 
    // apply parsed command-line args
    applyOptions();
@@ -682,7 +652,7 @@ QA::init(void)
      if( testPeriod() )
      {
         std::string key("82");
-        if( notes->inq( key, qaTime.time) )
+        if( notes->inq( key, qaTime.name) )
         {
           std::string capt("status is apparently in progress");
 
@@ -798,6 +768,8 @@ QA::initDefaults(void)
   importedRecFromPrevQA=0; // initial #rec in out-nc-file.
   currQARec=0;
 
+  frequency_pos=-1;
+
   // by default
   tablePath="./";
 
@@ -826,7 +798,7 @@ QA::initGlobalAtts(InFile &in)
   // global atts at creation.
   std::string today( Date::getCurrentDate() );
 
-  nc->setGlobalAtt( "QA_svn_revision", svnVersion);
+  nc->setGlobalAtt( "QA_revision", revision);
   nc->setGlobalAtt( "contact", "hollweg@dkrz.de");
 
   nc->setGlobalAtt( "creation_date", today);
@@ -852,7 +824,7 @@ QA::initResumeSession(void)
   // At first, a check over the ensemble of variables.
   // Get the name of the variable(s) used before
   // (only those with a trailing '_ave').
-  std::vector<std::string> vss( nc->getVarNames() ) ;
+  std::vector<std::string> vss( nc->getVarName() ) ;
 
   std::vector<std::string> prevTargets ;
 
@@ -1001,16 +973,19 @@ QA::openQA_Nc(InFile &in)
   // Copies time variable from input-nc file.
 
   // name of the file begins with qa_
-  if ( qaFilename.size() == 0 )
+  if ( qaFile.is )
   {
-    // use the input filename as basis;
-    // there could be a leading path
-    qaFilename = dataPath;
-    if( qaFilename.size() > 0 )
-      qaFilename += '/' ;
-    qaFilename += "qa_";
-    qaFilename += hdhC::getBasename(dataFilename);
-    qaFilename += ".txt";
+    std::string key("00");
+
+    if( notes->inq( key) )
+    {
+      std::string capt("openQA_Nc(): undefined file.") ;
+
+      (void) notes->operate(capt) ;
+      notes->setCheckMetaStr(fail);
+      setExit( notes->getExitValue() ) ;
+      return;
+    }
   }
 
   nc = new NcAPI;
@@ -1022,7 +997,7 @@ QA::openQA_Nc(InFile &in)
   if( ! isCheckTime )
     return;
 
-  if( nc->open(qaFilename, "NC_WRITE", false) )
+  if( nc->open(qaFile.file, "NC_WRITE", false) )
 //   if( isQA_open ) // false: do not exit in case of error
   {
     // continue a previous session
@@ -1052,9 +1027,9 @@ QA::openQA_Nc(InFile &in)
 
   // open new netcdf file
   if( qaNcfileFlags.size() )
-    nc->create(qaFilename,  qaNcfileFlags);
+    nc->create(qaFile.file,  qaNcfileFlags);
   else
-    nc->create(qaFilename,  "Replace");
+    nc->create(qaFile.file,  "Replace");
 
   if( pIn->isTime )
   {
@@ -1073,7 +1048,7 @@ QA::openQA_Nc(InFile &in)
   else if( isCheckTime )
   {
     // dimensions
-    qaTime.time="fixed";
+    qaTime.name="fixed";
     nc->defineDim("fixed", 1);
   }
 
@@ -1260,16 +1235,6 @@ QA::pushBackVarMeDa(Variable *var)
 }
 
 void
-QA::setFilename(std::string f)
-{
-  dataFile = f;
-  dataPath = hdhC::getPath(f);
-  dataFilename = hdhC::getFilename(f);
-
-  return;
-}
-
-void
 QA::setCheckMode(std::string m)
 {
   isCheckMeta=false;
@@ -1368,7 +1333,7 @@ QA::testPeriod(void)
 
   // Does the filename has a trailing date range?
   // Strip off the extension.
-  std::string f( dataFilename.substr(0, dataFilename.size()-3 ) );
+  std::string f( qaFile.basename );
 
   std::vector<std::string> sd;
   sd.push_back( "" );
@@ -1401,90 +1366,142 @@ QA::testPeriod(void)
   // convert ascii formated date to class Date
   qaTime.getDRSformattedDateRange(period, sd);
 
+  Date* fN_left = &period[0];
+  Date* fN_right = &period[1];
+
   // necessary for validity (not sufficient)
-  if( period[0] > period[1] )
+  if( *fN_left > *fN_right )
   {
      std::string key("42_4");
      if( notes->inq( key, fileStr) )
      {
-       std::string capt("invalid range for period in the filename");
+       std::string capt("invalid range for period in the filename, found ");
+       capt += hdhC::tf_val(sd[0] + "-" + sd[1]);
 
-       std::string text( "range=");
-       text += sd[0];
-       text += " - ";
-       text += sd[1];
-
-       (void) notes->operate(capt, text) ;
+       (void) notes->operate(capt) ;
        notes->setCheckMetaStr( fail );
      }
 
      return false;
   }
 
-  bool bLeft0, bLeft1, bRight0, bRight1;
-  bLeft0 = bLeft1 = bRight0 = bRight1 = false;
+  Date* tV_left = 0 ;
+  Date* tV_right = 0;
+
+  Date* tV_left_obj = 0 ;
+  Date* tV_right_obj = 0;
+  Date* tB_left_obj = 0 ;
+  Date* tB_right_obj = 0;
+
+  bool isLeft_fT_not_tV ;
+  bool isRight_fT_not_tV ;
 
   if( qaTime.isTimeBounds)
   {
-    period.push_back( qaTime.getDate("first", "left") );
-    period.push_back( qaTime.getDate("last", "right") );
+    tB_left_obj = new Date(qaTime.refDate);
+    tB_left_obj->addTime(qaTime.firstTimeBoundsValue[0]);
+    tV_left = tB_left_obj;
 
-    bLeft1=(period[0].getJulianDay() + 1.25*qaTime.referenceTimeStep)
-              < period[2].getJulianDay();
-    bRight0=(period[1].getJulianDay() - 1.25*qaTime.referenceTimeStep)
-              < period[3].getJulianDay();
+    tB_right_obj = new Date(qaTime.refDate);
+    tB_right_obj->addTime(qaTime.firstTimeBoundsValue[1]);
+    tV_right = tB_right_obj;
+
+    isLeft_fT_not_tV = *tB_left_obj != *fN_left ;
+    isRight_fT_not_tV = *tB_right_obj != *fN_right ;
   }
   else
   {
-    period.push_back( qaTime.getDate("first") );
-    period.push_back( qaTime.getDate("last") );
+    tV_left_obj = new Date(qaTime.refDate);
+    if( qaTime.firstTimeValue != 0. )
+      tV_left_obj->addTime(qaTime.firstTimeValue);
+    tV_left = tV_left_obj;
+
+    tV_right_obj = new Date(qaTime.refDate);
+    if( qaTime.lastTimeValue != 0. )
+      tV_right_obj->addTime(qaTime.lastTimeValue);
+    tV_right = tV_right_obj;
+
+    isLeft_fT_not_tV = *tV_left != *fN_left ;
+    isRight_fT_not_tV = *tV_right != *fN_right ;
   }
 
-  bLeft0= period[2] < period[0] ;
-  bRight1= period[3] > period[1] ;
+  if( isLeft_fT_not_tV )
+  {
+    // CMOR isn't capable of working with the time_bounds. Hence, an exception
+    // rule is added to the CORDEX archive design as to the period in filenames:
+    // "It is also allowed to use time values of the first and last records
+    // in NetCDF files for averaged data." However, this does not lead to a
+    // working solution. In fact, CMOR sets StartTime to the beginning  of
+    // the month bearing the first time value.
+    // So, here is a LEX CMOR
+    if( tV_left_obj == 0 )
+    {
+      tV_left_obj = new Date(qaTime.refDate);
+      tV_left = tV_left_obj;
+      if( qaTime.firstTimeValue != 0. )
+        tV_left->addTime(qaTime.firstTimeValue);
+    }
+    double monDaysNum = tV_left->getMonthDaysNum();
+    tV_left->addTime(-monDaysNum, "day");
 
-  if( bLeft0 || bLeft1 )
+    if( tV_right_obj == 0 )
+    {
+      tV_right_obj = new Date(qaTime.refDate);
+      tV_right = tV_right_obj;
+      if( qaTime.lastTimeValue != 0. )
+        tV_right->addTime(qaTime.lastTimeValue);
+    }
+
+    isLeft_fT_not_tV = *tV_left != *fN_left ;
+    isRight_fT_not_tV = *tV_right != *fN_right ;
+  }
+
+  // the annotation
+  if( isLeft_fT_not_tV )
   {
      std::string key("16_2");
      if( notes->inq( key, fileStr) )
      {
-       std::string capt("period in filename (1st date) is misaligned to time values");
+       std::string capt("First date ");
+       capt += hdhC::sAssign("(filename)", fN_left->getDate()) ;
+       capt += " and time " ;
+       if( tB_left_obj )
+         capt += "bounds ";
+       capt += hdhC::sAssign("data", tV_left->getDate());
+       capt += " are misaligned";
 
-       std::string text("from time data=");
-       text += period[2].getDate();
-       text += "\nfilename=" ;
-       text += period[0].getDate() ;
-       if( ! qaTime.isTimeBounds)
-         text += "\n note: time_bounds not available" ;
-
-       (void) notes->operate(capt, text) ;
+       (void) notes->operate(capt) ;
        notes->setCheckMetaStr( fail );
      }
   }
 
   // test completeness: the end of the file
-  if( isFileComplete && ( bRight0 || bRight1 ) )
+  if( isFileComplete && isRight_fT_not_tV )
   {
      std::string key("16_3");
      if( notes->inq( key, fileStr) )
      {
-       std::string capt("period in filename (2nd date) is misaligned to time values");
+       std::string capt("Second date ");
+       capt += hdhC::sAssign("(filename)", fN_right->getDate()) ;
 
-       std::string text;
-       if( period[3] > period[1] )
-         text = "Time values exceed period in filename." ;
-       else
-         text = "Period in filename exceeds time values." ;
+       capt += " is misaligned to time " ;
+       if( tB_left_obj )
+         capt += "bounds ";
+       capt += hdhC::sAssign("data", tB_right_obj->getDate());
 
-       text += "\ndata=" ;
-       text += period[3].getDate() ;
-       text += "\nfilename=" ;
-       text += period[1].getDate();
-
-       (void) notes->operate(capt, text) ;
+       (void) notes->operate(capt) ;
        notes->setCheckMetaStr( fail );
      }
   }
+
+  if( tV_left_obj )
+    delete tV_left_obj;
+  if( tV_right_obj )
+    delete tV_right_obj;
+  if( tB_left_obj )
+    delete tB_left_obj;
+  if( tB_right_obj )
+    delete tB_right_obj;
 
   return false;
 }

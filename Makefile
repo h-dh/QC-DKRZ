@@ -60,9 +60,9 @@ ${PRJ_NAME}.x: ${BASE_SOURCE} ${BASE_HEADER} $(QA_SOURCE) $(QA_HEADER) $(UTIL_SO
 
 #          -DREVISION=$(REVISION) \
 
-CF-checker: cf-checker.x
+CF-checker: dkrz-cf-checker.x
 
-cf-checker.x: CF_main.cpp CF.cpp $(BASE_SOURCE) ${BASE_SOURCE} $(QA_HEADER) $(UTIL_SOURCE) $(UTIL_HEADER)
-	$(CXX) $(CXXFLAGS) -o cf-checker.x $(QA_PATH)/src/CF_main.cpp \
+dkrz-cf-checker.x: CF_main.cpp CF.cpp $(BASE_SOURCE) ${BASE_SOURCE} $(QA_HEADER) $(UTIL_SOURCE) $(UTIL_HEADER)
+	$(CXX) $(CXXFLAGS) -o dkrz-cf-checker.x $(QA_PATH)/src/CF_main.cpp \
            -I $(QA_PATH)/include $(INCLUDE) \
            $(LIB) $(LIBDL) -ludunits2 -lnetcdf -lhdf5_hl -lhdf5 -lz

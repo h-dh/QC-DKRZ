@@ -960,8 +960,8 @@ Annotation::printFlags(void)
 
     if( isOutputPASS )
     {
-      out += "path: " + filenameItems.path;
-      out += "\nfile: " + filenameItems.filename;
+      out += "path: " + file.path;
+      out += "\nfile: " + file.filename;
       if( mp.begin() == mp.end() )
       {
         out += ":\tPASS\n" ;
@@ -1063,9 +1063,9 @@ Annotation::printHeader(std::ofstream *ofs)
 //   std::string str( where ) ;
    std::string str;
    str +="\nPath: " ;
-   str += filenameItems.path ;
+   str += file.path ;
    str += "\nFile: " ;
-   str += filenameItems.filename;
+   str += file.filename;
 
    *ofs << str << std::endl ;
 
@@ -1082,14 +1082,14 @@ Annotation::printNotes(std::string &tag, std::string &caption,
   // But, the calling program unit is due to exit.
   if( ofsNotes == 0 )
   {
-    if( filenameItems.path.size() == 0 )
-      filenameItems.path = "undefined_path" ;
-    if( filenameItems.filename.size() == 0 )
-      filenameItems.filename = "undefined_filename" ;
+    if( file.path.size() == 0 )
+      file.path = "undefined_path" ;
+    if( file.filename.size() == 0 )
+      file.filename = "undefined_filename" ;
 
     // compose the header of issued messages
     std::string strNotes = "qa_note_" ;
-    strNotes += filenameItems.filename + ".txt";
+    strNotes += file.filename + ".txt";
 
     // open file for writing
     if( ! ofsNotes )
@@ -1323,13 +1323,6 @@ Annotation::setConfVector(std::string txt, std::string str0)
   descript.push_back( txt );
 
   return ;
-}
-
-void
-Annotation::setFilename(std::string f)
-{
-  filenameItems = hdhC::setFilename(f);
-  return;
 }
 
 void

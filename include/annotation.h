@@ -54,8 +54,7 @@ class Annotation : public IObj
     bool         entry(void){return false;}
     bool         init(void) ;
     void         linkObject(IObj *){;}
-    void         setFilename(std::string name);
-    void         setFilePath(std::string s) {filenameItems.path=s;}
+    void         setFilename(std::string f){file = hdhC::setFilename(f);}
     void         setProject(std::string s){project=s;}
     void         setTablePath(std::string p){ tablePath=p; }
 
@@ -161,7 +160,8 @@ class Annotation : public IObj
 
   size_t recErrCountLimit;
 
-  struct hdhC::FilenameItems filenameItems;
+  struct hdhC::FilenameItems file;
+
   std::string project;
   std::string tablePath;
 
