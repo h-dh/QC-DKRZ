@@ -98,10 +98,30 @@ struct FieldDataMeta
   size_t size;
 };
 
-struct FilenameItems
+struct FileSplit
 {
+   FileSplit() : is(false) {;}
+   void clear(void);
+
+   std::string
+        getBasename(void){ return basename ; }
+   std::string
+        getExtension(void){ return extension ; }
+   std::string
+        getFile(void);
+   std::string
+        getFilename(void);
+   std::string
+        getPath(void){ return path ; }
+
+   bool isExisting(std::string f="");
+   void setExtension(std::string);
+   void setFile(std::string f );
+
+   void setFilename(std::string);
+   void setPath(std::string f){ path=f; }
+
    bool is;
-   std::string file;
    std::string filename;
    std::string basename;
    std::string extension;
@@ -280,9 +300,6 @@ getPathComponents(std::string &str, std::string &path,
                   std::string &fName, std::string &base,
                   std::string &ext);
 
-struct FilenameItems
-setFilename(std::string&) ;
-
 //! Invert the ordering of bits
 /*! For any type of T*/
 template <typename T>
@@ -443,11 +460,14 @@ tf_var(std::string& v,  bool colon, bool blank, bool isUpper);
 std::string
 clearChars(std::string &str, std::string s="", bool isStr=false );
 
-//! replace multiple internal spaces by a single blank
+//! replace multiple characters by a single one
 std::string
-clearInternalMultipleSpaces(std::string &str );
+clearInternalMultipleSpaces(std::string &str);
 
-//! rermove white spaces and newlines
+std::string
+clearSuccessiveIdenticalCharacters(std::string &str, char );
+
+//! remove white spaces and newlines
 std::string
 clearSpaces(std::string &str );
 

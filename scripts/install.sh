@@ -292,32 +292,6 @@ libInclSetting()
 
    local i
 
-#   if [ ${isLink:-f} = f ] ; then
-#     local isEmpty lib
-#     isEmpty=t
-#     lib=( ${LIB//:/ } )
-
-#     # any netcdf lib in the path of install_configure?
-#     for(( i=0 ; i < ${#lib[*]} ; ++i )) ; do
-#       if ls  ${lib[i]}/libnetcdf.* &> /dev/null ; then
-#          isEmpty=f
-#       fi
-#     done
-
-#     if [ ${isEmpty} = t ] ; then
-#        # any netcdf lib in QA/local?
-#        lib=( local/lib local/lib )
-
-#        for(( i=0 ; i < ${#lib[*]} ; ++i )) ; do
-#          if ls  ${lib[i]}/libnetcdf.* &> /dev/null ; then
-#             isEmpty=f
-#          fi
-#        done
-
-#        test ${isEmpty} = t && LIB=
-#     fi
-#   fi
-
    if [ ${isBuild:-f} = t -o ${isLink:-f} = t ] ; then
      # install zlib, hdf5, and/or netcdf.
      # LIB and INCLUDE, respectively, are colon-separated singles
@@ -616,7 +590,7 @@ projectLinks()
        "$( ls -l $p/$qDest 2> /dev/null | awk '{print $NF}' )" = "$p/$qTarget" \
      && return
 
-  \rm $p/$qDest
+  \rm -f $p/$qDest
   ln -f $p/$qTarget $p/$qDest
 
   return
@@ -995,16 +969,17 @@ fi
 makeUtilities
 
 # check projects' qa executables
-projects=( $* )
+if [ $# -eq 0 ] ; then
+  projects=( CORDEX )
+else
+  projects=( $* )
+fi
 
 # the revision number is inserted in Makefile via -DREVISION
 getRevNum REVISION
 export REVISION
 
-for prj in ${projects[*]} ; do
-  # echeck project's executable
-  makeProject $prj
+makeProject $prj
 
-  # run example for CORDEX, if not done, yet
-  runExample
-done
+# run example for CORDEX, if not done, yet
+runExample

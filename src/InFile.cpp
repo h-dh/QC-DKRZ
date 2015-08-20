@@ -48,7 +48,7 @@ InFile::applyOptions(void)
 
       if( split[0] == "path" )
       {
-        setFilePath(split[1]);
+        setFilename(split[1] + "/");
         continue;
       }
 
@@ -186,12 +186,6 @@ InFile::excludeVars(void)
     }
 
   return ;
-}
-
-std::string
-InFile::getAbsoluteFilename(void)
-{
-  return filenameItems.file ;
 }
 
 void
@@ -553,7 +547,7 @@ InFile::init(void)
   isTime=false;
 
   if( notes )
-    notes->setFilename(filenameItems.filename);
+    notes->file = file ;  // just for logging
 
   if( openNc() )
   {
@@ -585,7 +579,7 @@ InFile::init(void)
     {
       std::ostringstream ostr(std::ios::app);
       ostr << "InFile::init()\n";
-      ostr << "Could not open NetCDF file " << filenameItems.file;
+      ostr << "Could not open NetCDF file " << file.getFile();
       exceptionError( ostr.str() );
 
       finally(3, ostr.str());
@@ -739,7 +733,7 @@ InFile::openNc(bool isNew)
     {
       if( path.size() > 0 )
         nc.setPath(str);
-      if( ! nc.open(filenameItems.file.c_str()) )
+      if( ! nc.open(file.getFile().c_str()) )
         throw "Exception";
     }
     catch (char const*)
@@ -802,13 +796,6 @@ InFile::openNc(bool isNew)
   getVariable();
 
   return false;
-}
-
-void
-InFile::setFilename(std::string f)
-{
-  filenameItems = hdhC::setFilename(f);
-  return;
 }
 
 void

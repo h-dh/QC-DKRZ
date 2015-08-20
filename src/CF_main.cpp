@@ -40,9 +40,6 @@
 
 int main(int argc,char *argv[])
 {
-  std::vector<std::string> filename;
-  std::string path;
-
   InFile in;
   CF cf;
   Annotation notes;
@@ -52,24 +49,22 @@ int main(int argc,char *argv[])
   cf.linkObject((IObj*) &in);
   cf.linkObject((IObj*) &notes);
 
-  parseOptions(argc, argv, filename, in, cf, notes);
+  parseOptions(argc, argv, in, cf, notes);
 
-  for( size_t i=0 ; i < filename.size() ; ++i )
-  {
-    in.setFilename(filename[i]);
+  int retVal=0;
 
-    // runs also the cf checker
-    in.init();
+  // runs also the cf checker
+  in.init();
 
-    cf.notes->printFlags();
-  }
+  cf.notes->printFlags();
+  if( cf.notes->getExitValue() )
+    retVal=1 ;
 
-  return 0;
+  return retVal;
 }
 
 void
 parseOptions(int argc, char *org_argv[],
-   std::vector<std::string> &filename,
    InFile &in, CF &cf, Annotation &an)
 {
   GetOpt opt;
@@ -116,10 +111,10 @@ parseOptions(int argc, char *org_argv[],
     switch ( copt )
     {
       case 'f':
-        filename.push_back( opt.optarg );
+        in.setFilename(opt.optarg) ;
         break;
       case 'p':
-        in.setFilePath(opt.optarg) ;
+        in.file.path=opt.optarg ;
         break;
       case 't':
         an.setTablePath(opt.optarg);

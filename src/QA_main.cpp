@@ -50,20 +50,7 @@ int main(int argc,char *argv[])
     getCPUSeconds();
   }
 
-  // if filename was given by option -f name
-  if( ::NC_FILENAME.size() > 0 && ::NC_FILENAME.find('/') == std::string::npos )
-  {
-    std::string pf;
-    if( ::NC_PATH.size() )
-    {
-      pf = ::NC_PATH ;
-      pf += '/' ;
-    }
-
-    pf += ::NC_FILENAME;
-
-    ioc.in[0].setFilename( pf );
-  }
+  // path/filename was set in setObjProperties()
 
   // About processing: init() and entry() functions of the
   // base-derived objects are addressed by pointers,
@@ -725,8 +712,6 @@ setObjProperties(std::vector<std::vector<std::string> > &list, IObjContainer &io
     {
       Annotation *p = dynamic_cast<Annotation*>(ip);
       p->setTablePath(::TABLE_PATH);
-      p->setFilePath(::NC_PATH);
-      p->setFilename(::NC_FILENAME);
 
       if( id == 0 )
         notes = &ioc.an[i] ;
@@ -744,7 +729,7 @@ setObjProperties(std::vector<std::vector<std::string> > &list, IObjContainer &io
     else if( name == "IN" )
     {
       InFile *p = dynamic_cast<InFile*>(ip);
-      p->setFilename(::NC_FILENAME);
+      p->setFilename(::NC_PATH + "/" + ::NC_FILENAME);
     }
     else if( name == "OP" )
       ;

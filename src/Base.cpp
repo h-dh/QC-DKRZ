@@ -135,7 +135,7 @@ Base::copy(const Base &b)
 {
   objName = b.objName;
   thisID=b.thisID;
-  filenameItems=b.filenameItems;
+  file=b.file;
 
   srcStr.clear();
   for( size_t i=0 ; i < b.srcStr.size() ; ++i)
@@ -231,10 +231,10 @@ Base::exceptionError(std::string str)
     xcptn.strError += "_error" ;
 
      // base-name if available, i.e. after initialisation of the InFile obj
-    if( filenameItems.is )
+    if( file.is )
     {
       xcptn.strError += "_";
-      xcptn.strError += filenameItems.basename ;
+      xcptn.strError += file.basename ;
     }
     xcptn.strError += ".txt";
 
@@ -265,10 +265,10 @@ Base::exceptionWarning(std::string str)
     xcptn.strWarning = getObjName() ;
     xcptn.strWarning += "_warning" ;
 
-    if( filenameItems.is )
+    if( file.is )
     {
       xcptn.strWarning += "_";
-      xcptn.strWarning += filenameItems.basename ;
+      xcptn.strWarning += file.basename ;
     }
     xcptn.strWarning += ".txt";
 
@@ -492,13 +492,6 @@ Base::makeVariable (NcAPI *pnc, std::string name, int id)
 
   varNameMap[name] = variable.size()-1 ;
 
-  return;
-}
-
-void
-Base::setFilename(std::string f)
-{
-  filenameItems = hdhC::setFilename(f);
   return;
 }
 

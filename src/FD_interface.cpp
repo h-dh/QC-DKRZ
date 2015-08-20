@@ -73,7 +73,7 @@ FD_interface::applyOptions(void)
         if( split[0][0] == 's' || split[0][0] == 'S' )
         {
           isSaveBuild=true;
-          setFilename( split[1] );
+          setFilename( split[1]);
           continue;
         }
      }
@@ -207,10 +207,10 @@ FD_interface::exceptionError(std::string str)
     xcptn.strError = "fd_error" ;
 
      // base name if available, i.e. after the initialisation of the InFile obj
-    if( filenameItems.is )
+    if( file.is )
     {
       xcptn.strError += "_";
-      xcptn.strError += filenameItems.basename ;
+      xcptn.strError += file.basename ;
     }
     xcptn.strError += ".txt";
 
@@ -238,10 +238,10 @@ FD_interface::exceptionWarning(std::string str)
 
     xcptn.strWarning = "fd_warning" ;
 
-    if( filenameItems.is )
+    if( file.is )
     {
       xcptn.strWarning += "_";
-      xcptn.strWarning += filenameItems.basename ;
+      xcptn.strWarning += file.basename ;
     }
     xcptn.strWarning += ".txt";
 
@@ -380,8 +380,8 @@ FD_interface::init(void)
   // varnames in a request (or by default) and using stdout
   // will result in a mess, because several obj write to stdout.
 
-  if( filenameItems.is )
-    setFilename( filenameItems.file + "." + pIn->variable[0].name ) ;
+  if( file.is )
+    file.setFile( file.getFile() + "." + pIn->variable[0].name) ;
 //  pGM = pIn->variable[0].pGM;
 
 
@@ -393,7 +393,7 @@ FD_interface::init(void)
   for( size_t i=0 ; i <= regioStr.size() ; ++i)
   {
     fD.push_back( FreqDist<float>() );
-    fD.back().setOutputFilename( filenameItems.filename) ;
+    fD.back().setOutputFilename( file.filename) ;
     if( isReadProperties )
       fD.back().setReadOnlyProperties();
   }
@@ -455,7 +455,7 @@ FD_interface::init(void)
     for(size_t i=0 ; i < fD.size() ; ++i)
     {
       str = "#FILE=" ;
-      str += pIn->filenameItems.filename;
+      str += pIn->file.filename;
       fD[i].setInfo(str);
 
       str ="#VARIABLE=";
@@ -542,7 +542,7 @@ FD_interface::initTimeWindow(void)
    beginDateStr = beginDate.getDate();
    endDateStr = endDate.getDate() ;
 
-   str = filenameItems.basename;
+   str = file.basename;
    str = str.substr(3); // ignore leading three; no extension.
 
 // ++++++ Looking for a file +++++++++++++++++++++++
@@ -634,7 +634,7 @@ FD_interface::initTimeWindow(void)
 
    // compose output filename; use only integer years
    // ranging from year A inclusively and year B exclusively.
-   str = filenameItems.basename;
+   str = file.basename;
    str += "_" ;
 
    str += beginDateStr.substr(0,4);
@@ -713,8 +713,8 @@ FD_interface::print(std::string fromDate,
 
    std::string str;
 
-   if( filenameItems.is )
-     str=filenameItems.filename;
+   if( file.is )
+     str=file.filename;
    else
      str="frequencyDist." + vName;
 
@@ -813,12 +813,5 @@ FD_interface::rebuild( std::string f)
   }
 
   return false;  // no rebuild
-}
-
-void
-FD_interface::setFilename(std::string f)
-{
-  filenameItems = hdhC::setFilename(f);
-  return;
 }
 

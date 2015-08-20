@@ -1372,6 +1372,12 @@ set_qa_par()
  test ${#FILE_SEQUENCE} -gt 0 && \
    par=${par}"${s}"fS=${FILE_SEQUENCE}
 
+ test ${#FREQUENCY} -gt 0 && \
+   par=${par}"${s}"fq=${FREQUENCY}
+
+ test ${#FREQUENCY_POSITION} -gt 0 && \
+   par=${par}"${s}"fqp=${FREQUENCY_POSITION}
+
  test ${IGNORE_REF_DATE_ACROSS_EXP:-f} = t && \
    par=${par}"${s}"iRDAE
 

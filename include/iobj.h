@@ -25,9 +25,6 @@ public:
     virtual bool         entry(void) = 0;
     virtual bool         init(void) = 0;
     virtual void         linkObject(IObj *) = 0;
-    virtual void         setFilename(std::string ) = 0 ;
-    virtual void         setFilePath(std::string ) = 0 ;
-    virtual void         setTablePath(std::string ) = 0 ;
 
     //! Pointer to a member function in the polymorph context.
     /*! This pointer contains initially the pointer to the

@@ -401,6 +401,8 @@ callQaExecutor()
           FD_TIME_PART \
           FILE_SEQUENCE \
           FREQ_DIST \
+          FREQUENCY \
+          FREQUENCY_POSITION \
           IS_FIRST_SUB_TEMP \
           HLEVD \
           HLEVD_DELETE_FILE \

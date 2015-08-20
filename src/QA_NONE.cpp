@@ -159,7 +159,7 @@ QA::applyOptions(bool isPost)
        if( split.size() == 2 )
        {
           // path to the directory where the execution takes place
-          setFilename(split[1]);
+          qaFile.setPath(split[1]);
           continue;
        }
      }
@@ -177,7 +177,7 @@ QA::applyOptions(bool isPost)
      {
        if( split.size() == 2 )
        {
-          setFilename(split[1]);
+          qaFile.setFile(split[1]);
           continue;
        }
      }
@@ -280,25 +280,16 @@ QA::applyOptions(bool isPost)
      {
        if( split.size() == 2 )
        {
-          size_t pos;
-          if( (pos=split[1].rfind('/')) < std::string::npos )
-          {
-            if( split[1][0] == '/' )
-            {  // absolute path
-              tablePath=split[1].substr(0, pos);
-              projectTableName=split[1].substr(pos+1);
-            }
-            else // relative path remains part of the tablename
-              projectTableName=split[1];
-          }
-          else
-            projectTableName=split[1];
+          projectTableFile.setFile(split[1]);
 
           continue;
        }
      }
-
    }
+
+   // apply a general path which could have also been provided by setTablePath()
+   if( projectTableFile.path.size() == 0 )
+      projectTableFile.setPath(tablePath);
 
    return;
 }
@@ -313,7 +304,7 @@ QA::checkMetaData(InFile &in)
   inqTables();
 
   // Read or write the project table.
-  ProjectTable projectTable(this, &in, tablePath, projectTableName);
+  ProjectTable projectTable(this, &in, projectTableFile);
   projectTable.setAnnotation(notes);
   projectTable.setExcludedAttributes( excludedAttribute );
 
@@ -605,7 +596,9 @@ QA::init(void)
    // harm in testDate() called in closeEntry().
 
    notes->init();  // safe
-   setFilename(pIn->file.file);
+
+   // default
+   setFilename( pIn->file );
 
    // apply parsed command-line args
    applyOptions();
@@ -770,9 +763,6 @@ QA::initDefaults(void)
 
   frequency_pos=-1;
 
-  // by default
-  tablePath="./";
-
   // pre-set check-modes: all are used by default
   isCheckMeta=true;
   isCheckTime=true;
@@ -902,26 +892,15 @@ QA::initResumeSession(void)
 void
 QA::inqTables(void)
 {
-  // check tablePath; must exist
-  std::string testFile("/bin/bash -c \'test -d ") ;
-  testFile += tablePath ;
-  testFile += '\'' ;
-
-  // see 'man system' for the return value, here we expect 0,
-  // if directory exists.
-
-  if( system( testFile.c_str()) )
+  if( ! projectTableFile.isExisting(projectTableFile.path) )
   {
      std::string key("70_3");
      if( notes->inq( key, fileStr) )
      {
-        std::string capt("no path to the tables") ;
+        std::string capt("no path to the tables, tried ") ;
+        capt += projectTableFile.path;
 
-        std::string text("No path to the tables; tried ");
-        text += tablePath + ".";
-        text += "\nPlease, check the setting in the configuration file.";
-
-        if( notes->operate(capt, text) )
+        if( notes->operate(capt) )
         {
           notes->setCheckMetaStr( fail );
           setExit( notes->getExitValue() ) ;
@@ -932,10 +911,10 @@ QA::inqTables(void)
   // tables names usage: both project and standard tables
   // reside in the same path.
   // Naming of the project table:
-  if( projectTableName.size() == 0 )
-    projectTableName = "pt_NONE";
-  else if( projectTableName.find(".csv") == std::string::npos )
-    projectTableName += ".csv" ;
+  if( !projectTableFile.is )
+    projectTableFile.setFilename("pt_NONE.csv");
+  else if( projectTableFile.extension != ".csv" )
+    projectTableFile.setExtension(".csv") ;
 
   return;
 }
@@ -997,7 +976,7 @@ QA::openQA_Nc(InFile &in)
   if( ! isCheckTime )
     return;
 
-  if( nc->open(qaFile.file, "NC_WRITE", false) )
+  if( nc->open(qaFile.getFile(), "NC_WRITE", false) )
 //   if( isQA_open ) // false: do not exit in case of error
   {
     // continue a previous session
@@ -1027,9 +1006,9 @@ QA::openQA_Nc(InFile &in)
 
   // open new netcdf file
   if( qaNcfileFlags.size() )
-    nc->create(qaFile.file,  qaNcfileFlags);
+    nc->create(qaFile.getFile(),  qaNcfileFlags);
   else
-    nc->create(qaFile.file,  "Replace");
+    nc->create(qaFile.getFile(),  "Replace");
 
   if( pIn->isTime )
   {
@@ -1268,6 +1247,34 @@ QA::setExit( int e )
 }
 
 void
+QA::setFilename(hdhC::FileSplit& fC)
+{
+  std::string f(fC.basename);
+
+  Split x(f, '_');
+
+  if( x.size() )
+  {
+    Split y(x[x.size()-1], '-');
+
+    size_t sz = y.size();
+
+    if( sz == 2 &&
+          hdhC::isDigit( y[0]) && hdhC::isDigit( y[1]) )
+    {
+      f = "qa";
+
+      for( size_t i=0 ; i < x.size()-1 ; ++i )
+        f += "_" + x[i] ;
+    }
+  }
+
+  qaFile.setFilename(f + ".nc");
+
+  return ;
+}
+
+void
 QA::setTable(std::string t, std::string acronym)
 {
   // it is possible that this method is called from a spot,
@@ -1333,7 +1340,7 @@ QA::testPeriod(void)
 
   // Does the filename has a trailing date range?
   // Strip off the extension.
-  std::string f( qaFile.basename );
+  std::string f( qaFile.getBasename() );
 
   std::vector<std::string> sd;
   sd.push_back( "" );

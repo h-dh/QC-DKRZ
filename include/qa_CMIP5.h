@@ -115,9 +115,9 @@ public:
    the data of fields.*/
   bool   init(void) ;
   void   linkObject(IObj *);
-  void   setFilename(std::string);
-  void   setFilePath(std::string p) {filenameItems.path=p;}
-  void   setTablePath(std::string p){ tablePath=p; }
+
+  void   setFilename(hdhC::FileSplit&);
+  void   setTablePath(std::string p){tablePath=p;}
 
   void   applyOptions(bool isPost=false);
 
@@ -318,14 +318,14 @@ public:
   std::string
          getPath(std::string& f, std::string mode="total");
 
-  std::string
-         getVarReqTable(void){ return varReqTableName ; }
+//  std::string
+//         getVarReqTable(void){ return varReqTable.file ; }
+
+//  std::string
+//         getTablePath(void){ return tablePath; }
 
   std::string
-         getTablePath(void){ return tablePath; }
-
-  std::string
-         getVarnameFromFilename(std::string &str);
+         getVarnameFromFilename(std::string str);
 
   //! Brief description of options
   static void
@@ -406,7 +406,10 @@ public:
   bool   testPeriod(void);
 
   //! Name of the netCDF file with results of the quality control
-  struct hdhC::FilenameItems filenameItems;
+  std::string tablePath;
+  struct hdhC::FileSplit qaFile;
+  struct hdhC::FileSplit projectTableFile;
+  struct hdhC::FileSplit varReqTable;
 
   std::string qaNcfileFlags;
 
@@ -454,9 +457,6 @@ public:
 
   std::string cfStndNames;
   std::string currTable;
-  std::string projectTableName;
-  std::string varReqTableName;
-  std::string tablePath;
   std::string MIP_tableName;
   std::string frequency;
   std::string totalPeriod;

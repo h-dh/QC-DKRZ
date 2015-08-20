@@ -35,7 +35,7 @@ period()
 
   test ! -e $exp.log && return
 
-  prg=${QA_PATH}/xtractTimeRange_from_log
+  prg=${QA_PATH}/scripts/xtractTimeRange_from_log
 
   test ${#prg} -gt 0 && \
     /bin/bash ${prg} ${DEBUG_X} -P ${PROJECT} -Q $exp.log
@@ -151,7 +151,7 @@ txt="Annotation summary of the QA of experiment\n \
     if [ "${PROJECT}" = CORDEX ] ; then
       if ! expr match "$exp" '.*r0i0p0' &> /dev/null ; then
         if [ ${#std_table} -gt 0 ] ; then
-          /bin/bash ${QA_PATH}/findNotDelivered  --project=CORDEX ${DEBUG_X} \
+          /bin/bash ${QA_PATH}/scripts/findNotDelivered  --project=CORDEX ${DEBUG_X} \
           --period=$outP \
           --table=${std_table} \
           --out=$outA \
@@ -275,7 +275,7 @@ summaryY()
 
   test ! -e $exp.log && return
 
-  /bin/bash ${QA_PATH}/xtractNotes_from_log ${DEBUG_X} ${MERGE} -H $exp.log
+  /bin/bash ${QA_PATH}/scripts/xtractNotes_from_log ${DEBUG_X} ${MERGE} -H $exp.log
 
   return
 }

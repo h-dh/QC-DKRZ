@@ -91,9 +91,8 @@ class Base : public IObj
   bool isVarname( std::string &);
   void makeVariable (NcAPI *, std::string name, int id=-1);
 
-  // uses struct hdhC::FilenameItems
-  void setFilename(std::string);
-  void setFilePath(std::string p) {filenameItems.path=p;}
+  // uses struct hdhC::FileSplit
+  void setFilename(std::string f){file.setFile(f);}
 
   //! Connect a frequency distribution object.
   void setFreqDistI(FD_interface *p){ fDI=p; return;}
@@ -113,7 +112,7 @@ class Base : public IObj
   void setVarPropsForOperation( void );
   void setVarPropsNoOperation( void );
 
-  struct hdhC::FilenameItems filenameItems;
+  struct hdhC::FileSplit file;
 
   std::string linkObjName;
   bool        isAllocate;

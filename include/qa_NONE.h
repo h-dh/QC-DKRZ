@@ -101,8 +101,8 @@ class QA : public IObj
    the data of fields.*/
   bool   init(void) ;
   void   linkObject(IObj *);
-  void   setFilename(std::string f){qaFile = hdhC::setFilename(f);}
-  void   setTablePath(std::string p){ tablePath=p; }
+  void   setFilename(hdhC::FileSplit&);
+  void   setTablePath(std::string p){tablePath=p;}
 
   void   applyOptions(bool isPost=false);
 
@@ -134,8 +134,8 @@ class QA : public IObj
   std::string
          getFrequency(void);
 
-  std::string
-         getTablePath(void){ return tablePath; }
+//  std::string
+//         getTablePath(void){ return tablePath; }
 
   //! Brief description of options
   static void
@@ -193,7 +193,9 @@ class QA : public IObj
   bool   testPeriod(void);
 
   //! Name of the netCDF file with results of the quality control
-  struct hdhC::FilenameItems qaFile;
+  std::string tablePath;
+  struct hdhC::FileSplit qaFile;
+  struct hdhC::FileSplit projectTableFile;
 
   std::string qaNcfileFlags;
 
@@ -238,8 +240,6 @@ class QA : public IObj
   std::vector<std::string> replicationOpts;
 
   std::string currTable;
-  std::string projectTableName;
-  std::string tablePath;
 
   std::string frequency;
   int  frequency_pos;

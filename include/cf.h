@@ -36,10 +36,9 @@ class CF : public IObj
   bool   entry(void);
   bool   init(void) ;
   void   linkObject(IObj *);
-  void   setFilename(std::string s);
-  void   setFilePath(std::string p) {filenameItems.path=p;}
-  void   setTablePath(std::string p){ tablePath=p; }
 
+  void   setFilename(std::string f){file.setFile(f);}
+  void   setTablePath(std::string p){tablePath=p;}
 
   void   chap(void);
   void   chap_reco(void);
@@ -205,7 +204,7 @@ template <typename T>
   bool   scanStdNameTable(ReadLine&, Variable&, std::string);
   void   setCheck(std::string&);
   void   setFollowRecommendations(bool b){followRecommendations=b;}
-  void   setTable(std::string p){ std_name_table=p; }
+//  void   setTable(std::string p){ std_name_table=p; }
   bool   timeUnitsFormat(Variable&, bool annot=true);
   std::string
          units_lon_lat(Variable&, std::string units="");
@@ -219,14 +218,14 @@ template <typename T>
   bool isFeatureType;
   std::string cFVersion;
 
-  struct hdhC::FilenameItems filenameItems;
+  std::string tablePath;
+  struct hdhC::FileSplit file;
+  struct hdhC::FileSplit std_name_table;
+  struct hdhC::FileSplit area_table;
+  struct hdhC::FileSplit region_table;
 
   ut_system*   unitSystem;
 
-  std::string std_name_table;
-  std::string area_table;
-  std::string region_table;
-  std::string tablePath;
 
   std::string timeName;  // the name of the unlimited/time variable
   int         time_ix;

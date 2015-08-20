@@ -11,7 +11,7 @@ class InFile;
 class ProjectTable
 {
   public:
-  ProjectTable(QA *, InFile*, std::string &path, std::string &table);
+  ProjectTable(QA *, InFile*, struct hdhC::FileSplit& );
 
   //! Prepare the comparison of dimensions between file and project table.
   /*! This is checked for each chunk or atomic data set in each
@@ -51,8 +51,8 @@ class ProjectTable
 
   std::vector<std::string> excludedAttributes;
 
-  std::string path;
-  std::string table;
+  struct hdhC::FileSplit projectTableFile;
+
   std::string id_1st;
   std::string id_2nd;
 

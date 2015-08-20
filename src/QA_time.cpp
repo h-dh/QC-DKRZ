@@ -685,6 +685,12 @@ QA_Time::initTimeTable(std::string id_1st, std::string id_2nd)
    if( timeTableMode == NONE )
      return;
 
+   if( id_1st.size() == 0 )
+   {
+     timeTableMode = NONE ;
+     return;
+   }
+
    tt_block_rec=0;
    tt_count_recs=0;
 

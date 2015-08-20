@@ -38,12 +38,12 @@ QA::appendToHistory(size_t eCode)
       size_t pos;
       if( (pos=hstPath.rfind("\n")) < std::string::npos )
          hstPath.erase(pos,1);
-      if( filenameItems.path != hstPath )
+      if( qaFile.path != hstPath )
       {
         hst += "\n" ;
         hst += today;
         hst += " changed path to data: ";
-        hst += filenameItems.path + "\n" ;
+        hst += qaFile.path + "\n" ;
       }
     }
   }
@@ -52,7 +52,7 @@ QA::appendToHistory(size_t eCode)
     // the root of the history string
     hst += today;
     hst += " path_to_data: ";
-    hst += filenameItems.path ;
+    hst += qaFile.path ;
   }
 
   // did the package version change? Yes? Then add to history
@@ -149,7 +149,7 @@ QA::applyOptions(bool isPost)
        if( split.size() == 2 )
        {
           // path to the directory where the execution takes place
-          filenameItems.path=split[1];
+          qaFile.setPath(split[1]);
           continue;
        }
      }
@@ -167,7 +167,7 @@ QA::applyOptions(bool isPost)
      {
        if( split.size() == 2 )
        {
-          setFilename(split[1]);
+          qaFile.setFile(split[1]);
           continue;
        }
      }
@@ -290,19 +290,7 @@ QA::applyOptions(bool isPost)
      {
        if( split.size() == 2 )
        {
-          size_t pos;
-          if( (pos=split[1].rfind('/')) < std::string::npos )
-          {
-            if( split[1][0] == '/' )
-            {  // absolute path
-              tablePath=split[1].substr(0, pos);
-              projectTableName=split[1].substr(pos+1);
-            }
-            else // relative path remains part of the tablename
-              projectTableName=split[1];
-          }
-          else
-            projectTableName=split[1];
+          projectTableFile.setFile(split[1]);
 
           continue;
        }
@@ -313,19 +301,7 @@ QA::applyOptions(bool isPost)
      {
        if( split.size() == 2 )
        {
-          size_t pos;
-          if( (pos=split[1].rfind('/')) < std::string::npos )
-          {
-            if( split[1][0] == '/' )
-            {  // absolute path
-              tablePath=split[1].substr(0, pos);
-              varReqTableName=split[1].substr(pos+1);
-            }
-            else // relative path remains part of the tablename
-              varReqTableName=split[1];
-          }
-          else
-            varReqTableName=split[1];
+          varReqTable.setFile(split[1]);
 
           continue;
        }
@@ -341,6 +317,13 @@ QA::applyOptions(bool isPost)
           continue;
      }
    }
+
+   // apply a general path which could have also been provided by setTablePath()
+   if( projectTableFile.path.size() == 0 )
+      projectTableFile.setPath(tablePath) ;
+
+   if( varReqTable.path.size() == 0 )
+      varReqTable.setPath(tablePath);
 
    return;
 }
@@ -540,7 +523,7 @@ QA::checkDimVarReqTable(ReadLine &ifs, InFile &in,
             std::string capt("corrupt standard sub-table for dimensions: wrong number of columns.") ;
 
             std::ostringstream ostr(std::ios::app);
-            ostr << "Standard table: " << varReqTableName;
+            ostr << "Standard table: " << varReqTable.filename;
             ostr << "\nCurrent line: " << str0 ;
             ostr << "\nRequired number of items of the table sheet for ";
             ostr << "dimensions is " << colMax << ", but found ";
@@ -683,7 +666,7 @@ BREAK2:
 
     std::ostringstream ostr(std::ios::app);
     ostr << "QA::checkDimVarReqTable()";
-    ostr << "\nStandard_output table: " << varReqTableName;
+    ostr << "\nStandard_output table: " << varReqTable.filename;
     ostr << "\nDimension " <<  dimName;
     ostr << " not found in the table.";
 
@@ -754,7 +737,7 @@ QA::checkDimSpecialValue(InFile &in, VariableMetaData &vMD,
 
        std::ostringstream ostr(std::ios::app);
        ostr << "Variable Requirements table: ";
-       ostr << varReqTableName;
+       ostr << varReqTable.filename;
        ostr << ", variable: ";
        ostr << vMD.var->name;
        ostr << ", dimension: " <<  dimName;
@@ -819,7 +802,7 @@ QA::checkDimVarReqTableEntry(InFile &in,
   // of the hybrid sigma pressure coordinates. Also, the size of
   // this dimension may vary.
   // Is done separately.
-  if( currTable == varReqTableName && tbl_entry.outname == "lev" )
+  if( currTable == varReqTable.filename && tbl_entry.outname == "lev" )
       return;
 
   if( tbl_entry.outname != nc_entry.outname )
@@ -1356,7 +1339,7 @@ QA::checkDimUnits(InFile &in,
     return;  // this may have units or not
 
   std::string tableType;
-  if( currTable == varReqTableName )
+  if( currTable == varReqTable.filename )
     tableType = "standard table: ";
   else
     tableType = "project table: ";
@@ -1567,7 +1550,7 @@ QA::checkFilename(std::vector<std::string> &sTable,
     a += "[_<temporal subset>].nc" ;
 
   // comparable format of the real filename
-  std::string f( pIn->filenameItems.basename);
+  std::string f( pIn->file.basename);
   Split splt(f, "_");
 
   if( splt.size() > 4 )
@@ -1586,10 +1569,10 @@ QA::checkFilename(std::vector<std::string> &sTable,
   }
   else
   {
-     std::string key("1_2");
+     std::string key("1_4");
      if( notes->inq( key, fileStr) )
      {
-       std::string capt("filename is inconsistent with CMOR encoding.");
+       std::string capt("filename structure with syntax error.");
 
        (void) notes->operate(capt) ;
        {
@@ -1601,10 +1584,10 @@ QA::checkFilename(std::vector<std::string> &sTable,
 
   if( a != f )
   {
-    std::string key("1_3");
+    std::string key("1_5");
     if( notes->inq( key, fileStr))
     {
-       std::string capt("filename does not match CMIP5 global attributes.") ;
+       std::string capt("filename does not match file attributes.") ;
 
        (void) notes->operate(capt) ;
        {
@@ -1658,7 +1641,7 @@ QA::checkMetaData(InFile &in)
 
   if( isNotInFName )
   {
-     std::string key("1_1");
+     std::string key("1_3");
 
      if( notes->inq( key, fileStr) )
      {
@@ -1679,7 +1662,7 @@ QA::checkMetaData(InFile &in)
   }
 
   // Read or write the project table.
-  ProjectTable projectTable(this, &in, tablePath, projectTableName);
+  ProjectTable projectTable(this, &in, projectTableFile);
   projectTable.setAnnotation(notes);
   projectTable.setExcludedAttributes( excludedAttribute );
 
@@ -1842,19 +1825,18 @@ QA::checkVarReqTable(InFile &in, VariableMetaData &vMD,
    // variable was not found in table sheet Omon, because
    // it is defined in Oyr
 
-   if( varReqTableName.size() == 0 )  // no standard table
+   if( !varReqTable.is )  // no standard table
       return false;
 
    std::string str;
 
-   std::string str0(tablePath);
-   str0 += "/" + varReqTableName ;
-
-   setTable( varReqTableName, "VR" );
+   setTable( varReqTable.filename, "VR" );
 
 //   std::fstream ifs(str0.c_str(), std::ios::in);
    // This class provides the feature of putting back an entire line
-   ReadLine ifs(str0);
+   std::string str0;
+
+   ReadLine ifs(varReqTable.getFile());
 
    if( ! ifs.isOpen() )
    {
@@ -1863,7 +1845,7 @@ QA::checkVarReqTable(InFile &in, VariableMetaData &vMD,
       if( notes->inq( key, vMD.var->name) )
       {
          std::string capt("could not open variable-requirements table.") ;
-         capt += str0 ;
+         capt += varReqTable.getFilename() ;
 
          (void) notes->operate(capt) ;
          {
@@ -1897,6 +1879,7 @@ QA::checkVarReqTable(InFile &in, VariableMetaData &vMD,
    // The remainder is the name.
    // Unfortunately, the variable requirement table is in a shape of a little
    // distance from being perfect.
+
    while( ! ifs.getLine(str0) )
    {
      // try to identify the name of the table sheet in str0
@@ -1996,7 +1979,7 @@ QA::checkVarReqTable(InFile &in, VariableMetaData &vMD,
       capt += " not found in the standard table.";
 
       std::ostringstream ostr(std::ios::app);
-      ostr << "Standard table: " << varReqTableName  ;
+      ostr << "Standard table: " << varReqTable.filename  ;
       ostr << "\ntable sheet: " << vMD.varReqTableSheet;
       ostr << "\nVariable " << vMD.var->name;
       ostr << " not found in the table.";
@@ -2051,7 +2034,7 @@ QA::checkVarReqTableDimBounds(InFile &in, Split &splt_line,
          std::string capt( captsIntro) ;
          capt += "missing value in table sheet 'dims' in column 'bounds?'" ;
 
-         ostr << "Standard table: " << varReqTableName;
+         ostr << "Standard table: " << varReqTable.filename;
          ostr << "\nError in the dimension table: ";
          ostr << "item 'bounds?' must be 'yes' or 'no', but is ";
          ostr <<  splt_line[col["bounds?"]] << ".";
@@ -2671,7 +2654,7 @@ QA::checkVarReqTableEntry(
          || vMD.typeStr == "float"
               || vMD.typeStr == "double" ;
 
-  if( currTable == varReqTableName
+  if( currTable == varReqTable.filename
        && tbl_entry.typeStr.size() == 0 && vMD.typeStr.size() != 0 )
   {
     std::string key("4_11");
@@ -3099,7 +3082,7 @@ QA::findVarReqTableEntry(ReadLine &ifs, std::string &str0,
         std::string capt("missing column(s) in the standard table.") ;
 
         std::ostringstream ostr(std::ios::app);
-        ostr << "Standard table: " << varReqTableName ;
+        ostr << "Standard table: " << varReqTable.filename ;
         ostr << "\nCurrent line: " << str0 ;
         ostr << "\nRequired number of items ";
         ostr << "is " << col_max << ", but found ";
@@ -3211,7 +3194,7 @@ QA::getCurrentTableSubst(void)
 {
    std::string t(": ");
 
-   if( currTable == varReqTableName )
+   if( currTable == varReqTable.filename )
      t += "standard table" ;
    else
      t += "project table" ;
@@ -3355,7 +3338,7 @@ QA::getFrequency(void)
   // not found, but error issue is handled elsewhere
 
   // try the filename
-  std::string f( pIn->filenameItems.basename );
+  std::string f( pIn->file.basename );
 
   Split splt(f, "_");
 
@@ -3476,7 +3459,7 @@ QA::getTableSheet(VariableMetaData &vMD)
   checkFilename( sTable, tTable );
 
   // Note: filename:= name_CMOR-MIP table_... .nc
-  Split splt(pIn->filenameItems.basename, "_");
+  Split splt(pIn->file.basename, "_");
 
   std::string fTable;
   if( splt.size() > 1 )
@@ -3574,9 +3557,10 @@ QA::init(void)
    // apply parsed command-line args
    applyOptions();
 
-   setFilename(pIn->filenameItems.basename);
+   // default
+   setFilename( pIn->file );
 
-   fVarname = getVarnameFromFilename(pIn->filenameItems.filename);
+   fVarname = getVarnameFromFilename(pIn->file.filename);
    getFrequency();
 
    // Create and set VarMetaData objects.
@@ -3737,9 +3721,6 @@ QA::initDefaults(void)
   importedRecFromPrevQA=0; // initial #rec in out-nc-file.
   currQARec=0;
 
-  // by default
-  tablePath="./";
-
   // pre-set check-modes: all are used by default
   isCheckMeta=true;
   isCheckTime=true;
@@ -3770,9 +3751,8 @@ QA::initGlobalAtts(InFile &in)
   nc->setGlobalAtt( "contact", "hollweg@dkrz.de");
 
   std::string t("csv formatted ");
-  t += varReqTableName.substr( varReqTableName.rfind('/')+1 ) ;
-  t = t.substr(0,t.size()-3) + "xlsx" ;
-  nc->setGlobalAtt( "standard_table", t);
+
+  nc->setGlobalAtt( "standard_table", varReqTable.basename + ".xlsx");
 
   nc->setGlobalAtt( "creation_date", today);
 
@@ -3875,27 +3855,16 @@ QA::initResumeSession(void)
 void
 QA::inqTables(void)
 {
-  // check tablePath; must exist
-  std::string testFile="/bin/bash -c \'test -d " ;
-  testFile += tablePath ;
-  testFile += '\'' ;
-
-  // see 'man system' for the return value, here we expect 0,
-  // if directory exists.
-
-  if( system( testFile.c_str()) )
+  if( ! varReqTable.isExisting(varReqTable.path) )
   {
      std::string key("57");
 
      if( notes->inq( key, fileStr) )
      {
-        std::string capt("no path to the tables.") ;
+        std::string capt("no path to the tables, tried ") ;
+        capt += varReqTable.path;
 
-        std::string text("No path to the tables; tried: ");
-        text += tablePath + ".";
-        text += "\nPlease, check the setting in the configuration file.";
-
-        (void) notes->operate(capt, text) ;
+        (void) notes->operate(capt) ;
         {
           notes->setCheckMetaStr(fail);
           setExit( notes->getExitValue() ) ;
@@ -3906,15 +3875,18 @@ QA::inqTables(void)
   // tables names usage: both project and standard tables
   // reside in the same path.
   // Naming of the project table:
-  if( projectTableName.size() == 0 )
+  if( !projectTableFile.is )
   {
-    if( varReqTableName.size() == 0 )
-      projectTableName = "project_table.csv";
+    if( !varReqTable.is )
+      projectTableFile.setFile("project_table.csv");
     else
-    projectTableName = "pt_" + varReqTableName;
+    {
+      projectTableFile.setPath(varReqTable.path);
+      projectTableFile.setFilename("pt_" + varReqTable.filename);
+    }
   }
-  else if( projectTableName.find(".csv") == std::string::npos )
-    projectTableName += ".csv" ;
+  else if( projectTableFile.extension != "csv" )
+    projectTableFile.setExtension("csv");
 
   return;
 }
@@ -4021,13 +3993,13 @@ QA::openQA_Nc(InFile &in)
   // Copies time variable from input-nc file.
 
   // name of the result file was set before
-  if ( !filenameItems.is )
+  if ( !qaFile.is )
   {
     std::string key("00");
 
     if( notes->inq( key) )
     {
-      std::string capt("openQA_Nc(): undefined filenameItems.") ;
+      std::string capt("openQA_Nc(): undefined file.") ;
 
       (void) notes->operate(capt) ;
       notes->setCheckMetaStr(fail);
@@ -4045,7 +4017,7 @@ QA::openQA_Nc(InFile &in)
   if( ! isCheckTime )
     return;
 
-  if( nc->open(filenameItems.file, "NC_WRITE", false) )
+  if( nc->open(qaFile.getFile(), "NC_WRITE", false) )
 //   if( isQA_open ) // false: do not exit in case of error
   {
     // continue a previous session
@@ -4077,9 +4049,9 @@ QA::openQA_Nc(InFile &in)
   // open new netcdf file
   // open new netcdf file
   if( qaNcfileFlags.size() )
-    nc->create(filenameItems.file,  qaNcfileFlags);
+    nc->create(qaFile.getFile(),  qaNcfileFlags);
   else
-    nc->create(filenameItems.file,  "Replace");
+    nc->create(qaFile.getFile(),  "Replace");
 
   if( pIn->isTime )
   {
@@ -4317,11 +4289,7 @@ QA::readHeadline(ReadLine &ifs,
         // no dim sheet of the standard  table
         std::string capt("table sheet for dimensions not found in the standard table.") ;
 
-        std::string text("Standard table: ") ;
-        text +=  varReqTableName ;
-        text += "\nDid not find the sheet for dimensions." ;
-
-        (void) notes->operate(capt, text) ;
+        (void) notes->operate(capt) ;
         {
           notes->setCheckMetaStr(fail);
           setExit( notes->getExitValue() ) ;
@@ -4450,12 +4418,31 @@ QA::setExit( int e )
 }
 
 void
-QA::setFilename(std::string f)
+QA::setFilename(hdhC::FileSplit& fC)
 {
-  filenameItems = hdhC::setFilename(f);
-  filenameItems.path.clear();  // to be set by option
+  std::string f(fC.basename);
 
-  return;
+  Split x(f, '_');
+
+  if( x.size() )
+  {
+    Split y(x[x.size()-1], '-');
+
+    size_t sz = y.size();
+
+    if( sz == 2 &&
+          hdhC::isDigit( y[0]) && hdhC::isDigit( y[1]) )
+    {
+      f = "qa";
+
+      for( size_t i=0 ; i < x.size()-1 ; ++i )
+        f += "_" + x[i] ;
+    }
+  }
+
+  qaFile.setFilename(f + ".nc");
+
+  return ;
 }
 
 void
@@ -4524,7 +4511,7 @@ QA::testPeriod(void)
 
   // Does the filename has a trailing date range?
   // Strip off the extension.
-  std::string f( filenameItems.basename );
+  std::string f( qaFile.getBasename() );
 
   std::vector<std::string> sd;
   sd.push_back( "" );
@@ -4561,7 +4548,7 @@ QA::testPeriod(void)
   // necessary for validity (not sufficient)
   if( *fN_left > *fN_right )
   {
-     std::string key("1_5");
+     std::string key("1_7");
      if( notes->inq( key, fileStr) )
      {
        std::string capt("invalid time-stamp in the filename, found ");
@@ -4673,7 +4660,7 @@ QA::testPeriod(void)
   // the annotation
   if( isLeft_fT_not_tV )
   {
-     std::string key("1_4");
+     std::string key("1_6");
      if( notes->inq( key, fileStr) )
      {
        std::string capt("First date ");
@@ -4692,7 +4679,7 @@ QA::testPeriod(void)
   // test completeness: the end of the file
   if( isFileComplete && isRight_fT_not_tV )
   {
-     std::string key("1_4");
+     std::string key("1_6");
      if( notes->inq( key, fileStr) )
      {
        std::string capt("Second date ");

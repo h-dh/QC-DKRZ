@@ -42,12 +42,12 @@ QA::appendToHistory(size_t eCode)
       size_t pos;
       if( (pos=hstPath.rfind("\n")) < std::string::npos )
          hstPath.erase(pos,1);
-      if( filenameItems.path != hstPath )
+      if( qaFile.path != hstPath )
       {
         hst += "\n" ;
         hst += today;
         hst += " changed path to data=";
-        hst += filenameItems.path + "\n" ;
+        hst += qaFile.path + "\n" ;
       }
     }
   }
@@ -56,7 +56,7 @@ QA::appendToHistory(size_t eCode)
     // the root of the history string
     hst += today;
     hst += " path_to_data=";
-    hst += filenameItems.path ;
+    hst += qaFile.path ;
   }
 
   // did the package version change? Yes? Then add to history
@@ -157,7 +157,7 @@ QA::applyOptions(bool isPost)
        if( split.size() == 2 )
        {
           // path to the directory where the execution takes place
-          filenameItems.path=split[1];
+          qaFile.setPath(split[1]);
           continue;
        }
      }
@@ -175,7 +175,7 @@ QA::applyOptions(bool isPost)
      {
        if( split.size() == 2 )
        {
-          setFilename(split[1]);
+          qaFile.setFile(split[1]);
           continue;
        }
      }
@@ -249,7 +249,7 @@ QA::applyOptions(bool isPost)
      {
        if( split.size() == 2 )
        {
-          GCM_ModelNameTable = split[1] ;
+          GCM_ModelnameTable.setFile(split[1]) ;
 
           continue;
        }
@@ -270,19 +270,7 @@ QA::applyOptions(bool isPost)
      {
        if( split.size() == 2 )
        {
-          size_t pos;
-          if( (pos=split[1].rfind('/')) < std::string::npos )
-          {
-            if( split[1][0] == '/' )
-            {  // absolute path
-              tablePath=split[1].substr(0, pos);
-              projectTableName=split[1].substr(pos+1);
-            }
-            else // relative path remains part of the tablename
-              projectTableName=split[1];
-          }
-          else
-            projectTableName=split[1];
+          projectTableFile.setFile(split[1]);
 
           continue;
        }
@@ -294,7 +282,7 @@ QA::applyOptions(bool isPost)
      {
        if( split.size() == 2 )
        {
-          archiveDesignTable = split[1] ;
+          archiveDesignTable.setFile(split[1]) ;
 
           continue;
        }
@@ -305,7 +293,7 @@ QA::applyOptions(bool isPost)
      {
        if( split.size() == 2 )
        {
-          RCM_ModelNameTable = split[1] ;
+          RCM_ModelnameTable.setFile(split[1]) ;
 
           continue;
        }
@@ -316,19 +304,7 @@ QA::applyOptions(bool isPost)
      {
        if( split.size() == 2 )
        {
-          size_t pos;
-          if( (pos=split[1].rfind('/')) < std::string::npos )
-          {
-            if( split[1][0] == '/' )
-            {  // absolute path
-              tablePath=split[1].substr(0, pos);
-              varReqTable=split[1].substr(pos+1);
-            }
-            else // relative path remains part of the tablename
-              varReqTable=split[1];
-          }
-          else
-            varReqTable=split[1];
+          varReqTable.setFile(split[1]);
 
           continue;
        }
@@ -343,6 +319,22 @@ QA::applyOptions(bool isPost)
           continue;
      }
    }
+
+   // apply a general path which could have also been provided by setTablePath()
+   if( archiveDesignTable.path.size() == 0 )
+      archiveDesignTable.setPath(tablePath);
+
+   if( GCM_ModelnameTable.path.size() == 0 )
+      GCM_ModelnameTable.setPath(tablePath);
+
+   if( projectTableFile.path.size() == 0 )
+      projectTableFile.setPath(tablePath);
+
+   if( RCM_ModelnameTable.path.size() == 0 )
+      RCM_ModelnameTable.setPath(tablePath);
+
+   if( varReqTable.path.size() == 0 )
+      varReqTable.setPath(tablePath);
 
    return;
 }
@@ -628,7 +620,7 @@ QA::checkDimULD(
   // Checking ranges is senseless, thus discarded.
 
   // Compare against the project table.
-  if( currTable != varReqTable )
+  if( currTable != varReqTable.filename )
   {
     if( tbl_entry.units != nc_entry.units )
     {
@@ -741,7 +733,7 @@ QA::checkDimUnits(InFile &in,
   std::string key;
 
   std::string tableType;
-  if( currTable == varReqTable )
+  if( currTable == varReqTable.filename )
     tableType = "standard table=";
   else
     tableType = "project table=";
@@ -854,7 +846,7 @@ QA::checkDRS(InFile &in)
     checkDRS_ModelName(in, a_name[5], a_value[5], 'R', a_name[1], a_value[1]) ;
 
   // components of the path
-  Split p_items(filenameItems.path,"/");
+  Split p_items(in.file.path,"/");
 
   // check for identical sequences
   std::string text;
@@ -962,19 +954,10 @@ QA::checkDRS_ModelName(InFile &in, std::string &aName, std::string &aValue,
    char des, std::string instName, std::string instValue )
 {
    std::string tbl ;
-   if( des == 'G' && GCM_ModelNameTable.find('/') < std::string::npos )
-     tbl = GCM_ModelNameTable ;
-   else if( RCM_ModelNameTable.find('/') < std::string::npos )
-     tbl = RCM_ModelNameTable ;
+   if( des == 'G' )
+     tbl = GCM_ModelnameTable.getFile() ;
    else
-   {
-     tbl = tablePath ;
-     tbl += '/' ;
-     if( des == 'G' )
-       tbl += GCM_ModelNameTable ;
-     else
-       tbl += RCM_ModelNameTable ;
-   }
+     tbl = RCM_ModelnameTable.getFile() ;
 
    ReadLine ifs(tbl);
 
@@ -1293,7 +1276,7 @@ QA::domainCheck(ReadLine &ifs)
 
      for( size_t i=0 ; i < csv.size() ; ++i )
      {
-       // make rading of a table independent on a leading index
+       // make reading of a table independent on a leading index
        if( i == 0 && hdhC::isDigit(csv[0][0]) )
           continue;
 
@@ -1930,7 +1913,7 @@ QA::domainFindTableType(
    candidate.push_back( (pIn->getAttValue("CORDEX_domain")) ) ;
 
    // b) domain name from the filename, e.g. EUR-11
-   Split fd(filenameItems.filename, "_");
+   Split fd(pIn->file.getFilename(), "_");
    if( fd.size() > 1 )
       candidate.push_back( fd[1] );
    else
@@ -2204,7 +2187,7 @@ QA::checkMetaData(InFile &in)
   // from the previous instance.
   std::vector<struct DimensionMetaData> dimNcMeDa;
 
-  if(varReqTable.size() )
+  if(varReqTable.is )
   {
     for( size_t i=0 ; i < varMeDa.size() ; ++i )
     {
@@ -2215,7 +2198,7 @@ QA::checkMetaData(InFile &in)
   }
 
   // Read or write the project table.
-  ProjectTable projectTable(this, &in, tablePath, projectTableName);
+  ProjectTable projectTable(this, &in, projectTableFile);
   projectTable.setAnnotation(notes);
   projectTable.setExcludedAttributes( excludedAttribute );
 
@@ -2313,7 +2296,7 @@ QA::checkFilename(InFile &in )
 
   // CORDEX filename encoding in the order of below;
   // variable_name is not an attribute
-  std::string f( filenameItems.filename);
+  std::string f( in.file.getFilename());
 
   if( f.rfind(".nc" ) )
     f = f.substr( 0, f.size()-3 );  // strip ".nc"
@@ -3370,17 +3353,15 @@ QA::getFrequency(void)
 
   if( ! frequency.size() )
   {
-    // not found, but error issue is handled elsewhere
-
     // try the filename
-    std::string f( pIn->filenameItems.basename );
+    std::string f( pIn->file.basename );
 
     Split splt(f, "_");
 
     // test the last two items for time type. If both are,
     // then this would mean that they are separated by '_'.
     // This would be a fault for CORDEX.
-    size_t off=0;  // takes into account a period separator '_'
+    size_t off=0;  // take into account a period separator '_'
     if( splt.size() > 2 &&
            hdhC::isDigit( splt[ splt.size() -1 ])
              && hdhC::isDigit( splt[ splt.size() -2 ]) )
@@ -3479,7 +3460,7 @@ QA::getSubTable(void)
 }
 
 std::string
-QA::getVarnameFromFilename(std::string &fName)
+QA::getVarnameFromFilename(std::string fName)
 {
   std::string f;
 
@@ -3514,12 +3495,17 @@ QA::init(void)
    // Eventually, entry() is called to test the data of fields.
 
    notes->init();  // safe
-   setFilename(pIn->filenameItems.file);
+
+   // if non is provided via options
+   std::string str(pIn->file.getFilename());
+
+   // default for the qaFile
+   setFilename( pIn->file );
 
    // apply parsed command-line args
    applyOptions();
 
-   fVarname = getVarnameFromFilename(pIn->filenameItems.file);
+   fVarname = getVarnameFromFilename(pIn->file.getFilename());
    getFrequency();
    getSubTable() ;
 
@@ -3701,9 +3687,6 @@ QA::initDefaults(void)
 //  currQARec=UINT_MAX;
   currQARec=0;
 
-  // by default
-  tablePath="./";
-
   // pre-set check-modes: all are used by default
   isCheckMeta=true;
   isCheckTime=true;
@@ -3736,8 +3719,7 @@ QA::initGlobalAtts(InFile &in)
   nc->setGlobalAtt( "contact", "hollweg@dkrz.de");
 
   std::string t("csv formatted ");
-  t += varReqTable.substr( varReqTable.rfind('/')+1 ) ;
-  t = t.substr(0,t.size()-3) + "xlsx" ;
+  t += varReqTable.basename + "xlsx" ;
   nc->setGlobalAtt( "standard_table", t);
 
   nc->setGlobalAtt( "creation_date", today);
@@ -3841,20 +3823,12 @@ QA::initResumeSession(void)
 void
 QA::inqTables(void)
 {
-  // check tablePath; must exist
-  std::string testFile("/bin/bash -c \'test -d ") ;
-  testFile += tablePath ;
-  testFile += '\'' ;
-
-  // see 'man system' for the return value, here we expect 0,
-  // if directory exists.
-
-  if( system( testFile.c_str()) )
+  if( ! varReqTable.isExisting(varReqTable.path) )
   {
      std::string key("7_1");
      if( notes->inq( key, fileStr) )
      {
-        std::string capt("no path to the tables, tried " + tablePath) ;
+        std::string capt("no path to the tables, tried " + varReqTable.path) ;
 
         if( notes->operate(capt) )
         {
@@ -3867,10 +3841,8 @@ QA::inqTables(void)
   // tables names usage: both project and standard tables
   // reside in the same path.
   // Naming of the project table:
-  if( projectTableName.size() == 0 )
-    projectTableName = "pt_NONE";
-  else if( projectTableName.find(".csv") == std::string::npos )
-    projectTableName += ".csv" ;
+  if( ! projectTableFile.is )
+    projectTableFile.setFilename("pt_NONE.csv");
 
   return;
 }
@@ -3978,13 +3950,13 @@ QA::openQA_Nc(InFile &in)
   // Copies time variable from input-nc file.
 
   // name of the result file was set before
-  if ( !filenameItems.is )
+  if ( !qaFile.is )
   {
     std::string key("00");
 
     if( notes->inq( key) )
     {
-      std::string capt("openQA_Nc(): undefined filenameItems.") ;
+      std::string capt("openQA_Nc(): undefined file.") ;
 
       (void) notes->operate(capt) ;
       notes->setCheckMetaStr(fail);
@@ -4002,7 +3974,7 @@ QA::openQA_Nc(InFile &in)
   if( ! isCheckTime )
     return;
 
-  if( nc->open(filenameItems.file, "NC_WRITE", false) )
+  if( nc->open(qaFile.getFile(), "NC_WRITE", false) )
 //   if( isQA_open ) // false: do not exit in case of error
   {
     // continue a previous session
@@ -4034,9 +4006,9 @@ QA::openQA_Nc(InFile &in)
 
   // open new netcdf file
   if( qaNcfileFlags.size() )
-    nc->create(filenameItems.file,  qaNcfileFlags);
+    nc->create(qaFile.getFile(),  qaNcfileFlags);
   else
-    nc->create(filenameItems.file,  "Replace");
+    nc->create(qaFile.getFile(),  "Replace");
 
   if( pIn->isTime )
   {
@@ -4801,17 +4773,7 @@ QA::requiredAttributes_readFile(
     std::vector<std::string> &reqVname,
     std::vector<std::vector<std::string> > &reqA)
 {
-   std::string rfp ;
-   if( archiveDesignTable.find('/') < std::string::npos )
-     rfp = archiveDesignTable ;
-   else
-   {
-     rfp = tablePath ;
-     rfp += '/' ;
-     rfp += archiveDesignTable ;
-   }
-
-   ReadLine ifs(rfp);
+   ReadLine ifs(archiveDesignTable.getFile());
 
    if( ! ifs.isOpen() )
    {
@@ -4819,7 +4781,7 @@ QA::requiredAttributes_readFile(
       if( notes->inq( key, fileStr) )
       {
          std::string capt("could not open the CORDEX_archive_design table, tried") ;
-         capt += hdhC::tf_val(archiveDesignTable) ;
+         capt += hdhC::tf_val(archiveDesignTable.filename) ;
 
          if( notes->operate(capt) )
          {
@@ -4916,12 +4878,31 @@ QA::setExit( int e )
 }
 
 void
-QA::setFilename(std::string f)
+QA::setFilename(hdhC::FileSplit& fC)
 {
-  filenameItems = hdhC::setFilename(f);
-  filenameItems.path.clear();  // to be set by option
+  std::string f(fC.basename);
 
-  return;
+  Split x(f, '_');
+
+  if( x.size() )
+  {
+    Split y(x[x.size()-1], '-');
+
+    size_t sz = y.size();
+
+    if( sz == 2 &&
+          hdhC::isDigit( y[0]) && hdhC::isDigit( y[1]) )
+    {
+      f = "qa";
+
+      for( size_t i=0 ; i < x.size()-1 ; ++i )
+        f += "_" + x[i] ;
+    }
+  }
+
+  qaFile.setFilename(f + ".nc");
+
+  return ;
 }
 
 void
@@ -4944,14 +4925,11 @@ QA::varReqTableCheck(InFile &in, VariableMetaData &vMD,
 {
    // scanning the standard table.
 
-   std::string str0(tablePath);
-   str0 += "/" + varReqTable ;
-
-   setTable( varReqTable, "ST" );
+   setTable( varReqTable.filename, "ST" );
 
 //   std::fstream ifs(str0.c_str(), std::ios::in);
    // This class provides the feature of putting back an entire line
-   ReadLine ifs(str0);
+   ReadLine ifs(varReqTable.getFile());
 
    if( ! ifs.isOpen() )
    {
@@ -4959,7 +4937,7 @@ QA::varReqTableCheck(InFile &in, VariableMetaData &vMD,
       if( notes->inq( key, vMD.var->name) )
       {
          std::string capt("could not open the CORDEX_variables_requirement table, tried") ;
-         capt += hdhC::tf_val(str0);
+         capt += hdhC::tf_val(varReqTable.getFile());
 
          if( notes->operate(capt) )
          {
@@ -5080,7 +5058,7 @@ QA::testPeriod(void)
 
   // Does the filename has a trailing date range?
   // Strip off the extension.
-  std::string f( filenameItems.basename );
+  std::string f( pIn->file.getBasename() );
 
   std::vector<std::string> sd;
   sd.push_back( "" );
@@ -5167,7 +5145,6 @@ QA::testPeriod(void)
         notes->setCheckMetaStr( fail );
       }
     }
-
   }
   else
   {

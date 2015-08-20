@@ -1,12 +1,12 @@
 #include "qa_PT.h"
 
-ProjectTable::ProjectTable(QA *p0, InFile *p1, std::string &s0, std::string &s1)
+ProjectTable::ProjectTable(QA *p0, InFile *p1,
+    struct hdhC::FileSplit& pTFile )
 {
    qa  = p0;
    pIn = p1;
 
-   path=s0;
-   table=s1;
+   projectTableFile = pTFile;
 
    excludedAttributes.push_back("comment");
    excludedAttributes.push_back("history");
@@ -35,8 +35,7 @@ ProjectTable::check(Variable &dataVar)
   // matching the varname and frequency (account also rotated).
 
   // Open project table. Mode:  read
-  std::string str0(path);
-  str0 += "/" + table ;
+  std::string str0(projectTableFile.getFile());
 
   std::ifstream ifs(str0.c_str(), std::ios::in);
   if( !ifs.is_open() )  // file does not exist
@@ -755,9 +754,7 @@ ProjectTable::write(Variable &dataVar)
 
   getMetaData(dataVar, md);
 
-  std::string pFile(path);
-  pFile += '/' ;
-  pFile += table;
+  std::string pFile =  projectTableFile.getFile();
 
   lockFile(pFile);
 

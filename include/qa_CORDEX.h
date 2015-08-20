@@ -102,9 +102,10 @@ class QA : public IObj
    the data of fields.*/
   bool   init(void) ;
   void   linkObject(IObj *);
-  void   setFilename(std::string name);
-  void   setFilePath(std::string p) {filenameItems.path=p;}
-  void   setTablePath(std::string p){ tablePath=p; }
+
+  // special: frim InFile with path and period stripped.
+  void   setFilename(hdhC::FileSplit&);
+  void   setTablePath(std::string p){tablePath=p;}
 
   void   applyOptions(bool isPost=false);
 
@@ -285,14 +286,14 @@ class QA : public IObj
   std::string
          getFrequency(void);
 
-  std::string
-         getStandardTable(void){ return varReqTable ; }
+//  std::string
+//         getStandardTable(void){ return varReqTable.file ; }
 
   //! Get the Standard table name from the global attributes
   void   getSubTable(void);
 
-  std::string
-         getTablePath(void){ return tablePath; }
+//  std::string
+//         getTablePath(void){ return tablePath; }
 
   //! Brief description of options
   static void
@@ -398,7 +399,13 @@ class QA : public IObj
   bool   testPeriodFormat(std::vector<std::string> &sd) ;
 
   //! Name of the netCDF file with results of the quality control
-  struct hdhC::FilenameItems filenameItems;
+  std::string tablePath;
+  struct hdhC::FileSplit qaFile;
+  struct hdhC::FileSplit archiveDesignTable;
+  struct hdhC::FileSplit GCM_ModelnameTable;
+  struct hdhC::FileSplit projectTableFile;
+  struct hdhC::FileSplit RCM_ModelnameTable;
+  struct hdhC::FileSplit varReqTable;
 
   std::string qaNcfileFlags;
 
@@ -447,15 +454,8 @@ class QA : public IObj
   std::vector<std::string> replicationOpts;
   std::vector<std::string> requiredAttributesOption;
 
-  std::string GCM_ModelNameTable;
-  std::string RCM_ModelNameTable;
-  std::string archiveDesignTable;
-
   std::string cfStndNames;
   std::string currTable;
-  std::string projectTableName;
-  std::string varReqTable;
-  std::string tablePath;
 
   std::string frequency;
   std::string parentExpID;
@@ -498,7 +498,7 @@ class QA : public IObj
   std::string getSubjectsIntroDim(VariableMetaData &vMD,
                    struct DimensionMetaData &nc_entry,
                    struct DimensionMetaData &tbl_entry, bool isColon=true);
-  std::string getVarnameFromFilename(std::string &str);
+  std::string getVarnameFromFilename(std::string str);
   bool        not_equal(double x1, double x2, double epsilon);
   void        pushBackVarMeDa(Variable*);
   void        setExit(int);

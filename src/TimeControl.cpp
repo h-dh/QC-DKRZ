@@ -39,7 +39,7 @@ TimeControl::applyOptions(void)
      {
         if( split[0] == "path" )
         {
-          setFilePath(split[1]);
+          setFilename(split[1]);
           continue;
         }
 
@@ -124,8 +124,7 @@ TimeControl::copy(const TimeControl &p)
    incrementPattern=p.incrementPattern;
    incrementValue=p.incrementValue;
    filenamePattern=p.filenamePattern;
-   filename=p.filename;
-   path=p.path;
+   file=p.file;
    objName=p.objName;
 
    for( size_t i=0 ; i < optStr.size() ; ++i )
@@ -138,7 +137,7 @@ void
 TimeControl::exceptionError(std::string str)
 {
   // Occurrence of an error usually stops the run at once.
-  // But, the calling program unit is due to exit.
+  // But, the calling program unit is to exit.
   static bool doInit=true;
   if( doInit )
   {
@@ -146,11 +145,13 @@ TimeControl::exceptionError(std::string str)
 
     // base name if available, i.e. after the initialisation
     // of the InFile obj
+/*
     if( str.size() > 0 )
     {
       xcptn.strError += "_";
       xcptn.strError += hdhC::getBasename(str) ;
     }
+*/
     xcptn.strError += ".txt";
 
     doInit = false;
@@ -176,11 +177,13 @@ TimeControl::exceptionWarning(std::string str)
     // This happens only once.
     xcptn.strWarning = "tc_warning" ;
 
+/*
     if( str.size() > 0 )
     {
       xcptn.strWarning += "_";
       xcptn.strWarning += hdhC::getBasename(str) ;
     }
+*/
     xcptn.strWarning += ".txt";
 
     doInit = false;
@@ -287,18 +290,6 @@ TimeControl::findRecAtTime(std::string recVarName, double tLimit,
   return rm;
 }
 
-std::string
-TimeControl::getAbsoluteFilename(void)
-{
-  std::string s;
-  if( path.size() > 0 )
-    s = path + "/" ;
-  if( filename.size() > 0 )
-    s += filename;
-
-  return s;
-}
-
 void
 TimeControl::getCurrDate(NcAPI &nc, size_t rec)
 {
@@ -320,8 +311,7 @@ TimeControl::getFilename(void)
   // Determine the first or the next full-path filename.
   // Increments recursiveley, if the built filename does not exist.
 
-  bool isAfterFirst
-      =(filename.size() > 0) ? true : false;
+  bool isAfterFirst = (file.is > 0) ? true : false;
 
   if( isAfterFirst )
   {
@@ -340,7 +330,7 @@ TimeControl::getFilename(void)
         beginDate.addSeconds(incrementValue);
   }
 
-  filename = filenamePattern ;
+  setFilename(filenamePattern) ;
   size_t pos;
 
   std::string sDateStr(beginDate.getDate());
@@ -348,60 +338,54 @@ TimeControl::getFilename(void)
      std::string eDateStr(endDate.getDate());
 
   // find the patterns
-  if( (pos=filename.find("YYYY")) < std::string::npos )
+  if( (pos=file.basename.find("YYYY")) < std::string::npos )
   {
      std::string s= hdhC::double2String(
          beginDate.getYear(),4,"4_0");
-     filename=filename.replace(pos, 4, s);
+     file.basename.replace(pos, 4, s);
   }
-  if( (pos=filename.find("MM")) < std::string::npos )
+  if( (pos=file.basename.find("MM")) < std::string::npos )
   {
      std::string s= hdhC::double2String(
          beginDate.getMonth(),2,"2_0");
-     filename=filename.replace(pos, 2, s);
+     file.basename.replace(pos, 2, s);
   }
-  if( (pos=filename.find("DD")) < std::string::npos )
+  if( (pos=file.basename.find("DD")) < std::string::npos )
   {
      std::string s= hdhC::double2String(
          beginDate.getDay(),2,"2_0");
-     filename=filename.replace(pos, 2, s);
+     file.basename.replace(pos, 2, s);
   }
-  if( (pos=filename.find("hh")) < std::string::npos )
+  if( (pos=file.basename.find("hh")) < std::string::npos )
   {
      std::string s= hdhC::double2String(
          beginDate.getHour(),2,"2_0");
-     filename=filename.replace(pos, 2, s);
+     file.basename.replace(pos, 2, s);
   }
-  if( (pos=filename.find("mm")) < std::string::npos )
+  if( (pos=file.basename.find("mm")) < std::string::npos )
   {
      std::string s= hdhC::double2String(
          beginDate.getMinute(),2,"2_0");
-     filename=filename.replace(pos, 2, s);
+     file.basename.replace(pos, 2, s);
   }
-  if( (pos=filename.find("ss")) < std::string::npos )
+  if( (pos=file.basename.find("ss")) < std::string::npos )
   {
      std::string s= hdhC::double2String(
          beginDate.getSecond(),2,"2_0");
-     filename=filename.replace(pos, 2, s);
+     file.basename.replace(pos, 2, s);
   }
 
   sDateStr = beginDate.getDate();
 
-  std::string testFile="/bin/bash -c \'test -e " ;
-  testFile += getAbsoluteFilename() ;
-  testFile += '\'';
-
-  // see 'man system' for the return value, here we expect 0,
-  // if file exists.
-  if( system( testFile.c_str()) )
+  if( ! file.isExisting() )
   {
     if( isAfterFirst )  // no recursion, but stop
       return "";
 
-    filename = getFilename(); // into the recursion
+    setFilename(getFilename()); // into the recursion
   }
 
-  return getAbsoluteFilename();
+  return file.getFile();
 }
 
 void

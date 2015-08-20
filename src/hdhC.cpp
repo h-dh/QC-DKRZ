@@ -3,6 +3,166 @@
 namespace hdhC
 {
 
+void
+FileSplit::clear()
+{
+   is=false;
+   filename.clear();
+   basename.clear();
+   extension.clear();
+   path.clear();
+   return;
+}
+
+std::string
+FileSplit::getFile(void)
+{
+  std::string f;
+
+  if( path.size() )
+    f = path + "/";
+
+  f += basename;
+
+  if( extension.size() )
+    f += "." + extension;
+
+  return f;
+}
+
+std::string
+FileSplit::getFilename(void)
+{
+  if( extension.size() )
+    return basename + "." + extension ;
+  else
+    return basename;
+}
+
+bool
+FileSplit::isExisting(std::string f)
+{
+  std::string testFile("/bin/bash -c \'test -d ") ;
+
+  if( f.size() )
+    testFile += f ;
+  else
+    testFile += getFile() ;
+
+  testFile += '\'' ;
+
+  // see 'man system' for the return value, here we expect 0,
+  // if directory exists.
+
+  if( system( testFile.c_str()) )
+    return false;
+
+  return true;
+}
+
+void
+FileSplit::setExtension(std::string f)
+{
+  extension=f;
+  filename = basename + "." + extension ;
+  return ;
+}
+
+// ----------------------------------------------------
+/*
+struct FileSplit
+FileSplit::setFile(std::string f)
+{
+   struct FileSplit fC;
+
+   setFile(f, fC);
+
+   return fC;
+}
+*/
+
+void
+FileSplit::setFile(std::string f)
+{
+   // A file is split into path, filename, basename, and extension.
+   // Successive calls with different components are merged where
+   // a path must have a trailing / and an extension a leading '.' .
+
+   if( f.size() == 0 )
+     return;
+
+   is=true;
+   size_t pos ;
+
+   // remove multiple /
+   clearSuccessiveIdenticalCharacters(f, '/') ;
+
+   // path
+   if( (pos = f.rfind('/') ) < std::string::npos )
+   {
+     if( pos == 0 )
+     {
+       path = "/";
+       if( ++pos == f.size() )
+         return; // only a path
+
+       filename = f;
+     }
+     else
+     {
+       path = f.substr( 0, pos++ ) ;
+       if( pos == f.size() )
+         return; // only a path
+
+       filename = f.substr(pos);
+     }
+   }
+   else
+     filename = f;
+
+   // file components
+   if( (pos = filename.rfind('.') ) < std::string::npos )
+   {
+     if( pos == 0 )
+       extension = filename;  // no basename
+     else
+     {
+       basename = filename.substr( 0, pos++ ) ;
+
+       if( pos == filename.size() )
+         return; // only a basename
+
+       extension  = filename.substr(pos);
+     }
+   }
+   else
+     basename = filename ;
+
+   return ;
+}
+
+void
+FileSplit::setFilename(std::string f)
+{
+  std::string filename=f;
+
+  size_t pos;
+
+  if( (pos=f.rfind('/')) < std::string::npos )
+    f = f.substr(++pos);  // remove a leading path
+
+  if( (pos=f.rfind('.')) < std::string::npos )
+  {
+    basename = f.substr(0,pos++);
+    extension = f.substr(pos);
+  }
+  else
+    basename = f;
+
+  return;
+}
+
+
 template<typename T>
 T clearLeastBits( T v, size_t shft)
 {
@@ -1079,115 +1239,6 @@ uint32_t fletcher32_LE_clear( T *data, size_t len, bool *reset, size_t nShift )
 
 // ----------------------------------------------------
 
-struct FilenameItems
-setFilename(std::string& f)
-{
-   struct FilenameItems fC;
-
-   if( f.size() == 0 )
-   {
-     fC.is=false;
-     return fC;
-   }
-
-   fC.is=true;
-   fC.file=f;
-
-   size_t pos ;
-
-   // path
-   if( (pos = f.rfind('/') ) < std::string::npos )
-   {
-     if( pos == 0 )
-     {
-       fC.path = "/";
-       if( ++pos == f.size() )
-         return fC; // only the root path
-
-       fC.filename = f;
-     }
-     else
-     {
-       fC.path = f.substr( 0, pos ) ;
-       if( ++pos == f.size() )
-         return fC; // only a path
-
-       fC.filename = f.substr(pos);
-     }
-   }
-   else
-     fC.filename = f;
-
-   // file components
-   if( (pos = fC.filename.rfind('.') ) < std::string::npos )
-   {
-     if( pos == 0 )
-       fC.extension = fC.filename;  // no basename
-     else
-     {
-       fC.basename = fC.filename.substr( 0, pos ) ;
-
-       if( ++pos == fC.filename.size() )
-         return fC; // only a basename
-
-       fC.extension  = fC.filename.substr(pos);
-     }
-   }
-   else
-     fC.basename = fC.filename ;
-
-   return fC;
-}
-
-std::string getBasename(std::string &str)
-{
-  struct FilenameItems fC = setFilename(str);
-
-  return fC.basename;
-}
-
-std::string getExtension(std::string &str)
-{
-  struct FilenameItems fC = setFilename(str);
-
-  return fC.extension;
-}
-
-std::string getFilename(std::string &str)
-{
-  struct FilenameItems fC = setFilename(str);
-
-  return fC.filename;
-}
-
-std::string getPath(std::string &str, bool isWithSlash)
-{
-  struct FilenameItems fC = setFilename(str);
-
-  if( isWithSlash )
-    fC.path += '/' ;
-
-  return fC.path;
-}
-
-void getPathComponents(std::string &str,
-             std::string &path,   //path no trailing
-             std::string &fName,  //complete filename
-             std::string &base,   //filename without extension
-             std::string &ext)    //the extension without '.'
-{
-  struct FilenameItems fC = setFilename(str);
-
-  path  = fC.path;
-  fName = fC.filename;
-  base  = fC.basename;
-  ext   = fC.extension;
-
-  return;
-}
-
-// ----------------------------------------------------
-
 template <typename T>
 T invertBits ( T val )
 {
@@ -2066,6 +2117,27 @@ std::string clearInternalMultipleSpaces(std::string &str )
     s += " " ;
     s += splt[p] ;
   }
+
+  return s ;
+}
+
+std::string clearSuccessiveIdenticalCharacters(std::string &str, char c)
+{
+  // replace multiple identical characters by a single one
+  Split splt(str, c);
+
+  std::string s;
+  if( str[0] == c )
+    s += c;
+
+  for( size_t p=0 ; p < splt.size() ; ++p )
+  {
+    s += c ;
+    s += splt[p] ;
+  }
+
+  if( str.size() && str[str.size()-1] == c )
+    s += c;
 
   return s ;
 }

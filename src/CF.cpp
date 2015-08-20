@@ -34,14 +34,7 @@ CF::applyOptions(void)
      {
        if( split.size() == 2 )
        {
-          size_t p;
-          if( (p=split[1].rfind('/')) < std::string::npos )
-          {
-             tablePath = split[1].substr(0, p);
-             std_name_table = split[1].substr(p+1);
-          }
-          else
-            area_table=split[1];
+          area_table.setFile(split[1]);
           continue;
        }
      }
@@ -51,14 +44,7 @@ CF::applyOptions(void)
      {
        if( split.size() == 2 )
        {
-          size_t p;
-          if( (p=split[1].rfind('/')) < std::string::npos )
-          {
-             tablePath = split[1].substr(0, p);
-             std_name_table = split[1].substr(p+1);
-          }
-          else
-            std_name_table=split[1];
+          std_name_table.setFile(split[1]);
           continue;
        }
      }
@@ -68,14 +54,7 @@ CF::applyOptions(void)
      {
        if( split.size() == 2 )
        {
-          size_t p;
-          if( (p=split[1].rfind('/')) < std::string::npos )
-          {
-             tablePath = split[1].substr(0, p);
-             std_name_table = split[1].substr(p+1);
-          }
-          else
-            region_table=split[1];
+          region_table.setFile(split[1]);
           continue;
        }
      }
@@ -90,6 +69,14 @@ CF::applyOptions(void)
        }
      }
    }
+
+   // apply a general path which could have also been provided by setTablePath()
+   if( std_name_table.path.size() == 0 )
+      std_name_table.setPath(tablePath);
+   if( area_table.path.size() == 0 )
+      area_table.setPath(tablePath);
+   if( region_table.path.size() == 0 )
+      region_table.setPath(tablePath);
 
    return;
 }
@@ -2723,12 +2710,10 @@ CF::scanStdNameTable(std::vector<int> &zx)
   if( zx.size() == 0 )  // no standard name
      return false;
 
-  if( std_name_table.size() == 0 )  // name of the table
+  if( !std_name_table.is )  // name of the table
      return false;
 
-  std::string file(tablePath + "/");
-
-  ReadLine ifs( file + std_name_table ) ;
+  ReadLine ifs( std_name_table.getFile() ) ;
 
   if( !ifs.isOpen() )
   {
@@ -2957,13 +2942,6 @@ CF::setCheck(std::string &s)
    notes->setCheckCF_Str("PASS");
 
    return;
-}
-
-void
-CF::setFilename(std::string f)
-{
-  filenameItems = hdhC::setFilename(f);
-  return;
 }
 
 bool
@@ -3607,7 +3585,7 @@ CF::chap2_1(void)
      return;
 
   // filename extension
-  if( pIn->filenameItems.extension != "nc" )
+  if( pIn->file.extension != "nc" )
   {
     if( notes->inq(bKey + "21a") )
     {
@@ -6928,10 +6906,9 @@ CF::chap6(void)
     }
 
     // only read once
-    if( ! vs_region_table.size() && region_table.size() )
+    if( ! vs_region_table.size() && region_table.is )
     {
-      std::string file(tablePath + "/");
-      ReadLine ifs( file + region_table ) ;
+      ReadLine ifs( region_table.getFile() ) ;
 
       if( ifs.isOpen() )
       {
@@ -6968,7 +6945,7 @@ CF::chap6(void)
           {
               std::string capt(hdhC::tf_var(label.name, s_colon));
               capt += "A label taken from table ";
-              capt += std_name_table ;
+              capt += std_name_table.filename ;
               capt += " requires " + n_standard_name + "=region";
 
               (void) notes->operate(capt) ;
@@ -6984,7 +6961,7 @@ CF::chap6(void)
             capt += hdhC::tf_att(s_empty, n_standard_name, s_upper) ;
             capt += hdhC::tf_val("region") ;
             capt += "requires labels taken from";
-            capt += hdhC::tf_val(std_name_table, no_blank) ;
+            capt += hdhC::tf_val(std_name_table.filename, no_blank) ;
             capt += ", found" ;
             for(size_t f=0 ; f < vs_region_file.size() ; ++f )
             {
@@ -8275,10 +8252,9 @@ CF::chap7_3_3(std::string &method, Variable& var, std::string mode)
   // only read once
   std::vector<std::string> vs_areaType;
 
-  if( ! vs_areaType.size() && region_table.size() )
+  if( ! vs_areaType.size() && region_table.is )
   {
-    std::string file(tablePath + "/");
-    ReadLine ifs( file + area_table ) ;
+    ReadLine ifs( area_table.getFile() ) ;
 
     if( ifs.isOpen() )
     {
@@ -8488,12 +8464,10 @@ CF::chap7_3_4a(std::string& name)
    // rule: name must not be the name of a dimension or a scalar variable
    // collection of correct names; these have been sorted out before.
 
-  if( std_name_table.size() == 0 )  // cf-standard-name-table.xml
+  if( std_name_table.is )  // cf-standard-name-table.xml
      return false;
 
-  std::string file(tablePath + "/");
-
-  ReadLine ifs( file + std_name_table ) ;
+  ReadLine ifs( std_name_table.getFile() ) ;
 
   if( ! ifs.isOpen() )
   {

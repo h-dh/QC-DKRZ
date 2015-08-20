@@ -34,7 +34,6 @@ public:
   bool   entry(void);
   bool   init(void) ;
   void   linkObject(IObj *);
-  void   setTablePath(std::string p){ ; }
 
   void   applyOptions(void);
   void   applyOptions(std::vector<std::string> &v);
@@ -119,8 +118,10 @@ public:
   void   setRecEnd(size_t rec) {ncRecEnd=rec;}
 
   //! Store the path to the netcdf file.
-  void   setFilename(std::string);
-  void   setFilePath(std::string p) {filenameItems.path=p;}
+  void   setFilename(std::string f){file.setFile(f);}
+  void   setTablePath(std::string p){ ; }
+
+  struct hdhC::FileSplit file;
 
   bool   enableEntry;
   bool   isInfNan;
