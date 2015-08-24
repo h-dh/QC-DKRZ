@@ -3959,6 +3959,39 @@ setKWL()
   return
 }
 
+splitAtRegExp()
+{
+  # $1 : a path
+
+  set -f
+
+  # split selected path into components
+  local items=( ${1//\// } )
+
+  splitRE_0=
+
+  # look for an alpha-numeric sub-path leading a selected path
+  local i
+  for(( i=0 ; i < ${#items[*]} ; ++i )) ; do
+    if expr match "${items[i]}" "[[:alnum:]_-]\{${#items[i]}\}" &> /dev/null ; then
+      # only accept valid paths
+      splitRE_0=${splitRE_0}/"${items[i]}"
+    else
+      break
+    fi
+  done
+
+  local slash=
+  for(( ; i < ${#items[*]} ; ++i )) ; do
+    splitRE_1=${splitRE_1}${slash}${items[i]}
+    local slash=/
+  done
+
+  set +f
+
+  return 0
+}
+
 ##//! Launcher of annotations
 
 ##/*!

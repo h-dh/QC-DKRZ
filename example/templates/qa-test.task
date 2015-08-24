@@ -42,5 +42,5 @@
 # CHECK_MODE=meta  #[data]
 
 # embedded path to another qc configuration file with lower priority
-  QC_CONF=CORDEX_qc.conf
+  QC_CONF=CORDEX_qa.conf
 
