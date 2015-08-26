@@ -187,6 +187,7 @@ class QA_Data
   void   setName(std::string);
   void   setNextFlushBeg(size_t n);
   void   setStatisticsAttribute(NcAPI*);
+  void   setValidRangeAtt(NcAPI*, std::string&, double* arr, size_t sz, nc_type);
   void   store(hdhC::FieldData &);
 
   void   test( int, hdhC::FieldData &);

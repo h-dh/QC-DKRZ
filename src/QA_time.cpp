@@ -170,11 +170,11 @@ QA_Time::getDateStr(double val, bool isAbsolute)
 {
   if(isAbsolute || isFormattedDate)
   {
-    Date d(Date::getIso8601(val), calendar );
-    return d.getDate();
+    Date d(Date::convertFormattedToISO_8601(val), calendar );
+    return d.str();
   }
   else
-    return refDate.getDate(val) ;
+    return refDate.getDate(val).str() ;
 }
 
 void
@@ -497,7 +497,7 @@ QA_Time::initAbsoluteTime(std::string &units)
        referenceTimeStep=fabs(prevDate.getJulianDay() - currDate.getJulianDay());
        prevDate.addTime( -2.*referenceTimeStep ) ;
 
-       std::string s(prevDate.getDate());
+       std::string s(prevDate.str());
        std::string t(s.substr(0,4));
        t += s.substr(5,2);
        t += s.substr(8,2);
@@ -848,8 +848,8 @@ QA_Time::initTimeTable(std::string id_1st, std::string id_2nd)
          ostr << "\nrec#=0" ;
          ostr << "\ndate in record=" << getDateStr(currTimeValue) ;
          ostr << "\nrange from time-table=" ;
-         ostr << tt_dateRange[0].getDate() << " - " ;
-         ostr << tt_dateRange[1].getDate() ;
+         ostr << tt_dateRange[0].str() << " - " ;
+         ostr << tt_dateRange[1].str() ;
 
          if( notes->operate(capt, ostr.str()) )
          {
@@ -996,8 +996,8 @@ QA_Time::parseTimeTable(size_t rec)
          ostr << "\nrec#=" << rec;
          ostr << "\ndate in record=" << getDateStr(currTimeValue) ;
          ostr << "\nrange from time-table="
-              << tt_dateRange[0].getDate() << " - "
-              << tt_dateRange[1].getDate() ;
+              << tt_dateRange[0].str() << " - "
+              << tt_dateRange[1].str() ;
 
          if( notes->operate(capt, ostr.str()) )
          {
@@ -1584,7 +1584,7 @@ QA_Time::testTimeStep(void)
         else
         {
            ostr << "prev=" << prevTimeValue;
-           ostr << " (date=" << refDate.getDate(prevTimeValue) ;
+           ostr << " (date=" << refDate.getDate(prevTimeValue).str() ;
            ostr << ")\ncurr=" << currTimeValue << " (date:"
                 << getDateStr(currTimeValue) ;
            ostr << ")" ;

@@ -18,7 +18,7 @@ void
 QA::appendToHistory(size_t eCode)
 {
   // date and time at run time
-  std::string today( Date::getCurrentDate() );
+  std::string today( Date::getTodayStr() );
   today += ":";
 
   std::string s;
@@ -3517,15 +3517,13 @@ QA::getSubjectsIntroDim(VariableMetaData &vMD,
 }
 
 std::string
-QA::getVarnameFromFilename(std::string &fName)
+QA::getVarnameFromFilename(std::string fName)
 {
-  std::string f;
-
   size_t pos;
   if( (pos = fName.find("_")) < std::string::npos )
-    f = fName.substr(0,pos) ;
+    fName = fName.substr(0,pos) ;
 
-  return f;
+  return fName;
 }
 
 void
@@ -3741,7 +3739,7 @@ void
 QA::initGlobalAtts(InFile &in)
 {
   // global atts at creation.
-  std::string today( Date::getCurrentDate() );
+  std::string today( Date::getTodayStr() );
 
   nc->setGlobalAtt( "project", "CMIP5");
   nc->setGlobalAtt( "product", "quality check of CMIP5 data set");
@@ -4664,11 +4662,11 @@ QA::testPeriod(void)
      if( notes->inq( key, fileStr) )
      {
        std::string capt("First date ");
-       capt += hdhC::sAssign("(filename)", fN_left->getDate()) ;
+       capt += hdhC::sAssign("(filename)", fN_left->str()) ;
        capt += " and time " ;
        if( tB_left_obj )
          capt += "bounds ";
-       capt += hdhC::sAssign("data", tV_left->getDate());
+       capt += hdhC::sAssign("data", tV_left->str());
        capt += " are misaligned";
 
        (void) notes->operate(capt) ;
@@ -4683,12 +4681,12 @@ QA::testPeriod(void)
      if( notes->inq( key, fileStr) )
      {
        std::string capt("Second date ");
-       capt += hdhC::sAssign("(filename)", fN_right->getDate()) ;
+       capt += hdhC::sAssign("(filename)", fN_right->str()) ;
 
        capt += " is misaligned to time " ;
        if( tB_left_obj )
          capt += "bounds ";
-       capt += hdhC::sAssign("data", tB_right_obj->getDate());
+       capt += hdhC::sAssign("data", tB_right_obj->str());
 
        (void) notes->operate(capt) ;
        notes->setCheckMetaStr( fail );

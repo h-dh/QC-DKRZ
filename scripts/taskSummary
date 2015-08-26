@@ -73,7 +73,7 @@ processBlk()
 
 summaryHR()
 {
-  local p=$annotations/${exp}.log
+  local aIn=$annotations/${exp}.note
 
 txt="Annotation summary of the QA of experiment\n \
     ${exp}\
@@ -82,7 +82,7 @@ txt="Annotation summary of the QA of experiment\n \
 \n\nAccess to the logfiles:\n \
    ${QA_RESULTS}/check_logs \
 \n\nPath to the annotations in YAML format:\n\
-   $(pwd)/${p}\n\
+   $(pwd)/${aIn}\n\
 \n\n"
 
   mkdir -p $summary/$exp
@@ -151,12 +151,12 @@ txt="Annotation summary of the QA of experiment\n \
     if [ "${PROJECT}" = CORDEX ] ; then
       if ! expr match "$exp" '.*r0i0p0' &> /dev/null ; then
         if [ ${#std_table} -gt 0 ] ; then
-          /bin/bash ${QA_PATH}/scripts/findNotDelivered  --project=CORDEX ${DEBUG_X} \
+          /bin/bash ${QA_PATH}/scripts/findNotDelivered ${DEBUG_X} \
+          --project=CORDEX \
           --period=$outP \
           --table=${std_table} \
           --out=$outA \
-          --yaml \
-          isFoundNotDelivered=t
+          --yaml
         fi
       fi
     fi
@@ -177,7 +177,7 @@ txt="Annotation summary of the QA of experiment\n \
   fi
 
   # find tags of the yaml annotation file, if any
-  if [ ! -f $p ] ; then
+  if [ ! -f $aIn ] ; then
     echo -e " \n\n==== Annotation: none =========================\n" \
               >> $outA
     return
@@ -194,7 +194,7 @@ txt="Annotation summary of the QA of experiment\n \
 
       tags[${#tags[*]}]="${line[1]}"
     fi
-  done < $annotations/${exp}.log
+  done < $aIn
 
   # clear old results
   \rm -f $summary/$exp/L*
@@ -245,7 +245,7 @@ txt="Annotation summary of the QA of experiment\n \
         unset line[0]
         impct="${line[*]}"
       fi
-    done < $annotations/${exp}.log
+    done < $aIn
   done
 
   local f fc

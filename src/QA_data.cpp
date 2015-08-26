@@ -1042,10 +1042,10 @@ ReplicatedRecord::test(int nRecs, size_t bufferCount, size_t nextFlushBeg,
          range.push_back( hdhC::double2String(arr_curr_index[i] ) );
          cT  = pQA->pIn->nc.getData(tmp_mv, "time", arr_prev_index[i]) ;
          sCT = hdhC::double2String(cT) ;
-         range.push_back(pQA->qaTime.refDate.getDate( sCT ) );
+         range.push_back(pQA->qaTime.refDate.getDate(sCT).str() );
          cT  = pQA->pIn->nc.getData(tmp_mv, "time", arr_curr_index[i]) ;
          sCT = hdhC::double2String(cT) ;
-         range.push_back(pQA->qaTime.refDate.getDate( sCT ) );
+         range.push_back(pQA->qaTime.refDate.getDate(sCT).str() );
          isGroup = false;
        }
        else
@@ -1061,10 +1061,10 @@ ReplicatedRecord::test(int nRecs, size_t bufferCount, size_t nextFlushBeg,
          range.push_back( hdhC::double2String(arr_curr_index[i] ) );
          cT  = pQA->pIn->nc.getData(tmp_mv, "time", arr_prev_index[i]) ;
          sCT = hdhC::double2String(cT) ;
-         range.push_back(pQA->qaTime.refDate.getDate( sCT ) );
+         range.push_back(pQA->qaTime.refDate.getDate(sCT).str() );
          cT  = pQA->pIn->nc.getData(tmp_mv, "time", arr_curr_index[i]) ;
          sCT = hdhC::double2String(cT) ;
-         range.push_back(pQA->qaTime.refDate.getDate( sCT ) );
+         range.push_back(pQA->qaTime.refDate.getDate(sCT).str() );
        }
 
     }
@@ -1076,10 +1076,10 @@ ReplicatedRecord::test(int nRecs, size_t bufferCount, size_t nextFlushBeg,
          range.push_back( hdhC::double2String(arr_curr_index[i] ) );
          cT=pQA->pIn->nc.getData(tmp_mv, "time", arr_prev_index[i]) ;
          sCT = hdhC::double2String(cT) ;
-         range.push_back(pQA->qaTime.refDate.getDate( sCT ) );
+         range.push_back(pQA->qaTime.refDate.getDate(sCT).str() );
          cT  = pQA->pIn->nc.getData(tmp_mv, "time", arr_curr_index[i]) ;
          sCT = hdhC::double2String(cT) ;
-         range.push_back(pQA->qaTime.refDate.getDate( sCT ) );
+         range.push_back(pQA->qaTime.refDate.getDate(sCT).str() );
          isGroup=true;
        }
 
@@ -1099,10 +1099,10 @@ ReplicatedRecord::test(int nRecs, size_t bufferCount, size_t nextFlushBeg,
     range.push_back( hdhC::double2String(arr_curr_index[i-1] ) );
     cT  = pQA->pIn->nc.getData(tmp_mv, "time", arr_prev_index[i]) ;
     sCT = hdhC::double2String(cT) ;
-    range.push_back(pQA->qaTime.refDate.getDate( sCT ) );
+    range.push_back(pQA->qaTime.refDate.getDate(sCT).str() );
     cT  = pQA->pIn->nc.getData(tmp_mv, "time", arr_curr_index[i]) ;
     sCT = hdhC::double2String(cT) ;
-    range.push_back(pQA->qaTime.refDate.getDate( sCT ) );
+    range.push_back(pQA->qaTime.refDate.getDate(sCT).str() );
 
     report(range, isMultiple );
   }
@@ -1545,7 +1545,7 @@ QA_Data::openQA_NcContrib(NcAPI *nc, Variable *var)
   // and an additional att.
   nc->defineVar(vName, pIn->nc.getVarType(vName), vs);
   nc->setAtt(vName, "about",
-                          "original attributes of the checked variable");
+                    "original attributes of the checked variable");
 
   // get original dimensions and convert names into a string
   vs = pIn->nc.getDimName(vName);
@@ -1688,19 +1688,20 @@ QA_Data::setStatisticsAttribute(NcAPI *nc)
   std::vector<std::string> vs;
   std::string t;
   size_t sz=2;
-  double vals[2];
+  double d_val[2];
 
-  // overall range
-  vals[0]=statMin.getSampleMin();
-  vals[1]=statMax.getSampleMax();
+  // range of the variable
+  d_val[0]=statMin.getSampleMin();
+  d_val[1]=statMax.getSampleMax();
+  nc_type type = nc->getVarType(name);
 
-  nc->setAtt( name, "valid_range", vals, static_cast<size_t>(2) );
+  setValidRangeAtt(nc, name, d_val, sz, type);
 
   // attributes of special interest
   t = name + "_max";
-  vals[0] = statMax.getSampleMin();
-  vals[1] = statMax.getSampleMax();
-  nc->setAtt( t, "valid_range", vals, sz);
+  d_val[0] = statMax.getSampleMin();
+  d_val[1] = statMax.getSampleMax();
+  nc->setAtt( t, "valid_range", d_val, sz);
   vs.clear();
   vs.push_back( statMax.getSampleProperties() );
   // strip leading part indicating valid_range
@@ -1708,9 +1709,9 @@ QA_Data::setStatisticsAttribute(NcAPI *nc)
   nc->setAtt( t, "statistics", vs[0].substr(pos));
 
   t = name + "_min";
-  vals[0] = statMin.getSampleMin();
-  vals[1] = statMin.getSampleMax();
-  nc->setAtt( t, "valid_range", vals, sz);
+  d_val[0] = statMin.getSampleMin();
+  d_val[1] = statMin.getSampleMax();
+  nc->setAtt( t, "valid_range", d_val, sz);
   vs.clear();
   vs.push_back( statMin.getSampleProperties() );
   // strip leading part indicating valid_range
@@ -1718,9 +1719,9 @@ QA_Data::setStatisticsAttribute(NcAPI *nc)
   nc->setAtt( t, "statistics", vs[0].substr(pos));
 
   t = name + "_ave";
-  vals[0] = statAve.getSampleMin();
-  vals[1] = statAve.getSampleMax();
-  nc->setAtt( t, "valid_range", vals, sz);
+  d_val[0] = statAve.getSampleMin();
+  d_val[1] = statAve.getSampleMax();
+  nc->setAtt( t, "valid_range", d_val, sz);
   vs.clear();
   vs.push_back( statAve.getSampleProperties() );
   // strip leading part indicating valid_range
@@ -1728,14 +1729,91 @@ QA_Data::setStatisticsAttribute(NcAPI *nc)
   nc->setAtt( t, "statistics", vs[0].substr(pos));
 
   t = name + "_std_dev";
-  vals[0] = statStdDev.getSampleMin();
-  vals[1] = statStdDev.getSampleMax();
-  nc->setAtt( t, "valid_range", vals, sz);
+  d_val[0] = statStdDev.getSampleMin();
+  d_val[1] = statStdDev.getSampleMax();
+  nc->setAtt( t, "valid_range", d_val, sz);
   vs.clear();
   vs.push_back( statStdDev.getSampleProperties() );
   // strip leading part indicating valid_range
   pos = vs[0].find("sampleSize");
   nc->setAtt( t, "statistics", vs[0].substr(pos));
+
+  return;
+}
+
+void
+QA_Data::setValidRangeAtt(NcAPI* nc, std::string& name, double* d_val, size_t sz,
+    nc_type type)
+{
+  std::string vr("valid_range");
+
+  switch (type)
+  {
+    case NC_FLOAT:
+    {
+      float x=0.;
+      nc->setAtt( name, vr, d_val, sz, x );
+    }
+    break;
+    case NC_DOUBLE:
+    {
+      nc->setAtt( name, vr, d_val, sz);
+    }
+    break;
+    case NC_CHAR:
+    {
+      char x='a';
+      nc->setAtt( name, vr, d_val, sz, x );
+    }
+    break;
+    case NC_BYTE:
+    {
+      signed char x=0;
+      nc->setAtt( name, vr, d_val, sz, x );
+    }
+    break;
+    case NC_SHORT:
+    {
+      short x=0;
+      nc->setAtt( name, vr, d_val, sz, x );
+    }
+    break;
+    case NC_INT:
+    {
+      int x=0;
+      nc->setAtt( name, vr, d_val, sz, x );
+    }
+    break;
+    case NC_UBYTE:
+    {
+      unsigned char x=0;
+      nc->setAtt( name, vr, d_val, sz, x );
+    }
+    break;
+    case NC_USHORT:
+    {
+      unsigned short x=0;
+      nc->setAtt( name, vr, d_val, sz, x );
+    }
+    break;
+    case NC_UINT:
+    {
+      unsigned int x=0;
+      nc->setAtt( name, vr, d_val, sz, x );
+    }
+    break;
+    case NC_UINT64:
+    {
+      unsigned long long x=0;
+      nc->setAtt( name, vr, d_val, sz, x );
+    }
+    break;
+    case NC_INT64:
+    {
+      long long x=0;
+      nc->setAtt( name, vr, d_val, sz, x );
+    }
+  }
 
   return;
 }

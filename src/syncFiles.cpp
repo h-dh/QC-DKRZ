@@ -81,12 +81,8 @@ class Member
          getOutput(bool printSeparationLine=false);
   void   print(bool printSeparationLine=false);
   void   putState(std::string);
-  void   setBegin( std::string s)
-           { begin = refDate.getDate(s);}
-  void   setBegin(double f);
-  void   setEnd( std::string s)
-           { end = refDate.getDate(s);}
-  void   setEnd(double f);
+  void   setBegin(Date);
+  void   setEnd(Date);
   void   setFile(std::string&); // decomposes
   void   setFilename(std::string f){ filename = f;}
   void   setPath(std::string &p){ path = p;}
@@ -102,7 +98,7 @@ class Member
   Date        begin;
   Date        end;
   Date        refDate ;
-  long         modTime;
+  long        modTime;
 } ;
 
 class Ensemble
@@ -151,7 +147,7 @@ class Ensemble
 
    std::string           path;
    std::vector<Member*>  member ;
-   Annotation            *notes;
+   Annotation           *notes;
 } ;
 
 class SyncFiles
@@ -606,9 +602,9 @@ Ensemble::getDateSpan(void)
 {
    std::string span("PERIOD=");
 
-   span += member[startIndex]->begin.getDate();
+   span += member[startIndex]->begin.str();
    span += '_' ;
-   span += member[sz-1]->end.getDate();
+   span += member[sz-1]->end.str();
    span +="\n";
 
    return span ;
@@ -826,10 +822,7 @@ Ensemble::getTimes(std::string &str)
         continue;
      }
 
-     if( member[i]->refDate.isDateFormatted() )
-       member[i]->setBegin( val );
-     else
-       member[i]->setBegin( hdhC::double2String(val) );
+     member[i]->setBegin( member[i]->refDate.getDate(val) );
 
      index=recSize-1;
      if( (status = nc_get_var1_double(ncid, varid, &index, &val) ) )
@@ -850,10 +843,7 @@ Ensemble::getTimes(std::string &str)
         continue;
      }
 
-     if( member[i]->refDate.isDateFormatted() )
-       member[i]->setEnd( val );
-     else
-       member[i]->setEnd( hdhC::double2String(val) );
+     member[i]->setEnd( member[i]->refDate.getDate(val) );
 
      nc_close(ncid);
   }
@@ -903,9 +893,9 @@ void
 Ensemble::printDateSpan(void)
 {
    std::string span;
-   span  = member[startIndex]->begin.getDate();
+   span  = member[startIndex]->begin.str();
    span += '_' ;
-   span += member[sz-1]->end.getDate();
+   span += member[sz-1]->end.str();
 
    std::cout << "PERIOD=" << span << std::endl;
    return ;
@@ -1167,13 +1157,13 @@ Member::getOutput(bool printSepLine)
 
   if( isPrintDateRange )
   {
-   std::string t0( begin.getDate() );
+   std::string t0( begin.str() );
    if( t0.substr(0,10) != "4294962583" )
    {
      str += "  ";
      str += t0 ;
      str += " - " ;
-     str += end.getDate() ;
+     str += end.str() ;
    }
   }
 
@@ -1215,19 +1205,17 @@ Member::putState(std::string s)
 }
 
 void
-Member::setBegin(double f)
+Member::setBegin(Date d)
 {
- refDate.setDate(f);
- begin = refDate.getDate();
+ begin = d;
 
  return;
 }
 
 void
-Member::setEnd(double f)
+Member::setEnd(Date d)
 {
- refDate.setDate(f);
- end = refDate.getDate();
+ end = d;
 
  return;
 }
@@ -1393,7 +1381,8 @@ SyncFiles::readInput(void)
 }
 
 void
-SyncFiles::readArgv(int i, int argc, char *argv[])
+SyncFiles::readArgv
+(int i, int argc, char *argv[])
 {
   for( ; i < argc ; ++i)
   {

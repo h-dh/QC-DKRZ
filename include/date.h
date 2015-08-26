@@ -198,6 +198,11 @@ public:
       applied unit is day.*/
   void   addTime(double val, std::string unit="");
 
+  //! convert yyymmdd[.f] to ISO-8601
+  static std::string
+         convertFormattedToISO_8601(double f) ;
+  static std::string
+         convertFormattedToISO_8601(std::string) ;
 
   //! A usage description and examples
   static void
@@ -210,25 +215,13 @@ public:
   std::string
          getCalendar(void){ return currCalendar;}
 
-  //! Return the real current date.
-  static std::string
-         getCurrentDate(void);
-
-  //! Get string representation (ISO-8601)
-  std::string
-         getDate( void );
-
   //! Convert val to ISO-8601.
   /*! If val is relative to a reference date, then this is returned
       in ISO-8601 format. If reference was not set before, then
       val is considered a Julian day. The bool set true states
       that val is a Julian day anyway.*/
-  std::string  // val must be a Julian date if isRel.==false
-         getDate( double val, bool=false );
-
-  //! Convert a Julian Day ISO-8601.
-  std::string
-         getDate( Julian & );
+  Date  // val must be a Julian Date number if isRel.==false
+         getDate(double val, bool=false) ;
 
   //! Get relative or absolute date.
   /*! Provide time units relative to date and return ISO-8601 string.
@@ -236,13 +229,9 @@ public:
       set (see setDate(string) from the std::string parameter before
       a relative part is considered. In case of failure,
       'not-a-valid-date' string is returned.*/
-  std::string
-         getDate( std::string, bool enableSetDate=false  );
+  Date
+         getDate(std::string, bool enableSetDate=false);
 
-  //! Get ISO-8601 string for the given date elements.
-  std::string
-         getDate( double yr, double mo, double dy,
-                    double hr, double mi, double se );
   //! Get the day of the year and month.
   double getDay( void );
 
@@ -276,13 +265,15 @@ public:
   //! Get double representation of the integer hour.
   double getHour( void );
 
-  //! convert yyymmdd[.f] to ISO-8601
-  static std::string
-         getIso8601(double f) ;
-  static std::string
-         getIso8601(std::string) ;
+  std::string
+         getISO_8601(void);
 
-  //! Get the julian date.
+  std::string
+         getISO_8601( double y, double mo, double d,
+            double h=0, double mi=0, double s=0,
+            bool isError=false);
+
+         //! Get the julian date.
   long double
          getJulianDay(long double add=0.) const
             { return jul.getJulianDay() + add ;}
@@ -321,6 +312,10 @@ public:
   //! Get time lag to and in units of the relative time step.
   double getSince(Date &d, const char *ref="");
 
+  //! Return the real current date.
+  static std::string
+         getTodayStr(void);
+
   //! Get the unit of the reference date
   std::string
          getUnits(void){ return unitStr; }
@@ -350,21 +345,16 @@ public:
 
   //! Set date by date-encoded float
   /*! At present: (%Y%m%d.%f)*/
-  bool   setDate( double f, std::string cal="" );
-
-  //! Set date from parameters.
-  bool   setDate( double y, double mnth, double d,
-                    double h=0, double min=0, double s=0 );
+  bool   setDate( double f, std::string cal="", std::string monLen="" );
 
   //! Set reference date.
   /*! String could be "7 minutes since 1955-01-01 00:00", i.e.
       contain a reference date and the unit of relative time.*/
   bool   setDate( std::string, std::string cal="", std::string mLen="");
 
-  //! Set coding of string.
-  /*! At present, only "%Y%m%d.%f" must be given explicitly.
-      Code 'yymmdd_hhmmss.f' is tested by default.*/
-  void   setDateCode( std::string s){dateCode=s;}
+  //! Set date from parameters.
+  bool   setDate( double y, double mnth, double d,
+                    double h=0, double min=0, double s=0 );
 
   void   setFormattedDate(void){isFormattedDate=true;}
 
@@ -392,9 +382,12 @@ public:
 
   //! Set the unit of the reference date
   /*! Purpose: for a reference date without units */
-  bool   setUnits(std::string s);
+  void   setUnits(std::string s, int unitSign=1);
 
   bool   size(void){ return isDateSet; }
+
+  std::string
+         str(void) ;
 
 private:
   enum Calendar { GREGORIAN, PROLEPTIC_GREGORIAN, JULIAN,
@@ -432,13 +425,8 @@ private:
   void   exceptionError(std::string );
 
 /*  double getDayLightST( void );*/
-  std::string
-         getDateISO_8601(void);
-  std::string
-         getDateISO_8601( double y, double mo, double d,
-            double h=0, double mi=0, double s=0,
-            bool isError=false);
-  void   getDayTime(double d, double *h, double *m, double *s);
+  static void
+         getDayTime(double d, double *h, double *m, double *s);
   double getLocalTimeZone( void ) ;
 
   Julian gregorian2Julian( double y, double mo, double d, double hour ) ;
@@ -469,10 +457,11 @@ private:
   Julian modelDate2Julian( double y, double mo=0., double d=0.,
            double h=0., double mi=0., double s=0.) ;
 
-  bool   parseISO_8601(std::string& );
+  bool   parseISO_8601(std::string );
 
   Julian prolGreg2Julian( double y, double mo, double d, double deziH ) ;
 
+  void   setUnitsAndClear(std::string& s);
   void   string2Date(std::string &);
   void   string2ModelDate(std::string &);
 };

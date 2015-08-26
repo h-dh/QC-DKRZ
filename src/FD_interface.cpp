@@ -154,7 +154,7 @@ FD_interface::entry(void)
   {
     currDate.setDate( refDate.getDate(
                         hdhC::double2String(currTime) ) );
-    currDateStr = currDate.getDate();
+    currDateStr = currDate.str();
 
     // If sub-division is enabled, then here is a reset of the window.
     // The FreqDist itself was already reset in print
@@ -295,7 +295,7 @@ FD_interface::finally(int errCode)
             fD[i].infoLine[j] = "#END: " ;
             currDate.setDate( refDate.getDate(
                               hdhC::double2String(currTime) ) );
-            fD[i].infoLine[j] +=  currDate.getDate()  ;
+            fD[i].infoLine[j] +=  currDate.str()  ;
           }
        }
 
@@ -303,7 +303,7 @@ FD_interface::finally(int errCode)
        {
           fD[i].infoLine.push_back( "#BEGIN: " ) ;
           if( pIn->isTime )
-            fD[i].infoLine.back() += beginDate.getDate()  ;
+            fD[i].infoLine.back() += beginDate.str()  ;
           else
             fD[i].infoLine.back() += "entire experiment"  ;
 
@@ -313,7 +313,7 @@ FD_interface::finally(int errCode)
             // no partitioning
             currDate.setDate( refDate.getDate(
                              hdhC::double2String(currTime) ) );
-            fD[i].infoLine.back() +=   currDate.getDate()  ;
+            fD[i].infoLine.back() +=   currDate.str()  ;
           }
           else
             fD[i].infoLine.back() += "entire experiment"  ;
@@ -411,7 +411,7 @@ FD_interface::init(void)
 
     std::string cTime = hdhC::double2String(startTime);
     beginDate.setDate( refDate.getDate(cTime) );
-    cTime = beginDate.getDate();
+    cTime = beginDate.str();
 //  cTime = cTime.substr(0,4) + "-01-01T00:00:00" ;
     beginDate = cTime;
     endDate = beginDate; //for time window partitioning
@@ -539,8 +539,8 @@ FD_interface::initTimeWindow(void)
 //   jDays -= beginDate.getJulianDate() ;
 
    // change of context
-   beginDateStr = beginDate.getDate();
-   endDateStr = endDate.getDate() ;
+   beginDateStr = beginDate.str();
+   endDateStr = endDate.str() ;
 
    str = file.basename;
    str = str.substr(3); // ignore leading three; no extension.
@@ -607,8 +607,8 @@ FD_interface::initTimeWindow(void)
              {
                 beginDate = fBeginDate;
                 endDate = fEndDate;
-                beginDateStr = fBeginDate.getDate();
-                endDateStr = fEndDate.getDate();
+                beginDateStr = fBeginDate.str();
+                endDateStr = fEndDate.str();
 
                 // resume previous, incomplete session
                 if( rebuild( str1 ) )

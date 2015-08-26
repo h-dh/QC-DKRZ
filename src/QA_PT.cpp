@@ -52,7 +52,7 @@ ProjectTable::check(Variable &dataVar)
   bool isNew=true;
   while( getline(ifs, str0) )
   {
-    if( str0.size() )
+    if( !str0.size() )
       continue;  // skip blank lines
 
     size_t p1, p2;  // positions of ','

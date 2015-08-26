@@ -734,8 +734,7 @@ void
 //  vector ------------------
     template <typename Type>
     void
-      setAtt(std::string vName, std::string aName,
-             std::vector<Type> &values)
+      setAtt(std::string vName, std::string aName, std::vector<Type> &values)
          {setAtt(getVarID(vName), aName, values) ;}
 
     template <typename To, typename From>
@@ -758,14 +757,14 @@ void
     template <typename Type>
     void
       setAtt(std::string vName, std::string aName,
-             Type *values, size_t sz)
-         {setAtt(getVarID(vName), aName, values, sz) ;}
+             Type *arr, size_t sz)
+         {setAtt(getVarID(vName), aName, arr, sz) ;}
 
     template <typename To, typename From>
     void
       setAtt(std::string vName, std::string aName,
-             From *values, size_t sz, To x)
-         {setAtt(getVarID(vName), aName, sz, x) ;}
+             From *arr, size_t sz, To x)
+         {setAtt(getVarID(vName), aName, arr, sz, x) ;}
 
 //  plain value, but also a const char*. So , take special care.
     template <typename Type>
@@ -809,12 +808,12 @@ void
 //  array ------------------
     template <typename Type>
     void
-      setGlobalAtt(std::string aName, Type *values, size_t sz)
-         {setAtt(NC_GLOBAL, aName, values, sz) ;}
+      setGlobalAtt(std::string aName, Type *arr, size_t sz)
+         {setAtt(NC_GLOBAL, aName, arr, sz) ;}
 
     template <typename To, typename From>
     void
-      setGlobalAtt(std::string aName, From *values, size_t sz, To x)
+      setGlobalAtt(std::string aName, From *arr, size_t sz, To x)
          {setAtt(NC_GLOBAL, aName, sz, x) ;}
 
 //  plain value, but also a const char*. So , take special care.
@@ -1125,13 +1124,12 @@ private:
 // array
     template <typename T>
     void
-      setAtt(int varid, std::string aName, T *values, size_t sz);
+      setAtt(int varid, std::string aName, T *arr, size_t sz);
 
 // array and conversion
     template <typename To, typename From>
     void
-      setAtt(int varid, std::string aName,
-              From *values, size_t sz, To x);
+      setAtt(int varid, std::string aName, From *arr, size_t sz, To x);
 
 // plain value
     template <typename From>

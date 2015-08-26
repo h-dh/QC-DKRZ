@@ -540,7 +540,7 @@ std::string double2String( double z, int d, std::string flag)
 std::string double2String( double z, std::string flag)
 {
   /* a floating number is converted to a string.
-     Format: [??][w=int?][p=int[|adj]?][f=int?][s[ci]]
+     Format: [??][w=int?][p=int[|adj]?][f=int?][s[ci]|float]
 
      Separator ?: by default ',', The pre- and post-fix may
      be omitted for the default. If changed, then the prefix
@@ -552,6 +552,7 @@ std::string double2String( double z, std::string flag)
   */
 
   bool isSci=false;
+  bool isFloat=false;
   bool isAdjusted=false;
   std::string c;
   int width = -1;
@@ -576,6 +577,12 @@ std::string double2String( double z, std::string flag)
        continue;
      }
 
+     if( splt[i] == "float" )
+     {
+       isFloat=true;
+       continue;
+     }
+
      if( splt[i][0] == 'w' )
      {
        width = static_cast<int>( hdhC::string2Double(splt[i]) ) ;
@@ -588,7 +595,13 @@ std::string double2String( double z, std::string flag)
      }
      if( splt[i][0] == 'p' )
      {
-       Split splt_p(splt[i],"|");
+       size_t pos=1;
+       if( splt[i][1] == '=' )
+         ++pos;
+
+       std::string t0(splt[i].substr(pos));
+
+       Split splt_p(t0,"|");
        for( size_t i=0 ; i < splt_p.size() ; ++i )
        {
          if( splt_p[i].substr(0,3) == "adj" )
@@ -604,7 +617,8 @@ std::string double2String( double z, std::string flag)
 
   double z_abs(fabs(z));
 
-  if( isSci || z_abs > 100000. || (z_abs > 0.0 && z_abs < 0.000001) )
+  if( !isFloat && (isSci || z_abs > 100000.
+                   || (z_abs > 0.0 && z_abs < 0.000001)) )
     ostr.setf(std::ios::scientific, std::ios::floatfield);
   else
     ostr.setf(std::ios::fixed, std::ios::floatfield);

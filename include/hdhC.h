@@ -169,15 +169,18 @@ convertTime(std::string targetUnit, std::string time,
             std::string unit="");
 
 //! Convert a floating number into a string.
-/*!Format: ?[w=int?][p=int[|adj]?][f=int?][s[ci]]?\n
+/*!Format: ?[w=int?][p=int[|][adj]?][f=char?][s[ci]|float]?\n
    ?: separator (by default ','). The pre- and post-fix may
      be omitted for the default. If changed, then the prefix
      has to be formed by twice a character (not: w, p,f,s).
    w: width of the field,
-   p: precision with 'adj' discarding tariling zeros and dec. point,
-   f: filling character, sci: scientific notation.
-   Note: assignment '=' may be omitted.*/
-
+   p: precision with 'adj' discarding trailing zeros and dec. point,
+   f: filling character
+   sci: scientific notation.
+   float: floating notation.
+   Note: assignment '=' may be omitted. By default sci is used for abs-values
+   greater than 100000. and smaller than 0.000001.
+*/
 std::string
 double2String( double z, std::string flag);
 
@@ -186,7 +189,8 @@ double2String( double z, std::string flag);
  Format of 'flag' is 'n_X with n leading positions filled by
  character X. The _-char may be omitted if X is not a number.
  Negative value of d indicates rounding with additional
- elimination of trailing zeros and a trailing decimal point.*/
+ elimination of trailing zeros and a trailing decimal point.
+*/
 std::string
 double2String( double z, int d=-5, std::string flag="");
 

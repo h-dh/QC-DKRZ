@@ -333,9 +333,9 @@ TimeControl::getFilename(void)
   setFilename(filenamePattern) ;
   size_t pos;
 
-  std::string sDateStr(beginDate.getDate());
+  std::string sDateStr(beginDate.str());
   if( isTimeFrame)
-     std::string eDateStr(endDate.getDate());
+     std::string eDateStr(endDate.str());
 
   // find the patterns
   if( (pos=file.basename.find("YYYY")) < std::string::npos )
@@ -375,7 +375,7 @@ TimeControl::getFilename(void)
      file.basename.replace(pos, 2, s);
   }
 
-  sDateStr = beginDate.getDate();
+  sDateStr = beginDate.str();
 
   if( ! file.isExisting() )
   {
