@@ -177,7 +177,9 @@ ReadLine::getItems( size_t beg, size_t end )
 bool
 ReadLine::getLine( std::string &str0)
 {
-  bool bret = readLine();
+  bool bret;
+  if( (bret=readLine()) )
+    return bret;
 
   if( isSkipCharacter )
   {
