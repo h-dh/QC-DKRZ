@@ -178,24 +178,16 @@ getSrcPath()
 {
   # extract the path to the root of the QA package
 
-  # given by environment variable
-  if [ ${#QA_PATH} -gt 0 ] ; then
-    # is it a path to bin?
-    if [ ${QA_PATH##*/} = 'bin' ] ; then
-      QA_PATH=${QA_PATH%/bin}
-      isWithBin=t
+  # is it in a conda built?
+  local x_conda=${0%/qa-dkrz}
+  if [ ${x_conda##*/} = bin ] ; then
+    x_conda=${x_conda%/bin}
+    if [ -d $x_conda/opt/qa-dkrz ] ; then
+       CONDA_ENV=t
+       export QA_PATH=$x_conda/opt/qa-dkrz
+       return
     fi
-
-    # is something wrong?
-    if [ ! -f ${QA_PATH}/.install_configure ] ; then
-      str="\nQA_PATH=${QA_PATH}${isWithBin:+/bin} is no path to the QA-DKRZ root"
-      str="\nPlease, check environment variable QA_PATH"
-      echo -e -n "${str}" > $TTY
-      exit
-    fi
-
-    return
-   fi
+  fi
 
   local target isInvalid
 
@@ -222,7 +214,6 @@ getSrcPath()
 
     local xname=${target##*/}
     target=${target%/*}  # remove the name of the script
-    target=${target%/*}  # remove the name directory scripts
 
     local arr=( ${target//\// } )
 
@@ -253,14 +244,14 @@ getSrcPath()
     local tmp
     for(( i=0 ; i < sz ; ++i )) ; do
       tmp=${tmp}/${arr[i]}
+
+      if [ -f ${tmp}/.install_configure ] ; then
+        QA_PATH=$tmp
+        break
+      fi
     done
 
-    if [ -f ${tmp}/.install_configure ] ; then
-      QA_PATH=$tmp
-    else
-      isInvalid=t
-    fi
-
+    test $i -eq $sz && isInvalid=t
   else
     isInvalid=t
   fi
@@ -483,16 +474,20 @@ makeProject()
   for PROJECT in ${projects[*]} ; do
     export PROJECT=$PROJECT
 
-    # link between PROJECT file and a symbolic name
-    projectLinks cpp
-    projectLinks h
-
     if [ ${PROJECT} = CF ] ; then
       local cfc=CF-checker
+      export QA_PRJ_HEADER=qa_NONE.h
+      export QA_PRJ_SRC=QA_NONE.cpp
+
     elif [ ${PROJECT} = MODIFY ] ; then
       MAKEFILE=Makefile_modify
       local cfc=ModifyNc
+
     else
+      export QA_PRJ_HEADER=qa_${PROJECT}.h
+      export QA_PRJ_SRC=QA_${PROJECT}.cpp
+      CXXFLAGS="${CXXFLAGS} -D ${PROJECT}"
+
       if [ $(ps -ef | grep -c qa-DKRZ) -gt 1 ] ; then
         ##protect running sessions, but not really thread save
         export PRJ_NAME=qqA-${PROJECT}
@@ -552,46 +547,6 @@ makeUtilities()
       exit
     fi
   fi
-
-  return
-}
-
-projectLinks()
-{
-  local p qTarget qDest
-
-  if [ $1 = h ] ; then
-    p=${QA_PATH}/include
-
-    qTarget=qa_${PROJECT}.h
-    qDest=qa.h
-  else
-    p=${QA_PATH}/src
-
-    qTarget=QA_${PROJECT}.cpp
-    qDest=QA.cpp
-  fi
-
-  # this is particular: the CF checker needs a qa.h and
-  # QA.cpp, respectively, but it doesn't matter which one.
-  if [ "${PROJECT}" = CF -o "${PROJECT}" = MODIFY ] ; then
-    test -e $p/$qDest && return
-
-    if [ $1 = h ] ; then
-      qTarget=qa_NONE.h
-    else
-      qTarget=QA_NONE.cpp
-    fi
-  fi
-
-  # connect qa.h and QA.cpp, respectively, to the selected project.
-  # Note that a link could have become non-symbolic by simple copying
-  test -h $p/$qDest -a \
-       "$( ls -l $p/$qDest 2> /dev/null | awk '{print $NF}' )" = "$p/$qTarget" \
-     && return
-
-  \rm -f $p/$qDest
-  ln -f $p/$qTarget $p/$qDest
 
   return
 }
@@ -982,4 +937,4 @@ export REVISION
 makeProject $prj
 
 # run example for CORDEX, if not done, yet
-runExample
+# runExample

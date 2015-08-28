@@ -30,7 +30,15 @@
 #include "QA_data.cpp"
 #include "QA_time.cpp"
 #include "QA_PT.cpp"
-#include "QA.cpp"
+
+#if defined CORDEX
+  #include "QA_CORDEX.cpp"
+#elif defined CMIP5
+  #include "QA_CMIP5.cpp"
+#else
+  #include "QA_NONE.cpp"
+#endif
+
 #include "TimeControl.cpp"
 
 // ------------------

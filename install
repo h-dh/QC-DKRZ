@@ -58,24 +58,16 @@ getSrcPath()
 {
   # extract the path to the root of the QA package
 
-  # given by environment variable
-  if [ ${#QA_PATH} -gt 0 ] ; then
-    # is it a path to bin?
-    if [ ${QA_PATH##*/} = 'bin' ] ; then
-      QA_PATH=${QA_PATH%/bin}
-      isWithBin=t
+  # is it in a conda built?
+  local x_conda=${0%/qa-dkrz}
+  if [ ${x_conda##*/} = bin ] ; then
+    x_conda=${x_conda%/bin}
+    if [ -d $x_conda/opt/qa-dkrz ] ; then
+       CONDA_ENV=t
+       export QA_PATH=$x_conda/opt/qa-dkrz
+       return
     fi
-
-    # is something wrong?
-    if [ ! -f ${QA_PATH}/.install_configure ] ; then
-      str="\nQA_PATH=${QA_PATH}${isWithBin:+/bin} is no path to the QA-DKRZ root"
-      str="\nPlease, check environment variable QA_PATH"
-      echo -e "${str}"
-      exit
-    fi
-
-    return
-   fi
+  fi
 
   local target isInvalid
 
@@ -88,7 +80,7 @@ getSrcPath()
   if [ -h $target ] ; then
 
     # get the link
-    local link=$(ls -l $target 2> /dev/null | awk  '{print $(NF)}')
+    local link=$(ls -l $target | awk  '{print $(NF)}')
 
     # link is relative, so make it absolute
     test ${link:0:1} != '/' && link=${target%/*}/${link}
@@ -102,12 +94,9 @@ getSrcPath()
 
     local xname=${target##*/}
     target=${target%/*}  # remove the name of the script
-    target=${target%/*}  # remove the name directory scripts
 
-    # resolve .. and .
     local arr=( ${target//\// } )
 
-    # any ., or .. in the middle of QA_PATH?
     local i j sz
     sz=${#arr[*]}
 
@@ -135,14 +124,14 @@ getSrcPath()
     local tmp
     for(( i=0 ; i < sz ; ++i )) ; do
       tmp=${tmp}/${arr[i]}
+
+      if [ -f ${tmp}/.install_configure ] ; then
+        QA_PATH=$tmp
+        break
+      fi
     done
 
-    if [ -f ${tmp}/.install_configure ] ; then
-      QA_PATH=$tmp
-    else
-      isInvalid=t
-    fi
-
+    test $i -eq $sz && isInvalid=t
   else
     isInvalid=t
   fi

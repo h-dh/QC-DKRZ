@@ -17,9 +17,9 @@ BASE_HEADER = annotation.h base.h brace_op.h data_statistics.h date.h \
    time_control.h variable.h
 
 QA_SOURCE = CF.cpp CellStatistics.cpp FD_interface.cpp Oper.cpp OutFile.cpp Parse.cpp \
-   QA.cpp QA_data.cpp QA_time.cpp QA_PT.cpp QA_main.cpp
+    QA_data.cpp QA_time.cpp QA_PT.cpp QA_main.cpp
 QA_HEADER = cell_statistics.h cf.h fd_interface.h oper.h out_file.h parse.h \
-   qa.h qa_data.h qa_PT.h qa_main.h qa_time.h
+    qa_data.h qa_PT.h qa_main.h qa_time.h
 
 #vpath %.c   $(QA_PATH)/src
 #vpath %.cpp $(QA_PATH)/src
@@ -53,7 +53,8 @@ testValidNC.x: $(UTIL_SOURCE) $(UTIL_HEADER) nc_api.h NcAPI.cpp testValidNC.cpp
 
 ${PRJ_NAME}: ${PRJ_NAME}.x
 
-${PRJ_NAME}.x: ${BASE_SOURCE} ${BASE_HEADER} $(QA_SOURCE) $(QA_HEADER) $(UTIL_SOURCE) $(UTIL_HEADER)
+${PRJ_NAME}.x: ${BASE_SOURCE} ${BASE_HEADER} $(QA_PRJ_HEADER) $(QA_PRJ_SRC) \
+               $(QA_SOURCE) $(QA_HEADER) $(UTIL_SOURCE) $(UTIL_HEADER)
 	$(CXX) $(CXXFLAGS) -o ${PRJ_NAME}.x $(QA_PATH)/src/QA_main.cpp \
            -I $(QA_PATH)/include $(INCLUDE) \
            $(LIB) $(LIBDL) -ludunits2 -lnetcdf -lhdf5_hl -lhdf5 -lz
@@ -62,7 +63,8 @@ ${PRJ_NAME}.x: ${BASE_SOURCE} ${BASE_HEADER} $(QA_SOURCE) $(QA_HEADER) $(UTIL_SO
 
 CF-checker: dkrz-cf-checker.x
 
-dkrz-cf-checker.x: CF_main.cpp CF.cpp $(BASE_SOURCE) ${BASE_SOURCE} $(QA_HEADER) $(UTIL_SOURCE) $(UTIL_HEADER)
+dkrz-cf-checker.x: CF_main.cpp CF.cpp $(BASE_SOURCE) ${BASE_SOURCE} \
+                   $(QA_PRJ_HEADER) $(QA_HEADER) $(UTIL_SOURCE) $(UTIL_HEADER)
 	$(CXX) $(CXXFLAGS) -o dkrz-cf-checker.x $(QA_PATH)/src/CF_main.cpp \
            -I $(QA_PATH)/include $(INCLUDE) \
            $(LIB) $(LIBDL) -ludunits2 -lnetcdf -lhdf5_hl -lhdf5 -lz

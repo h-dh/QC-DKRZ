@@ -33,7 +33,7 @@
 #include "QA_data.cpp"
 #include "QA_time.cpp"
 #include "QA_PT.cpp"
-#include "QA.cpp"
+#include "QA_NONE.cpp"
 #include "TimeControl.cpp"
 
 // ------------------

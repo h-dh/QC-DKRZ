@@ -42,7 +42,7 @@
 #include "qa_data.h"
 #include "qa_time.h"
 #include "qa_PT.h"
-#include "qa.h"
+#include "qa_NONE.h"
 #include "time_control.h"
 
 /*! Command-line options are gathered from ordinary command-line arguments,

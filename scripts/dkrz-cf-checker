@@ -28,24 +28,16 @@ getSrcPath()
 {
   # extract the path to the root of the QA package
 
-  # given by environment variable
-  if [ ${#QA_PATH} -gt 0 ] ; then
-    # is it a path to bin?
-    if [ ${QA_PATH##*/} = 'bin' ] ; then
-      QA_PATH=${QA_PATH%/bin}
-      isWithBin=t
+  # is it in a conda built?
+  local x_conda=${0%/qa-dkrz}
+  if [ ${x_conda##*/} = bin ] ; then
+    x_conda=${x_conda%/bin}
+    if [ -d $x_conda/opt/qa-dkrz ] ; then
+       CONDA_ENV=t
+       export QA_PATH=$x_conda/opt/qa-dkrz
+       return
     fi
-
-    # is something wrong?
-    if [ ! -f ${QA_PATH}/.install_configure ] ; then
-      str="\nQA_PATH=${QA_PATH}${isWithBin:+/bin} is no path to the QA-DKRZ root"
-      str="\nPlease, check environment variable QA_PATH"
-      echo -e "${str}"
-      exit
-    fi
-
-    return
-   fi
+  fi
 
   local target isInvalid
 
@@ -58,7 +50,7 @@ getSrcPath()
   if [ -h $target ] ; then
 
     # get the link
-    local link=$(ls -l $target 2> /dev/null | awk  '{print $(NF)}')
+    local link=$(ls -l $target | awk  '{print $(NF)}')
 
     # link is relative, so make it absolute
     test ${link:0:1} != '/' && link=${target%/*}/${link}
@@ -72,7 +64,6 @@ getSrcPath()
 
     local xname=${target##*/}
     target=${target%/*}  # remove the name of the script
-    target=${target%/*}  # remove the name directory scripts
 
     local arr=( ${target//\// } )
 
@@ -103,14 +94,14 @@ getSrcPath()
     local tmp
     for(( i=0 ; i < sz ; ++i )) ; do
       tmp=${tmp}/${arr[i]}
+
+      if [ -f ${tmp}/.install_configure ] ; then
+        QA_PATH=$tmp
+        break
+      fi
     done
 
-    if [ -f ${tmp}/.install_configure ] ; then
-      QA_PATH=$tmp
-    else
-      isInvalid=t
-    fi
-
+    test $i -eq $sz && isInvalid=t
   else
     isInvalid=t
   fi
@@ -130,7 +121,7 @@ getSrcPath()
     exit 1
   fi
 
-#  export QA_PATH=${QA_PATH}
+  export QA_PATH=${QA_PATH}
 
   return
 }
@@ -166,14 +157,38 @@ done
 
 shift $(( $OPTIND - 1 ))
 
-getSrcPath $0
+getSrcPath $0  # sets QA_PATH and if required CONDA_ENV
 
-$QA_PATH/install CF &> /dev/null
+test ! $CONDA_ENV &&
+  $QA_PATH/install CF &> /dev/null
+
+QA_WORK=$QA_PATH
 
 # files
 if [ ${isTestSuite:-f} = t ] ; then
   # only for the set of test files
   ts_fs=( $* )
+
+  # generate the netcdf files
+  count=$(find $QA_PATH/CF-TestSuite/Nc -name "*.nc" 2> /dev/null | grep -c .)
+  if [ ${count} -lt 25 ] ; then  # sufficient to outnumber protected nc-files
+    if [ ! -f $QA_PATH/CF-TestSuite/Txt ] ; then
+      if [ -f $QA_PATH/CF-TestSuite/Txt.tar.bz2 ] ; then
+        tar -C   ${QA_WORK}/CF-TestSuite \
+            -xjf ${QA_PATH}/CF-TestSuite/Txt.tar.bz2
+      else
+        echo "$QA_PATH/CF-TestSuite/Txt no such directory"
+        exit 1
+      fi
+    fi
+
+    if [ -d $QA_PATH/CF-TestSuite/Txt ] ; then
+      $QA_PATH/CF-TestSuite/scripts/mkAllNc > /dev/null
+    else
+      echo "$QA_PATH/CF-TestSuite/Txt no such directory"
+      exit 1
+    fi
+  fi
 else
   fs=( $* )
 fi
