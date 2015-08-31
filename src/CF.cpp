@@ -440,7 +440,7 @@ CF::checkCoordinateValues(Variable& var, bool isFormTermAux, T x)
     i=mv.validRangeBegin[j] + 1 ;
 
     if( !j )
-      sig=(mv[i]-mv[i-1]) / fabs(mv[i]-mv[i-1]);
+      sig=(static_cast<double>(mv[i]-mv[i-1])) / fabs(mv[i]-mv[i-1]);
 
     for( ; i < mv.validRangeEnd[j] ; ++i)
     {
@@ -7559,12 +7559,14 @@ CF::chap7_3(void)
         isColonFail = true;
 
       // an end with name:
-      size_t pos;
       if( x_cm.size() )
-         pos = x_cm.size()-1;
+      {
+         size_t pos = x_cm.size()-1;
+         size_t sz = x_cm[pos].size();
 
-      if( x_cm[pos].size() && x_cm[pos][x_cm[pos].size()-1] == ':' )
-        isColonFail = true;
+         if( sz && x_cm[pos][sz-1] == ':' )
+           isColonFail = true;
+      }
     }
 
     if( isSepFail )  // only once
