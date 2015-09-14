@@ -192,14 +192,12 @@ void
 InFile::getData( int rec )
 {
   if( rec == 0 )
-  {
     for( size_t i=0 ; i < variable.size() ; ++i)
       variable[i].getData(rec);
-    return;
-  }
+  else
+    for( size_t i=0 ; i < dataVarIndex.size() ; ++i)
+      variable[i].getData(rec);
 
-  for( size_t i=0 ; i < dataVarIndex.size() ; ++i)
-    variable[i].getData(rec);
   return;
 }
 
@@ -209,6 +207,7 @@ InFile::getData( int rec, std::string name )
   for( size_t i=0 ; i < variable.size() ; ++i)
     if( name == variable[i].name )
        variable[i].getData(rec);
+
   return;
 }
 
@@ -449,8 +448,8 @@ InFile::getVariable(void)
   for( size_t i=0 ; i < varSz ; ++i )
     variable[i].makeObj(isInfNan);
 
-  // derive the state of meta-data.
-  // Optionally in addition, check for CF Convention.
+  // check for CF Convention.
+  cF->setFilename(file);
   (void) cF->run();
 
   if( isOnlyCF )
@@ -476,6 +475,23 @@ InFile::getVariable(void)
       // inquire parameters for GeoMeta objects;
       // make GeoMeta obj for geo-related fields
       setGeoParam(variable[i]) ;
+    }
+  }
+
+  if( ! dataVarIndex.size() )
+  {
+    size_t pos;
+    std::string fName;
+    if( (pos = fName.find("_")) < std::string::npos )
+      fName = fName.substr(0,pos) ;
+
+    for( size_t i=0 ; i < pIn->varSz ; ++i )
+    {
+      if( fName == pIn->variable[i].name )
+      {
+        dataVarIndex.push_back(i);
+        break;
+      }
     }
   }
 
@@ -539,6 +555,7 @@ bool
 InFile::init(void)
 {
   notes->init() ;  // safe
+  notes->file.setFile(file);
 
   // apply parsed command-line args
   applyOptions();

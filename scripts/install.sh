@@ -90,8 +90,6 @@ descript()
   echo "  --link=path       Link lib and include files, respectively, of external netcdf"
   echo "                    to the directories 'your-path/${package}/local'."
   echo "  --package=str     str=QA-version."
-  echo "  --reset_tables    Remove every table in ${package}/tables having an"
-  echo "                    entry of the same name in ${package}/tables/projects."
   echo "  --show-inst       Display properties of the current installation."
   echo "  --src-path=path   To the place were all three libs reside."
   echo "    project-name    At present CMIP5 and CORDEX."
@@ -499,15 +497,13 @@ makeProject()
       fi
     fi
 
-    if make ${always} -q -C $BIN -f ${QA_PATH}/$MAKEFILE ${cfc} ; then
-       test ${PROJECT} != CF && log "make qa-${PROJECT}.x" DONE=up-to-date
-    else
+    if ! make ${always} -q -C $BIN -f ${QA_PATH}/$MAKEFILE ${cfc} ; then
        # not up-to-date
        if make ${always} ${mk_D} -C $BIN -f ${QA_PATH}/$MAKEFILE ${cfc} ; then
          test ${PROJECT} != CF && log "make qa-${PROJECT}.x" DONE
        else
          test ${PROJECT} != CF && log "make qa-${PROJECT}.x" FAIL
-         exit
+         exit 1
        fi
     fi
 
@@ -536,47 +532,14 @@ makeUtilities()
             -C $BIN -f ${QA_PATH}/$MAKEFILE c-prog cpp-prog 2>&1 )
     fi
 
-    status=$?
-
-    if [ ${status} -eq 0 ] ; then
+    if [ $? -eq 0 ] ; then
       test ${displayComp:-f} = t && echo -e "${text}"
       log "C/C++ utilities" DONE
     else
       echo -e "$text"
       log "C/C++ utilities" FAIL
-      exit
+      exit 1
     fi
-  fi
-
-  return
-}
-
-resetBuild()
-{
-  \rm -rf local
-
-  \rm -rf example/test_I
-  \rm -rf example/qa-test.task
-
-  return
-}
-
-runExample()
-{
-  # running the example requires qa-CORDEX.x
-  test ! -e bin/qA-CORDEX.x && return
-
-  # prepare the example, if not done, yet
-  if [ ! -e example/qa-test.task ] ; then
-    cp example/templates/qa-test.task example
-
-    cd example
-    ln -sf ../tables/projects/CORDEX/CORDEX_qa.conf .
-
-    ../scripts/qa-DKRZ ${isDebug:+-E_DEBUG_M} -f qa-test.task
-
-    logPwd=../
-    log "Example run" DONE
   fi
 
   return
@@ -936,5 +899,4 @@ export REVISION
 
 makeProject $prj
 
-# run example for CORDEX, if not done, yet
-# runExample
+exit 0

@@ -1,3 +1,4 @@
+
 Check results are usually written to a path provided by
 option QC_RESULTS in a config file (or on the command-line).
 The default path is identical to the work-space.
@@ -7,11 +8,18 @@ The workspace contains updated and/or user-modified tables,
 a CF test suite (after the first run of dkrz-cf-checker),
 and results of an example run (which is executed
 on the command-line by 'qa-dkrz --example').
-The work-space is $HOME/.qa-dkrz by default.
+Except the unlikely case described below, it is sufficient to 
+apply --workspace=str only once for all.
+The default for a work-space depends on how QA-DKRZ was fetched:
+   conda:  $HOME/.qa-dkrz by default. 
+   GitHub: path to the QA_DKRZ package
 
 $HOME/.qa-dkrz is the home of a 'config' file used to store paths etc. .
 If this doesn't exist, then a file '.conf' is written to QA-DKRZ, i.e
-the package downloaded by 'conda' or from GitHub. If QA-DKRZ is
-without write-permissions, then the user is asked to use --workspace.
-This unlikely case requires --workspace to be provided for each run
-of the script 'QA-DKRZ/scripts/qa-dkrz'.
+the package downloaded by 'conda' or from GitHub. If additionally
+QA-DKRZ is without write-permissions, then the user is asked to 
+use --workspace. This unlikely case requires --workspace to be provided 
+for each run of the script 'QA-DKRZ/scripts/qa-dkrz'.
+
+Please, note for multi-user purpose that $HOME of each users has to exist.
+

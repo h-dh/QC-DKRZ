@@ -45,6 +45,9 @@ DataOutputBuffer::clear()
 void
 DataOutputBuffer::flush(void)
 {
+   if( ! bufferCount )
+      return;
+
    std::string t;
 
    if( min )
@@ -223,12 +226,15 @@ SharedRecordFlag::adjustFlag(int num, size_t rec, int erase)
 void
 SharedRecordFlag::flush(void)
 {
-   nc->putData(nextFlushBeg, bufferCount, name, buffer );
+  if(bufferCount)
+  {
+    nc->putData(nextFlushBeg, bufferCount, name, buffer );
 
-   nextFlushBeg += bufferCount;
-   bufferCount=0;
+    nextFlushBeg += bufferCount;
+    bufferCount=0;
+  }
 
-   return;
+  return;
 }
 
 void
@@ -638,16 +644,16 @@ Outlier::test(QA_Data *pQAD)
         outRecMax = outRec[0] ;
         outValMax = outVal[0] ;
 
-        double cT=pQA->pIn->nc.getData(tmp_mv, "time", outRec[0]) ;
-        currDateStrMax        = pQA->qaTime.getDateStr(cT);
+        double cT = pQA->pIn->nc.getData(tmp_mv, "time", outRec[0]) ;
+        currDateStrMax = pQA->qaTime.refDate.getDate(cT).str();
 
         for( size_t k=1 ; k < outRec.size() ; ++k )
         {
           if ( outVal[k] < outValMax )
             continue;
 
-          cT=pQA->pIn->nc.getData(tmp_mv, "time", outRec[k]) ;
-          currDateStrMax        = pQA->qaTime.getDateStr(cT);
+          cT = pQA->pIn->nc.getData(tmp_mv, "time", outRec[k]) ;
+          currDateStrMax = pQA->qaTime.refDate.getDate(cT).str();
 
           outValMax = outVal[k] ;
           outRecMax = outRec[k] ;
@@ -681,7 +687,7 @@ Outlier::test(QA_Data *pQAD)
           currTime = pQA->pIn->nc.getData(tmp_mv, "time", outRec[k]) ;
 
           ostr << "\nrec#=" << outRec[k];
-          ostr << ", date=" << pQA->qaTime.getDateStr(currTime);
+          ostr << ", date=" << pQA->qaTime.refDate.getDate(currTime).str();
           ostr << ", value=";
           ostr << std::setw(12) << std::setprecision(5) << outVal[k];
         }
@@ -1040,12 +1046,12 @@ ReplicatedRecord::test(int nRecs, size_t bufferCount, size_t nextFlushBeg,
        {
          range.push_back( hdhC::double2String(arr_prev_index[i] ) );
          range.push_back( hdhC::double2String(arr_curr_index[i] ) );
-         cT  = pQA->pIn->nc.getData(tmp_mv, "time", arr_prev_index[i]) ;
-         sCT = hdhC::double2String(cT) ;
-         range.push_back(pQA->qaTime.refDate.getDate(sCT).str() );
-         cT  = pQA->pIn->nc.getData(tmp_mv, "time", arr_curr_index[i]) ;
-         sCT = hdhC::double2String(cT) ;
-         range.push_back(pQA->qaTime.refDate.getDate(sCT).str() );
+
+         cT = pQA->pIn->nc.getData(tmp_mv, "time", arr_prev_index[i]) ;
+         range.push_back(pQA->qaTime.refDate.getDate(cT).str() );
+
+         cT = pQA->pIn->nc.getData(tmp_mv, "time", arr_curr_index[i]) ;
+         range.push_back(pQA->qaTime.refDate.getDate(cT).str() );
          isGroup = false;
        }
        else
@@ -1059,12 +1065,12 @@ ReplicatedRecord::test(int nRecs, size_t bufferCount, size_t nextFlushBeg,
        {
          range.push_back( hdhC::double2String(arr_prev_index[i] ) );
          range.push_back( hdhC::double2String(arr_curr_index[i] ) );
-         cT  = pQA->pIn->nc.getData(tmp_mv, "time", arr_prev_index[i]) ;
-         sCT = hdhC::double2String(cT) ;
-         range.push_back(pQA->qaTime.refDate.getDate(sCT).str() );
-         cT  = pQA->pIn->nc.getData(tmp_mv, "time", arr_curr_index[i]) ;
-         sCT = hdhC::double2String(cT) ;
-         range.push_back(pQA->qaTime.refDate.getDate(sCT).str() );
+
+         cT = pQA->pIn->nc.getData(tmp_mv, "time", arr_prev_index[i]) ;
+         range.push_back(pQA->qaTime.refDate.getDate(cT).str() );
+
+         cT = pQA->pIn->nc.getData(tmp_mv, "time", arr_curr_index[i]) ;
+         range.push_back(pQA->qaTime.refDate.getDate(cT).str() );
        }
 
     }
@@ -1074,12 +1080,12 @@ ReplicatedRecord::test(int nRecs, size_t bufferCount, size_t nextFlushBeg,
        {
          range.push_back( hdhC::double2String(arr_prev_index[i] ) );
          range.push_back( hdhC::double2String(arr_curr_index[i] ) );
-         cT=pQA->pIn->nc.getData(tmp_mv, "time", arr_prev_index[i]) ;
-         sCT = hdhC::double2String(cT) ;
-         range.push_back(pQA->qaTime.refDate.getDate(sCT).str() );
-         cT  = pQA->pIn->nc.getData(tmp_mv, "time", arr_curr_index[i]) ;
-         sCT = hdhC::double2String(cT) ;
-         range.push_back(pQA->qaTime.refDate.getDate(sCT).str() );
+
+         cT = pQA->pIn->nc.getData(tmp_mv, "time", arr_prev_index[i]) ;
+         range.push_back(pQA->qaTime.refDate.getDate(cT).str() );
+
+         cT = pQA->pIn->nc.getData(tmp_mv, "time", arr_curr_index[i]) ;
+         range.push_back(pQA->qaTime.refDate.getDate(cT).str() );
          isGroup=true;
        }
 
@@ -1097,12 +1103,12 @@ ReplicatedRecord::test(int nRecs, size_t bufferCount, size_t nextFlushBeg,
     size_t i = bufferCount -1 ;
     range.push_back( hdhC::double2String(arr_prev_index[i-1] ) );
     range.push_back( hdhC::double2String(arr_curr_index[i-1] ) );
-    cT  = pQA->pIn->nc.getData(tmp_mv, "time", arr_prev_index[i]) ;
-    sCT = hdhC::double2String(cT) ;
-    range.push_back(pQA->qaTime.refDate.getDate(sCT).str() );
-    cT  = pQA->pIn->nc.getData(tmp_mv, "time", arr_curr_index[i]) ;
-    sCT = hdhC::double2String(cT) ;
-    range.push_back(pQA->qaTime.refDate.getDate(sCT).str() );
+
+    cT = pQA->pIn->nc.getData(tmp_mv, "time", arr_prev_index[i]) ;
+    range.push_back(pQA->qaTime.refDate.getDate(cT).str() );
+
+    cT = pQA->pIn->nc.getData(tmp_mv, "time", arr_curr_index[i]) ;
+    range.push_back(pQA->qaTime.refDate.getDate(cT).str() );
 
     report(range, isMultiple );
   }
@@ -1404,7 +1410,7 @@ QA_Data::forkAnnotation(Annotation *n)
 void
 QA_Data::flush(void)
 {
-  if( dataOutputBuffer.min )
+  if( bufferCount )
   {
      // test for entirely identical records
      if( allRecordsAreIdentical )
@@ -1440,9 +1446,10 @@ QA_Data::flush(void)
 
      dataOutputBuffer.flush();
      sharedRecordFlag.flush();
+
+     bufferCount = 0;
   }
 
-  bufferCount = 0;
 
   return ;
 }
@@ -1572,7 +1579,7 @@ QA_Data::openQA_NcContrib(NcAPI *nc, Variable *var)
   if( var->isFixed )
     dimStr = "fixed" ;
   else
-    dimStr = pQA->qaTime.name.c_str() ;
+    dimStr = pIn->unlimitedName.c_str() ;
 
   // different, but derived, varnames
   vs.clear();

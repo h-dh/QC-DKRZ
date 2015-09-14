@@ -37,8 +37,9 @@ class CF : public IObj
   bool   init(void) ;
   void   linkObject(IObj *);
 
-  void   setFilename(std::string f){file.setFile(f);}
-  void   setTablePath(std::string p){tablePath=p;}
+  void   setFilename(hdhC::FileSplit& f) {file=f;}
+  void   setFilename(std::string f) {file.setFile(f);}
+  void   setTablePath(std::string p) {tablePath=p;}
 
   void   chap(void);
   void   chap_reco(void);

@@ -117,6 +117,7 @@ struct FileSplit
    bool isExisting(std::string f="");
    void setExtension(std::string);
    void setFile(std::string f );
+   void setFile(struct FileSplit& );
 
    void setFilename(std::string);
    void setPath(std::string f){ path=f; }

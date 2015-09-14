@@ -41,7 +41,7 @@ class TimeOutputBuffer
 
 enum TimeTableMode
 {
-    NONE, REGULAR, ORPHAN, DISABLE, CYCLE
+    UNDEF, REGULAR, ORPHAN, DISABLE, CYCLE
 };
 TimeTableMode timeTableMode;
 
@@ -61,10 +61,10 @@ class QA_Time
   bool   entry(void);
   bool   init(void);
 
-  bool isCheckTime;
   bool isFormattedDate;
   bool isMaxDateRange;
   bool isNoCalendar;
+  bool isNoProgress;
   bool isRegularTimeSteps;
   bool isPrintTimeBoundDates;
   bool isReferenceDate;
@@ -76,9 +76,11 @@ class QA_Time
   std::string boundsName;
   int time_ix;    // the var-index
   int timeBounds_ix;
+  bool isTime;
 
-  double      lastTimeStep;  // is set in flush()
-  double      refTimeOffset;
+  double lastTimeStep;  // is set in flush()
+  double refTimeOffset;
+  double refTimeStep;
 
   Date refDate;
 
@@ -86,7 +88,7 @@ class QA_Time
   double firstTimeValue;
   double currTimeValue;
   double lastTimeValue;
-  double referenceTimeStep, currTimeStep ;
+  double currTimeStep ;
 
   double prevTimeBoundsValue[2];
   double firstTimeBoundsValue[2];
@@ -118,13 +120,11 @@ class QA_Time
   void   finally(NcAPI *);
 
   void   getDate(Date& , double t);
-  std::string
-         getDateStr(double val, bool isAbsolute=false);
   void   getDRSformattedDateRange(std::vector<Date> &,
                    std::vector<std::string> &);
   void   getTimeBoundsValues(double *pair, size_t rec, double offset=0.);
 
-  void   init(InFile*, Annotation*, QA*);
+  bool   init(InFile*, Annotation*, QA*);
 
   /*! Absolute date encoded by a format given in time:units */
   bool   initAbsoluteTime(std::string &units);

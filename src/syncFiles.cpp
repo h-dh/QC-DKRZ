@@ -51,8 +51,7 @@ Options:\n
 return:  output: \n
   0      Name of next file(s).\n
   1      "" , i.e. qa-file is up-to-date or invalid.\n
-         Also for a fixed field file that was already checked.\n
-         Note for --post: filename with latest dates.\n
+         Note for --post: output of filename with latest dates.\n
   2      Last filename if the date is older than.\n
          the end-date in the QA-result file.\n
   3      Unspecific error.\n
@@ -671,6 +670,7 @@ Ensemble::getTimes(std::string &str)
   size_t recSize, len;
   size_t index=0;
   double val ;
+  bool isTimeless=false;
 
   std::string begStr;
   std::string endStr;
@@ -698,7 +698,9 @@ Ensemble::getTimes(std::string &str)
        nc_close(ncid);
 
        if( sz == 1 )
-       	 return 0;
+       	 return 4;
+       else
+         isTimeless=true;
 
        isInvalid = true;
        member[i]->state += "missing time dimension";
@@ -870,6 +872,9 @@ Ensemble::getTimes(std::string &str)
     }
   }
 */
+
+  if( isTimeless ) // num of files is > 1
+    return 5;
 
   // get modification times of files
   for(size_t i=0 ; i < member.size() ; ++i )
@@ -1417,7 +1422,12 @@ SyncFiles::run(void)
   // Any annotation would be done there.
   std::string str;
 
-  returnValue = ensemble->getTimes(str) ;
+  if( (returnValue=ensemble->getTimes(str)) == 4 )
+  {
+     print();
+     return returnValue;
+  }
+
   if( str.size() )  // exit condition found
   {
    //  if( returnValue == 2 || returnValue == 3 )

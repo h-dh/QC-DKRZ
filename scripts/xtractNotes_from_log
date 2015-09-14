@@ -20,7 +20,6 @@ descript()
   echo "  -t str   Comma-sep-list of 'name,ensemble' pairs"
   echo "           where 'ensemble' may be omitted."
   echo "           for a default and for particular files."
-  echo "  -Q       Suppress status message."
   echo "  --debug[=script]"
   echo "  --line=i only search the i-th line of each block."
   echo "  f(s)  these logfs (bash: *, ? allowed)"
@@ -586,7 +585,7 @@ findRedundantBlocks()
   # note: first array item of pattern is FILE:
   matches=($(grep -n "[[:space:]]*file:[[:space:]]*${pattern}" ${path}${f} ))
 
-  # a unique block is represented by two matches per line
+  # a unique block is represented by three matches per line
   test ${#matches[*]} -eq 3 && return 0
 
   last=${matches[$(( ${#matches[*]} - 3 ))]}

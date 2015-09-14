@@ -54,6 +54,7 @@ class Annotation : public IObj
     bool         entry(void){return false;}
     bool         init(void) ;
     void         linkObject(IObj *){;}
+    void         setFilename(hdhC::FileSplit& f) {file=f;}
     void         setFilename(std::string f){file.setFile(f);}
     void         setProject(std::string s){project=s;}
     void         setTablePath(std::string p){ tablePath=p; }

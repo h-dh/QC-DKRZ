@@ -370,14 +370,16 @@ Annotation::getCheckResults(void)
   // collected in vectors, but are eventually merged.
 
   // default: omission
+  std::string NA("N/A");
+
   if( checkCF_Str.size() == 0 )
-    checkCF_Str = "OMIT" ;
+    checkCF_Str = NA ;
   if( checkMetaStr.size() == 0 )
-    checkMetaStr = "OMIT" ;
+    checkMetaStr = NA ;
   if( checkTimeStr.size() == 0 )
-    checkTimeStr = "OMIT" ;
+    checkTimeStr = NA ;
   if( checkDataStr.size() == 0 )
-    checkDataStr = "OMIT" ;
+    checkDataStr = NA ;
 
   std::string out("CF_conv: ");
 
@@ -1021,9 +1023,13 @@ Annotation::printFlags(void)
     // Still the caption.
     if( s[0] == 'R' )
     {
-       out += " (total: " ;
-       out += mp_count[f] ;
-       out += ")" ;
+       int num;
+       if( (num=mp_count.count(f)) )
+       {
+         out += " (total: " ;
+         out += hdhC::itoa(num) ;
+         out += ")" ;
+       }
     }
 
     int last=out.size() -1 ;
@@ -1089,7 +1095,7 @@ Annotation::printNotes(std::string &tag, std::string &caption,
 
     // compose the header of issued messages
     std::string strNotes = "qa_note_" ;
-    strNotes += file.filename + ".txt";
+    strNotes += file.basename + ".txt";
 
     // open file for writing
     if( ! ofsNotes )

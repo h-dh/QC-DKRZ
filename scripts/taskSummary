@@ -302,10 +302,12 @@ summaryY()
       r)  QA_RESULTS=${OPTARG} ;;
       s)  std_table=${OPTARG} ;;
       t)  test -e ${OPTARG} -a ! -d ${OPTARG} && cl_table=${OPTARG} ;;
-      -)  if [ "$OPTARG" = "help" ] ; then
+      -)  if [ "${OPTARG:0:3}" = src ] ; then
+            QA_PATH=${OPTARG##*=}
+          elif [ "$OPTARG" = help ] ; then
             descript
             exit
-          elif [ "${OPTARG%%=*}" = "debug" ] ; then
+          elif [ "${OPTARG%%=*}" = debug ] ; then
             DEBUG_X="--${OPTARG}"
             this=${0##*/}
             test "${OPTARG}" = debug -o ${OPTARG##*=} = ${this} && set -x

@@ -2819,7 +2819,7 @@ NcAPI::getData(int varid, size_t rec, size_t leg)
 
     std::string text("Variable <");
     text += vName;
-    text += ">";
+    text += ">: ";
 
     std::vector<std::string> checkType;
     if( vName == getUnlimitedDimVarName() )
@@ -2836,65 +2836,52 @@ NcAPI::getData(int varid, size_t rec, size_t leg)
 }
 
 template <typename ToT>
-int
+ToT
 NcAPI::getData(MtrxArr<ToT> &x, std::string vName, size_t rec)
 {
    // rec==0 is ok for the unlimited case
    if( rec && getNumOfRecords(vName) < rec )
-     return -1;
+     return 0;
 
    return getData(x, getVarID(vName), rec);
 }
 
 template <typename ToT>
-int
+ToT
 NcAPI::getData(MtrxArr<ToT> &to, int varid, size_t rec)
 {
   // Get netCDF data and store in a MtrxArr object.
   // The first value is returned.
-  int rv=-1;
-
   if( varid < 0 )
-    return rv;
+    return 0;
 
-  // Note: getData allocates memory pointed by rec_val_'type';
-  if( layout.rec_prev[varid] != static_cast<int>(rec) )
+  // note that the leg length is atomatically set to a single step
+  // for higher-dimensonal arrays.
+  size_t currLeg = layout.rec_leg_sz[varid];
+
+  // read operation required
+  if( ! (rec > layout.rec_leg_begin[varid]
+             && rec < layout.rec_leg_end[varid]) )
   {
-    size_t currLeg = layout.rec_leg_sz[varid];
-    bool isGetData=false;
-
-    if( rec >= layout.rec_leg_end[varid] )
-    {
-      // outside of the higher index side.
-      layout.rec_leg_begin[varid] = layout.rec_leg_end[varid] ;
-      layout.rec_leg_end[varid] += currLeg ;
-      isGetData=true;
-    }
-    else if( rec < layout.rec_leg_begin[varid] )
-    {
-      // outside of the smaller index side.
-      layout.rec_leg_begin[varid] = rec;
-      layout.rec_leg_end[varid] = rec + currLeg ;
-      isGetData=true;
-    }
+    layout.rec_leg_begin[varid] = rec;
+    layout.rec_leg_end[varid] = rec + currLeg ;
 
     if( layout.rec_leg_end[varid] > layout.varDimSize[varid][0] )
     {
       layout.rec_leg_end[varid] = layout.varDimSize[varid][0];
-      currLeg = layout.varDimSize[varid][0] - layout.rec_leg_begin[varid] ;
-      isGetData=true;
+      currLeg = layout.varDimSize[varid][0] - rec ;
     }
 
-    if( isGetData )
-      (void) getData(varid, rec, currLeg);
-
-    layout.rec_prev[varid] = static_cast<int>(rec);
+    (void) getData(varid, rec, currLeg);
+  }
+  else if( (void*)to.arr == layout.rec_prev_taker[varid] )
+  {
+    // the taking object is the same as before
+    return to[ rec - layout.rec_leg_begin[varid] ] ;
   }
 
-  // index of MtrxArr relative to rec
-  rv = rec - layout.rec_leg_begin[varid] ;
-
-  // Note: is already in data mode
+  // the taking obj had been used in a different context
+  size_t to_ix = rec - layout.rec_leg_begin[varid] ;
 
   switch ( layout.varType[varid] )
   {
@@ -2949,14 +2936,14 @@ NcAPI::getData(MtrxArr<ToT> &to, int varid, size_t rec)
         checkType.push_back("data");
 
       exceptionHandling(key, capt, text, checkType, vName);
-      return rv;
+      return to[to_ix];
     }
     break;
   }
 
-//  to.testValueException();
+  layout.rec_prev_taker[varid] = (void*) to.arr ;
 
-  return rv;
+  return to[to_ix];
 }
 
 void
@@ -3071,6 +3058,13 @@ NcAPI::getData(std::vector<std::string> &v, std::string varName, size_t rec )
   }
 
   return ;
+}
+
+std::pair<int, int>
+NcAPI::getDataIndexRange(int varid)
+{
+  return std::pair<int,int>
+     (layout.rec_leg_begin[varid], layout.rec_leg_end[varid]) ;
 }
 
 size_t
@@ -3590,7 +3584,7 @@ NcAPI::getLayout(void)
      layout.rec_leg_begin.push_back( 0 );
      layout.rec_leg_sz.push_back( 1 );  // default for large multi-dim arrays
      layout.rec_leg_end.push_back( 0 );
-     layout.rec_prev.push_back( -1 );
+     layout.rec_prev_taker.push_back( 0 );  // pointer of the last data taker
 
      if( rank < 3 )
      {

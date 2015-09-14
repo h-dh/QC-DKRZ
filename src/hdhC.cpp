@@ -80,6 +80,16 @@ FileSplit::setFile(std::string f)
    return fC;
 }
 */
+void
+FileSplit::setFile(hdhC::FileSplit& f)
+{
+  is=f.is;
+  filename =f.filename;
+  basename =f.basename;
+  extension=f.extension;
+  path     =f.path;
+  return;
+}
 
 void
 FileSplit::setFile(std::string f)
@@ -662,15 +672,19 @@ std::string double2String( double z, std::string flag)
        }
     }
 
-    int pos=str.size()-1;
-    for(  ; pos > -1 ; --pos)
-      if( str[pos] != '0' )
-        break ;
+    if( str.find('.') < std::string::npos )
+    {
+      int pos=str.size()-1;
+      for(  ; pos > -1 ; --pos)
+        if( str[pos] != '0' )
+          break ;
 
-    if( str[pos] == '.' )
-      --pos;
+      if( str[pos] == '.' )
+        --pos;
 
-    str = str.substr(0, ++pos);
+      str = str.substr(0, ++pos);
+    }
+    
     str += sci_rep;
 
     return str;

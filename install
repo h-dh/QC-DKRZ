@@ -9,6 +9,40 @@ udunits=udunits-2.2.19
 
 defaultProject=CORDEX
 
+editConfigFile()
+{
+  # return 0: modified entry, but not disabled
+  local args item name
+
+  args=($*)
+  args=(${args[*]//=/ })
+
+#  if [ ${#args[*]} -eq 0 ] ; then
+#    return 1 # this is a fault
+#  el
+   if [ ${#args[*]} -eq 1 ] ; then
+    name=${args[0]}
+  else
+    name=${args[0]}
+    item=${args[1]}
+  fi
+
+  if grep -i -q $name=${item:-enabled} $CONFIG_FILE &> /dev/null; then
+    return 0
+  fi
+
+  if [ "${item#*=}" = disable -o "${item#*=}" = d ] ; then
+    sed -i "/${name}/ d" $CONFIG_FILE &> /dev/null
+    test ! -s $CONFIG_FILE && \rm $CONFIG_FILE
+    return 1
+  elif grep -i -q ${name} $CONFIG_FILE &> /dev/null; then
+    sed -i "/${name}/ d" $CONFIG_FILE &> /dev/null
+  fi
+
+  echo ${name}=${item:-enabled} >> $CONFIG_FILE
+  return 0
+}
+
 descript()
 {
   echo "Usage: install [options] [project[s]]"
@@ -30,26 +64,97 @@ descript()
   echo "                    in 'your-path/${package}/local'."
   echo "                    Shared by all hdf, netcdf, udunits  and zlib."
   echo "  --link_type=path  Same as for 'link' but just for type=netcdf, hdf, zlib, or udunits"
-  echo "  --local=path      Path where lib and include directories are to be installed"
+  echo "  --local=str       Path where lib and include directories are to be installed"
   echo "                    [default: QA_DKRZ/local] for both real and hard-links."
   echo "                    Note: unneccesary when install_configure points outside."
   echo "  --show-inst       Display properties of the current installation."
   echo "  --up[date]        Update the QA package from the repository."
   echo "                    Note: not for netCDF, HDF5, udunits2 or zlib."
+  echo "  --workspace=str   Path to put updated tables [ ~/.qa-dkrz/tables by"
+  echo "                    default]. Also, str is the location of the CF test,"
+  echo "                    suite, an example run, and of qc check results for"
+  echo "                    omitted option QC_RESULTS. Special: Omitted str "
+  echo "                    defaults to the QA-DKRZ path, i.e. as for QC-0.4;"
+  echo "                    write permission required. The default for the workspace itself"
+  echo "                    is \$HOME\.qa-dkrz [if not available, then the user"
+  echo "                    is asked to provide --workspace".
   echo ""
   echo "  project-name      At present CF, CMIP5, and CORDEX; the latter by default."
+}
+
+getCurrPaths()
+{
+  # the config file
+  if [ ! ${CONFIG_FILE} ] ; then
+    if [ -w ~ ] ; then
+      local cPath=~/.qa-dkrz
+      if [ ${CONDA_ENV} ] ; then
+        CONFIG_FILE=$cPath/config.conda
+      else
+        CONFIG_FILE=$cPath/config.src
+      fi
+      test ! -d $cPath && mkdir -p $CONFIG_FILE 2> /dev/null
+
+    elif [ -w "$QA_PATH" ] ; then
+      if [ ${CONDA_ENV} ] ; then
+        CONFIG_FILE=$QA_PATH/.conf.conda
+      else
+        CONFIG_FILE=$QA_PATH/.conf.config.src
+      fi
+
+    elif [ -w "$QA_WORK" ] || mkdir -p "$QA_WORK" 2> /dev/null ; then
+      if [ ${CONDA_ENV} ] ; then
+        CONFIG_FILE=$QA_WORK/config.conda
+      else
+        CONFIG_FILE=$QA_WORK/config.src
+      fi
+
+    else
+      echo "HOME and QA_DKRZ without write permissions,"
+      echo "please restart with provided option --workspace=str"
+      exit
+    fi
+  fi
+
+  # the paths
+  if [ $QA_WORK ] ; then
+    return
+  else
+    if [ $CONDA_ENV ] ; then
+      QA_WORK=~/.qa-dkrz
+    else
+      QA_WORK=$QA_PATH
+    fi
+  fi
+
+  test ! -d $QA_WORK   && mkdir -p $QA_WORK   2> /dev/null
+
+  return
+}
+
+getGitBranch()
+{
+   git branch | grep '*' | awk '{print $2}'
+   return
 }
 
 getRevNum()
 {
   # get current revision number; this determines whether it is
   # before a change of defaults happened.
-  local arg=$1
+  local branch currIdent
 
-  local branch=$(git branch | grep '*' | awk '{print $2}')
-  local currIdent=$(git log --pretty=format:'%h' -n 1)
+  if [ $CONDA_ENV ] ; then
+    if grep revision $QA_PATH/install.log ; then
+      branch=branch
+      currIdent=currIdent
+    fi
+  else
+    branch=$(getGitBranch)
+    currIdent=$(git log --pretty=format:'%h' -n 1)
+  fi
 
-  eval ${arg}=${branch}-${currIdent}
+  eval ${1}=${branch}-${currIdent}
 
   return
 }
@@ -68,6 +173,8 @@ getSrcPath()
        return
     fi
   fi
+
+  test ${QA_PATH} && return
 
   local target isInvalid
 
@@ -108,7 +215,7 @@ getSrcPath()
         j=$((i-1))
 
         # this takes into account adjacent . and/or .. with any depth
-        while [ ${#arr[j]} -eq 0 ] ; do
+        while [ ! ${arr[j]} ] ; do
           j=$((j-1))
         done
         unset arr[j]
@@ -126,7 +233,7 @@ getSrcPath()
       tmp=${tmp}/${arr[i]}
 
       if [ -f ${tmp}/.install_configure ] ; then
-        QA_PATH=$tmp
+        export QA_PATH=$tmp
         break
       fi
     done
@@ -152,20 +259,6 @@ getSrcPath()
   fi
 
   export QA_PATH=${QA_PATH}
-
-  return
-}
-
-git_update()
-{
-  git pull origin
-
-  test $? -gt 0 && return
-
-  # revison num of the updated package
-  getRevNum packRev
-
-  set_dot_conf QA-DKRZ_REVISION=$packRev
 
   return
 }
@@ -208,38 +301,6 @@ saveAsCycle()
   done
 }
 
-set_dot_conf()
-{
-  local args item name
-
-  args=($*)
-  args=(${args[*]//=/ })
-
-  if [ ${#args[*]} -eq 0 ] ; then
-    return  # this is a fault
-  elif [ $${#args[*]} -eq 1 ] ; then
-    name=${args[0]}
-    item=enabled
-  else
-    name=${args[0]}
-    item=${args[1]}
-  fi
-
-  if grep -i -q $name=$item .conf &> /dev/null; then
-    return
-  fi
-
-  if [ "${item#*=}" = disable -o "${item#*=}" = d ] ; then
-    sed -i "/${name}/ d" .conf &> /dev/null
-    test ! -s .conf && \rm .conf
-  elif grep -i -q ${name} .conf &> /dev/null; then
-    sed -i "/${name}/ d" .conf &> /dev/null
-    echo ${name}=enabled >> .conf
-  fi
-
-  return
-}
-
 tr_option()
 {
   local phrase="${!1}"
@@ -252,14 +313,83 @@ tr_option()
 
   if [ ${i} -eq ${sz} ] ; then
     phrase=$( echo "${phrase/% /}" | tr "[:lower:]" "[:upper:]" )
+    phrase=$( echo "${phrase}" | tr "-" "_" )
   else
     local tmp0="${phrase:0:i}"
     tmp0="${tmp0//QC/QA}"
     tmp0=$( echo "${tmp0/% /}" | tr "[:lower:]" "[:upper:]" )
+    tmp0=$( echo "${tmp0}" | tr "-" "_" )
     phrase="${tmp0}""${phrase:i}"
   fi
 
   eval ${1}=\${phrase}
+  return
+}
+
+update()
+{
+  if [ ${isAutoUp} ] || \
+  editConfigFile AUTO_UPDATE=$AUTO_UPDATE ; then
+    if [ $CONDA_ENV ] ; then
+      # look for a new conda-built package
+      local tmp
+      declare -a tmp
+      tmp=( $(conda search -c birdhouse qa-dkrz 2> /dev/null) )
+
+      local i item
+      for(( i=0 ; i < ${#tmp[*]} ; ++i )) ; do
+        if [ ${tmp[i]} = '*' ] ; then
+          item=${tmp[++i]}
+          item=${item}-${tmp[++i]}
+
+          if ! editConfigFile CONDA_BUILD=$item ; then
+            conda update -c birdhouse qa-dkrz &> /dev/null
+
+            getRevNum packRev
+            editConfigFile QA_REVISION=$packRev
+
+            exitVal=101
+          fi
+          break
+        fi
+      done
+
+    elif [ ! -f ${QA_PATH}/.ignore_GitHub_update ] ; then
+      cd $QA_PATH
+
+      # is qa-dkrz going to change?
+      local qa_dkrzDate=$(ls -l \
+           --time-style=+'%s' ${QA_PATH}/scripts/qa_dkrz \
+           | awk '{print $6}' 2> /dev/null )
+
+      test "$(getGitBranch)" != master && \
+        git checkout master &> /dev/null
+
+      git pull --no-edit -q origin master &> /dev/null
+
+      if [ ${qa_dkrzDate} != $( ls -l \
+           --time-style=+'%s' ${QA_PATH}/scripts/qa_dkrz \
+           | awk '{print $6}' 2> /dev/null ) ] ; then
+        exitVal=101
+      fi
+
+      # revison num of the updated package
+      getRevNum packRev
+
+      editConfigFile QA_REVISION=$packRev
+    fi
+  fi
+
+  if editConfigFile AUTO_TABLE_UPDATE=$AUTO_TABLE_UPDATE ; then
+    if [ "$QA_WORK" != "$QA_PATH" ] ; then
+      rsync -auz $QA_PATH/tables $QA_WORK &> /dev/null
+    fi
+
+    ${QA_PATH}/scripts/get_cfconventions \
+        --config_file=$CONFIG_FILE \
+        ${QA_WORK}/tables/projects/CF
+  fi
+
   return
 }
 
@@ -276,43 +406,34 @@ if [ $# -gt 0 ] ; then
   # higher priority options
   for(( i=0 ; i < ${#sArgs[*]} ; ++i )) ; do
     # some args are accepted without '--'
-    isAccepted=f
-    if [ "${sArgs[${i}]:0:7}" = auto-up ] ; then
-      isAccepted=t
-    elif [ "${sArgs[${i}]:0:5}" = debug ] ; then
-      isAccepted=t
-    elif [ "${sArgs[${i}]:0:4}" = help ] ; then
-      isAccepted=t
-    elif [ "${sArgs[${i}]:0:4}" = link ] ; then
-      isAccepted=t
-    elif [ "${sArgs[${i}]:0:6}" = only-q ] ; then
-      isAccepted=t
-    elif [ "${sArgs[${i}]:0:3}" = src ] ; then
-      isAccepted=t
-    elif [ "${sArgs[${i}]:0:2}" = up ] ; then
-      isAccepted=t
-    fi
-
-    test ${isAccepted} = t && sArgs[${i}]=--${sArgs[${i}]}
-
     A="${sArgs[i]}"
     tr_option A
 
+    if [ "${A:0:5}" = AUTO_ ] ; then
+      sArgs[${i}]=--${sArgs[${i}]}
+      A="--${A}"
+    elif [ "${A:0:5}" = DEBUG ] ; then
+      sArgs[${i}]=--${sArgs[${i}]}
+      A="--${A}"
+    elif [ "${A:0:4}" = HELP ] ; then
+      sArgs[${i}]=--${sArgs[${i}]}
+      A="--${A}"
+    elif [ "${A:0:4}" = LINK ] ; then
+      sArgs[${i}]=--${sArgs[${i}]}
+      A="--${A}"
+    elif [ "${A:0:6}" = ONLY-Q ] ; then
+      sArgs[${i}]=--${sArgs[${i}]}
+      A="--${A}"
+    elif [ "${A:0:3}" = SRC  ] ; then
+      sArgs[${i}]=--${sArgs[${i}]}
+      A="--${A}"
+    elif [ "${A:0:2}" = UP ] ; then
+      sArgs[${i}]=--${sArgs[${i}]}
+      A="--${A}"
+    fi
+
     if [ "${A%=*}" = '--DEBUG' ] ; then
       test ${A} = '--DEBUG' -o ${A#*=} = ${0##*/} && set -x
-    elif [ "${A%%=*}" = "--PREFIX" ] ; then
-      if [ -d ${sArgs[i]#*=} ] ; then
-         mv ${sArgs[i]#*=} ${sArgs[i]#*=}.save
-         echo "--prefix=${sArgs[i]#*=} exists; saved as ${sArgs[i]#*=}.save"
-      fi
-
-      zeroArg=${sArgs[i]#*=}
-      if mkdir -p $zeroArg ; then
-        cd $zeroArg
-      else
-        echo "Could not mkdir -p $zeroArg"
-        exit
-      fi
     fi
   done
 fi
@@ -327,25 +448,35 @@ do
     d)  coll[${#coll[*]}]=-d ;;
     h)  descript
         exit ;;
-    -)  if [ "${UOPTARG%=*}" = "AUTO_UP" ] ; then
-          set_dot_conf ${OPTARG}
-          continue
-        elif [ "${UOPTARG:0:5}" = "BUILD" ] ; then
+    -)  if [ "${UOPTARG:0:7}" = AUTO_UP ] ; then
+          AUTO_UP=${OPTARG##*=}
+          isAutoUp=t
+        elif [ "${UOPTARG:0:13}" = AUTO_TABLE_UP ] ; then
+          AUTO_TABLE_UPDATE=${OPTARG##*=}
+          isAutoTableUp=t
+        elif [ "${UOPTARG:0:5}" = BUILD ] ; then
           isBuild=t
-        elif [ "${UOPTARG:0:4}" = "LINK" ] ; then
-          isLink=t
+        elif [ "${UOPTARG:0:11}" = CONFIG_FILE ] ; then
+          CONFIG_FILE=${OPTARG##*=}
         elif [ ${UOPTARG:0:5} = DEBUG -o ${UOPTARG} = 'DEBUG=install' ] ; then
           set -x
-        elif [ "${UOPTARG%%=*}" = "HELP" ] ; then
+        elif [ "${UOPTARG%%=*}" = HELP ] ; then
           descript
           exit
-        elif [ "${UOPTARG:0:6}" = "ONLY-Q" ] ; then
-          continue  # for backward compatibilty
-        elif [ "${UOPTARG}" = "SRC" ] ; then
-          continue  # for backward compatibilty
-        elif [ "${UOPTARG:0:2}" = "UP" ] ; then
+        elif [ "${UOPTARG:0:4}" = LINK ] ; then
+          isLink=t
+        elif [ "${UOPTARG:0:6}" = ONLY_Q ] ; then
+          :  # for backward compatibilty
+        elif [ "${UOPTARG:0:7}" = QA_PATH ] ; then
+          export QA_PATH=${OPTARG##*=}
+        elif [ "${UOPTARG:0:7}" = QA_WORK ] ; then
+          QA_WORK=${OPTARG##*=}
+        elif [ "${UOPTARG}" = SRC ] ; then
+          :  # for backward compatibilty
+        elif [ "${UOPTARG:0:2}" = UP ] ; then
           isUpdateQA=t
-          continue
+        elif [ "${UOPTARG:0:9}" = WORKSPACE ] ; then
+          QA_WORK=${UOPTARG##*=}
         fi
 
         # collect options, which have not been processed above
@@ -359,13 +490,11 @@ done
 
 shift $(( $OPTIND - 1 ))
 
-getSrcPath $zeroArg
+getSrcPath $zeroArg  # sets also CONDA_ENV
+getCurrPaths
+update
 
-if grep -i -q AUTO-UP .conf &> /dev/null; then
-  isUpdateQA=t
-fi
-
-test ${isUpdateQA:-f} = t && git_update
+test ${CONDA_ENV} && exit  # miniconda built executables
 
 for pck in $* ; do
   PCK="${pck}"
@@ -395,6 +524,6 @@ else
   pcks=
 fi
 
-exec scripts/install.sh ${debug} --pack=${package} \
+exec $QA_PATH/scripts/install.sh ${debug} --pack=${package} \
 ${isContinueLog:+--continue_log} ${pcks} \
 ${coll[*]}

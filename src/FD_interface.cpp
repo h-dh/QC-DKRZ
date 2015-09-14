@@ -148,12 +148,11 @@ FD_interface::entry(void)
 
   // used in finally and here
   if( pIn->isTime )
-    currTime=pIn->nc.getData(w, "time", pIn->currRec);
+    currTime = pIn->nc.getData(w, "time", pIn->currRec);
 
   if( timeWindowWidth.size() > 0 )
   {
-    currDate.setDate( refDate.getDate(
-                        hdhC::double2String(currTime) ) );
+    currDate = refDate.getDate(currTime) ;
     currDateStr = currDate.str();
 
     // If sub-division is enabled, then here is a reset of the window.
@@ -293,8 +292,7 @@ FD_interface::finally(int errCode)
          {
             is=false;
             fD[i].infoLine[j] = "#END: " ;
-            currDate.setDate( refDate.getDate(
-                              hdhC::double2String(currTime) ) );
+            currDate = refDate.getDate(currTime) ;
             fD[i].infoLine[j] +=  currDate.str()  ;
           }
        }
@@ -311,8 +309,7 @@ FD_interface::finally(int errCode)
           if( pIn->isTime )
           {
             // no partitioning
-            currDate.setDate( refDate.getDate(
-                             hdhC::double2String(currTime) ) );
+            currDate = refDate.getDate(currTime) ;
             fD[i].infoLine.back() +=   currDate.str()  ;
           }
           else
@@ -407,13 +404,11 @@ FD_interface::init(void)
     refDate.setDate( str );
 
     MtrxArr<double> mv_d;
-    double startTime=pIn->nc.getData(mv_d, "time", pIn->currRec);
+    double startTime = pIn->nc.getData(mv_d, "time", pIn->currRec);
 
-    std::string cTime = hdhC::double2String(startTime);
-    beginDate.setDate( refDate.getDate(cTime) );
-    cTime = beginDate.str();
-//  cTime = cTime.substr(0,4) + "-01-01T00:00:00" ;
-    beginDate = cTime;
+    beginDate = refDate.getDate(startTime) ;
+    std::string cTime = beginDate.str();
+
     endDate = beginDate; //for time window partitioning
   }
 

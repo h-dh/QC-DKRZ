@@ -1,5 +1,5 @@
 The files in directory 'projects' are provided as
-default for the named projects and should  not be edited.
+defaults for the named projects and should  not be edited.
 
 If modifications of the defaults are wanted, please,
 create identical project/filename within the tables-directory

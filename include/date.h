@@ -221,16 +221,17 @@ public:
       val is considered a Julian day. The bool set true states
       that val is a Julian day anyway.*/
   Date  // val must be a Julian Date number if isRel.==false
-         getDate(double val, bool=false) ;
+         getDate(double val, bool isJD=false) ;
 
   //! Get relative or absolute date.
   /*! Provide time units relative to date and return ISO-8601 string.
       If 'enableSetDate=true', then a reference date is extracted and
       set (see setDate(string) from the std::string parameter before
       a relative part is considered. In case of failure,
-      'not-a-valid-date' string is returned.*/
+      'not-a-valid-date' string is returned.
+      Bool isFormatted=true for formatted value like 20010102.5*/
   Date
-         getDate(std::string, bool enableSetDate=false);
+         getDate(std::string, bool isFormatted=false);
 
   //! Get the day of the year and month.
   double getDay( void );
@@ -343,8 +344,13 @@ public:
   //! Set date from a Julian date object.
   bool   setDate( const Date::Julian & );
 
-  //! Set date by date-encoded float
-  /*! At present: (%Y%m%d.%f)*/
+  //! Set date by date-encoded float or a Julian Day
+  /*! Encoding:
+        at present: (%Y%m%d.%f); requires previous
+        setting of setFormattedDate().
+      For no encoding:
+        if a date was previously set, then add f to the date,
+        else: f is taken into account a Julian Date.*/
   bool   setDate( double f, std::string cal="", std::string monLen="" );
 
   //! Set reference date.
@@ -389,9 +395,11 @@ public:
   std::string
          str(void) ;
 
+  void   clear(void);
+
 private:
   enum Calendar { GREGORIAN, PROLEPTIC_GREGORIAN, JULIAN,
-                  EQUAL_MONTHS, ALL_LEAP, NO_LEAP, NONE } ;
+                  EQUAL_MONTHS, ALL_LEAP, NO_LEAP, UNDEF } ;
   enum Calendar currCalendarEnum ;
   std::string currCalendar;
 

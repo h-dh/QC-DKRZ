@@ -166,7 +166,7 @@ public:
       std::vector<size_t>  rec_leg_begin;
       std::vector<size_t>  rec_leg_sz;
       std::vector<size_t>  rec_leg_end;
-      std::vector<int>     rec_prev;
+      std::vector<void*>   rec_prev_taker;
 
 //! NC4: Compression
       std::vector<int> varShuffle;
@@ -425,11 +425,25 @@ void
 /*! The user has to take care that type conversion is possible.
     Return value: index of x corresponding to rec; -1 for invalid rec */
   template <typename ToT>
-    int
+    ToT
       getData(MtrxArr<ToT> &x, std::string vName, size_t rec=0 );
+
+//! Access of a record by a MtrxArr object.
+/*! Note that data is sliced according to an internally specified maximum
+    range.*/
+    template <typename ToT>
+    ToT
+      getData(MtrxArr<ToT> &x, int varid, size_t rec=0);
 
     void
       getData(std::vector<std::string> &,std::string, size_t rec=0);
+
+    std::pair<int, int>
+      getDataIndexRange(std::string vName)
+        {return getDataIndexRange(getVarID(vName));}
+
+    std::pair<int, int>
+      getDataIndexRange(int varid);
 
 //! Get number of values per record of variable 'vName'.
 /*! If vName is not a valid variable, 0 is returned.
@@ -512,6 +526,14 @@ void
 //! Get the number of records, if var is unlimited
     size_t
       getNumOfRecords(std::string var, bool force=false);
+
+    size_t
+      getRecLegIndex(std::string vName, size_t rec)
+      { return getRecLegIndex(getVarID(vName), rec); }
+
+    size_t
+      getRecLegIndex(int varid, size_t rec)
+        { return rec - layout.rec_leg_begin[varid] ; }
 
 //! Get number of values per record of variable 'vName'.
 /*! If vName is not a valid variable, 0 is returned.
@@ -1034,14 +1056,6 @@ private:
 
     void*
       getData(int varid, size_t rec, size_t leg=0);
-
-//! Access of a record by a MtrxArr object.
-/*! A slice at the rec-th index of the unlimited dimension.
-    If the variable holds 1-D data and leg > rec, then get the leg.
-    Return value: index of x corresponding to rec; -1 for invalid rec  */
-    template <typename ToT>
-    int
-      getData(MtrxArr<ToT> &x, int varid, size_t rec=0);
 
 // Get number of values per record of variable 'vName'.
     size_t

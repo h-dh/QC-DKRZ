@@ -883,35 +883,7 @@ MArep<T>::getDim(std::vector<size_t> &d_in)
       return  ;
 
     // Test dimensions.
-    dim.clear();
-
-    // test, whether any dim size > 0
-    bool is0=true;
-    for(size_t i=0 ; i < d_in.size() ; ++i)
-    {
-      if( d_in[i] )
-        is0=false ;
-    }
-    if( is0 )
-      d_in[0]=1;
-
-    // test, whether any dim size > 1
-    bool isNGT1=true;
-    for(size_t i=0 ; i < d_in.size() ; ++i)
-      if( d_in[i] > 1 )
-        isNGT1=false;
-
-    if( isNGT1 )
-    { // this is in fact not a field, but a point
-      dim.push_back(1);
-      return;
-    }
-
-    // Dimension size(s) of 1 is/are discarded, if
-    // any other is > 1.
-    for(size_t i=0 ; i < d_in.size() ; ++i)
-      if( d_in[i] > 1 )
-        dim.push_back(d_in[i]);
+    dim = d_in;
 
     // Product of dimensions. Purpose: conversion of
     // array index to matrix indices and vice versa.
@@ -999,11 +971,7 @@ void
 MArep<T>::setM(void)
 {
     if( m2D && m2D_dim0 != dim[0] )
-    {
-      delete [] m2D;
-      m2D=0;
-      m2D_dim0=0;
-    }
+       clearM();
 
     // allocate new mem for the 2D shape
     if( dim.size() == 2 )
@@ -1191,7 +1159,7 @@ public:
   std::vector<size_t>
           getDimensions(void)const { return rep->dim;}
   size_t  getDimSize(){ return rep->dim.size(); }
-  
+
   size_t  getExceptionCount(size_t i);
   size_t  getExceptionCount(std::string s="all");
 

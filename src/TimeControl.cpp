@@ -223,6 +223,7 @@ TimeControl::findRecAtTime(std::string recVarName, double tLimit,
 
   // read time from the ncFile
   double t0 = pIn->nc.getData(tmp_mv, recVarName, r0) ;
+
   double t1 = pIn->nc.getData(tmp_mv, recVarName, r1) ;
   double tm;
 

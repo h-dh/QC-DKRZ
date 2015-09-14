@@ -19,7 +19,7 @@ QA::~QA()
 }
 
 void
-QA::appendToHistory(size_t eCode)
+QA::appendToHistory(void)
 {
   // date and time at run time
   std::string today( Date::getTodayStr() );
@@ -864,7 +864,20 @@ QA::checkDRS(InFile &in)
 
   for( i=p_ix, j=a_ix ; j > -1 && i > -1 ; --i, --j )
   {
-     if( a_value[j] != p_items[i] )
+     bool is = a_value[j] != p_items[i];
+
+     // space for exceptions
+     if( is )
+     {
+       if( p_name[j] == "CMIP5EnsembleMember" )
+       {
+          // not considered in the documents
+          if( a_value[j] == "r0i0p0" || p_items[i] == "r0i0p0")
+            is=false;
+       }
+     }
+
+     if( is )
      {
         text += "Expected ";
         text += p_name[j] + "=";
@@ -953,13 +966,14 @@ void
 QA::checkDRS_ModelName(InFile &in, std::string &aName, std::string &aValue,
    char des, std::string instName, std::string instValue )
 {
-   std::string tbl ;
-   if( des == 'G' )
-     tbl = GCM_ModelnameTable.getFile() ;
-   else
-     tbl = RCM_ModelnameTable.getFile() ;
+   hdhC::FileSplit* tbl;
 
-   ReadLine ifs(tbl);
+   if( des == 'G' )
+     tbl = &GCM_ModelnameTable ;
+   else
+     tbl = &RCM_ModelnameTable ;
+
+   ReadLine ifs(tbl->getFile());
 
    if( ! ifs.isOpen() )
    {
@@ -970,7 +984,7 @@ QA::checkDRS_ModelName(InFile &in, std::string &aName, std::string &aValue,
       else
         key += "4" ;
 
-      if( notes->inq( key, fileStr) )
+      if( notes->inq(key) )
       {
          std::string capt("could not open ") ;
          if( des == 'G' )
@@ -1038,7 +1052,8 @@ QA::checkDRS_ModelName(InFile &in, std::string &aName, std::string &aValue,
      if( notes->inq( key, fileStr) )
      {
        std::string capt("global " + hdhC::tf_att(s_empty, aName, aValue));
-       capt += "is not registered" ;
+       capt += "is not registered in table " ;
+       capt += tbl->getBasename();
 
        if( notes->operate(capt) )
        {
@@ -1055,7 +1070,8 @@ QA::checkDRS_ModelName(InFile &in, std::string &aName, std::string &aValue,
      if( notes->inq( key, fileStr) )
      {
        std::string capt("global " + hdhC::tf_att(s_empty, instName, instValue));
-       capt += "is not registered" ;
+       capt += "is not registered in table " ;
+       capt += tbl->getBasename();
 
        if( notes->operate(capt) )
        {
@@ -1074,7 +1090,8 @@ QA::checkDRS_ModelName(InFile &in, std::string &aName, std::string &aValue,
        std::string capt("combination of global") ;
        capt += hdhC::tf_att(s_empty, aName, aValue);
        capt += "and " + hdhC::tf_val(instName, instValue);
-       capt += "is unregistered";
+       capt += "is unregistered in table ";
+       capt += tbl->getBasename();
 
        if( notes->operate(capt) )
        {
@@ -2686,12 +2703,14 @@ QA::checkVarTableEntry_longName(
     if( vMD.longName.size() )
     {
       capt = hdhC::tf_att(vMD.var->name, n_long_name, vMD.longName) ;
-      capt += "does not match required value " + tbl_entry.longName;
+      capt += "does not match required value" ;
+      capt += hdhC::tf_val(tbl_entry.longName);
     }
     else
     {
       capt = hdhC::tf_att(vMD.var->name, n_long_name) ;
-      capt += "is missing value " + tbl_entry.longName;
+      capt += "is missing required value" ;
+      capt += hdhC::tf_val(tbl_entry.longName);
     }
 
     (void) notes->operate(capt) ;
@@ -2789,9 +2808,9 @@ QA::closeEntry(void)
    if( isCheckData )
    {
      // data: structure defined in hdhC.h
-     std::vector<hdhC::FieldData> fA;
      for( size_t i=0 ; i < varMeDa.size() ; ++i )
      {
+
        if( varMeDa[i].var->isNoData )
           continue;
 
@@ -2799,14 +2818,14 @@ QA::closeEntry(void)
        if( isNotFirstRecord && varMeDa[i].var->isFixed  )
          continue;
 
-       fA.push_back( varMeDa[i].var->pDS->get() ) ;
+       hdhC::FieldData fA( varMeDa[i].var->pDS->get() ) ;
 
        // test overflow of ranges specified in a table, or
        // plausibility of the extrema.
-       varMeDa[i].qaData.test(i, fA.back() );
-     }
+       varMeDa[i].qaData.test(i, fA);
 
-     storeData(fA);
+       storeData(varMeDa[i], fA);
+     }
    }
 
    ++currQARec;
@@ -2827,8 +2846,8 @@ QA::createVarMetaData(void)
   // Variable::VariableMeta(Base)::isDATA == true. The index
   // of identified targets is stored in vector in.dataVarIndex.
 
-  bool is=true;
-  for( size_t i=0 ; i < pIn->dataVarIndex.size() ; ++i )
+  size_t i;
+  for( i=0 ; i < pIn->dataVarIndex.size() ; ++i )
   {
     Variable &var = pIn->variable[pIn->dataVarIndex[i]];
 
@@ -2846,7 +2865,7 @@ QA::createVarMetaData(void)
         if( notes->inq( key, var.name) )
         {
           std::string capt(hdhC::tf_var(var.getDimNameStr(true), s_colon));
-          capt += "CORDEX favours scalar variables, found " ;
+          capt += "CORDEX favours a scalar variable for dimension " ;
 
           for( size_t l=0 ; l < var.dimName.size() ; ++l )
           {
@@ -2873,20 +2892,22 @@ QA::createVarMetaData(void)
     vMD.longName     = var.getAttValue(n_long_name) ;
     vMD.positive     = var.getAttValue(n_positive) ;
 
-    // Check varname from filename with those in the file.
-    // Is the shortname in the filename also defined in the nc-header?
-    if( fVarname == var.name )
-      is=false;
   }
 
-  if( is )
+  // Check varname from filename with those in the file.
+  // Is the shortname in the filename also defined in the nc-header?
+  for( i=0 ; i < pIn->varSz ; ++i )
+    if( fVarname == pIn->variable[i].name )
+      break;
+
+  if( i == pIn->varSz )
   {
      std::string key("15_3");
      if( notes->inq( key, fileStr) )
      {
-       std::string capt("variable acronym in ");
-       capt += hdhC::sAssign("filename", fVarname);
-       capt += "does not match any variable in the file" ;
+       std::string capt("variable ");
+       capt += hdhC::sAssign("acronym", fVarname);
+       capt += " in the filename does not match any variable in the file" ;
 
        (void) notes->operate(capt) ;
        notes->setCheckMetaStr( fail );
@@ -2894,7 +2915,7 @@ QA::createVarMetaData(void)
   }
 
    // very special: discard particular tests
-  for( size_t i=0 ; i < varMeDa.size() ; ++i )
+  for( i=0 ; i < varMeDa.size() ; ++i )
   {
     VariableMetaData &vMD = varMeDa[i] ;
 
@@ -2977,14 +2998,19 @@ QA::entry(void)
 }
 
 int
-QA::finally(int eCode)
+QA::finally(int xCode)
 {
   if( nc )
-    setExit( finally_data(eCode) );
+    xCode = finally_data(xCode) ;
+
+  if( xCode != 63 )
+    qaTime.finally( nc );
+
+  setExit(xCode);
 
   // distinguish from a sytem crash (segmentation error)
 //  notes->print() ;
-  std::cout << "STATUS-BEG" << eCode << "STATUS-END";
+  std::cout << "STATUS-BEG" << xCode << "STATUS-END";
   std::cout << std::flush;
 
   setExit( exitCode ) ;
@@ -2993,9 +3019,9 @@ QA::finally(int eCode)
 }
 
 int
-QA::finally_data(int eCode)
+QA::finally_data(int xCode)
 {
-  setExit(eCode);
+  setExit(xCode);
 
   // write pending results to qa-file.nc. Modes are considered there
   for( size_t i=0 ; i < varMeDa.size() ; ++i )
@@ -3031,11 +3057,8 @@ QA::finally_data(int eCode)
     return exitCode ;
   }
 
-  if( exitCode != 63 )
-    qaTime.finally( nc );
-
   // read history from the qa-file.nc and append new entries
-  appendToHistory(exitCode);
+  appendToHistory();
 
   // check for flags concerning the total data set,
   // but exclude the case of no record
@@ -3481,6 +3504,7 @@ QA::help(void)
   std::cerr << "   printASCII (disables writing to netCDF file.\n" ;
   std::cerr << "   printTimeBoundDates\n" ;
   std::cerr << std::endl;
+
   return;
 }
 
@@ -3535,11 +3559,10 @@ QA::init(void)
    // get meta data from file and compare with tables
    checkMetaData(*pIn);
 
-   if( isCheckTime )
+   if(qaTime.init(pIn, notes, this))
    {
      // init the time obj.
      // note that freq is compared to the first column of the time table
-     qaTime.init(pIn, notes, this);
      qaTime.applyOptions(optStr);
      qaTime.initTimeTable( getFrequency() );
 
@@ -3557,10 +3580,11 @@ QA::init(void)
      }
    }
 
-   // open netCDF for creating, continuation or resuming qa_<varname>.nc
+   // open netCDF for creating, continuation or resuming qa_<varname>.nc.
+   // note that this must happen before checkMetaData which uses currQARec
    openQA_Nc(*pIn);
 
-   if( getExit() || isUseStrict || isNoProgress )
+   if( getExit() || isUseStrict || qaTime.isNoProgress )
    {
      isCheckData=false;
      isCheckTime=false;
@@ -3569,12 +3593,13 @@ QA::init(void)
 
    if( isCheckTime )
    {
-     if( ! pIn->nc.isAnyRecord() )
+     if( qaTime.isTime && ! pIn->nc.isAnyRecord() )
      {
+       // time is defined, but there is no data
        isCheckTime = false;
        notes->setCheckTimeStr(fail);
      }
-     else if( ! pIn->isTime )
+     else if( ! qaTime.isTime )
      {
        isCheckTime = false;
        notes->setCheckTimeStr("FIXED");
@@ -3585,19 +3610,13 @@ QA::init(void)
 
    if( isCheckData )
    {
-     if( ! pIn->nc.isAnyRecord() )
-     {
-       notes->setCheckDataStr(fail);
-       return true;
-     }
-
-     notes->setCheckDataStr("PASS");
+     // default
+     if( pIn->dataVarIndex.size() )
+       notes->setCheckDataStr("PASS");
 
      // set pointer to function for operating tests
      execPtr = &IObj::entry ;
-     bool is=true ;
-     if( pIn->dataVarIndex.size() )
-        is = entry();
+     bool is = entry();
 
      if( getExit() || is )
        return true;
@@ -3673,7 +3692,6 @@ QA::initDefaults(void)
   isCheckParentExpRIP=true;
   isExit=false;
   isFirstFile=false;
-  isNoProgress=false;
   isNotFirstRecord=false;
   isResumeSession=false;
   isRotated=true;
@@ -3967,8 +3985,8 @@ QA::openQA_Nc(InFile &in)
   if( notes )
     nc->setNotes(notes);
 
-  // don't create a netCDF file, when only meta data are checked.
-  // but, a NcAPI object m ust exist
+  // don't create a netCDF file, when only meta data are to be checked.
+  // but, NcAPI object nc must exist.
   if( ! isCheckTime )
     return;
 
@@ -3987,20 +4005,14 @@ QA::openQA_Nc(InFile &in)
     initResumeSession();
     isResumeSession=true;
 
-    // if files are synchronised, i.e. a file hasn't changed since
-    // the last qa
-    if( isCheckTime )
-      isNoProgress = qaTime.sync( isCheckData, enabledPostProc );
-
     return;
   }
 
+  // So, we have to generate a netCDF file from almost scratch;
   isFirstFile=true;
 
   if( currQARec == 0 && in.nc.getNumOfRecords() == 1 )
     qaTime.isSingleTimeValue = true;
-
-  // So, we have to generate a netCDF file from almost scratch;
 
   // open new netcdf file
   if( qaNcfileFlags.size() )
@@ -4029,9 +4041,10 @@ QA::openQA_Nc(InFile &in)
     nc->defineDim("fixed", 1);
   }
 
-  // create variable for the data statics etc.
+    // create variable for the data statics etc.
   for( size_t m=0 ; m < varMeDa.size() ; ++m )
     varMeDa[m].qaData.openQA_NcContrib(nc, varMeDa[m].var);
+
 
   // global atts at creation.
   initGlobalAtts(in);
@@ -5005,22 +5018,17 @@ QA::varReqTableCheck(InFile &in, VariableMetaData &vMD,
 }
 
 void
-QA::storeData(std::vector<hdhC::FieldData> &fA)
+QA::storeData(VariableMetaData& vMD, hdhC::FieldData& fA)
 {
   //FieldData structure defined in geoData.h
-
-  for( size_t i=0 ; i < varMeDa.size() ; ++i )
-  {
-    VariableMetaData &vMD = varMeDa[i];
 
     if( vMD.var->isNoData )
       return;
 
     if( isNotFirstRecord && vMD.var->isFixed  )
-      continue;
+      return;
 
-    vMD.qaData.store(fA[i]) ;
-  }
+    vMD.qaData.store(fA) ;
 
   return ;
 }
@@ -5697,7 +5705,7 @@ VariableMetaData::verifyPercent(void)
 }
 
 int
-VariableMetaData::finally(int eCode)
+VariableMetaData::finally(int xCode)
 {
   // write pending results to qa-file.nc. Modes are considered there
   qaData.flush();
@@ -5706,9 +5714,9 @@ VariableMetaData::finally(int eCode)
   notes->printFlags();
 
   int rV = notes->getExitValue();
-  eCode = ( eCode > rV ) ? eCode : rV ;
+  xCode = ( xCode > rV ) ? xCode : rV ;
 
-  return eCode ;
+  return xCode ;
 }
 
 void

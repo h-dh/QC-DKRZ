@@ -2071,6 +2071,8 @@ CF::isBounds(Variable& var)
 bool
 CF::init()
 {
+  notes->setFilename(file);
+
   notes->init();  // safe
 
   applyOptions();
@@ -4205,9 +4207,11 @@ CF::chap2_6(void)
      {
        std::string &aName = pIn->variable[i].attName[j];
 
-       if( pIn->variable[i].attValue[j][0].size() == 0 && notes->inq(bKey + "0g") )
+       if( hdhC::stripSurrounding(pIn->variable[i].attValue[j][0]).size()
+              == 0  && notes->inq(bKey + "0g") )
        {
-         std::string capt(hdhC::tf_att(var.name, aName) + "is empty");
+         std::string capt("warning: ");
+         capt += hdhC::tf_att(var.name, aName) + "is empty" ;
 
          (void) notes->operate(capt) ;
          notes->setCheckCF_Str( fail );
@@ -5204,6 +5208,18 @@ CF::chap4_3_1(Variable& var)
   if( isAx && (isP || isM) )  // axis and units
       ++countZ;
 
+  // and these are indicators against
+  if( var.isValidAtt(n_coordinates) )
+    --countZ;
+  if( var.isValidAtt(n_cell_methods) )
+    --countZ;
+  if( var.isValidAtt(n_grid_mapping) )
+    --countZ;
+  if( var.isValidAtt(n_missing_value) ||var.isValidAtt(n_FillValue) )
+    --countZ;
+  if( var.dimName.size() > 2 )
+    --countZ;
+
   if(var.isDataVar() )
     --countZ;
 
@@ -5234,7 +5250,7 @@ CF::chap4_3_1(Variable& var)
   {
     if( !var.coord.isZ_DL )
     {
-      // was is rated a dimless Z without fomrula_terms attribute?
+      // was is rated a dimless Z without formula_terms attribute?
       if( notes->inq(bKey + "43d", var.name) )
       {
         std::string capt(hdhC::tf_var(var.name));
@@ -10057,15 +10073,14 @@ CF::chap9_sample_dimension(std::vector<size_t>& dv_ix)
 
       // does the dimension named by sample_dimension exist?
       int dSz = pIn->nc.getDimSize( var.attValue[j][0]) ;
-/*
+
       if( dSz < 0 )
       {
-        if( notes->inq(bKey + "932bx", var.name) )
+        if( notes->inq(bKey + "932d", var.name) )
         {
-          std::string capt(hdhC::tf_var(var.name));
-          capt += "with " ;
-          capt += hdhC::tf_att(s_empty, n_sample_dimension, var.attValue[j][0]) ;
-          capt += "does not match any dimension";
+          std::string capt(
+            hdhC::tf_att(var.name, n_sample_dimension, var.attValue[j][0]));
+          capt += "does not name a valid dimension";
 
           (void) notes->operate(capt) ;
           notes->setCheckCF_Str( fail );
@@ -10073,49 +10088,67 @@ CF::chap9_sample_dimension(std::vector<size_t>& dv_ix)
 
         continue;
       }
-*/
 
       // does the sum of values of the sample_dim variable match
-      // the dimenision indicated by the attribute
+      // the dimension indicated by the attribute
       MtrxArr<int> ma;
-      var.getData(ma, 0, pIn->nc.getDimSize(var.dimName[0]));
+      size_t rec=0;
+      int legSz=pIn->nc.getDimSize(var.dimName[0]) ;
+      std::pair<int,int> rec_range(0,0) ;
       int sum=0;
-      if( ma.validRangeBegin.size() == 1 )
+      bool missingData=false;
+
+      while( rec_range.second == legSz )
       {
-        for(size_t i=ma.validRangeBegin[0] ; i < ma.validRangeEnd[0] ; ++i )
-          sum += ma[i] ;
+        // get lenths of sequences and add together
+        (void) pIn->nc.getData(ma, var.name, rec) ;
+        rec_range = pIn->nc.getDataIndexRange(var.name);
 
-        if( sum != dSz )
+        if( ma.validRangeBegin.size() == 1 )
         {
-          if( notes->inq(bKey + "932a", var.name) )
-          {
-            std::string capt(hdhC::tf_var(var.name + " with " + n_sample_dimension, s_colon)) ;
-            capt += "The sum of data values=" + hdhC::itoa(sum);
+          for(size_t i=ma.validRangeBegin[0] ; i < ma.validRangeEnd[0] ; ++i )
+            sum += ma[i] ;
+        } // while
+        else
+          missingData=true;
 
-            if( sum > dSz )
-              capt += " over";
-            else
-              capt += " under";
+        rec=rec_range.second;
+      }
 
-            capt += "-determines " + n_dimension ;
-            capt += hdhC::tf_val(var.attValue[j][0] + "=" + hdhC::itoa(dSz)) ;
+      if( ! missingData && sum != dSz )
+      {
+        if( notes->inq(bKey + "932a", var.name) )
+        {
+          std::string capt(hdhC::tf_att(var.name, n_sample_dimension, s_colon)) ;
+          capt += "The sum of data values=" + hdhC::itoa(sum);
 
-            (void) notes->operate(capt) ;
-            notes->setCheckCF_Str( fail );
-          }
+          if( sum > dSz )
+            capt += " over";
+          else
+            capt += " under";
+
+          capt += "-determines " + n_dimension ;
+          capt += hdhC::tf_val(var.attValue[j][0] + "=" + hdhC::itoa(dSz)) ;
+
+          (void) notes->operate(capt) ;
+          notes->setCheckCF_Str( fail );
         }
       }
-      else if( notes->inq(bKey + "932b", var.name) )
-      {
-        std::string capt(hdhC::tf_var(var.name));
-        capt += "with " +  hdhC::tf_att(n_sample_dimension);
-        if(ma.validRangeBegin.size() == 0 )
-//          capt += "must not have missing values";
-//        else
-          capt += "must have data" ;
 
-        (void) notes->operate(capt) ;
-        notes->setCheckCF_Str( fail );
+      if(missingData)
+      {
+        if( notes->inq(bKey + "932b", var.name) )
+        {
+          std::string capt(hdhC::tf_var(var.name));
+          capt += "with " +  hdhC::tf_att(n_sample_dimension);
+          if(ma.validRangeBegin.size() == 0 )
+//          capt += "must not have missing values";
+//         else
+            capt += "must have data" ;
+
+          (void) notes->operate(capt) ;
+          notes->setCheckCF_Str( fail );
+        }
       }
     }
   }
@@ -10155,27 +10188,38 @@ CF::chap9_sample_dimension(std::vector<size_t>& dv_ix)
       int dSz = pIn->nc.getDimSize(name) ;
 
       MtrxArr<int> ma;
-
-      var.getData(ma, 0, pIn->nc.getDimSize(var.dimName[0]));
+      size_t rec=0;
+      int legSz=pIn->nc.getDimSize(var.dimName[0]) ;
+      std::pair<int,int> rec_range(0,0) ;
       int sum=0;
-      if( ma.validRangeBegin.size() )
+
+      while( rec_range.second == legSz )
       {
-        for(size_t j=ma.validRangeBegin[0] ; j < ma.validRangeEnd[0] ; ++j )
-          sum += ma[j] ;
+        // get lenths of sequences and add together
+        (void) pIn->nc.getData(ma, var.name, rec) ;
+        rec_range = pIn->nc.getDataIndexRange(var.name);
 
-        if( sum == dSz )
+        if( ma.validRangeBegin.size() )
         {
-          var.addAuxCount();
+          for(size_t j=ma.validRangeBegin[0] ; j < ma.validRangeEnd[0] ; ++j )
+            sum += ma[j] ;
+        }
 
-          if( notes->inq(bKey + "932c", var.name) )
-          {
-            std::string capt(hdhC::tf_var(var.name, s_colon));
-            capt += "The sum of values of an indexing variable suggests a missing " ;
-            capt += hdhC::tf_att(n_sample_dimension);
+        rec=rec_range.second;
+      }
 
-            (void) notes->operate(capt) ;
-            notes->setCheckCF_Str( fail );
-          }
+      if( sum == dSz )
+      {
+        var.addAuxCount();
+
+        if( notes->inq(bKey + "932c", var.name) )
+        {
+          std::string capt(hdhC::tf_var(var.name, s_colon));
+          capt += "The sum of values of an indexing variable suggests a missing " ;
+          capt += hdhC::tf_att(n_sample_dimension);
+
+          (void) notes->operate(capt) ;
+          notes->setCheckCF_Str( fail );
         }
       }
     }

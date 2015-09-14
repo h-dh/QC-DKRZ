@@ -118,8 +118,8 @@ public:
   void   setRecEnd(size_t rec) {ncRecEnd=rec;}
 
   //! Store the path to the netcdf file.
-  void   setFilename(std::string f){file.setFile(f);}
-  void   setTablePath(std::string p){ ; }
+  void   setFilename(std::string f) {file.setFile(f);}
+  void   setTablePath(std::string p) { ; }
 
   struct hdhC::FileSplit file;
 

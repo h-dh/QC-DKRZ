@@ -103,7 +103,7 @@ class QA : public IObj
   bool   init(void) ;
   void   linkObject(IObj *);
 
-  // special: frim InFile with path and period stripped.
+  // special: from InFile with path and period stripped.
   void   setFilename(hdhC::FileSplit&);
   void   setTablePath(std::string p){tablePath=p;}
 
@@ -317,7 +317,7 @@ class QA : public IObj
   //! Check the path to the tables;
   void   inqTables(void);
 
-  bool   isProgress(void){ return ! isNoProgress ; }
+  bool   isProgress(void){ return ! qaTime.isNoProgress ; }
 
   //! Get coordinates of grid-cells where an error occurred
   /*! Does not work for tripolar coordinates */
@@ -349,6 +349,8 @@ class QA : public IObj
   void   requiredAttributes_readFile(
            std::vector<std::string> &,
            std::vector<std::vector<std::string> > &);
+
+  void   resumeSession(void);
 
   //! Connect this with the object to be checked
   void   setInFilePointer(InFile *p) { pIn = p; }
@@ -386,7 +388,7 @@ class QA : public IObj
   //! Store results in the internal buffer
   /*! The buffer is flushed to file every 'flushCountMax' time steps.*/
   void   store(std::vector<hdhC::FieldData> &fA);
-  void   storeData(std::vector<hdhC::FieldData> &fA);
+  void   storeData(VariableMetaData&, hdhC::FieldData& );
   void   storeTime(void);
 
   //! Test the time-period of the input file.
@@ -433,7 +435,6 @@ class QA : public IObj
   bool isClearBits;
   bool isFileComplete;
   bool isFirstFile;
-  bool isNoProgress;
   bool isNotFirstRecord;
   bool isPrintTimeBoundDates;
   bool isResumeSession;
@@ -493,7 +494,7 @@ class QA : public IObj
   std::string getCaptIntroDim(VariableMetaData &vMD,
                    struct DimensionMetaData &nc_entry,
                    struct DimensionMetaData &tbl_entry, std::string att="");
-  void        appendToHistory(size_t);
+  void        appendToHistory();
   bool        getExit(void);
   std::string getSubjectsIntroDim(VariableMetaData &vMD,
                    struct DimensionMetaData &nc_entry,

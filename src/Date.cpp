@@ -209,6 +209,18 @@ Date::addYears( long double v )
   return;
 }
 
+void
+Date::clear(void)
+{
+  isDateSet=false;
+  isFormattedDate=false;
+
+  jul.jdn  = 0. ;
+  jul.time = 0. ;
+
+  return;
+}
+
 std::string
 Date::convertFormattedToISO_8601(double f)
 {
@@ -271,11 +283,14 @@ Date::convertFormattedToISO_8601(double f)
 
   s -= fInt;
 
-  str = hdhC::double2String(s,"p=3|adj,float") ;
-  if( str[0] == '0' && str[1] == '.' )
-    iso += str.substr(1);
-  else
-    iso += str;
+  if( s > 0 )
+  {
+    str = hdhC::double2String(s,"p=3|adj,float") ;
+    if( str[0] == '0' && str[1] == '.' )
+      iso += str.substr(1);
+    else
+      iso += str;
+  }
 
   return iso;
 }
@@ -513,29 +528,37 @@ Date::getDate( double val, bool isJulDay)
   // If a reference is not set, then val is considered a Julian day.
 
   // The bool set true states that val is a Julian day.
-
-  if( isDateSet && ! isJulDay )
-  {
-    Date myDate(*this);
-    myDate.addTime(val);
-    return myDate;
-  }
-
-  // representation of the current julian day
   Date myDate(*this);
-  myDate.jul=val;
+
+  if( isFormattedDate )
+    myDate.setDate(val);
+  else if( isJulDay )
+    // representation of the current julian day
+    myDate.jul=val;
+  else
+    myDate.addTime(val);
 
   return myDate;
 }
 
 Date
-Date::getDate(std::string arg, bool enableSetDate)
+Date::getDate(std::string arg, bool isFormatted)
 {
-  if( enableSetDate )
-    setDate( arg );
-
+  // isFormatted=true for formatted value like 20010102.5*/
   Date myDate(*this);
-  myDate.setDate(arg);
+
+  if( ! myDate.setDate(arg) )
+  {
+    if( isFormatted )
+      myDate.setFormattedDate();
+
+    if( myDate.isFormattedDate )
+      myDate.setDate( hdhC::string2Double(arg) );
+    else if( ! isDateSet )
+      myDate.jul=hdhC::string2Double(arg);
+    else
+      myDate.addTime(hdhC::string2Double(arg));
+  }
 
   return myDate ;
 }
@@ -995,7 +1018,7 @@ Date::julian2ModelDate( const Date::Julian &j,
   else
   {
     // explicitly: months and/or leap year and/or leap_month
-    // For calender: NO_LEAP, ALL_LEAP, NONE and not provided
+    // For calender: NO_LEAP, ALL_LEAP, UNDEF and not provided
     long double jd=j.jdn + j.time ;
 
     long double yrDays;
@@ -1156,29 +1179,67 @@ bool
 Date::parseISO_8601(std::string str0)
 {
   // ISO 8601 Format: yyyy-mm-ddThh:mm:ss
-  double year, month, day, hour, minute, second;
+  double year, month, day, hour;
 
   // defaults:
   year = 0.;
   month = 1.;
   day = 1.;
   hour=0.;
-  minute=0.;
-  second=0.;
 
-  Split x_str0(str0, 'T');
+  Split x_str0(str0, " T");
+
   Split x_d(x_str0[0],'-');
-  Split x_t(x_str0[1], ':');
 
-  year  = hdhC::string2Double( x_d[0] );
-  month = hdhC::string2Double( x_d[1] );
-  day   = hdhC::string2Double( x_d[2] );
+  if( x_d.size() > 2 )
+  {
+    year  = hdhC::string2Double( x_d[0] );
+    month = hdhC::string2Double( x_d[1] );
+    day   = hdhC::string2Double( x_d[2] );
+  }
+  else if( x_d.size() > 1 )
+  {
+    year  = hdhC::string2Double( x_d[0] );
+    month = hdhC::string2Double( x_d[1] );
+  }
+  else
+    year  = hdhC::string2Double( x_d[0] );
 
-  hour   = hdhC::string2Double( x_t[0] );
-  minute = hdhC::string2Double( x_t[1] );
-  second = hdhC::string2Double( x_t[2] );
+  if( x_str0.size() > 1 )
+  {
+    Split x_t(x_str0[1], ':') ;
 
-  jul = date2Julian( year, month, day, hour, minute, second);
+    if( x_t.size() > 2 )
+    {
+      hour  = hdhC::string2Double( x_t[0] );
+      hour += hdhC::string2Double( x_t[1] ) / 60.;
+      hour += hdhC::string2Double( x_t[2] ) / 3600.;
+    }
+    else if( x_t.size() > 1 )
+    {
+      hour  = hdhC::string2Double( x_t[0] );
+      hour += hdhC::string2Double( x_t[1] ) / 60.;
+    }
+    else
+      hour  = hdhC::string2Double( x_t[0] );
+  }
+
+  if( x_str0.size() == 3 )
+  {
+    // local time zone
+    Split x_t(x_str0[2], ':') ;
+    if( x_t.size() > 1 )
+    {
+      hour += hdhC::string2Double(x_t[0]) ;
+      hour += hdhC::string2Double(x_t[1]) / 60. ;  // minutes
+    }
+    else
+      hour += hdhC::string2Double(x_t[0]) ;
+
+  }
+
+  jul = date2Julian( year, month, day, 0., 0., 0.);
+  jul += hour/24.;
   isDateSet=true;
 
   return false ;
@@ -1228,7 +1289,7 @@ Date::setCalendar(std::string cal, std::string monLen)
     currCalendarEnum = PROLEPTIC_GREGORIAN ;
     currCalendar="proleptic_gregorian";
   }
-  else if( cal == "360_day")
+  else if( cal.substr(0,3) == "360")
   {
     currCalendarEnum = EQUAL_MONTHS ;
     currCalendar=cal.substr(0,3);
@@ -1240,13 +1301,13 @@ Date::setCalendar(std::string cal, std::string monLen)
     currCalendar=cal;
     jul.set(0.);
   }
-  else if( cal == "noleap" || cal == "365_day" )
+  else if( cal == "noleap" || cal.substr(0,3) == "365" )
   {
     currCalendarEnum = NO_LEAP ;
     currCalendar="365";
     jul.set(0.);
   }
-  else if( cal == "all_leap" || cal == "366_day" )
+  else if( cal == "all_leap" || cal.substr(0,3) == "366" )
   {
     currCalendarEnum = ALL_LEAP ;
     currCalendar="366";
@@ -1254,7 +1315,7 @@ Date::setCalendar(std::string cal, std::string monLen)
   }
   else
   {
-    currCalendarEnum = NONE ;
+    currCalendarEnum = UNDEF ;
     currCalendar=cal;
     jul.set(0.);
   }
@@ -1281,7 +1342,7 @@ Date::setCalendar(std::string cal, std::string monLen)
   if( currCalendar == "366" )
      regularMonthDays[1]=29.;
 
-  if( currCalendarEnum == NONE )
+  if( currCalendarEnum == UNDEF )
   {
     // a leap year is defined
     lY_is=true;
@@ -1380,15 +1441,22 @@ Date::setDate(double f, std::string cal, std::string monLen)
   if( cal.size() )
     setCalendar(cal, monLen);
 
+  std::string str;
 
-  // convert %Y%m%d.f formatted str
-  if( ! parseISO_8601( convertFormattedToISO_8601(f) ) )
+  if( isFormattedDate )
   {
-    isDateSet=true;
-    return false;
-  }
+    // convert %Y%m%d.f formatted str
+    str = convertFormattedToISO_8601(f) ;
 
-  return true;
+    if( ! parseISO_8601(str) )
+      return true;
+  }
+  else if( isDateSet )
+    addTime(f);
+  else
+    jul = f ;
+
+  return false;
 }
 
 bool
@@ -1417,10 +1485,19 @@ Date::setDate( std::string str, std::string cal, std::string monLen)
   // key-word.
   setUnitsAndClear(str) ;
 
-  if( ! parseISO_8601( convertFormattedToISO_8601(str) ) )
-      return false;
+  if( isFormattedDate || str.find(' ') < std::string::npos )
+    str = convertFormattedToISO_8601(str) ;
 
-  return true;
+  if( ! parseISO_8601(str) )
+    return true;
+  else if( isDateSet && hdhC::isNumber(str) )
+  {
+    // try the string as float
+    if( setDate(hdhC::string2Double(str)) )
+      return true;
+  }
+
+  return false;
 }
 
 void

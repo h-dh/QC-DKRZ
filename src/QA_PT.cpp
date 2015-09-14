@@ -301,7 +301,10 @@ BREAK:
               capt += xt_eq[0];
               capt += ": missing" ;
             }
-            capt += " compared to the project table";
+            if( qa->currQARec )
+              capt += " across sub-temporal files";
+            else
+              capt += " across parent experiments";
 
             (void) notes->operate(capt) ;
             notes->setCheckMetaStr( "FAIL" );

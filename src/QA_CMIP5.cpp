@@ -3593,11 +3593,10 @@ QA::init(void)
    // get and check meta data
    checkMetaData(*pIn);
 
-   if( isCheckTime && pIn->isTime )
+   if( qaTime.init(pIn, notes, this) )
    {
      // init the time object
      // note that freq is compared to the first column of the time table
-     qaTime.init(pIn, notes, this);
      qaTime.applyOptions(optStr);
      qaTime.initTimeTable( getFrequency() );
 
@@ -3634,12 +3633,12 @@ QA::init(void)
 
    if( isCheckTime )
    {
-     if( ! pIn->nc.isAnyRecord() )
+     if( qaTime.isTime && ! pIn->nc.isAnyRecord() )
      {
        isCheckTime = false;
        notes->setCheckTimeStr(fail);
      }
-     else if( ! pIn->isTime )
+     else if( ! qaTime.isTime )
      {
        isCheckTime = false;
        notes->setCheckTimeStr("FIXED");
@@ -3647,6 +3646,8 @@ QA::init(void)
      else
        notes->setCheckTimeStr("PASS");
    }
+   else
+      notes->setCheckTimeStr("OMIT");
 
    if( isCheckData )
    {

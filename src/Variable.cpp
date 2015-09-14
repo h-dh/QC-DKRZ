@@ -146,14 +146,13 @@ Variable::getAttValue(std::string aName, bool forceLowerCase)
 }
 
 template<typename T>
-void
+std::pair<int,int>
 Variable::getData(MtrxArr<T>& ma, int rec, int leg )
 {
   if( leg < 0 )
     return;
 
-  (void) pNc->getData(ma, name, rec) ;
-  return;
+  return pNc->getData(ma, name, rec, leg) ;
 }
 
 bool
@@ -237,7 +236,7 @@ Variable::getData(int rec)
 #endif
   }
 
-  return is;
+  return is ;
 }
 
 std::string
