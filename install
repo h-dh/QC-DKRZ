@@ -86,7 +86,7 @@ getCurrPaths()
 {
   # where all the work is going to take place
   if [ $QA_WORK ] ; then
-    test ! -d $QA_WORK/.qa-dkrz && mkdir -p $QA_WORK/.qa-dkrz 2> /dev/null
+    test ! -d $QA_WORK && mkdir -p $QA_WORK 2> /dev/null
   else
     if [ $CONDA_ENV ] ; then
       QA_WORK=~/.qa-dkrz
