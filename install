@@ -149,9 +149,11 @@ getRevNum()
   local branch currIdent
 
   if [ $CONDA_ENV ] ; then
-    if grep revision $QA_PATH/install.log ; then
-      branch=branch
-      currIdent=currIdent
+    if branch=$(grep branch $QA_PATH/install.log 2> /dev/null) ; then
+      branch=${branch#*=}
+    fi
+    if currIdent=$(grep branch $QA_PATH/install.log 2> /dev/null) ; then
+      currIdent=${currIdent#*=}
     fi
   else
     branch=$(getGitBranch)
