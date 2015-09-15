@@ -84,25 +84,42 @@ descript()
 
 getCurrPaths()
 {
-  # the config file
+  # where all the work is going to take place
+  if [ $QA_WORK ] ; then
+    test ! -d $QA_WORK/.qa-dkrz && mkdir -p $QA_WORK/.qa-dkrz 2> /dev/null
+  else
+    if [ $CONDA_ENV ] ; then
+      QA_WORK=~/.qa-dkrz
+      test ! -d $QA_WORK   && mkdir -p $QA_WORK   2> /dev/null
+    else
+      QA_WORK=$QA_PATH
+    fi
+  fi
+
+  # the config filename and location
   if [ ! ${CONFIG_FILE} ] ; then
     if [ -w ~ ] ; then
       local cPath=~/.qa-dkrz
+      test ! -d $cPath && mkdir -p $cPath 2> /dev/null
+
       if [ ${CONDA_ENV} ] ; then
         CONFIG_FILE=$cPath/config.conda
       else
         CONFIG_FILE=$cPath/config.src
       fi
-      test ! -d $cPath && mkdir -p $CONFIG_FILE 2> /dev/null
 
     elif [ -w "$QA_PATH" ] ; then
+      test ! -d $QA_PATH/.qa-dkrz && mkdir -p $QA_PATH/.qa-dkrz 2> /dev/null
+
       if [ ${CONDA_ENV} ] ; then
-        CONFIG_FILE=$QA_PATH/.conf.conda
+        CONFIG_FILE=$QA_PATH/.qa-dkrz/config.conda
       else
-        CONFIG_FILE=$QA_PATH/.conf.config.src
+        CONFIG_FILE=$QA_PATH/.qa-dkrz/config.src
       fi
 
-    elif [ -w "$QA_WORK" ] || mkdir -p "$QA_WORK" 2> /dev/null ; then
+    elif [ -w "$QA_WORK" ] ; then
+      test ! -d $QA_WORK && mkdir -p $QA_WORK/.qa-dkrz 2> /dev/null
+
       if [ ${CONDA_ENV} ] ; then
         CONFIG_FILE=$QA_WORK/config.conda
       else
@@ -115,19 +132,6 @@ getCurrPaths()
       exit
     fi
   fi
-
-  # the paths
-  if [ $QA_WORK ] ; then
-    return
-  else
-    if [ $CONDA_ENV ] ; then
-      QA_WORK=~/.qa-dkrz
-    else
-      QA_WORK=$QA_PATH
-    fi
-  fi
-
-  test ! -d $QA_WORK   && mkdir -p $QA_WORK   2> /dev/null
 
   return
 }
@@ -380,7 +384,8 @@ update()
     fi
   fi
 
-  if editConfigFile AUTO_TABLE_UPDATE=$AUTO_TABLE_UPDATE ; then
+  if editConfigFile AUTO_TABLE_UPDATE=$AUTO_TABLE_UPDATE \
+      || ${FORCE_RSYNC:-f} = t ; then
     if [ "$QA_WORK" != "$QA_PATH" ] ; then
       rsync -auz $QA_PATH/tables $QA_WORK &> /dev/null
     fi
@@ -490,12 +495,6 @@ done
 
 shift $(( $OPTIND - 1 ))
 
-getSrcPath $zeroArg  # sets also CONDA_ENV
-getCurrPaths
-update
-
-test ${CONDA_ENV} && exit  # miniconda built executables
-
 for pck in $* ; do
   PCK="${pck}"
   tr_option PCK
@@ -508,10 +507,19 @@ for pck in $* ; do
     netcdf=${pck}
   elif [ ${PCK:0:7} = UDUNITS ] ; then
     udunits=${pck}
+  elif [ ${PCK:0:7} = QA_WORK ] ; then
+    QA_WORK=${PCK:8}
+    FORCE_RSYNC=t
   else
     coll[${#coll[*]}]=$pck  # collect project names
   fi
 done
+
+getSrcPath $zeroArg  # sets also CONDA_ENV
+getCurrPaths
+update
+
+test ${CONDA_ENV} && exit  # miniconda built executables
 
 pcks="--zlib=$zlib --hdf5=$hdf5 --netcdf=$netcdf --udunits=$udunits"
 

@@ -628,25 +628,42 @@ getConfPriority()
 
 getCurrPaths()
 {
-  # the config file
+  # where all the work is going to take place
+  if [ $QA_WORK ] ; then
+    test ! -d $QA_WORK/.qa-dkrz && mkdir -p $QA_WORK/.qa-dkrz 2> /dev/null
+  else
+    if [ $CONDA_ENV ] ; then
+      setKWL QA_WORK=~/.qa-dkrz
+      test ! -d $QA_WORK && mkdir -p $QA_WORK 2> /dev/null
+    else
+      setKWL QA_WORK=$QA_PATH
+    fi
+  fi
+
+  # the config filename and location
   if [ -w ~ ] ; then
     local cPath=~/.qa-dkrz
+    test ! -d $cPath && mkdir -p $cPath 2> /dev/null
+
     if [ ${CONDA_ENV} ] ; then
       setKWL CONFIG_FILE=$cPath/config.conda
     else
       setKWL CONFIG_FILE=$cPath/config.src
     fi
-    test ! -d $cPath && mkdir -p $cPath 2> /dev/null
 
   elif [ -w "$QA_PATH" ] ; then
+    test ! -d $QA_PATH/.qa-dkrz && mkdir -p $QA_PATH/.qa-dkrz 2> /dev/null
+
     if [ ${CONDA_ENV} ] ; then
-      setKWL CONFIG_FILE=$QA_PATH/.conf.conda
+      setKWL CONFIG_FILE=$QA_PATH/.qa-dkrz/conf.conda
     else
-      setKWL CONFIG_FILE=$QA_PATH/.conf.config.src
+      setKWL CONFIG_FILE=$QA_PATH/.qa-dkrz/config.src
     fi
     test ! -d $QA_PATH && mkdir -p $QA_PATH 2> /dev/null
 
-  elif [ -w "$QA_WORK" ] || mkdir -p "$QA_WORK" 2> /dev/null ; then
+  elif [ -w "$QA_WORK" ] ; then
+    test ! -d $QA_WORK && mkdir -p $QA_WORK/.qa-dkrz 2> /dev/null
+
     if [ ${CONDA_ENV} ] ; then
       setKWL CONFIG_FILE=$QA_WORK/config.conda
     else
@@ -1303,7 +1320,6 @@ parseOPTARG()
       fi
     done
 
-    setKWL NOTE="${value}"
   elif [ "${key}" = OUTLIER_TEST ] ; then
     for(( i=0 ; i < ${#keyWordList[*]} ; ++i )) ; do
       if [ "${key}" = ${keyWordList[i]} ] ; then
@@ -1312,11 +1328,14 @@ parseOPTARG()
       fi
     done
 
-    setKWL OUTLIER_TEST="${value}"
-  else
-    # no more syntax checks; invoke all
-    setKWL ${key}=${value:-t}
+  elif [ "${key}" = QA_WORK ] ; then
+    installArgs="${installArgs}QA_WORK=${OPTARG#*=},"
   fi
+
+  # no more syntax checks; invoke all
+  setKWL ${key}=${value:-t}
+
+  return
 }
 
 ##//! parse SELECT and LOCK assignments
@@ -2009,6 +2028,7 @@ do
           setKWL POST_PROC=t
 
         elif [ "${UOPTARG:0:9}" = WORKSPACE ] ; then
+          installArgs="${installArgs}QA_WORK=${OPTARG#*=},"
           setKWL QA_WORK=${OPTARG##*=}
 
         else
