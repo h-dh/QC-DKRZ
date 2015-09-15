@@ -2943,32 +2943,43 @@ initT()
 
    # implicitly and highest: local file and file with absolute path
 
-   for(( ix=0 ; ix < 4 ; ++ix )) ; do
-     # if USE_STRICT is enabled, then projects[/prj] is required
-     test ${USE_STRICT:-f} = t -a ${ix} -gt 1 && break
+   if [ ${USE_STRICT:-f} = t ] ; then
+      # if USE_STRICT is enabled, then projects[/prj] is required
+      p=${QA_WORK}/${pDir[0]}/
 
-     # a local instance
-     test -f ${value} && break
+   elif [ ! -f ${value} ] ; then
+      # a local instance precedes always
+      if [ -f ${QA_WORK}/${value} ] ; then
+        # explicitly in a sub-dir path
+        p=${QA_WORK}/
+      else
+        for(( ix=0 ; ix < 4 ; ++ix )) ; do
 
-     # explicitly in a sub-dir path
-     if [ -f ${QA_WORK}/${value} ] ; then
-       p=${QA_WORK}/
-       break
-     fi
-
-     # scan through the precedence chain
-     if [ -f ${QA_WORK}/${pDir[ix]}/${value} ] ; then
-       p=${QA_WORK}/${pDir[ix]}/
-       break
-     fi
-   done
+          # scan through the precedence chain
+          test -f ${QA_WORK}/${pDir[ix]}/${value} && p=${QA_WORK}/${pDir[ix]}/
+        done
+      fi
+   fi
 
    value=${value##*/}
 
    if [ ${table} = TABLE_RCM_NAME ] ; then
-     cat ${QA_WORK}/${pDir[0]}/IS-ENES-Data.github.io/CORDEX_RCMs_ToU.txt \
-         ${QA_WORK}/${pDir[0]}/cordex_specs/RCMModelName.txt \
-         > ${TABLE_PATH}/CORDEX_RCMModelName.txt
+     local f_a=${QA_WORK}/${pDir[0]}/IS-ENES-Data.github.io/CORDEX_RCMs_ToU.txt
+     local f_b=${QA_WORK}/${pDir[0]}/cordex_specs/RCMModelName.txt
+     local f_c=${TABLE_PATH}/CORDEX_RCMModelName.txt
+
+     local isNew=f
+     if [ -f $f_a -a -f $f_a -a -f $f_a ] ; then
+       local sec_a=$(ls -l --time-style='+%Y%m%d' ${f_a} | awk '{print $6}')
+       local sec_b=$(ls -l --time-style='+%Y%m%d' ${f_b} | awk '{print $6}')
+       local sec_c=$(ls -l --time-style='+%Y%m%d' ${f_c} | awk '{print $6}')
+
+       test ${sec_a} -gt ${sec_c} -o ${sec_b} -gt ${sec_c} && isNew=t
+     else
+       isNew=t
+     fi
+
+     test $isNew = t &&  cat  $f_a $f_b > $f_c
    elif [ -f "${p}${value}" ] ; then
      if ! diff ${p}${value} ${TABLE_PATH}/${value} \
            &> /dev/null ; then
