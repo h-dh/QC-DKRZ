@@ -314,11 +314,6 @@ Annotation::findIndex(std::string &key, bool isOnly)
              push_back( key, currName, level[i],
                  table[i], task[i], "", value[i], xRecord_0[i], xRecord_1[i]);
 
-             // adjust indexes of the effective vectors
-//             for( size_t j=0 ; j < effIndex.size() ; ++j )
-//                ++effIndex[j] ;  //shift contained index
-
-//             currIndex = 0;
               currIndex = code.size() -1 ;
 
              if( ! isOnly )

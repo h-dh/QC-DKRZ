@@ -79,6 +79,7 @@ class Annotation : public IObj
       was specified for a particular variable name,
       then a default is applied. 'mode' is composed of strings
       'INQ_ONLY' and 'NO_MT', separated by '|' if both are set. \n
+      ACCUM    NO_MT with accumulated text messages \n
       INQ_ONLY for simulation without triggering an action \n
       NO_MT    disables multiple identical tags \n
       NO_TXT   disable the default text from the check-list table.
@@ -199,9 +200,10 @@ class Annotation : public IObj
   std::string currName;
   std::string useAlways;
 
+  bool isAccumText;
   bool isCheckResultsWasPrinted;
   bool isInit;
-  bool isListText;
+  bool isDescriptionFromTable;
   bool isMultipleTags;
   bool isDisplay;
   bool isOutputPASS;
