@@ -28,7 +28,7 @@ class DataOutputBuffer
    void    flush(void);
 
    //! Change the flush counter; 1500 by default
-   void    initBuffer(NcAPI *n, size_t next=0, size_t max=1500);
+   void    initBuffer(QA* , size_t next=0, size_t max=1500);
    void    setName(std::string n){name=n;}
    void    setNextFlushBeg(size_t n){nextFlushBeg=n;};
    void    store(hdhC::FieldData &fA);
@@ -44,38 +44,9 @@ class DataOutputBuffer
    double *ave;
    double *std_dev;
    int    *fill_count;
-   uint32_t *checksum;
+   int    *checksum;
 
-   NcAPI *nc;
-};
-
-class SharedRecordFlag
-{
-  public:
-  SharedRecordFlag();
- ~SharedRecordFlag();
-
-  void   adjustFlag(int num, size_t rec, int erase=0);
-  void   flush(void);
-
-  //! Change the flush counter; 1500 by default
-  void   initBuffer(NcAPI *, size_t next=0, size_t max=1500);
-  void   setAnnotation(Annotation *p){notes=p;}
-  void   setName(std::string n){name=n;}
-  void   setNextFlushBeg(size_t n){nextFlushBeg=n;};
-  void   store(void);
-
-  size_t bufferCount;
-  size_t maxBufferSize;
-  size_t nextFlushBeg;
-
-  int   *buffer;
-  int    currFlag;
-
-  std::string name;
-
-  Annotation *notes;
-  NcAPI *nc;
+   QA* pQA;
 };
 
 class Outlier
@@ -102,9 +73,9 @@ class Outlier
 
   std::vector<std::string> options;
 
-  size_t vMDix;
+  size_t vMD_ix;
   std::string name;
-  MtrxArr<double> tmp_mv;
+  MtrxArr<double> ma_d;
 
   Annotation *notes;
 } ;
@@ -119,21 +90,24 @@ class ReplicatedRecord
       in the array itself.*/
 
   public:
-  ReplicatedRecord( QA *, size_t vMDix, std::string name);
+  ReplicatedRecord( QA*, size_t vMDix, std::string name);
   ~ReplicatedRecord(){;}
 
+  void   getRange(size_t ix, size_t sz, size_t recNum,
+            size_t *arr_rep_ix, size_t *arr_1st_ix,
+            bool *arr_rep_bool, bool *arr_1st_bool,
+            std::vector<std::string>& range) ;
   static bool
          isSelected( std::vector<std::string> &options,
-                     std::string &vName,
-                     bool isQA_enablePostProc,
-                     int effDims );
+            std::string &vName, bool isQA_enablePostProc, int effDims );
 
   void   parseOption( std::vector<std::string> &opts ) ;
-  void   report( std::vector<std::string> &note, bool isMultiple );
+  void   report( std::vector<std::string> &note, size_t bufCount,
+            bool isMultiple );
   void   setAnnotation(Annotation *p){notes=p;}
   void   setGroupSize(size_t i){groupSize=i;}
   void   test( int nRecs, size_t bufferCount, size_t nextFlushBeg,
-               bool isMultiple, bool isFirst );
+            bool isMultiple );
 
   bool   enableReplicationOnlyGroups;
 
@@ -141,12 +115,39 @@ class ReplicatedRecord
   std::vector<std::string> options;
   size_t groupSize;
 
-  MtrxArr<double> tmp_mv;
+  size_t vMD_ix;
+  Annotation *notes;
+  QA* pQA;
+} ;
 
-  size_t vMDix;
+class SharedRecordFlag
+{
+  public:
+  SharedRecordFlag();
+ ~SharedRecordFlag();
+
+  void   adjustFlag(int num, size_t rec, int erase=0);
+  void   flush(void);
+
+  //! Change the flush counter; 1500 by default
+  void   initBuffer(QA*, size_t next=0, size_t max=1500);
+  void   setAnnotation(Annotation *p){notes=p;}
+  void   setName(std::string n){name=n;}
+  void   setNextFlushBeg(size_t n){nextFlushBeg=n;};
+  void   store(void);
+
+  size_t bufferCount;
+  size_t maxBufferSize;
+  size_t nextFlushBeg;
+
+  int   *buffer;
+  int    currFlag;
+
+  std::string name;
+
   Annotation *notes;
   QA *pQA;
-} ;
+};
 
 class QA_Data
 {
@@ -174,7 +175,7 @@ class QA_Data
   void   init(InFile*, QA*, std::string);
 
   //! Change the flush counter; 1500 by default
-  void   initBuffer(NcAPI *, size_t next=0, size_t max=1500);
+  void   initBuffer(QA*, size_t next=0, size_t max=1500);
 
   //! Initialisiation of a resumed session.
   void   initResumeSession(void);
@@ -225,6 +226,7 @@ class QA_Data
   bool   isForkedAnnotation;
   bool   isSingleValueField;
 
+  std::string   ANNOT_ACCUM;
   std::string   ANNOT_NO_MT;
   size_t        numOfClearedBitsInChecksum;
 

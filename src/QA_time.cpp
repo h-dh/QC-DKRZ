@@ -275,12 +275,12 @@ QA_Time::getDRSformattedDateRange(std::vector<Date> &period,
 void
 QA_Time::getTimeBoundsValues(double* pair, size_t rec, double offset)
 {
-  (void) pIn->nc.getData(mv_tb, timeBounds_ix, rec );
+  (void) pIn->nc.getData(ma_tb, timeBounds_ix, rec );
   std::pair<int,int> range( pIn->nc.getDataIndexRange(timeBounds_ix) );
 
   size_t i = rec - range.first ;
 
-  double** m2D =mv_tb.getM();
+  double** m2D =ma_tb.getM();
   pair[0]=m2D[i][0] + offset;
   pair[1]=m2D[i][1] + offset;
 
@@ -299,19 +299,21 @@ QA_Time::initTimeBounds(double offset)
     return false;
   }
 
-  (void) pIn->nc.getData(mv_tb, boundsName, 0 );
-  double** m2D =mv_tb.getM();
+  (void) pIn->nc.getData(ma_tb, boundsName, 0 );
+  double** m2D =ma_tb.getM();
   firstTimeBoundsValue[0]=m2D[0][0] + offset;
   firstTimeBoundsValue[1]=m2D[0][1] + offset;
 
   size_t rec = pIn->nc.getNumOfRows(boundsName)-1;
-  (void) pIn->nc.getData(mv_tb, boundsName, rec );
+  (void) pIn->nc.getData(ma_tb, boundsName, rec );
 
   size_t i = pIn->nc.getRecLegIndex(timeBounds_ix, rec) ;
 
-  m2D =mv_tb.getM();
+  m2D =ma_tb.getM();
   lastTimeBoundsValue[0]=m2D[i][0] + offset;
   lastTimeBoundsValue[1]=m2D[i][1] + offset;
+
+  ANNOT_ACCUM="ACCUM";
 
   return true;
 }
@@ -365,10 +367,10 @@ QA_Time::init(InFile *in, Annotation *n, QA *q)
       }
    }
 
-   timeOutputBuffer.initBuffer(pQA->nc, pQA->currQARec);
+   timeOutputBuffer.initBuffer(pQA, pQA->currQARec, pQA->bufferSize);
    timeOutputBuffer.setName(name);
 
-   sharedRecordFlag.initBuffer(pQA->nc, pQA->currQARec);
+   sharedRecordFlag.initBuffer(pQA, pQA->currQARec, pQA->bufferSize);
    sharedRecordFlag.setName( name + "_flag" );
 
    // set date to a reference time
@@ -481,14 +483,14 @@ QA_Time::initAbsoluteTime(std::string &units)
      }
   }
 
-  if( pIn->nc.getData(mv_t, name, 0) == MAXDOUBLE)
+  if( pIn->nc.getData(ma_t, name, 0) == MAXDOUBLE)
      return true;
 
   currTimeValue += refTimeOffset;
   firstTimeValue = currTimeValue;
 
   size_t recSz = pIn->nc.getNumOfRows(name) ;
-  lastTimeValue = pIn->nc.getData(mv_t, name, recSz-1) + refTimeOffset ;
+  lastTimeValue = pIn->nc.getData(ma_t, name, recSz-1) + refTimeOffset ;
 
   if( prevTimeValue == MAXDOUBLE )
   {
@@ -500,7 +502,7 @@ QA_Time::initAbsoluteTime(std::string &units)
      if( recSz > 1 )
      {
        if( pIn->currRec < recSz )
-         prevTimeValue = pIn->nc.getData(mv_t, name, 1) + refTimeOffset ;
+         prevTimeValue = pIn->nc.getData(ma_t, name, 1) + refTimeOffset ;
 
        // an arbitrary setting that would pass the first test;
        // the corresponding results is set to FillValue
@@ -559,7 +561,7 @@ QA_Time::initRelativeTime(std::string &units)
    }
    refDate.setDate( units );
 
-   if( (currTimeValue=pIn->nc.getData(mv_t, name, 0)) == MAXDOUBLE)
+   if( (currTimeValue=pIn->nc.getData(ma_t, name, 0)) == MAXDOUBLE)
       return true;
 
    currTimeValue += refTimeOffset;
@@ -567,7 +569,7 @@ QA_Time::initRelativeTime(std::string &units)
 
    size_t recSz = pIn->nc.getNumOfRows(name) ;
 
-   lastTimeValue = pIn->nc.getData(mv_t, name, recSz-1) + refTimeOffset ;
+   lastTimeValue = pIn->nc.getData(ma_t, name, recSz-1) + refTimeOffset ;
 
    if( isTimeBounds )
      initTimeBounds(refTimeOffset) ;
@@ -585,8 +587,8 @@ QA_Time::initRelativeTime(std::string &units)
 
        if( pIn->currRec < recSz )
        {
-         if( mv_t.getDimSize() == 1 && mv_t.size() > (pIn->currRec +1) )
-           t1=mv_t[pIn->currRec+1] + refTimeOffset ;
+         if( ma_t.getDimSize() == 1 && ma_t.size() > (pIn->currRec +1) )
+           t1=ma_t[pIn->currRec+1] + refTimeOffset ;
        }
 
        // an arbitrary setting that would pass the first test;
@@ -1055,7 +1057,7 @@ QA_Time::openQA_NcContrib(NcAPI *nc)
    vs.clear();
    vs.push_back( "time");
 
-   currTimeValue = pIn->nc.getData(mv_t, name, 0) + refTimeOffset ;
+   currTimeValue = pIn->nc.getData(ma_t, name, 0) + refTimeOffset ;
    nc->setAtt( "time", "first_time", currTimeValue);
    nc->setAtt( "time", "first_date", refDate.getDate(currTimeValue).str() );
 
@@ -1135,17 +1137,17 @@ QA_Time::sync(bool isCheckData, bool enabledPostProc )
 
   while( range.second < inRecNum )
   {
-    (void) pIn->nc.getData(mv_t, name, range.second) ;
+    (void) pIn->nc.getData(ma_t, name, range.second) ;
     range = pIn->nc.getDataIndexRange(name) ;
 
-    size_t sz = mv_t.size() ;
+    size_t sz = ma_t.size() ;
 
     // try the last item first
-    if( mv_t[sz-1] < qa_t_eps )
+    if( ma_t[sz-1] < qa_t_eps )
       continue;
 
     // a preliminary test
-    if( hdhC::equal(qa_t+refTimeStep, (mv_t[sz-1] + refTimeOffset), epsilon) )
+    if( hdhC::equal(qa_t+refTimeStep, (ma_t[sz-1] + refTimeOffset), epsilon) )
     {
       if( range.second == inRecNum )
       {
@@ -1160,10 +1162,10 @@ QA_Time::sync(bool isCheckData, bool enabledPostProc )
     // scanning time
     for( size_t i=0 ; i < sz ; ++i )
     {
-      if( mv_t[i] < qa_t_eps )
+      if( ma_t[i] < qa_t_eps )
         continue;
 
-      if( hdhC::equal(qa_t+refTimeStep, (mv_t[i] + refTimeOffset), epsilon) )
+      if( hdhC::equal(qa_t+refTimeStep, (ma_t[i] + refTimeOffset), epsilon) )
       {
         if( (range.first+1) == inRecNum )
         {
@@ -1181,7 +1183,7 @@ QA_Time::sync(bool isCheckData, bool enabledPostProc )
 
       // a previous QA had checked a complete previous sub-temporal infile
       // and time continues in the current infile.
-      if( (qa_t + epsilon) < (mv_t[i] + refTimeOffset) )
+      if( (qa_t + epsilon) < (ma_t[i] + refTimeOffset) )
         return false ;  // the usual case
     }
   }
@@ -1196,7 +1198,7 @@ QA_Time::sync(bool isCheckData, bool enabledPostProc )
      std::ostringstream ostr(std::ios::app);
      ostr << "\nlast time of previous QA=" << qa_t;
      ostr << "\nfirst time in file="
-          << (pIn->nc.getData(mv_t, name, 0) + refTimeOffset) ;
+          << (pIn->nc.getData(ma_t, name, 0) + refTimeOffset) ;
 
      if( notes->operate(capt, ostr.str()) )
      {
@@ -1240,7 +1242,7 @@ QA_Time::testTimeBounds(NcAPI &nc)
   if( diff <= 0. )
   {
     std::string key=("R8");  // no multiple
-    if( notes->inq( key, name, "NO_MT") )
+    if( notes->inq( key, name, ANNOT_ACCUM) )
     {
       sharedRecordFlag.currFlag += 8 ;
 
@@ -1303,7 +1305,7 @@ QA_Time::testTimeBounds(NcAPI &nc)
         sharedRecordFlag.currFlag += 16;
       }
 
-      if( notes->inq( key, boundsName, "NO_MT") )
+      if( notes->inq( key, boundsName, ANNOT_ACCUM) )
       {
         std::string capt("overlapping time bounds");
         if( isAcrossFiles )
@@ -1355,7 +1357,7 @@ QA_Time::testTimeBounds(NcAPI &nc)
         sharedRecordFlag.currFlag += 32 ;
       }
 
-      if( notes->inq( key, boundsName, "NO_MT") )
+      if( notes->inq( key, boundsName, ANNOT_ACCUM) )
       {
         std::string capt("gap between time bounds ranges");
 
@@ -1402,7 +1404,7 @@ QA_Time::testTimeBounds(NcAPI &nc)
 void
 QA_Time::testDate(NcAPI &nc)
 {
-  currTimeValue = pIn->nc.getData(mv_t, time_ix, pIn->currRec) + refTimeOffset ;
+  currTimeValue = pIn->nc.getData(ma_t, time_ix, pIn->currRec) + refTimeOffset ;
 
   // is current time reasonable?
   (void) testTimeStep() ;
@@ -1465,7 +1467,7 @@ QA_Time::testTimeStep(void)
       sharedRecordFlag.currFlag += 1;
     }
 
-    if( notes->inq( key, name, "NO_MT") )
+    if( notes->inq( key, name, ANNOT_ACCUM) )
     {
       std::string capt ;
       std::ostringstream ostr(std::ios::app);
@@ -1527,7 +1529,7 @@ QA_Time::testTimeStep(void)
       if( isAcrossFiles )
         sharedRecordFlag.currFlag += 4 ;
 
-      if( notes->inq( key, name, "NO_MT") )
+      if( notes->inq( key, name, ANNOT_ACCUM) )
       {
         std::string capt("identical time values");
         std::ostringstream ostr(std::ios::app);
@@ -1582,7 +1584,7 @@ QA_Time::testTimeStep(void)
     else
       key="R2";
 
-    if( notes->inq( key, name, "NO_MT") )
+    if( notes->inq( key, name, ANNOT_ACCUM) )
     {
       std::string capt;
       std::ostringstream ostr(std::ios::app);
@@ -1656,7 +1658,7 @@ TimeOutputBuffer::TimeOutputBuffer()
   // may be changed with setFlushCounter()
   maxBufferSize=1500; //change with setFlushCounter
 
-  nc=0;
+  pQA=0;
 }
 
 TimeOutputBuffer::~TimeOutputBuffer()
@@ -1684,13 +1686,13 @@ TimeOutputBuffer::flush(void)
   if( bufferCount )
   {
     // Flush temporarily arrayed values
-    nc->putData(nextFlushBeg, bufferCount, name, buffer );
+    pQA->nc->putData(nextFlushBeg, bufferCount, name, buffer );
 
     if( nextFlushBeg )
-      nc->putData(nextFlushBeg, bufferCount, name_step, buffer_step );
+      pQA->nc->putData(nextFlushBeg, bufferCount, name_step, buffer_step );
     else
       // Leave out the first time for fillingValue
-      nc->putData(1, bufferCount-1, name_step, (buffer_step + 1) );
+      pQA->nc->putData(1, bufferCount-1, name_step, (buffer_step + 1) );
 
     nextFlushBeg += bufferCount;
     bufferCount = 0;
@@ -1700,9 +1702,9 @@ TimeOutputBuffer::flush(void)
 }
 
 void
-TimeOutputBuffer::initBuffer(NcAPI *n, size_t nxt, size_t mx)
+TimeOutputBuffer::initBuffer(QA* p, size_t nxt, size_t mx)
 {
-  nc = n;
+  pQA = p;
   maxBufferSize=mx;
   nextFlushBeg=nxt;
 

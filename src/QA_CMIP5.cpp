@@ -76,7 +76,7 @@ QA::appendToHistory(size_t eCode)
     }
     else
       // not in the history, so take the one from the version attribute
-      tmp = nc->getAttString("QA-revision");
+      tmp = nc->getAttString("QA revision");
 
     if( revision != tmp )
     {
@@ -3574,11 +3574,7 @@ QA::init(void)
       std::string key("6_15");
       if( notes->inq( key, fileStr) )
       {
-        std::string capt("empty data section in the file.") ;
-
-        std::string text("Is there an empty data section in the file? Please, check.");
-        notes->setCheckTimeStr(fail);
-        notes->setCheckDataStr(fail);
+        std::string capt("No records in the file.") ;
 
         (void) notes->operate(capt, text) ;
         {
@@ -3614,22 +3610,15 @@ QA::init(void)
      }
    }
 
-   if( isExit )
-     return true;
-
    // open netCDF for continuation and resuming a session
    openQA_Nc(*pIn);
 
-   if( isExit || isNoProgress )
+   if( getExit() || qaTime.isNoProgress )
    {
      isCheckData=false;
      isCheckTime=false;
      return true;
    }
-
-   // This is for the case of processing several layers per record.
-   // The order must be kept: at first, the time stuff and then
-   // the field testing.
 
    if( isCheckTime )
    {
@@ -3646,8 +3635,6 @@ QA::init(void)
      else
        notes->setCheckTimeStr("PASS");
    }
-   else
-      notes->setCheckTimeStr("OMIT");
 
    if( isCheckData )
    {
@@ -3677,14 +3664,14 @@ QA::initDataOutputBuffer(void)
 {
   if( isCheckTime )
   {
-    qaTime.timeOutputBuffer.initBuffer(nc, currQARec);
-    qaTime.sharedRecordFlag.initBuffer(nc, currQARec);
+    qaTime.timeOutputBuffer.initBuffer(nc, currQARec, bufferSize);
+    qaTime.sharedRecordFlag.initBuffer(nc, currQARec, bufferSize);
   }
 
   if( isCheckData )
   {
     for( size_t i=0 ; i < varMeDa.size() ; ++i)
-      varMeDa[i].qaData.initBuffer(nc, currQARec);
+      varMeDa[i].qaData.initBuffer(nc, currQARec, bufferSize);
   }
 
   return;
@@ -3698,9 +3685,20 @@ QA::initDefaults(void)
   nc=0;
   notes=0;
 
+  cF=0;
+  pIn=0;
+  fDI=0;
+  pOper=0;
+  pOut=0;
+  qA=0;
+  tC=0;
+
+  blank=" ";
   fail="FAIL";
+  no_blank="no_blank";
   notAvailable="not available";
-  fileStr="file";
+  s_colon=":";
+  s_upper="upper";
 
   enablePostProc=false;
   enableVersionInHistory=true;
@@ -3725,6 +3723,8 @@ QA::initDefaults(void)
   isCheckTime=true;
   isCheckData=true;
 
+  bufferSize=1500;
+
   exitCode=0;
 
 #ifdef REVISION
@@ -3746,7 +3746,7 @@ QA::initGlobalAtts(InFile &in)
   nc->setGlobalAtt( "product", "quality check of CMIP5 data set");
 
 //  enableVersionInHistory=false;
-  nc->setGlobalAtt( "QA_revision", revision);
+  nc->setGlobalAtt( "QA revision", revision);
   nc->setGlobalAtt( "contact", "hollweg@dkrz.de");
 
   std::string t("csv formatted ");

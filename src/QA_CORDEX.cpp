@@ -82,7 +82,7 @@ QA::appendToHistory(void)
       tmp = splt[++index] ;
     else
       // not in the history, so take the one from the version attribute
-      tmp = nc->getAttString("QA-revision");
+      tmp = nc->getAttString("QA revision");
 
     if( revision != tmp )
     {
@@ -2801,16 +2801,11 @@ QA::checkVarTableEntry_units(
 void
 QA::closeEntry(void)
 {
-   // This here is only for the regular QA time series file
-   if( isCheckTime )
-     storeTime();
-
    if( isCheckData )
    {
      // data: structure defined in hdhC.h
      for( size_t i=0 ; i < varMeDa.size() ; ++i )
      {
-
        if( varMeDa[i].var->isNoData )
           continue;
 
@@ -2827,6 +2822,11 @@ QA::closeEntry(void)
        storeData(varMeDa[i], fA);
      }
    }
+
+   // This here is only for the regular QA time series file
+   if( isCheckTime )
+     storeTime();
+
 
    ++currQARec;
 
@@ -3610,9 +3610,13 @@ QA::init(void)
 
    if( isCheckData )
    {
-     // default
-     if( pIn->dataVarIndex.size() )
-       notes->setCheckDataStr("PASS");
+     if( ! pIn->nc.isAnyRecord() )
+     {
+       notes->setCheckDataStr(fail);
+       return true;
+     }
+
+     notes->setCheckDataStr("PASS");
 
      // set pointer to function for operating tests
      execPtr = &IObj::entry ;
@@ -3633,14 +3637,14 @@ QA::initDataOutputBuffer(void)
 {
   if( isCheckTime )
   {
-    qaTime.timeOutputBuffer.initBuffer(nc, currQARec);
-    qaTime.sharedRecordFlag.initBuffer(nc, currQARec);
+    qaTime.timeOutputBuffer.initBuffer(this, currQARec, bufferSize);
+    qaTime.sharedRecordFlag.initBuffer(this, currQARec, bufferSize);
   }
 
   if( isCheckData )
   {
     for( size_t i=0 ; i < varMeDa.size() ; ++i)
-      varMeDa[i].qaData.initBuffer(nc, currQARec);
+      varMeDa[i].qaData.initBuffer(this, currQARec, bufferSize);
   }
 
   return;
@@ -3653,8 +3657,8 @@ QA::initDefaults(void)
 
   // pre-setting of some pointers
   nc=0;
-
   notes=0;
+
   cF=0;
   pIn=0;
   fDI=0;
@@ -3708,6 +3712,8 @@ QA::initDefaults(void)
   isCheckTime=true;
   isCheckData=true;
 
+  bufferSize=1500;
+
   exitCode=0;
 
   // file sequence: f[first], s[equence], l[ast]
@@ -3731,7 +3737,7 @@ QA::initGlobalAtts(InFile &in)
   nc->setGlobalAtt( "project", "CORDEX");
   nc->setGlobalAtt( "product", "quality check of CORDEX data set");
 
-  nc->setGlobalAtt( "QA_revision", revision);
+  nc->setGlobalAtt( "QA revision", revision);
   nc->setGlobalAtt( "contact", "hollweg@dkrz.de");
 
   std::string t("csv formatted ");
@@ -4000,7 +4006,6 @@ QA::openQA_Nc(InFile &in)
       isNotFirstRecord = true;
 
     initDataOutputBuffer();
-    qaTime.sharedRecordFlag.initBuffer(nc, currQARec);
 
     initResumeSession();
     isResumeSession=true;

@@ -425,6 +425,9 @@ public:
   size_t importedRecFromPrevQA; // initial num of recs in the write-to-nc-file
   MtrxArr<double> tmp_mv;
 
+  // the same buf-size for all buffer is required for testing replicated records
+  size_t bufferSize;
+
   // init for test about times
   bool enablePostProc;
   bool isUseStrict;

@@ -20,7 +20,7 @@ class TimeOutputBuffer
   void    flush(void);
 
   //! Change the flush counter; 1500 by default
-  void    initBuffer(NcAPI *n, size_t next=0, size_t max=1500);
+  void    initBuffer(QA*, size_t next=0, size_t max=1500);
   void    setName(std::string n);
   void    setNextFlushBeg(size_t n){nextFlushBeg=n;};
   void    store(double val, double step);
@@ -32,7 +32,7 @@ class TimeOutputBuffer
   size_t  maxBufferSize;
   size_t  nextFlushBeg;
 
-  NcAPI  *nc;
+  QA* pQA;
 
   double *buffer;
   double *buffer_step;
@@ -168,8 +168,8 @@ class QA_Time
   //! Check time steps
   bool   testTimeStep(void);
 
-  MtrxArr<double> mv_tb;
-  MtrxArr<double> mv_t;
+  MtrxArr<double> ma_tb;
+  MtrxArr<double> ma_t;
 
   // Time Table: hold the state over a record
   size_t tt_block_rec ;
@@ -185,6 +185,8 @@ class QA_Time
   size_t maxBufferSize;
   size_t nextFlushBeg;
 
+  std::string ANNOT_ACCUM;
+  
   SharedRecordFlag sharedRecordFlag;
   TimeOutputBuffer timeOutputBuffer;
 
