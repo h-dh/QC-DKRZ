@@ -9,6 +9,8 @@
 # Note: the former QC_DATA_ROOT was replaced by this, but is still valid.
   QA_RESULTS=results
 
+# A project name. If the project is unknown, but it is similar to
+# a known one, then use additionaly PROJECT_AS=name
   PROJECT=CORDEX
 
 # Selection of paths and variables (RegExp of the 'expr' command,
