@@ -251,7 +251,7 @@ Annotation::findIndex(std::string &key, bool isOnly)
       {
          currIndex = effIndex[i] ;
 
-         return isMultipleTags ? false : true ;
+         return (isMultipleTags||isAccumText) ? false : true ;
       }
     }
   }
@@ -463,15 +463,17 @@ Annotation::initDefaults(void)
 bool
 Annotation::inq( std::string key, std::string name, std::string mode)
 {
-  // SYNTAX mode: [INQ::ONLY[ | INQ::NMT]]
-  // with  INQ_ONLY  simulation without triggering an action
+  // SYNTAX mode: [INQ::ONLY[|...]]
+  // with     ACCUM  NO_MT with accumulated text messages
+  //       INQ_ONLY  simulation without triggering an action
   //          NO_MT  no multiple tags
   //       LIST_TXT  disable the default text from the check-list table
   currName=name;
 
   bool isOnly=false;
   isMultipleTags=true;
-  isListText=false;
+  isDescriptionFromTable=false;
+  isAccumText=false;
 
   if( mode.size() )
   {
@@ -483,7 +485,12 @@ Annotation::inq( std::string key, std::string name, std::string mode)
        else if( splt[i] == "NO_MT" )
          isMultipleTags=false;
        else if( splt[i] == "LIST_TXT" )
-         isListText=true;
+         isDescriptionFromTable=true;
+       else if( splt[i] == "ACCUM" )
+       {
+         isAccumText=true;
+         isMultipleTags=false;
+       }
     }
   }
 
@@ -621,7 +628,7 @@ Annotation::operate(std::string headline,
    }
 
    // print notes
-   if( isListText )
+   if( isDescriptionFromTable )
      passedText = text[currIndex] ;
 
 
@@ -1044,14 +1051,20 @@ Annotation::printFlags(void)
 
     if( mp_txt.count(f) && mp_txt[f].size() )
     {
+      // rm trailing newline, i.e. ';'
+      std::string& str = mp_txt[f] ;
+
+      if( str[str.size()-1] == ';' )
+        str = str.substr(0,str.size()-1);
+
       if( ! isDisplay )
       {
         out += "TXT-BEG" ;
-        out += mp_txt[f];
+        out += str;
         out += "TXT-END" ;
       }
       else
-        out += mp_txt[f] + "\n";
+        out += str + "\n";
     }
 
     if( ! isDisplay )
@@ -1085,7 +1098,7 @@ Annotation::printNotes(std::string &tag, std::string &caption,
   // str == message
 
   // Occurrence of an error usually stops the run immediately.
-  // But, the calling program unit is due to exit.
+  // But, it lies with the calling program unit to exit.
   if( ofsNotes == 0 )
   {
     if( file.path.size() == 0 )
@@ -1110,13 +1123,21 @@ Annotation::printNotes(std::string &tag, std::string &caption,
 
   if( count[currIndex] > recErrCountLimit )
   {
-    *ofsNotes << code[currIndex] << ": more ..." << std::endl;
+    std::string more("more ...");
+
+    *ofsNotes << more << std::endl;
+    mp_txt[tag] += more ;
 
     return;
   }
 
-  // write message
-  *ofsNotes << "\n" << caption << "\n" << str << std::endl;
+  // write caption+message, but the caption only once
+  if( mp_count[tag] == 1 )
+      *ofsNotes << "\n" << caption << std::endl;
+
+  *ofsNotes <<  str ;
+  if( str[str.size()-1] != '\n' )
+    *ofsNotes <<  std::endl;
 
   // output the pure text with '\n' replaced by ';'
   size_t sz=str.size();
@@ -1124,7 +1145,7 @@ Annotation::printNotes(std::string &tag, std::string &caption,
     if( str[i] == '\n' )
        str[i] = ';' ;
 
-   mp_txt[tag] = str;
+  mp_txt[tag] += str;
 
   return ;
 }
