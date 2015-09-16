@@ -2969,7 +2969,7 @@ initT()
      local f_c=${TABLE_PATH}/CORDEX_RCMModelName.txt
 
      local isNew=f
-     if [ -f $f_a -a -f $f_a -a -f $f_a ] ; then
+     if [ -f $f_a -a -f $f_b -a -f $f_c ] ; then
        local sec_a=$(ls -l --time-style='+%Y%m%d' ${f_a} | awk '{print $6}')
        local sec_b=$(ls -l --time-style='+%Y%m%d' ${f_b} | awk '{print $6}')
        local sec_c=$(ls -l --time-style='+%Y%m%d' ${f_c} | awk '{print $6}')
