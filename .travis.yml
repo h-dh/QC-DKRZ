@@ -4,7 +4,7 @@ branches:
     - birdhouse
     - develop
     - master
-sudo: true
+sudo: false
 python:
   # We don't actually use the Travis Python, but this keeps it organized.
   - "2.7"
