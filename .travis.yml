@@ -20,7 +20,7 @@ install:
   - conda info -a
 
   # Replace dep1 dep2 ... with your dependencies
-  - conda config --add birdhouse
+  - conda config --add channels birdhouse
   - conda install -q libnetcdf hdf5 zlib udunits
 
   # Get build script
