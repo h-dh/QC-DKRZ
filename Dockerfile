@@ -1,35 +1,34 @@
-FROM centos:6
+FROM ubuntu:14.04
 MAINTAINER https://github.com/h-dh/QA-DKRZ
 
 # install system packages
-RUN yum update -y
-RUN yum install -y wget tar bzip2 which
-RUN yum install -y libuuid libuuid-devel
+RUN apt-get update -y
+RUN apt-get install -y wget vim sudo
+RUN apt-get install -y libuuid1 uuid-dev
 
 # Add user hdh 
-RUN useradd -d /home/hdh -m hdh
+RUN useradd -d /home/hdh -m hdh -G dialout
 
 # cd into home
-WORKDIR /home/hdh
+#WORKDIR /home/hdh
+WORKDIR /root
 
 # Remaining tasks run as user hdh
-USER hdh
+#USER hdh
 
 # prepare miniconda
 RUN wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh;
 RUN bash miniconda.sh -b -p $HOME/miniconda
-ENV PATH="/home/hdh/miniconda/bin:$PATH"
-#RUN conda config --set always_yes yes --set changeps1 no
-RUN conda update -y -q conda
+ENV PATH="/root/miniconda/bin:$PATH"
+RUN conda config --set always_yes yes --set changeps1 no
+RUN conda update -q conda
 
 # add additional conda channels
 RUN conda config --add channels birdhouse
 
 # install qa-dkrz
-RUN conda install -y -c birdhouse qa-dkrz cdo
+RUN conda install -c birdhouse qa-dkrz cdo
 
 # add mount point for data
 VOLUME /data
-
-CMD ["/bin/bash"]
 
