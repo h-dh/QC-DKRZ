@@ -477,27 +477,18 @@ Outlier::test(QA_Data *pQAD)
   std::vector<size_t> outRec;
   std::vector<double> outVal;
 
-  size_t currRecEnd=pQA->nc->getNumOfRecords();
-//  size_t subTempRecs=pQA->pIn->nc.getNumOfRecords();
-  size_t prevRecEnd ;
-
-//  if( pQA->enabledPostProc )
-    prevRecEnd=0  ;  //forces re-reading of all
-//  else
-//    prevRecEnd = currRecEnd - subTempRecs ;
-
-  size_t currRecNum = currRecEnd - prevRecEnd ;
+  size_t recNum=pQA->nc->getNumOfRecords();
 
   // adjustment of outOptPrcnt: the effective percentage must be related
   // to the total number of data points in a way that 10 outlier must
   // be possible in principle.
   if( outOptPrcnt > 0. )
   {
-    while ( static_cast<double>(currRecNum) * outOptPrcnt < .1 )
+    while ( static_cast<double>(recNum) * outOptPrcnt < .1 )
      outOptPrcnt *= 10. ;
   }
 
-  double extr[currRecNum];
+  double extr[recNum];
 
   MtrxArr<double> ma_d;
   size_t N[100]; // counter for exceeding extreme values
@@ -509,10 +500,11 @@ Outlier::test(QA_Data *pQAD)
 
     bool isOut = false;
     size_t rec=0;
-    for( size_t j=prevRecEnd ; j < currRecEnd ; ++j )
+    for( size_t j=0 ; j < recNum ; ++j )
     {
-       pQA->nc->getData(ma_d, names[i] , j );
-       extr[rec++] = ma_d[0] ;
+       extr[rec++] = pQA->nc->getData(ma_d, names[i] , j );
+if( rec==7)
+  extr[6] += 100.;
     }
 
     // find number of extreme values exceeding N*sigma
@@ -533,12 +525,12 @@ Outlier::test(QA_Data *pQAD)
         outRec.clear();
         outVal.clear();
 
-        for( size_t j=0 ; j < currRecNum ; ++j )
+        for( size_t j=0 ; j < recNum ; ++j )
         {
           if( fabs(extr[j] - ave[i]) > n_sigma )
           {
             ++N[n] ;
-            outRec.push_back( prevRecEnd + j );
+            outRec.push_back( j );
             outVal.push_back( extr[j] );
           }
         }
@@ -571,7 +563,7 @@ Outlier::test(QA_Data *pQAD)
       if( outOptPrcnt > 0. )
       {
         double a =
-           static_cast<double>(N[n]) / static_cast<double>(currRecEnd) ;
+           static_cast<double>(N[n]) / static_cast<double>(recNum) ;
         isTooManyA =  a > outOptPrcnt ;
       }
       else
