@@ -3,7 +3,7 @@ MAINTAINER https://github.com/h-dh/QA-DKRZ
 
 # install system packages
 RUN yum update -y
-RUN yum install -y wget tar bzip2
+RUN yum install -y wget tar bzip2 which
 RUN yum install -y libuuid libuuid-devel
 
 # Add user hdh 
