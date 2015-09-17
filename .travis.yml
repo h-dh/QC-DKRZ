@@ -33,7 +33,6 @@ install:
   - echo "INCLUDE=\"${PREFIX}/include\":/usr/include/uuid" >> install_configure
 
 script:
-  - cd
   - export QA_PATH="$PWD"
   - touch .ignore_GitHub_update
   - ./install CF
