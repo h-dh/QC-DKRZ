@@ -36,5 +36,5 @@ script:
   - cd
   - export QA_PATH="$PWD"
   - touch .ignore_GitHub_update
-  - bash install CF
-  - bash install CORDEX
+  - ./install CF
+  - ./install CORDEX
