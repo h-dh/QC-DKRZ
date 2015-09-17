@@ -270,11 +270,6 @@ callQaConfig()
     fi
 
     setKWL ${key}
-
-    # check for key-word POST in any assignment
-    if expr match "${items[i]#*=}" 'POST' &> /dev/null ; then
-      isPost=t
-    fi
   done
 
 # invoked by option -E_DEBUG_MANAGER
@@ -1812,7 +1807,7 @@ getNextVariable()
   fi
 
   nextFile="$(echo ${nV_fls[*]} | ${QA_BIN#*:}/syncFiles.x \
-     ${isPost:+--post} $syncOpts -P ${nextPath} )"
+     $syncOpts -P ${nextPath} )"
 
   status=$?
 
@@ -1820,6 +1815,13 @@ getNextVariable()
        std_out flush "${nextFile[*]/%/\\n}"
 
   local nFsSz=${#nextFile[*]}
+
+  if [ ${status} -gt 49 ] ; then
+    status=$((status - 50))
+    isPost=t
+  else
+    isPost=f
+  fi
 
   # up-to-date
   if [ ${status} -eq 1 ] ; then
@@ -1829,20 +1831,6 @@ getNextVariable()
       local num=${#nV_fls[*]}
       progressFileNum=$(( ${progressFileNum:-0} + num ))
 #    fi
-
-    # --post option caused to output the last filename
-    if [ "${qa_fl[0]}" -a ${isPost:-f} = t ] ; then
-      # check global attributes for outlier_test=done
-#      local att
-#      att=$( getNC_att.x ${qa_fl} postponed_operations )
-#      att=${att#*=}
-#      att=${att%% }
-
-#      if [ ! "${att}" -o ${FORCE_POST:-f} = t ] ; then
-        nextFile=( ${nextFile[*]//\\n/ } )
-#        return 1
-#      fi
-    fi
 
     nextFile=
     return 0
@@ -2696,8 +2684,7 @@ init()
     tput dl 1 > $TTY
   fi
 
-#  syncOptsInit="-s -T"
-  syncOptsInit='-s --only-marked'
+  syncOptsInit='--only-marked'
 
   # progress bar
 #  if [ ${PROGRESS_BAR:-f} = t ] ; then

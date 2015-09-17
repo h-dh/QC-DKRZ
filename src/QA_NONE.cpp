@@ -539,6 +539,16 @@ QA::finally_data(int eCode)
   return exitCode ;
 }
 
+bool
+QA::getExit(void)
+{
+  // note that isExit==true was forced
+  if( exitCode > 1 || isExit )
+    return true;
+
+  return false;
+}
+
 std::string
 QA::getFrequency()
 {
@@ -632,11 +642,10 @@ QA::init(void)
    // get meta data from file and compare with tables
    checkMetaData(*pIn);
 
-   if( isCheckTime && pIn->isTime )
+   if(qaTime.init(pIn, notes, this))
    {
      // init the time object
      // note that freq is compared to the first column of the time table
-     qaTime.init(pIn, notes, this);
      qaTime.applyOptions(optStr);
      qaTime.initTimeTable( getFrequency() );
 
@@ -654,13 +663,10 @@ QA::init(void)
      }
    }
 
-   if(isExit)
-     return true;
-
    // open netCDF for creating, continuation or resuming qa_<varname>.nc
    openQA_Nc(*pIn);
 
-   if( isExit || isNoProgress )
+   if( getExit() || qaTime.isNoProgress )
    {
      isCheckData=false;
      isCheckTime=false;
@@ -669,12 +675,12 @@ QA::init(void)
 
    if( isCheckTime )
    {
-     if( ! pIn->nc.isAnyRecord() )
+     if( qaTime.isTime && ! pIn->nc.isAnyRecord() )
      {
        isCheckTime = false;
        notes->setCheckTimeStr(fail);
      }
-     else if( ! pIn->isTime )
+     else if( ! qaTime.isTime )
      {
        isCheckTime = false;
        notes->setCheckTimeStr("FIXED");
@@ -696,6 +702,7 @@ QA::init(void)
      // set pointer to function for operating tests
      execPtr = &IObj::entry ;
      bool is = entry();
+
      if( isExit || is )
        return true;
 
@@ -711,14 +718,14 @@ QA::initDataOutputBuffer(void)
 {
   if( isCheckTime )
   {
-    qaTime.timeOutputBuffer.initBuffer(nc, currQARec);
-    qaTime.sharedRecordFlag.initBuffer(nc, currQARec);
+    qaTime.timeOutputBuffer.initBuffer(this, currQARec, bufferSize);
+    qaTime.sharedRecordFlag.initBuffer(this, currQARec, bufferSize);
   }
 
   if( isCheckData )
   {
     for( size_t i=0 ; i < varMeDa.size() ; ++i)
-      varMeDa[i].qaData.initBuffer(nc, currQARec);
+      varMeDa[i].qaData.initBuffer(this, currQARec, bufferSize);
   }
 
   return;
@@ -986,23 +993,16 @@ QA::openQA_Nc(InFile &in)
       isNotFirstRecord = true;
 
     initDataOutputBuffer();
-    qaTime.sharedRecordFlag.initBuffer(nc, currQARec);
 
     initResumeSession();
     isResumeSession=true;
 
-    // if files are synchronised, i.e. a file hasn't changed since
-    // the last qa
-    if( isCheckTime )
-      isNoProgress = qaTime.sync( isCheckData, enablePostProc );
-
     return;
   }
 
+  // So, we have to generate a netCDF file from almost scratch;
   if( currQARec == 0 && in.nc.getNumOfRecords() == 1 )
     qaTime.isSingleTimeValue = true;
-
-  // So, we have to generate a netCDF file from almost scratch;
 
   // open new netcdf file
   if( qaNcfileFlags.size() )

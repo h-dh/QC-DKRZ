@@ -129,6 +129,7 @@ class QA : public IObj
   std::string
          getCurrentTable(void){ return currTable ; }
 
+  bool   getExit(void);
   int    getExitCode(void){return exitCode;}
 
   std::string
@@ -213,6 +214,9 @@ class QA : public IObj
   size_t currQARec;
   size_t importedRecFromPrevQA; // initial num of recs in the write-to-nc-file
   MtrxArr<double> tmp_mv;
+
+  // the same buf-size for all buffer is required for testing replicated records
+  size_t bufferSize;
 
   // init for test about times
   bool enablePostProc;
