@@ -61,8 +61,7 @@ return:  output: \n
   +8        misaligned time-values across files \n
   +16       filenames with a mix of date formats \n
   +32       suspicion of a renewed ensemble. \n
-+50      The last file of the ensemble, also for a single file \n
-         Output: filenames sorted according to the modification time. */
+         Output: file names sorted according to the modification time. */
 
 class Member
 {
@@ -386,8 +385,6 @@ Ensemble::constraint(std::string &timeLimitStr)
        startIndex = sz; // ==> empty output
 
        if( sz == 1 )
-         return 51;
-       else
          return 1;
     }
   }
@@ -415,8 +412,8 @@ Ensemble::constraintSeries(void)
     {
        startIndex = i;
        if( i == (sz-1) )
-         retVal=50;
-       
+         retVal= 0;
+
        break;
     }
   }
@@ -1271,10 +1268,10 @@ SyncFiles::printTimelessFile(std::string &str)
       {
         ensemble->enablePrintOnlyMarked();
         str = ensemble->getOutput() ;
-        return 53;  // a fixed field file, but with error
+        return 3;  // a fixed field file, but with error
       }
       else
-        return 54;  // a fixed field file
+        return 4;  // a fixed field file
    }
    else
    {
