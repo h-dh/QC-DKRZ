@@ -197,7 +197,6 @@ QA::applyOptions(bool isPost)
         continue;
      }
 
-
      if( split[0] == "qNF" || split[0] == "qaNcfileFlags"
        || split[0] == "qa_ncfile_flags" )
      {
@@ -2984,7 +2983,7 @@ QA::finally(int xCode)
   if( nc )
     xCode = finally_data(xCode) ;
 
-  if( xCode != 63 )
+  if( xCode != 63 && isCheckTime )
     qaTime.finally( nc );
 
   setExit(xCode);
@@ -2993,7 +2992,7 @@ QA::finally(int xCode)
   std::cout << "STATUS-BEG" << xCode << "STATUS-END";
   std::cout << std::flush;
 
-  setExit( exitCode ) ;
+  nc->close();
 
   return exitCode ;
 }
@@ -3553,6 +3552,8 @@ QA::init(void)
        }
      }
    }
+   else
+     isCheckTime=false;
 
    // open netCDF for creating, continuation or resuming qa_<varname>.nc.
    // note that this must happen before checkMetaData which uses currQARec

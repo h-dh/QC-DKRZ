@@ -477,9 +477,17 @@ public:
   std::string fail;
   std::string fileStr;
   std::string notAvailable;
+  std::string blank;
+  std::string no_blank;
+  std::string s_colon;
+  std::string s_empty;
+  std::string s_mismatch;
+  std::string s_upper;
+  std::string s_lower;
 
   void        appendToHistory(size_t);
   std::string getCurrentTableSubst(void);
+  bool        getExit(void);
   std::string getSubjectsIntroDim(VariableMetaData &vMD,
                    struct DimensionMetaData &nc_entry,
                    struct DimensionMetaData &tbl_entry);

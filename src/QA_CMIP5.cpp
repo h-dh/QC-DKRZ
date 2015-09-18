@@ -15,7 +15,7 @@ QA::~QA(void)
 }
 
 void
-QA::appendToHistory(size_t eCode)
+QA::appendToHistory(size_t xCode)
 {
   // date and time at run time
   std::string today( Date::getTodayStr() );
@@ -99,6 +99,8 @@ QA::appendToHistory(size_t eCode)
 void
 QA::applyOptions(bool isPost)
 {
+  enablePostProc=isPost;
+
   // the first loop for items with higher precedence
   for( size_t i=0 ; i < optStr.size() ; ++i)
   {
@@ -147,11 +149,9 @@ QA::applyOptions(bool isPost)
           || split[0] == "dataPath" || split[0] == "data_path" )
      {
        if( split.size() == 2 )
-       {
           // path to the directory where the execution takes place
           qaFile.setPath(split[1]);
-          continue;
-       }
+       continue;
      }
 
      if( split[0] == "eA" || split[0] == "excludedAttribute"
@@ -166,10 +166,8 @@ QA::applyOptions(bool isPost)
      if( split[0] == "f" )
      {
        if( split.size() == 2 )
-       {
           qaFile.setFile(split[1]);
-          continue;
-       }
+       continue;
      }
 
      if( split[0] == "fST" || split[0] == "ForceStndTable"
@@ -182,25 +180,17 @@ QA::applyOptions(bool isPost)
      if( split[0] == "nextRecords" )
      {
        if( split.size() == 2 )
-       {
           nextRecords=static_cast<size_t>(split.toDouble(1));
-          continue;
-       }
+       continue;
      }
 
      if( split[0] == "oT"
            || split[0] == "outlierTest"
                 || split[0] == "outlier_test" )
      {
-       if( split.size() == 2 )
-       {
-          if( split[1].find("POST") < std::string::npos
-                   && ! enablePostProc )
-            continue;
-
+       if( enablePostProc && split.size() == 2 )
           outlierOpts.push_back(split[1]);
-          continue;
-       }
+       continue;
      }
 
      if( split[0] == "pEI" || split[0] == "parentExperimentID"
@@ -211,8 +201,8 @@ QA::applyOptions(bool isPost)
           parentExpID=split[1];
           if( parentExpID == "none" )
             isCheckParentExpID=false ;
-          continue;
        }
+       continue;
      }
 
      if( split[0] == "pER" || split[0] == "parentExperimentRIP"
@@ -223,18 +213,16 @@ QA::applyOptions(bool isPost)
           parentExpRIP=split[1];
           if( parentExpRIP == "none" )
             isCheckParentExpRIP=false ;
-          continue;
        }
+       continue;
      }
 
      if( split[0] == "qNF" || split[0] == "qaNcfileFlags"
        || split[0] == "qa_ncfile_flags" )
      {
        if( split.size() == 2 )
-       {
           qaNcfileFlags=split[1];
-          continue;
-       }
+       continue;
      }
 
      if( split[0] == "rR"
@@ -261,61 +249,50 @@ QA::applyOptions(bool isPost)
             for( size_t i=0 ; i < csv.size() ; ++i )
               replicationOpts.push_back(csv[i]);
           }
-          continue;
        }
+       continue;
      }
 
      if( split[0] == "tP"
           || split[0] == "tablePath" || split[0] == "table_path")
      {
        if( split.size() == 2 )
-       {
           tablePath=split[1];
-          continue;
-       }
+       continue;
      }
 
      if( split[0] == "totP"
           || split[0] == "totalPeriod" || split[0] == "total_period")
      {
        if( split.size() == 2 )
-       {
           totalPeriod = split[1] ;
-          continue;
-       }
+       continue;
      }
 
      if( split[0] == "tPr"
           || split[0] == "tableProject" )  // dummy
      {
        if( split.size() == 2 )
-       {
           projectTableFile.setFile(split[1]);
-
-          continue;
-       }
+       continue;
      }
 
      if( split[0] == "tStd"
           || split[0] == "tableStandard" )
      {
        if( split.size() == 2 )
-       {
           varReqTable.setFile(split[1]);
-
-          continue;
-       }
+       continue;
      }
 
-     if( split[0] == "uS"
-         || split[0] == "useStrict"
+     if( split[0] == "uS" || split[0] == "useStrict"
             || split[0] == "use_strict" )
      {
           isUseStrict=true ;
           isForceStndTable=true;
           setCheckMode("meta");
-          continue;
      }
+     continue;
    }
 
    // apply a general path which could have also been provided by setTablePath()
@@ -2818,7 +2795,7 @@ QA::createVarMetaData(void)
     if( replicationOpts.size() )
     {
       if( ReplicatedRecord::isSelected(
-             replicationOpts, vMD.var->name, enablePostProc, effDim ) )
+             replicationOpts, vMD.var->name, effDim ) )
       {
         vMD.qaData.replicated = new ReplicatedRecord(this, i, vMD.var->name);
         vMD.qaData.replicated->setAnnotation(notes);
@@ -2826,11 +2803,13 @@ QA::createVarMetaData(void)
       }
     }
 
-    if( outlierOpts.size() )
+    if( enablePostProc && outlierOpts.size() )
     {
       if( Outlier::isSelected(
-             outlierOpts, vMD.var->name, enablePostProc, effDim ) )
+             outlierOpts, vMD.var->name, effDim ) )
       {
+        vMD.qaData.enableOutlierTest=true;
+
         vMD.qaData.outlier = new Outlier(this, i, vMD.var->name);
         vMD.qaData.outlier->setAnnotation(notes);
         vMD.qaData.outlier->parseOption(outlierOpts);
@@ -2889,25 +2868,29 @@ QA::entry(void)
 }
 
 int
-QA::finally(int eCode)
+QA::finally(int xCode)
 {
   if( nc )
-    setExit( finally_data(eCode) );
+    setExit( finally_data(xCode) );
+
+  if( xCode != 63 && isCheckTime )
+    qaTime.finally( nc );
+
+  setExit(xCode);
 
   // distinguish from a sytem crash (segmentation error)
-//  notes->print() ;
-  std::cout << "STATUS-BEG" << eCode << "STATUS-END";
+  std::cout << "STATUS-BEG" << xCode << "STATUS-END";
   std::cout << std::flush;
 
-  setExit( exitCode ) ;
+  nc->close();
 
   return exitCode ;
 }
 
 int
-QA::finally_data(int eCode)
+QA::finally_data(int xCode)
 {
-  setExit(eCode);
+  setExit(xCode);
 
   // write pending results to qa-file.nc. Modes are considered there
   for( size_t i=0 ; i < varMeDa.size() ; ++i )
@@ -2918,35 +2901,27 @@ QA::finally_data(int eCode)
   if( exitCode < 3 )
   {  // 3 or 4 interrupted any checking
     if( enablePostProc )
+    {
       if( postProc() )
+      {
         if( exitCode == 63 )
-            exitCode=0;  // this is considered a change
-  }
-  else
-  {
-    // outlier test based on slope across n*sigma
-    // must follow flushOutput(), if the latter is effective
-    if( isCheckData )
-      for( size_t i=0 ; i < varMeDa.size() ; ++i )
-         if( varMeDa[i].qaData.enableOutlierTest )
-           varMeDa[i].qaData.outlier->test( &(varMeDa[i].qaData) );
+            exitCode=1;  // this is considered a change
+
+        notes->setCheckDataStr(fail);
+      }
+    }
   }
 
   if( exitCode == 63 ||
      ( nc == 0 && exitCode ) || (currQARec == 0 && pIn->isTime ) )
   { // qa is up-to-date or a forced exit right from the start;
     // qa_>filename>.nc remains the same
-    nc->close();
-
     if( exitCode == 63 )
       exitCode=0 ;
 
     isExit=true;
     return exitCode ;
   }
-
-  if( exitCode != 63 )
-    qaTime.finally( nc );
 
   // read history from the qa-file.nc and append new entries
   appendToHistory(exitCode);
@@ -2962,8 +2937,6 @@ QA::finally_data(int eCode)
     for( size_t j=0 ; j < varMeDa.size() ; ++j )
        varMeDa[j].qaData.setStatisticsAttribute(nc);
   }
-
-  nc->close();
 
   return exitCode ;
 }
@@ -3323,6 +3296,16 @@ QA::getDimMetaData(InFile &in,
   return ;
 }
 
+bool
+QA::getExit(void)
+{
+  // note that isExit==true was forced
+  if( exitCode > 1 || isExit )
+    return true;
+
+  return false;
+}
+
 std::string
 QA::getFrequency(void)
 {
@@ -3552,11 +3535,11 @@ QA::init(void)
 
    notes->init();  // safe
 
-   // apply parsed command-line args
-   applyOptions();
-
    // default
    setFilename( pIn->file );
+
+   // apply parsed command-line args
+   applyOptions();
 
    fVarname = getVarnameFromFilename(pIn->file.filename);
    getFrequency();
@@ -3576,7 +3559,7 @@ QA::init(void)
       {
         std::string capt("No records in the file.") ;
 
-        (void) notes->operate(capt, text) ;
+        (void) notes->operate(capt) ;
         {
           notes->setCheckMetaStr(fail);
           notes->setCheckTimeStr(fail);
@@ -3609,6 +3592,8 @@ QA::init(void)
        }
      }
    }
+   else
+     isCheckTime=false;
 
    // open netCDF for continuation and resuming a session
    openQA_Nc(*pIn);
@@ -3649,7 +3634,8 @@ QA::init(void)
      // set pointer to function for operating tests
      execPtr = &IObj::entry ;
      bool is = entry();
-     if( isExit || is )
+
+     if( getExit() || is )
        return true;
 
      isNotFirstRecord = true;
@@ -3664,14 +3650,14 @@ QA::initDataOutputBuffer(void)
 {
   if( isCheckTime )
   {
-    qaTime.timeOutputBuffer.initBuffer(nc, currQARec, bufferSize);
-    qaTime.sharedRecordFlag.initBuffer(nc, currQARec, bufferSize);
+    qaTime.timeOutputBuffer.initBuffer(this, currQARec, bufferSize);
+    qaTime.sharedRecordFlag.initBuffer(this, currQARec, bufferSize);
   }
 
   if( isCheckData )
   {
     for( size_t i=0 ; i < varMeDa.size() ; ++i)
-      varMeDa[i].qaData.initBuffer(nc, currQARec, bufferSize);
+      varMeDa[i].qaData.initBuffer(this, currQARec, bufferSize);
   }
 
   return;
@@ -3695,9 +3681,11 @@ QA::initDefaults(void)
 
   blank=" ";
   fail="FAIL";
+  fileStr="file";
   no_blank="no_blank";
   notAvailable="not available";
   s_colon=":";
+  s_mismatch="mismatch";
   s_upper="upper";
 
   enablePostProc=false;
@@ -4026,15 +4014,9 @@ QA::openQA_Nc(InFile &in)
       isNotFirstRecord = true;
 
     initDataOutputBuffer();
-    qaTime.sharedRecordFlag.initBuffer(nc, currQARec);
 
     initResumeSession();
     isResumeSession=true;
-
-    // if files are synchronised, i.e. a file hasn't changed since
-    // the last qa, this will exit in member finally(6?)
-    if( isCheckTime )
-      isNoProgress = qaTime.sync( isCheckData, enablePostProc );
 
     return;
   }
@@ -4042,10 +4024,6 @@ QA::openQA_Nc(InFile &in)
   if( currQARec == 0 && in.nc.getNumOfRecords() == 1 )
     qaTime.isSingleTimeValue = true;
 
-  // So, we have to generate a netCDF file from almost scratch;
-  std::string str; // temporarily
-
-  // open new netcdf file
   // open new netcdf file
   if( qaNcfileFlags.size() )
     nc->create(qaFile.getFile(),  qaNcfileFlags);
@@ -4757,7 +4735,7 @@ VariableMetaData::~VariableMetaData()
 }
 
 int
-VariableMetaData::finally(int eCode)
+VariableMetaData::finally(int xCode)
 {
   // write pending results to qa-file.nc. Modes are considered there
   qaData.flush();
@@ -4766,9 +4744,9 @@ VariableMetaData::finally(int eCode)
   notes->printFlags();
 
   int rV = notes->getExitValue();
-  eCode = ( eCode > rV ) ? eCode : rV ;
+  xCode = ( xCode > rV ) ? xCode : rV ;
 
-  return eCode ;
+  return xCode ;
 }
 
 void

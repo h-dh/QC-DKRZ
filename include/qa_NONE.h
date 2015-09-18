@@ -106,6 +106,8 @@ class QA : public IObj
 
   void   applyOptions(bool isPost=false);
 
+  bool   checkDataBody(void);
+
 //! Checks meta-data
   void   checkMetaData(InFile &) ;
 

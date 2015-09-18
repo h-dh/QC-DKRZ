@@ -436,7 +436,7 @@ callQaExecutor()
           PROJECT_TABLE \
           QA \
           QA_CHECK_LIST \
-          QA_MANAGER_HOST \
+          QA_HOST \
           QA_NCFILE_FLAGS \
           QA_RESULTS \
           QA_PATH \
@@ -1815,13 +1815,6 @@ getNextVariable()
        std_out flush "${nextFile[*]/%/\\n}"
 
   local nFsSz=${#nextFile[*]}
-
-  if [ ${status} -gt 49 ] ; then
-    status=$((status - 50))
-    isPost=t
-  else
-    isPost=f
-  fi
 
   # up-to-date
   if [ ${status} -eq 1 ] ; then
@@ -3228,11 +3221,11 @@ log()
 
   s_out="${s_out} - date: $( date +'%FT%T' )"
 
-#  if [ ${QA_MANAGER_HOST} = $HOSTNAME ] ; then
+#  if [ ${QA_HOST} = $HOSTNAME ] ; then
 #  test ${ix} -lt 2 && \
 #    echo  "${sp[ix]}date: $( date +'%FT%T' )" >> $out
 #  else
-#    tryRemote ssh ${QA_MANAGER_HOST} \
+#    tryRemote ssh ${QA_HOST} \
 #      echo -e ${str} >> $out
 #  fi
 
@@ -3311,11 +3304,11 @@ log_expMessage()
   str="\n$( date +'%F %T' ) "
   str="$str""$1"
 
-#  if [ ${QA_MANAGER_HOST} = $HOSTNAME ] ; then
+#  if [ ${QA_HOST} = $HOSTNAME ] ; then
     tryCom \
     echo -e "${str}" >> $EXP_LOGDIR/${CURR_EXP_NAME}.log
 #  else
-#    tryRemote ssh ${QA_MANAGER_HOST} \
+#    tryRemote ssh ${QA_HOST} \
 #      echo -e ${str} >> $EXP_LOGDIR/${CURR_EXP_NAME}.log
 #  fi
 
@@ -3630,7 +3623,7 @@ operatePipes()
          FILE_SEQUENCE=s
       fi
 
-      if [ ${isPost:-f} = t -a ${#p_nF[*]} -eq 1 ] ; then
+      if [ ${#p_nF[*]} -eq 1 ] ; then
         POST_PROC=t
       else
         POST_PROC=

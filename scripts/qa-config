@@ -42,7 +42,7 @@ setDefaults()
   # you should not leave this unchanged in the config file
   test ! ${QA_RESULTS} && setKWL QA_RESULTS=${QA_WORK}/results
 
-  setKWL QA_MANAGER_HOST=$HOSTNAME
+  setKWL QA_HOST=$HOSTNAME
 
   setKWL QA_BIN=${HOSTNAME}:${QA_PATH}/bin
 
@@ -546,7 +546,7 @@ getConfPriority()
   # the first two items of array 'task_priority' would have been
   # set while performing getops().
 
-  test "${PROJECT}" = NONE && return
+#  test "${PROJECT}" = NONE && return
 
   local i item qaResults swp sz1 sz
 

@@ -15,7 +15,7 @@ QA::~QA()
 }
 
 void
-QA::appendToHistory(size_t eCode)
+QA::appendToHistory(size_t xCode)
 {
   // date and time at run time
   std::string today( Date::getTodayStr() );
@@ -53,14 +53,6 @@ QA::appendToHistory(size_t eCode)
     hst += today;
     hst += " path_to_data=";
     hst += qaFile.path ;
-/*
-    hst += "\nfilenames and tracking_id in file tid_";
-
-    std::string t0(qaFile.substr(3));
-    t0 = t0.substr(0, t0.size()-3);
-    hst += t0;
-    hst += ".txt" ;
-*/
   }
 
   // did the package version change? Yes? Then add to history
@@ -86,7 +78,7 @@ QA::appendToHistory(size_t eCode)
       tmp = splt[++index] ;
     else
       // not in the history, so take the one from the version attribute
-      tmp = nc->getAttString("QA_revision");
+      tmp = nc->getAttString("QA revision");
 
     if( revision != tmp )
     {
@@ -109,6 +101,8 @@ QA::appendToHistory(size_t eCode)
 void
 QA::applyOptions(bool isPost)
 {
+  enablePostProc=isPost;
+
   // the first loop for items with higher precedence
   for( size_t i=0 ; i < optStr.size() ; ++i)
   {
@@ -141,7 +135,7 @@ QA::applyOptions(bool isPost)
        if( split.size() == 2 )
          setCheckMode(split[1]);
 
-        continue;
+       continue;
      }
 
      if( split[0] == "dIP"
@@ -157,11 +151,10 @@ QA::applyOptions(bool isPost)
           || split[0] == "dataPath" || split[0] == "data_path" )
      {
        if( split.size() == 2 )
-       {
           // path to the directory where the execution takes place
           qaFile.setPath(split[1]);
-          continue;
-       }
+
+       continue;
      }
 
      if( split[0] == "eA" || split[0] == "excludedAttribute"
@@ -170,71 +163,57 @@ QA::applyOptions(bool isPost)
        Split cvs(split[1],",");
        for( size_t i=0 ; i < cvs.size() ; ++i )
          excludedAttribute.push_back(cvs[i]);
+
        continue;
      }
 
      if( split[0] == "f" )
      {
        if( split.size() == 2 )
-       {
           qaFile.setFile(split[1]);
-          continue;
-       }
+       continue;
      }
 
      if( split[0] == "fS" || split[0] == "FileSequence"
          || split[0] == "file_sequence" )
      {
        if( split.size() == 2 )
-       {
           fileSequenceState=split[1][0];
-          continue;
-       }
+       continue;
      }
 
      if( split[0] == "fq" || split[0] == "Frequency"
          || split[0] == "frequency" )
      {
        if( split.size() == 2 )
-       {
           frequency=split[1];
-          continue;
-       }
+       continue;
      }
 
      if( split[0] == "fqp" || split[0] == "FrequencyPosition"
          || split[0] == "frequency_position" )
      {
        if( split.size() == 2 )
-       {
           frequency_pos = split.toInt(1);
-          continue;
-       }
+       continue;
      }
 
      if( split[0] == "oT"
            || split[0] == "outlierTest"
                 || split[0] == "outlier_test" )
      {
-       if( split.size() == 2 )
-       {
-          if( split[1].find("POST") < std::string::npos
-                   && ! enablePostProc )
-            continue;
-
+       if( enablePostProc && split.size() == 2 )
           outlierOpts.push_back(split[1]);
-          continue;
-       }
+
+       continue;
      }
 
      if( split[0] == "qNF" || split[0] == "qaNcfileFlags"
        || split[0] == "qa_ncfile_flags" )
      {
        if( split.size() == 2 )
-       {
           qaNcfileFlags=split[1];
-          continue;
-       }
+       continue;
      }
 
      if( split[0] == "rR"
@@ -261,29 +240,25 @@ QA::applyOptions(bool isPost)
             for( size_t i=0 ; i < csv.size() ; ++i )
               replicationOpts.push_back(csv[i]);
           }
-          continue;
        }
+       continue;
      }
 
      if( split[0] == "tP"
           || split[0] == "tablePath" || split[0] == "table_path")
      {
        if( split.size() == 2 )
-       {
           tablePath=split[1];
-          continue;
-       }
+       continue;
      }
 
      if( split[0] == "tPr"
           || split[0] == "tableProject" )  // dummy
      {
        if( split.size() == 2 )
-       {
           projectTableFile.setFile(split[1]);
 
-          continue;
-       }
+       continue;
      }
    }
 
@@ -292,6 +267,34 @@ QA::applyOptions(bool isPost)
       projectTableFile.setPath(tablePath);
 
    return;
+}
+
+bool
+QA::checkDataBody(void)
+{
+  // no data at all
+  if( ! pIn->dataVarIndex.size() )
+    return true;
+
+  std::vector<size_t> vs;
+  for( size_t i=0 ; i < pIn->dataVarIndex.size() ; ++i)
+  {
+    Variable& var = pIn->variable[ pIn->dataVarIndex[i] ];
+    if( ! pIn->nc.isEmptyData(var.name) )
+    {
+      vs.push_back(pIn->dataVarIndex[i]) ;
+      notes->setCheckDataStr(fail);
+    }
+  }
+
+  if( vs.size() )
+    // only try for variables with data
+    pIn->dataVarIndex = vs ;
+  else
+    // all data variables without any data
+    return true;
+
+  return false;
 }
 
 void
@@ -386,7 +389,7 @@ QA::createVarMetaData(void)
     if( replicationOpts.size() )
     {
       if( ReplicatedRecord::isSelected(
-             replicationOpts, vMD.name, enablePostProc, effDim ) )
+             replicationOpts, vMD.name, effDim ) )
       {
         vMD.qaData.replicated = new ReplicatedRecord(this, i, vMD.name);
         vMD.qaData.replicated->setAnnotation(notes);
@@ -394,12 +397,14 @@ QA::createVarMetaData(void)
       }
     }
 
-    if( outlierOpts.size() )
+    if( enablePostProc && outlierOpts.size() )
     {
       if( Outlier::isSelected(
-             outlierOpts, vMD.name, enablePostProc, effDim ) )
+             outlierOpts, vMD.name, effDim ) )
       {
-        vMD.qaData.outlier = new Outlier(this, i, vMD.name);
+        vMD.qaData.enableOutlierTest=true;
+
+        vMD.qaData.outlier = new Outlier(this, i, vMD.var->name);
         vMD.qaData.outlier->setAnnotation(notes);
         vMD.qaData.outlier->parseOption(outlierOpts);
       }
@@ -457,25 +462,29 @@ QA::entry(void)
 }
 
 int
-QA::finally(int eCode)
+QA::finally(int xCode)
 {
   if( nc )
-    setExit( finally_data(eCode) );
+    setExit( finally_data(xCode) );
+
+  if( xCode != 63 && isCheckTime )
+    qaTime.finally( nc );
+
+  setExit(xCode);
 
   // distinguish from a sytem crash (segmentation error)
-//  notes->print() ;
   std::cout << "STATUS-BEG" << exitCode << "STATUS-END";
   std::cout << std::flush;
 
-  setExit( exitCode ) ;
+  nc->close() ;
 
   return exitCode ;
 }
 
 int
-QA::finally_data(int eCode)
+QA::finally_data(int xCode)
 {
-  setExit(eCode);
+  setExit(xCode);
 
   // write pending results to qa-file.nc. Modes are considered there
   for( size_t i=0 ; i < varMeDa.size() ; ++i )
@@ -486,26 +495,21 @@ QA::finally_data(int eCode)
   if( exitCode < 3 )
   {  // 3 or 4 interrupted any checking
     if( enablePostProc )
+    {
       if( postProc() )
+      {
         if( exitCode == 63 )
-            exitCode=0;  // this is considered a change
-  }
-  else
-  {
-    // outlier test based on slope across n*sigma
-    // must follow flushOutput(), if the latter is effective
-    if( isCheckData )
-      for( size_t i=0 ; i < varMeDa.size() ; ++i )
-         if( varMeDa[i].qaData.enableOutlierTest )
-           varMeDa[i].qaData.outlier->test( &(varMeDa[i].qaData) );
+            exitCode=1;  // this is considered a change
+
+        notes->setCheckDataStr(fail);
+      }
+    }
   }
 
   if( exitCode == 63 ||
      ( nc == 0 && exitCode ) || (currQARec == 0 && pIn->isTime ) )
   { // qa is up-to-date or a forced exit right from the start;
     // no data to write
-    nc->close();
-
     if( exitCode == 63 )
       exitCode=0 ;
 
@@ -533,8 +537,6 @@ QA::finally_data(int eCode)
        varMeDa[j].qaData.setStatisticsAttribute(nc);
     }
   }
-
-  nc->close();
 
   return exitCode ;
 }
@@ -662,6 +664,9 @@ QA::init(void)
        }
      }
    }
+   else
+     isCheckTime=false;
+
 
    // open netCDF for creating, continuation or resuming qa_<varname>.nc
    openQA_Nc(*pIn);
@@ -691,11 +696,8 @@ QA::init(void)
 
    if( isCheckData )
    {
-     if( ! pIn->nc.isAnyRecord() )
-     {
-       notes->setCheckDataStr(fail);
+     if( checkDataBody() )
        return true;
-     }
 
      notes->setCheckDataStr("PASS");
 
@@ -774,6 +776,8 @@ QA::initDefaults(void)
   isCheckMeta=true;
   isCheckTime=true;
   isCheckData=true;
+
+  bufferSize=1500;
 
   exitCode=0;
 
@@ -959,7 +963,7 @@ QA::openQA_Nc(InFile &in)
   // Copies time variable from input-nc file.
 
   // name of the file begins with qa_
-  if ( qaFile.is )
+  if ( !qaFile.is )
   {
     std::string key("00");
 
@@ -1530,7 +1534,7 @@ VariableMetaData::~VariableMetaData()
 }
 
 int
-VariableMetaData::finally(int eCode)
+VariableMetaData::finally(int xCode)
 {
   // write pending results to qa-file.nc. Modes are considered there
   qaData.flush();
@@ -1539,9 +1543,9 @@ VariableMetaData::finally(int eCode)
   notes->printFlags();
 
   int rV = notes->getExitValue();
-  eCode = ( eCode > rV ) ? eCode : rV ;
+  xCode = ( xCode > rV ) ? xCode : rV ;
 
-  return eCode ;
+  return xCode ;
 }
 
 void

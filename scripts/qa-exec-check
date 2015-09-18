@@ -201,7 +201,7 @@ clearProcPool()
     if [ ${DISTRIBUTED_FS:-f} = f ] ; then
        tryCom mv $PROC_POOL/$PROC_FILE.lock $PROC_POOL/$PROC_FILE.closed
     else
-       tryRemote ssh ${QA_MANAGER_HOST}  \
+       tryRemote ssh ${QA_HOST}  \
          mv $PROC_POOL/$PROC_FILE.lock $PROC_POOL/$PROC_FILE.closed
     fi
   fi
@@ -285,7 +285,7 @@ fi
 
  # Be nice: check, whether load is lower than two of the three limits.
  if [ "${WORK_AT_LOW_LOAD:-f}" = 't' ] ; then
-   if [ ${QA_MANAGER_HOST} != $HOSTNAME ] ; then
+   if [ ${QA_HOST} != $HOSTNAME ] ; then
      while : ; do
        upTime=( $(uptime) )
         # for linux and solaris identical
@@ -612,7 +612,7 @@ init()
   if [ ${DISTRIBUTED_FS:-f} = f ] ; then
      tryCom mv $PROC_POOL/$PROC_FILE $PROC_POOL/$PROC_FILE.lock
   else
-     tryRemote ssh ${QA_MANAGER_HOST} \
+     tryRemote ssh ${QA_HOST} \
        mv $PROC_POOL/$PROC_FILE $PROC_POOL/$PROC_FILE.lock
   fi
 
@@ -637,7 +637,7 @@ init()
 
   # Distributed file system?This is the qa-DKRZ host.
   if [ ${DISTRIBUTED_FS:-f} = t ] ; then
-    test ${QA_MANAGER_HOST} = $HOSTNAME && DISTRIBUTED_FS=f
+    test ${QA_HOST} = $HOSTNAME && DISTRIBUTED_FS=f
   fi
 
   # path to the netCDF file
@@ -1536,10 +1536,10 @@ signalParent()
      return
    fi
 
-   if [ "${HOSTNAME}" = "${QA_MANAGER_HOST}" ] ; then
+   if [ "${HOSTNAME}" = "${QA_HOST}" ] ; then
      kill -${1} $PAR_PID &> /dev/null
    else
-     ssh ${QA_MANAGER_HOST} kill -${1} $PAR_PID &> /dev/null
+     ssh ${QA_HOST} kill -${1} $PAR_PID &> /dev/null
    fi
 }
 
@@ -1896,7 +1896,7 @@ tryRemote()
   fi
 
   # wait until host is reachable
-  while ! callPing ${QA_MANAGER_HOST} ; do
+  while ! callPing ${QA_HOST} ; do
     sleep $(( ++mySleep ))
   done
 

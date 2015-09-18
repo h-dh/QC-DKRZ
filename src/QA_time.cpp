@@ -367,6 +367,9 @@ QA_Time::init(InFile *in, Annotation *n, QA *q)
       }
    }
 
+   if( pIn->nc.isEmptyData(name) )
+     return false;
+
    timeOutputBuffer.initBuffer(pQA, pQA->currQARec, pQA->bufferSize);
    timeOutputBuffer.setName(name);
 
