@@ -59,9 +59,7 @@ class Outlier
 
   static bool
         isSelected( std::vector<std::string> &opts,
-                     std::string &vName,
-                     bool isQA_enablePostProc,
-                     int effDims );
+                     std::string &vName, int effDims );
 
   //! Evaluate outlier test
   /*! When of checking sub-temp files or in post-processing mode.
@@ -99,7 +97,7 @@ class ReplicatedRecord
             std::vector<std::string>& range) ;
   static bool
          isSelected( std::vector<std::string> &options,
-            std::string &vName, bool isQA_enablePostProc, int effDims );
+            std::string &vName, int effDims );
 
   void   parseOption( std::vector<std::string> &opts ) ;
   void   report( std::vector<std::string> &note, size_t bufCount,
