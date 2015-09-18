@@ -874,7 +874,7 @@ Annotation::parse(void)
           else if( isEmergency )
             level.push_back("L4");
           else
-            level.push_back("");
+            level.push_back("L1");
 
           count.push_back( 0 );
           text.push_back( checkListText );
@@ -1023,6 +1023,7 @@ Annotation::printFlags(void)
 
     // any account for accumulated 'R' flags?
     // Still the caption.
+/*
     if( s[0] == 'R' )
     {
        int num;
@@ -1033,6 +1034,7 @@ Annotation::printFlags(void)
          out += ")" ;
        }
     }
+*/
 
     int last=out.size() -1 ;
     if( last > -1 &&
