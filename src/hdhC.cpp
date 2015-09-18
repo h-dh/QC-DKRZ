@@ -1,4 +1,4 @@
-#include "hdhC.h"
+// // epsiolon#include "hdhC.h"
 
 namespace hdhC
 {
@@ -215,23 +215,25 @@ T clearLeastBits( T v, size_t shft)
   return v;
 }
 
-bool compare(double x, double y, std::string op, double epsilon)
+bool compare(double x, double y, char op, double epsilon)
 {
   // compare x and y within uncertainty ranges e
-  // A factor of 2 is substituted in epsilon
-  // modes: op: "==" --> x == y
-  //        op: "<"  --> x < y
-  //        op: ">"  --> x > y
+  // modes: op: '=' --> x == y
+  //        op: '<'  --> x < y
+  //        op: '>'  --> x > y
 
-  if( op == "==" )
+  if( op == '=' )
   {
+    if( x == y )
+       return true;
+
     if( fabs(x - y) < epsilon )
       return true;
     else
       return false;
   }
 
-  if( op == "<" )
+  if( op == '<' )
   {
     if( (x + epsilon) < y )
       return true;
@@ -239,7 +241,7 @@ bool compare(double x, double y, std::string op, double epsilon)
       return false;
   }
 
-  if( op == ">" )
+  if( op == '>' )
   {
     if( x > (y + epsilon) )
       return true;
@@ -251,7 +253,7 @@ bool compare(double x, double y, std::string op, double epsilon)
 }
 
 bool
-compare(double x, double y, std::string op, int decimals)
+compare(double x, double y, char op, int decimals)
 {
   // fabs( (x + x*10^-decimals) op (y + y*10^-decimals )
 
@@ -259,7 +261,7 @@ compare(double x, double y, std::string op, int decimals)
 
 // compare x and y within uncertainty ranges e
   // A factor of 2 is substituted in epsilon
-  // modes: op: "==" --> x == y
+  // modes: op: "=" --> x == y
   //        op: "<"  --> x < y
   //        op: ">"  --> x > y
   double delta_x = x;
@@ -274,12 +276,12 @@ compare(double x, double y, std::string op, int decimals)
   double epsilon = fabs(delta_y - delta_x);
   double val = fabs( x - y );
 
-  if( op == ">" )
+  if( op == '>' )
   {
     if( val > epsilon )
       return true;
   }
-  else if( op == "<" )
+  else if( op == '<' )
   {
     if( val < epsilon )
       return true;
@@ -684,7 +686,7 @@ std::string double2String( double z, std::string flag)
 
       str = str.substr(0, ++pos);
     }
-    
+
     str += sci_rep;
 
     return str;
@@ -747,12 +749,6 @@ bool equal(T x1, T x2, double epsilon)
 
   // Note: it is assumed the typenames are restricted to
   // a kind of float
-
-  //take the type into account
-  std::string ti( typeid(x1).name() );
-
-  if( ti == "d" )
-    epsilon *= epsilon ;
 
   // test for the same sign
   if( x1 > 0. )

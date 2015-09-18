@@ -427,11 +427,11 @@ class QA : public IObj
 
   // the same buf-size for all buffer is required for testing replicated records
   size_t bufferSize;
-  
+
   // init for test about times
-  bool enabledPostProc;
-  bool isUseStrict;
+  bool enablePostProc;
   bool enableVersionInHistory;
+  bool isUseStrict;
   bool isCaseInsensitiveVarName;
   bool isCheckParentExpID;
   bool isCheckParentExpRIP;
@@ -475,11 +475,13 @@ class QA : public IObj
   std::string revision;
 
   std::string fail;
+  std::string fileStr;
   std::string notAvailable;
   std::string blank;
   std::string no_blank;
   std::string s_colon;
   std::string s_empty;
+  std::string s_mismatch;
   std::string s_upper;
   std::string s_lower;
 
@@ -490,9 +492,6 @@ class QA : public IObj
   std::string n_positive;
   std::string n_standard_name;
   std::string n_units;
-
-  std::string fileStr;
-  std::string s_mismatch;
 
   std::string getCaptIntroDim(VariableMetaData &vMD,
                    struct DimensionMetaData &nc_entry,

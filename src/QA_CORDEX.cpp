@@ -105,7 +105,7 @@ QA::appendToHistory(void)
 void
 QA::applyOptions(bool isPost)
 {
-  enabledPostProc=isPost;
+  enablePostProc=isPost;
 
   // the first loop for items with higher precedence
   for( size_t i=0 ; i < optStr.size() ; ++i)
@@ -115,7 +115,7 @@ QA::applyOptions(bool isPost)
      if( split[0] == "pP" || split[0] == "postProc"
        || split[0] == "post_proc")
      {
-       enabledPostProc=true;
+       enablePostProc=true;
        break;
      }
   }
@@ -154,12 +154,11 @@ QA::applyOptions(bool isPost)
      if( split[0] == "dP"
           || split[0] == "dataPath" || split[0] == "data_path" )
      {
-       if( split.size() == 2 )
-       {
+        if( split.size() == 2 )
           // path to the directory where the execution takes place
           qaFile.setPath(split[1]);
-          continue;
-       }
+
+        continue;
      }
 
      if( split[0] == "eA" || split[0] == "excludedAttribute"
@@ -168,41 +167,34 @@ QA::applyOptions(bool isPost)
        Split cvs(split[1],",");
        for( size_t i=0 ; i < cvs.size() ; ++i )
          excludedAttribute.push_back(cvs[i]);
+
        continue;
      }
 
      if( split[0] == "f" )
      {
        if( split.size() == 2 )
-       {
           qaFile.setFile(split[1]);
-          continue;
-       }
+        continue;
      }
 
      if( split[0] == "fS" || split[0] == "FileSequence"
          || split[0] == "file_sequence" )
      {
-       if( split.size() == 2 )
-       {
+        if( split.size() == 2 )
           fileSequenceState=split[1][0];
-          continue;
-       }
+
+        continue;
      }
 
      if( split[0] == "oT"
            || split[0] == "outlierTest"
                 || split[0] == "outlier_test" )
      {
-       if( split.size() == 2 )
-       {
-          if( split[1].find("POST") < std::string::npos
-                   && ! enabledPostProc )
-            continue;
-
+        if( enablePostProc && split.size() == 2 )
           outlierOpts.push_back(split[1]);
-          continue;
-       }
+
+        continue;
      }
 
 
@@ -210,10 +202,8 @@ QA::applyOptions(bool isPost)
        || split[0] == "qa_ncfile_flags" )
      {
        if( split.size() == 2 )
-       {
           qaNcfileFlags=split[1];
-          continue;
-       }
+        continue;
      }
 
      if( split[0] == "rR"
@@ -240,6 +230,7 @@ QA::applyOptions(bool isPost)
             for( size_t i=0 ; i < csv.size() ; ++i )
               replicationOpts.push_back(csv[i]);
           }
+
           continue;
        }
      }
@@ -248,32 +239,27 @@ QA::applyOptions(bool isPost)
            || split[0] == "table_GCM_NAME" )
      {
        if( split.size() == 2 )
-       {
           GCM_ModelnameTable.setFile(split[1]) ;
 
-          continue;
-       }
+       continue;
      }
 
      if( split[0] == "tP"
           || split[0] == "tablePath" || split[0] == "table_path")
      {
        if( split.size() == 2 )
-       {
           tablePath=split[1];
-          continue;
-       }
+
+       continue;
      }
 
      if( split[0] == "tPr"
           || split[0] == "tableProject" )  // dummy
      {
        if( split.size() == 2 )
-       {
           projectTableFile.setFile(split[1]);
 
-          continue;
-       }
+       continue;
      }
 
      if( split[0] == "tCAD"
@@ -281,43 +267,37 @@ QA::applyOptions(bool isPost)
                 || split[0] == "table_archive_design" )
      {
        if( split.size() == 2 )
-       {
           archiveDesignTable.setFile(split[1]) ;
 
-          continue;
-       }
+       continue;
      }
 
      if( split[0] == "tRCM"
            || split[0] == "table_RCM_NAME" )
      {
        if( split.size() == 2 )
-       {
           RCM_ModelnameTable.setFile(split[1]) ;
 
-          continue;
-       }
+       continue;
      }
 
      if( split[0] == "tVR"
           || split[0] == "tableVariableRequirement" )
      {
        if( split.size() == 2 )
-       {
           varReqTable.setFile(split[1]);
 
-          continue;
-       }
+       continue;
      }
 
-     if( split[0] == "uS"
-         || split[0] == "useStrict"
+     if( split[0] == "uS" || split[0] == "useStrict"
             || split[0] == "use_strict" )
      {
           isUseStrict=true ;
           setCheckMode("meta");
-          continue;
      }
+
+     continue;
    }
 
    // apply a general path which could have also been provided by setTablePath()
@@ -2891,7 +2871,6 @@ QA::createVarMetaData(void)
     // some more properties
     vMD.longName     = var.getAttValue(n_long_name) ;
     vMD.positive     = var.getAttValue(n_positive) ;
-
   }
 
   // Check varname from filename with those in the file.
@@ -2927,7 +2906,7 @@ QA::createVarMetaData(void)
     if( replicationOpts.size() )
     {
       if( ReplicatedRecord::isSelected(
-             replicationOpts, vMD.var->name, enabledPostProc, effDim ) )
+             replicationOpts, vMD.var->name, effDim ) )
       {
         vMD.qaData.replicated = new ReplicatedRecord(this, i, vMD.var->name);
         vMD.qaData.replicated->setAnnotation(notes);
@@ -2935,11 +2914,13 @@ QA::createVarMetaData(void)
       }
     }
 
-    if( outlierOpts.size() )
+    if( enablePostProc && outlierOpts.size() )
     {
       if( Outlier::isSelected(
-             outlierOpts, vMD.var->name, enabledPostProc, effDim ) )
+             outlierOpts, vMD.var->name, effDim ) )
       {
+        vMD.qaData.enableOutlierTest=true;
+
         vMD.qaData.outlier = new Outlier(this, i, vMD.var->name);
         vMD.qaData.outlier->setAnnotation(notes);
         vMD.qaData.outlier->parseOption(outlierOpts);
@@ -3009,7 +2990,6 @@ QA::finally(int xCode)
   setExit(xCode);
 
   // distinguish from a sytem crash (segmentation error)
-//  notes->print() ;
   std::cout << "STATUS-BEG" << xCode << "STATUS-END";
   std::cout << std::flush;
 
@@ -3031,19 +3011,16 @@ QA::finally_data(int xCode)
   // incomplete checking.
   if( exitCode < 3 )
   {  // 3 or 4 interrupted any checking
-    if( enabledPostProc )
+    if( enablePostProc )
+    {
       if( postProc() )
+      {
         if( exitCode == 63 )
-            exitCode=0;  // this is considered a change
-  }
-  else
-  {
-    // outlier test based on slope across n*sigma
-    // must follow flushOutput(), if the latter is effective
-    if( isCheckData )
-      for( size_t i=0 ; i < varMeDa.size() ; ++i )
-         if( varMeDa[i].qaData.enableOutlierTest )
-           varMeDa[i].qaData.outlier->test( &(varMeDa[i].qaData) );
+            exitCode=1;  // this is considered a change
+
+        notes->setCheckDataStr(fail);
+      }
+    }
   }
 
   if( exitCode == 63 ||
@@ -3518,15 +3495,12 @@ QA::init(void)
 
    notes->init();  // safe
 
-   // if non is provided via options
-   std::string str(pIn->file.getFilename());
-
    // default for the qaFile
    setFilename( pIn->file );
 
    // apply parsed command-line args
    applyOptions();
-
+//
    fVarname = getVarnameFromFilename(pIn->file.getFilename());
    getFrequency();
    getSubTable() ;
@@ -3672,9 +3646,11 @@ QA::initDefaults(void)
 
   blank=" ";
   fail="FAIL";
+  fileStr="file";
   no_blank="no_blank";
   notAvailable="not available";
   s_colon=":";
+  s_mismatch="mismatch";
   s_upper="upper";
 
   n_axis="axis";
@@ -3685,10 +3661,7 @@ QA::initDefaults(void)
   n_standard_name="standard_name";
   n_units="units";
 
-  fileStr="file";
-  s_mismatch="mismatch";
-
-  enabledPostProc=false;
+  enablePostProc=false;
   enableVersionInHistory=true;
 
   isCaseInsensitiveVarName=false;
@@ -4049,7 +4022,6 @@ QA::openQA_Nc(InFile &in)
     // create variable for the data statics etc.
   for( size_t m=0 ; m < varMeDa.size() ; ++m )
     varMeDa[m].qaData.openQA_NcContrib(nc, varMeDa[m].var);
-
 
   // global atts at creation.
   initGlobalAtts(in);
@@ -5525,7 +5497,7 @@ QA::testPeriodCut(std::vector<std::string> &sd)
 
     if( isEnd )
     {
-      if( !enabledPostProc && sd[1].substr(4,2) != "11" )
+      if( !enablePostProc && sd[1].substr(4,2) != "11" )
       {
         if( text.size() )
           text += "\n";

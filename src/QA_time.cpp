@@ -640,9 +640,9 @@ QA_Time::initRelativeTime(std::string &units)
 void
 QA_Time::initResumeSession(void)
 {
-   // this method may be used for two different purposes. First,
-   // resuming within the same experiment. Second, continuation
-   // from a parent experiment.
+    // if files are synchronised, i.e. a file hasn't changed since
+    // the last qa, this will exit in member finally(6?)
+   isNoProgress = sync();
 
    std::vector<double> dv;
 
@@ -1103,7 +1103,7 @@ QA_Time::setTable(std::string &p, std::string t)
 }
 
 bool
-QA_Time::sync(bool isCheckData, bool enabledPostProc )
+QA_Time::sync(void)
 {
   // Synchronise the in-file and the qa-netCDF file.
   // Failure: call setExit(error_code).
@@ -1116,11 +1116,7 @@ QA_Time::sync(bool isCheckData, bool enabledPostProc )
   // Any records available in the qa-ncfile?
   size_t qaRecNum;
   if( (qaRecNum=pQA->nc->getNumOfRecords() ) == 0 )
-  {
-    // for a file with fixed variable(s)
-    if( ! enabledPostProc )
-      return true;
-  }
+    return true;
 
   // get last time value from the previous file
   std::vector<double> dv;
@@ -1141,39 +1137,26 @@ QA_Time::sync(bool isCheckData, bool enabledPostProc )
     range = pIn->nc.getDataIndexRange(name) ;
 
     size_t sz = ma_t.size() ;
+    double val = ma_t[sz-1] + refTimeOffset ;
 
     // try the last item first
-    if( ma_t[sz-1] < qa_t_eps )
+    if( val < qa_t_eps )
       continue;
 
     // a preliminary test
-    if( hdhC::equal(qa_t+refTimeStep, (ma_t[sz-1] + refTimeOffset), epsilon) )
-    {
-      if( range.second == inRecNum )
-      {
-        //nothing has changed since the last QA
-        if( ! enabledPostProc )
-          return true;
-      }
-
+    if( hdhC::compare(qa_t, val, '=', epsilon) )
       return false; // up-to-date
-    }
 
     // scanning time
     for( size_t i=0 ; i < sz ; ++i )
     {
-      if( ma_t[i] < qa_t_eps )
+      double val = ma_t[i] + refTimeOffset ;
+
+      if( val < qa_t_eps )
         continue;
 
-      if( hdhC::equal(qa_t+refTimeStep, (ma_t[i] + refTimeOffset), epsilon) )
+      if( hdhC::compare(qa_t, val, '=', epsilon) )
       {
-        if( (range.first+1) == inRecNum )
-        {
-          //nothing has changed since the last QA
-          if( ! enabledPostProc )
-            return true;
-        }
-
         // a previous QA had checked an infile that was extended
         // in the meantime.
         pIn->setCurrRec(range.first+1);
@@ -1183,7 +1166,7 @@ QA_Time::sync(bool isCheckData, bool enabledPostProc )
 
       // a previous QA had checked a complete previous sub-temporal infile
       // and time continues in the current infile.
-      if( (qa_t + epsilon) < (ma_t[i] + refTimeOffset) )
+      if( (qa_t + epsilon) < val )
         return false ;  // the usual case
     }
   }

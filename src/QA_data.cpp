@@ -282,8 +282,7 @@ Outlier::Outlier( QA *p, size_t vi, std::string nm)
 bool
 Outlier::isSelected(
      std::vector<std::string> &options,
-     std::string &vName,
-     bool isQA_enabledPostProc, int effDim )
+     std::string &vName, int effDim )
 {
   if( options.size() == 1 && options[0] == "t" )
     return true; // default for all
@@ -301,12 +300,7 @@ Outlier::isSelected(
     Split cvs(options[k],",");
     for( size_t i=0 ; i < cvs.size() ; ++i )
     {
-      if( cvs[i] == "POST" )
-      {
-        if( ! isQA_enabledPostProc )
-         isThis=false ;
-      }
-      else if( cvs[i] == "no_0-D" && effDim < 1 )
+      if( cvs[i] == "no_0-D" && effDim < 1 )
         isZeroDim=true;
       else if( cvs[i] == vName )
         isVar=true;  // valid for this specific variable
@@ -410,8 +404,8 @@ Outlier::test(QA_Data *pQAD)
 
   std::vector<std::string> names;
 
-  if( names.size() == 0 )
-    return retCode;  // probably a fixed variable
+  if( name.size() == 0 )
+    return retCode;
 
   names.push_back( name + "_min"  );
   names.push_back( name + "_max"  );
@@ -499,13 +493,8 @@ Outlier::test(QA_Data *pQAD)
     outVal.clear();
 
     bool isOut = false;
-    size_t rec=0;
     for( size_t j=0 ; j < recNum ; ++j )
-    {
-       extr[rec++] = pQA->nc->getData(ma_d, names[i] , j );
-if( rec==7)
-  extr[6] += 100.;
-    }
+       extr[j] = pQA->nc->getData(ma_d, names[i] , j );
 
     // find number of extreme values exceeding N*sigma
     size_t n=0;
@@ -617,13 +606,15 @@ if( rec==7)
 
     if( isOut )
     {
+      retCode=true;
+
       double currTime;
       std::string cTime;
-      MtrxArr<double>& ma_time = pQA->qaTime.ma_t;
+      MtrxArr<double> ma_time ;
 
       std::string key("R");
       key += hdhC::itoa(errNum[i]);
-      if( notes->inq( key, name, "NO_MT") )
+      if( notes->inq( key, name, "ACCUM") )
       {
         pQAD->sharedRecordFlag.currFlag += errNum[i];
 
@@ -637,7 +628,7 @@ if( rec==7)
         outRecMax = outRec[0] ;
         outValMax = outVal[0] ;
 
-        double cT = pQA->pIn->nc.getData(ma_time, "time", outRec[0]) ;
+        double cT = pQA->nc->getData(ma_time, "time", outRec[0]) ;
         currDateStrMax = pQA->qaTime.refDate.getDate(cT).str();
 
         for( size_t k=1 ; k < outRec.size() ; ++k )
@@ -645,7 +636,7 @@ if( rec==7)
           if ( outVal[k] < outValMax )
             continue;
 
-          cT = pQA->pIn->nc.getData(ma_time, "time", outRec[k]) ;
+          cT = pQA->nc->getData(ma_time, "time", outRec[k]) ;
           currDateStrMax = pQA->qaTime.refDate.getDate(cT).str();
 
           outValMax = outVal[k] ;
@@ -659,10 +650,9 @@ if( rec==7)
           ostr << name << ", ";
         ostr << "rec# ";
 
-        ostr << outRecMax<< ", questionable " << extStr[i];
-        ostr << ", value=" ;
+        ostr << outRecMax<< ", outlier suspicion (" << extStr[i];
+        ostr << "), value=" ;
         ostr << std::setw(12) << std::setprecision(5) << outValMax;
-        ostr << ", date="<< currDateStrMax << ".";
 
         std::string capt(ostr.str());
 
@@ -677,7 +667,7 @@ if( rec==7)
           // adjust coded flags
           pQAD->sharedRecordFlag.adjustFlag(errNum[i], outRec[k] ) ;
 
-          currTime = pQA->pIn->nc.getData(ma_time, "time", outRec[k]) ;
+          currTime = pQA->nc->getData(ma_time, "time", outRec[k]) ;
 
           ostr << "\nrec#=" << outRec[k];
           ostr << ", date=" << pQA->qaTime.refDate.getDate(currTime).str();
@@ -750,8 +740,7 @@ ReplicatedRecord::getRange(size_t i, size_t bufferCount, size_t recNum,
 bool
 ReplicatedRecord::isSelected(
      std::vector<std::string> &options,
-     std::string &vName,
-     bool isQA_enabledPostProc, int effDim )
+     std::string &vName, int effDim )
 {
   if( options.size() == 1 && options[0] == "t" )
     return true; // default for all
@@ -759,7 +748,6 @@ ReplicatedRecord::isSelected(
   bool isThis  =true;
   bool isZeroDim=false;
 
-  // dismember options
   for( size_t k=0 ; k < options.size() ; ++k )
   {
     bool isVar  =false;
@@ -769,12 +757,7 @@ ReplicatedRecord::isSelected(
     Split cvs(options[k],",");
     for( size_t i=0 ; i < cvs.size() ; ++i )
     {
-      if( cvs[i] == "POST" )
-      {
-        if( ! isQA_enabledPostProc )
-         isThis=false ;
-      }
-      else if( cvs[i].substr(0,10) == "clear_bits" )
+      if( cvs[i].substr(0,10) == "clear_bits" )
         ;
       else if( cvs[i] == "no_0-D" && effDim < 1 )
         isZeroDim=true;

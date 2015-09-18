@@ -155,7 +155,7 @@ class QA_Time
 
   //! Synchronise the in-file and the qa-netCDF file.
   /*! Return value==true for isNoProgress.*/
-  bool   sync(bool checkData, bool postProc);
+  bool   sync(void);
 
   //! Test time value.
   /*! This member is just the entry to different tests.*/
@@ -186,7 +186,7 @@ class QA_Time
   size_t nextFlushBeg;
 
   std::string ANNOT_ACCUM;
-  
+
   SharedRecordFlag sharedRecordFlag;
   TimeOutputBuffer timeOutputBuffer;
 
