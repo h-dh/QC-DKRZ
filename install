@@ -97,6 +97,8 @@ getCurrPaths()
   fi
 
   # the config filename and location
+  local isPrint=f
+
   if [ ! ${CONFIG_FILE} ] ; then
     if [ -w ~ ] ; then
       local cPath=~/.qa-dkrz
@@ -112,7 +114,11 @@ getCurrPaths()
       test ! -d $QA_PATH/.qa-dkrz && mkdir -p $QA_PATH/.qa-dkrz 2> /dev/null
 
       if [ ${CONDA_ENV} ] ; then
-        CONFIG_FILE=$QA_PATH/.qa-dkrz/config.conda
+        if [ -w "$QA_PATH" ] ; then
+          CONFIG_FILE=$QA_PATH/.qa-dkrz/config.conda
+        else
+          isPrint=t
+        fi
       else
         CONFIG_FILE=$QA_PATH/.qa-dkrz/config.src
       fi
@@ -127,10 +133,14 @@ getCurrPaths()
       fi
 
     else
-      echo "HOME and QA_DKRZ without write permissions,"
-      echo "please restart with provided option --workspace=str"
-      exit
+      isPrint=t
     fi
+  fi
+
+  if [ ${isPrint} = t ] ; then
+    echo "HOME and QA_DKRZ without write permissions,"
+    echo "please restart with provided option --workspace=str"
+    exit
   fi
 
   return
