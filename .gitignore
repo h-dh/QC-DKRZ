@@ -7,3 +7,5 @@ local
 bin
 example/test_I
 src/Test
+_build
+*.kate-swp

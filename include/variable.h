@@ -46,6 +46,7 @@ class VariableMeta
   bool        isUnitsDefined;
   std::string std_name;
   std::string units;
+
   std::vector<std::string>               attName;
   std::map<std::string, int>             attNameMap;
   std::vector<nc_type>                   attType;
@@ -81,13 +82,14 @@ class VariableMeta
   };
   Coordinates coord;
 
-  bool isDATA;
-  bool isAUX;
-  int   countData;
-  int   countAux;
+  int  countData;
+  int  countAux;
   int  indication_DV;
+  int  isUnlimited_;  // access by isUnlimited() method
 
   bool isArithmeticMean; // externally set
+  bool isAUX;
+  bool isDATA;
   bool isChecked;
   bool isClimatology;
   bool isCompress;
@@ -95,12 +97,12 @@ class VariableMeta
   bool isExcluded;
   bool isFixed;  // isTime==false && isDataVar==true
   bool isFillValue;
+  bool isFormulaTermsVar;
   bool isLabel;
   bool isMapVar;
   bool isMissingValue;
   bool isNoData;
   bool isScalar;
-  int  isUnlimited_;  // access by isUnlimited() method
   bool isVoid;
 
   bool is_1st_X;  // one-time switches in units_lon_lat()
@@ -108,6 +110,8 @@ class VariableMeta
   bool is_1st_rotX;
   bool is_1st_rotY;
 
+  std::vector<std::string> dimName;
+  std::vector<size_t>      dim_ix;
 
 //  std::string associatedTo;
   std::vector<std::string> aux;
@@ -146,8 +150,9 @@ class Variable : public VariableMeta
        getAttValue(std::string, bool forceLowerCase=false);
   int  getCoordinateType(void);  // X: 0, Y: 1, Z: 2, T: 3, any: 4, none: -1
   template<typename T>
-  void getData(MtrxArr<T>&, int rec, int leg=0);
-  bool getData(int rec, int leg=0);
+  std::pair<int,int>
+       getData(MtrxArr<T>&, int rec, int leg=0);
+  bool getData(int rec);
   std::string
        getDimNameStr(bool isWithVar=false, char sep=',');
   int  getVarIndex(){ return id ;}
@@ -174,12 +179,9 @@ class Variable : public VariableMeta
   MtrxArr<float>              *mvFLOAT;
   MtrxArr<double>             *mvDOUBLE;
 
-  std::vector<std::string>    dimName;
-
   int                id;
   bool               isInfNan;
 
-//    VariableMeta      *pMeta ;
   GeoMetaBase        *pGM;
   DataStatisticsBase *pDS;
   MtrxArrB           *pMA;

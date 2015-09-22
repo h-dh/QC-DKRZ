@@ -251,7 +251,7 @@ Annotation::findIndex(std::string &key, bool isOnly)
       {
          currIndex = effIndex[i] ;
 
-         return isMultipleTags ? false : true ;
+         return (isMultipleTags||isAccumText) ? false : true ;
       }
     }
   }
@@ -314,11 +314,6 @@ Annotation::findIndex(std::string &key, bool isOnly)
              push_back( key, currName, level[i],
                  table[i], task[i], "", value[i], xRecord_0[i], xRecord_1[i]);
 
-             // adjust indexes of the effective vectors
-//             for( size_t j=0 ; j < effIndex.size() ; ++j )
-//                ++effIndex[j] ;  //shift contained index
-
-//             currIndex = 0;
               currIndex = code.size() -1 ;
 
              if( ! isOnly )
@@ -370,14 +365,16 @@ Annotation::getCheckResults(void)
   // collected in vectors, but are eventually merged.
 
   // default: omission
+  std::string NA("N/A");
+
   if( checkCF_Str.size() == 0 )
-    checkCF_Str = "OMIT" ;
+    checkCF_Str = NA ;
   if( checkMetaStr.size() == 0 )
-    checkMetaStr = "OMIT" ;
+    checkMetaStr = NA ;
   if( checkTimeStr.size() == 0 )
-    checkTimeStr = "OMIT" ;
+    checkTimeStr = NA ;
   if( checkDataStr.size() == 0 )
-    checkDataStr = "OMIT" ;
+    checkDataStr = NA ;
 
   std::string out("CF_conv: ");
 
@@ -461,15 +458,17 @@ Annotation::initDefaults(void)
 bool
 Annotation::inq( std::string key, std::string name, std::string mode)
 {
-  // SYNTAX mode: [INQ::ONLY[ | INQ::NMT]]
-  // with  INQ_ONLY  simulation without triggering an action
+  // SYNTAX mode: [INQ::ONLY[|...]]
+  // with     ACCUM  NO_MT with accumulated text messages
+  //       INQ_ONLY  simulation without triggering an action
   //          NO_MT  no multiple tags
   //       LIST_TXT  disable the default text from the check-list table
   currName=name;
 
   bool isOnly=false;
   isMultipleTags=true;
-  isListText=false;
+  isDescriptionFromTable=false;
+  isAccumText=false;
 
   if( mode.size() )
   {
@@ -481,7 +480,12 @@ Annotation::inq( std::string key, std::string name, std::string mode)
        else if( splt[i] == "NO_MT" )
          isMultipleTags=false;
        else if( splt[i] == "LIST_TXT" )
-         isListText=true;
+         isDescriptionFromTable=true;
+       else if( splt[i] == "ACCUM" )
+       {
+         isAccumText=true;
+         isMultipleTags=false;
+       }
     }
   }
 
@@ -619,7 +623,7 @@ Annotation::operate(std::string headline,
    }
 
    // print notes
-   if( isListText )
+   if( isDescriptionFromTable )
      passedText = text[currIndex] ;
 
 
@@ -751,7 +755,7 @@ Annotation::parse(void)
           continue;
         }
 
-        if( str0 == "ST" )
+        if( str0 == "VR" )
         {
           isST=true;
           continue;
@@ -850,7 +854,7 @@ Annotation::parse(void)
           if( isPT )
             table.push_back("PT") ;
           else if( isST )
-            table.push_back("ST") ;
+            table.push_back("VR") ;
           else
             table.push_back("*") ;
 
@@ -870,7 +874,7 @@ Annotation::parse(void)
           else if( isEmergency )
             level.push_back("L4");
           else
-            level.push_back("");
+            level.push_back("L1");
 
           count.push_back( 0 );
           text.push_back( checkListText );
@@ -960,8 +964,8 @@ Annotation::printFlags(void)
 
     if( isOutputPASS )
     {
-      out += "path: " + path;
-      out += "\nfile: " + filename;
+      out += "path: " + file.path;
+      out += "\nfile: " + file.filename;
       if( mp.begin() == mp.end() )
       {
         out += ":\tPASS\n" ;
@@ -1019,12 +1023,18 @@ Annotation::printFlags(void)
 
     // any account for accumulated 'R' flags?
     // Still the caption.
+/*
     if( s[0] == 'R' )
     {
-       out += " (total: " ;
-       out += mp_count[f] ;
-       out += ")" ;
+       int num;
+       if( (num=mp_count.count(f)) )
+       {
+         out += " (total: " ;
+         out += hdhC::itoa(num) ;
+         out += ")" ;
+       }
     }
+*/
 
     int last=out.size() -1 ;
     if( last > -1 &&
@@ -1038,14 +1048,20 @@ Annotation::printFlags(void)
 
     if( mp_txt.count(f) && mp_txt[f].size() )
     {
+      // rm trailing newline, i.e. ';'
+      std::string& str = mp_txt[f] ;
+
+      if( str[str.size()-1] == ';' )
+        str = str.substr(0,str.size()-1);
+
       if( ! isDisplay )
       {
         out += "TXT-BEG" ;
-        out += mp_txt[f];
+        out += str;
         out += "TXT-END" ;
       }
       else
-        out += mp_txt[f] + "\n";
+        out += str + "\n";
     }
 
     if( ! isDisplay )
@@ -1063,9 +1079,9 @@ Annotation::printHeader(std::ofstream *ofs)
 //   std::string str( where ) ;
    std::string str;
    str +="\nPath: " ;
-   str += path ;
+   str += file.path ;
    str += "\nFile: " ;
-   str += filename;
+   str += file.filename;
 
    *ofs << str << std::endl ;
 
@@ -1079,19 +1095,17 @@ Annotation::printNotes(std::string &tag, std::string &caption,
   // str == message
 
   // Occurrence of an error usually stops the run immediately.
-  // But, the calling program unit is due to exit.
+  // But, it lies with the calling program unit to exit.
   if( ofsNotes == 0 )
   {
-    if( path.size() == 0 )
-      path = "undefined_path" ;
-    if( filename.size() == 0 )
-      filename = "undefined_filename" ;
+    if( file.path.size() == 0 )
+      file.path = "undefined_path" ;
+    if( file.filename.size() == 0 )
+      file.filename = "undefined_filename" ;
 
     // compose the header of issued messages
     std::string strNotes = "qa_note_" ;
-    size_t pos = filename.rfind( ".nc" );
-    strNotes += filename.substr(0, pos) ;
-    strNotes += ".txt";
+    strNotes += file.basename + ".txt";
 
     // open file for writing
     if( ! ofsNotes )
@@ -1106,13 +1120,21 @@ Annotation::printNotes(std::string &tag, std::string &caption,
 
   if( count[currIndex] > recErrCountLimit )
   {
-    *ofsNotes << code[currIndex] << ": more ..." << std::endl;
+    std::string more("more ...");
+
+    *ofsNotes << more << std::endl;
+    mp_txt[tag] += more ;
 
     return;
   }
 
-  // write message
-  *ofsNotes << "\n" << caption << "\n" << str << std::endl;
+  // write caption+message, but the caption only once
+  if( mp_count[tag] == 1 )
+      *ofsNotes << "\n" << caption << std::endl;
+
+  *ofsNotes <<  str ;
+  if( str[str.size()-1] != '\n' )
+    *ofsNotes <<  std::endl;
 
   // output the pure text with '\n' replaced by ';'
   size_t sz=str.size();
@@ -1120,7 +1142,7 @@ Annotation::printNotes(std::string &tag, std::string &caption,
     if( str[i] == '\n' )
        str[i] = ';' ;
 
-   mp_txt[tag] = str;
+  mp_txt[tag] += str;
 
   return ;
 }
@@ -1325,21 +1347,6 @@ Annotation::setConfVector(std::string txt, std::string str0)
   descript.push_back( txt );
 
   return ;
-}
-
-void
-Annotation::setFilename(std::string f)
-{
-  size_t pos;
-  if( (pos = f.rfind('/')) < std::string::npos )
-  {
-    path = f.substr(0,pos) ;
-    filename = f.substr(pos+1) ;
-  }
-  else
-    filename = f;  // path is served separately
-
-  return;
 }
 
 void

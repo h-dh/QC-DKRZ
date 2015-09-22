@@ -48,7 +48,7 @@ InFile::applyOptions(void)
 
       if( split[0] == "path" )
       {
-        setFilePath(split[1]);
+        setFilename(split[1] + "/");
         continue;
       }
 
@@ -188,30 +188,16 @@ InFile::excludeVars(void)
   return ;
 }
 
-std::string
-InFile::getAbsoluteFilename(void)
-{
-  std::string s;
-  if( path.size() > 0 )
-    s = path + "/" ;
-  if( filename.size() > 0 )
-    s += filename;
-
-  return s;
-}
-
 void
 InFile::getData( int rec )
 {
   if( rec == 0 )
-  {
     for( size_t i=0 ; i < variable.size() ; ++i)
       variable[i].getData(rec);
-    return;
-  }
+  else
+    for( size_t i=0 ; i < dataVarIndex.size() ; ++i)
+      variable[i].getData(rec);
 
-  for( size_t i=0 ; i < dataVarIndex.size() ; ++i)
-    variable[i].getData(rec);
   return;
 }
 
@@ -221,24 +207,25 @@ InFile::getData( int rec, std::string name )
   for( size_t i=0 ; i < variable.size() ; ++i)
     if( name == variable[i].name )
        variable[i].getData(rec);
+
   return;
 }
 
 std::vector<std::string>
-InFile::getLimitedVarNames(void)
+InFile::getLimitedVarName(void)
 {
-  std::vector<std::string> t0( nc.getLimitedVarNames() );
+  std::vector<std::string> t0( nc.getLimitedVarName() );
 
   // If no limited variable is defined and vName is provided, then
   // try for all variables, not depending on dName.*/
   if( !t0.size() && unlimitedName.size() )
   {
-    std::vector<std::string> vs(nc.getVarNames()) ;
+    std::vector<std::string> vs(nc.getVarName()) ;
     std::vector<std::string> vd;
     for( size_t i=0 ; i < vs.size() ; ++i )
     {
        bool is=true;
-       vd = nc.getDimNames(vs[i]);
+       vd = nc.getDimName(vs[i]);
        for( size_t j=0 ; j < vd.size() ; ++j )
        {
          if( vd[j] == unlimitedName )
@@ -290,11 +277,11 @@ InFile::getUnlimitedVars(void)
   // try for all variables, depending on unlimitedName.*/
   if( !t0.size() && unlimitedName.size() )
   {
-    std::vector<std::string> vs(nc.getVarNames()) ;
+    std::vector<std::string> vs(nc.getVarName()) ;
     std::vector<std::string> vd;
     for( size_t i=0 ; i < vs.size() ; ++i )
     {
-       vd = nc.getDimNames(vs[i]);
+       vd = nc.getDimName(vs[i]);
        for( size_t j=0 ; j < vd.size() ; ++j )
        {
          if( vd[j] == unlimitedName )
@@ -445,10 +432,13 @@ InFile::getVariable(void)
     var.pIn = this;
 
     // names of the dimensions
-    ds = nc.getDimNames( var.name );
+    ds = nc.getDimName( var.name );
 
     for( size_t j=0 ; j < ds.size() ; ++j)
+    {
       var.dimName.push_back( ds[j] );
+      var.dim_ix.push_back(j);
+    }
 
     // get meta data of variables.
     getVariableMeta(var);
@@ -458,8 +448,8 @@ InFile::getVariable(void)
   for( size_t i=0 ; i < varSz ; ++i )
     variable[i].makeObj(isInfNan);
 
-  // derive the state of meta-data.
-  // Optionally in addition, check for CF Convention.
+  // check for CF Convention.
+  cF->setFilename(file);
   (void) cF->run();
 
   if( isOnlyCF )
@@ -485,6 +475,23 @@ InFile::getVariable(void)
       // inquire parameters for GeoMeta objects;
       // make GeoMeta obj for geo-related fields
       setGeoParam(variable[i]) ;
+    }
+  }
+
+  if( ! dataVarIndex.size() )
+  {
+    size_t pos;
+    std::string fName;
+    if( (pos = fName.find("_")) < std::string::npos )
+      fName = fName.substr(0,pos) ;
+
+    for( size_t i=0 ; i < pIn->varSz ; ++i )
+    {
+      if( fName == pIn->variable[i].name )
+      {
+        dataVarIndex.push_back(i);
+        break;
+      }
     }
   }
 
@@ -548,6 +555,7 @@ bool
 InFile::init(void)
 {
   notes->init() ;  // safe
+  notes->file.setFile(file);
 
   // apply parsed command-line args
   applyOptions();
@@ -556,7 +564,7 @@ InFile::init(void)
   isTime=false;
 
   if( notes )
-    notes->setFilename(filename);
+    notes->file = file ;  // just for logging
 
   if( openNc() )
   {
@@ -588,7 +596,7 @@ InFile::init(void)
     {
       std::ostringstream ostr(std::ios::app);
       ostr << "InFile::init()\n";
-      ostr << "Could not open NetCDF file " << filename;
+      ostr << "Could not open NetCDF file " << file.getFile();
       exceptionError( ostr.str() );
 
       finally(3, ostr.str());
@@ -703,11 +711,11 @@ InFile::isVarUnlimited(std::string vName)
   // try for all variables, depending on vName.*/
   if( !is && unlimitedName.size() )
   {
-    std::vector<std::string> vs(nc.getVarNames()) ;
+    std::vector<std::string> vs(nc.getVarName()) ;
     std::vector<std::string> vd;
     for( size_t i=0 ; i < vs.size() ; ++i )
     {
-       vd = nc.getDimNames(vs[i]);
+       vd = nc.getDimName(vs[i]);
        for( size_t j=0 ; j < vd.size() ; ++j )
        {
          if( vd[j] == unlimitedName )
@@ -742,7 +750,7 @@ InFile::openNc(bool isNew)
     {
       if( path.size() > 0 )
         nc.setPath(str);
-      if( ! nc.open(filename.c_str()) )
+      if( ! nc.open(file.getFile().c_str()) )
         throw "Exception";
     }
     catch (char const*)
@@ -761,7 +769,7 @@ InFile::openNc(bool isNew)
   isInit=true;
 
   // get and analyse all variables and create Variable objects
-  std::vector<std::string> var( nc.getVarNames() );
+  std::vector<std::string> var( nc.getVarName() );
 
   // effective num of variables without any trqailing NC_GLOBAL
   varSz = var.size();
@@ -805,34 +813,6 @@ InFile::openNc(bool isNew)
   getVariable();
 
   return false;
-}
-
-void
-InFile::setFilename(std::string fn)
-{
-  // filename with path
-  if( fn.find('/') == std::string::npos )
-  {
-    if( path.size() )
-      fn = path + "/" + fn;
-  }
-
-  filename=fn;
-
-  return;
-}
-
-void
-InFile::setFilePath(std::string pth)
-{
-  size_t sz = pth.size();
-
-  if( sz && pth[ sz-1] == '/' )
-    path = pth.substr(0,sz-1);
-  else
-    path = pth;
-
-  return ;
 }
 
 void
@@ -1020,8 +1000,8 @@ InFile::setGeoLayer(Variable &var)
 {
   // search for layer defining variables lon/lat
   size_t count=0;
-  std::vector<std::string> lonDimNames;
-  std::vector<std::string> latDimNames;
+  std::vector<std::string> lonDimName;
+  std::vector<std::string> latDimName;
 
   for( size_t i=0 ; i < variable.size() ; ++i )
   {
@@ -1030,13 +1010,13 @@ InFile::setGeoLayer(Variable &var)
     {
       if( variable[i].name.substr(0,3) == "lon" )
       {
-        lonDimNames=nc.getDimNames(variable[i].name) ;
+        lonDimName=nc.getDimName(variable[i].name) ;
         ++count;
       }
 
       if( variable[i].name.substr(0,3) == "lat" )
       {
-        latDimNames=nc.getDimNames(variable[i].name) ;
+        latDimName=nc.getDimName(variable[i].name) ;
         ++count;
       }
     }
@@ -1045,17 +1025,17 @@ InFile::setGeoLayer(Variable &var)
   // both variables must be defined
   if( count == 1 )
   {
-    if( !(latDimNames[0] == "loc" || latDimNames[0] == "site") )
+    if( !(latDimName[0] == "loc" || latDimName[0] == "site") )
       return;  // not a layer
   }
   else if( count == 0 )
     return;  // may-be an implicit layer; not CMIP5
 
   // not for defining layers, but for layers with associated areas
-  if( lonDimNames.size() == latDimNames.size() )
+  if( lonDimName.size() == latDimName.size() )
   {
-    if( lonDimNames.size() > 1 )
-       if( lonDimNames[0] == unlimitedName )
+    if( lonDimName.size() > 1 )
+       if( lonDimName[0] == unlimitedName )
          var.pGM->enableMutableLayerDims();
   }
   else
@@ -1090,19 +1070,19 @@ InFile::setGeoLayer(Variable &var)
     // would be rather amazing; this is not checked.
 
     bool is=false;
-    for( size_t j=0 ; j < latDimNames.size() ; ++j )
+    for( size_t j=0 ; j < latDimName.size() ; ++j )
     {
-      if( latDimNames[j] == unlimitedName )
+      if( latDimName[j] == unlimitedName )
         continue;
-      if( var.dimName[i] == latDimNames[j] )
+      if( var.dimName[i] == latDimName[j] )
         is=true;
     }
 
-    for( size_t j=0 ; j < lonDimNames.size() ; ++j )
+    for( size_t j=0 ; j < lonDimName.size() ; ++j )
     {
-      if( lonDimNames[j] == unlimitedName )
+      if( lonDimName[j] == unlimitedName )
         continue;
-      if( var.dimName[i] == lonDimNames[j] )
+      if( var.dimName[i] == lonDimName[j] )
         is=true;
     }
 

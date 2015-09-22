@@ -3,8 +3,13 @@
 ##/*! \file taskSummary.h
 ## \brief Summary of all processed variables of a given experiment
 
-## Annotations in QA_RESULTS/check_logs/_Notes/experiment are explored.
+## Annotations in QA_RESULTS/check_logs/Annotations.yaml/experiment are explored.
 ##*/
+
+# names of the directories
+annotations=Annotations.yaml
+period=Period.yaml
+summary=Summary
 
 descript()
 {
@@ -30,13 +35,13 @@ period()
 
   test ! -e $exp.log && return
 
-  prg=${QA_SRC}/xtractTimeRange_from_log
+  prg=${QA_PATH}/scripts/xtractTimeRange_from_log
 
   test ${#prg} -gt 0 && \
     /bin/bash ${prg} ${DEBUG_X} -P ${PROJECT} -Q $exp.log
 
   isPeriodFault=f
-  if grep -q 'FAIL' _Period/${exp}.period &> /dev/null ; then
+  if grep -q 'FAIL' $period/${exp}.period &> /dev/null ; then
     isPeriodFault=t
   fi
 
@@ -68,6 +73,8 @@ processBlk()
 
 summaryHR()
 {
+  local aIn=$annotations/${exp}.note
+
 txt="Annotation summary of the QA of experiment\n \
     ${exp}\
 \n\nAccess to all QA results:\n \
@@ -75,103 +82,107 @@ txt="Annotation summary of the QA of experiment\n \
 \n\nAccess to the logfiles:\n \
    ${QA_RESULTS}/check_logs \
 \n\nPath to the annotations in YAML format:\n\
-   $(pwd)/_Notes/${exp}\n\
+   $(pwd)/${aIn}\n\
 \n\n"
+
+  mkdir -p $summary/$exp
+
+  # create a comprehensive summary
+  outA=$summary/$exp/annotations.txt
+  echo -e ${txt} > $outA
 
   # convert periods to human readers
   local countL line max_len len space
 
-  # find the longest name
-  local max_len=0
-  declare -a line
+  if [ -e $period/${exp}.period ] ; then
+    # find the longest name
+    local max_len=0
+    declare -a line
 
-  while read -a line ; do
-    if [ "${line[1]}" = atomic_name: -a ${#line[2]} -gt ${max_len} ] ; then
-      max_len=${#line[2]}
+    while read -a line ; do
+      if [ "${line[1]}" = atomic_name: -a ${#line[2]} -gt ${max_len} ] ; then
+        max_len=${#line[2]}
+      fi
+    done < $period/${exp}.period
+
+    outP=$summary/$exp/periods.txt
+    echo -n '' > $outP
+
+    exec 9<&0
+    exec 0< $period/${exp}.period
+
+    # skip 1st and 2nd line
+    read -a line
+    read -a line
+
+    local fName begin end failB failE
+
+    while read -a line ; do
+      if [ "${line[1]}" = 'frequency:' ] ; then
+        test ${#fName} -gt 0 && processBlk
+
+        echo -e -n "\nFrequency: ${line[2]}, " >> $outP
+        read -a line
+        echo Number of variables: ${line[1]} >> $outP
+      elif [ "${line[1]}" = 'atomic_name:' ] ; then
+        # process a blk
+        processBlk
+        fName=${line[2]}
+      elif [ ${line[0]} = 'begin:' ] ; then
+        begin=${line[1]}
+      elif [ ${line[0]} = 'end:' ] ; then
+        end=${line[1]}
+      elif [ ${line[0]} = 'status:' ] ; then
+        test ${line[1]:0:6} = "FAIL:B" && failB="--> "
+        test ${line[1]} = "FAIL:E" -o ${line[1]} = "FAIL:BE" && failE=" <--"
+      fi
+    done
+
+    # the last entry
+    if [ ${#fName} -gt 0 ] ; then
+      # process a blk
+      processBlk
     fi
-  done < _Period/${exp}.period
 
-  mkdir -p Summary/$exp
+    # restore stdin and free #9
+    exec 0<&9 9<&-
 
-  outP=Summary/$exp/periods.txt
-  echo -n '' > $outP
-
-  exec 9<&0
-  exec 0< _Period/${exp}.period
-
-  # skip 1st and 2nd line
-  read -a line
-  read -a line
-
-  local fName begin end failB failE
-
-  while read -a line ; do
-    if [ "${line[1]}" = 'frequency:' ] ; then
-       test ${#fName} -gt 0 && processBlk
-
-       echo -e -n "\nFrequency: ${line[2]}, " >> $outP
-       read -a line
-       echo Number of variables: ${line[1]} >> $outP
-    elif [ "${line[1]}" = 'atomic_name:' ] ; then
-       # process a blk
-       processBlk
-       fName=${line[2]}
-    elif [ ${line[0]} = 'begin:' ] ; then
-       begin=${line[1]}
-    elif [ ${line[0]} = 'end:' ] ; then
-       end=${line[1]}
-    elif [ ${line[0]} = 'status:' ] ; then
-       test ${line[1]:0:6} = "FAIL:B" && failB="--> "
-       test ${line[1]} = "FAIL:E" -o ${line[1]} = "FAIL:BE" && failE=" <--"
+    # find var-freq cases of the CORE entity not delivered
+    if [ "${PROJECT}" = CORDEX ] ; then
+      if ! expr match "$exp" '.*r0i0p0' &> /dev/null ; then
+        if [ ${#std_table} -gt 0 ] ; then
+          /bin/bash ${QA_PATH}/scripts/findNotDelivered ${DEBUG_X} \
+          --project=CORDEX \
+          --period=$outP \
+          --table=${std_table} \
+          --out=$outA \
+          --yaml
+        fi
+      fi
     fi
-  done
 
-  # the last entry
-  if [ ${#fName} -gt 0 ] ; then
-     # process a blk
-     processBlk
-  fi
+    if [ -e $outP ] ; then
+      echo -e " \n\n==== Atomic Time Ranges =========================\n" \
+                    >> $outA
+      cat $outP     >> $outA
+      echo -e "\n"  >> $outA
 
-  # restore stdin and free #9
-  exec 0<&9 9<&-
-
-  # create a comprehensive summary
-  outA=Summary/$exp/annotations.txt
-  echo -e ${txt} > $outA
-
-  # find var-freq cases of the CORE entity not delivered
-  if [ "${PROJECT}" = CORDEX ] ; then
-    if ! expr match "$exp" '.*r0i0p0' &> /dev/null ; then
-      if [ ${#std_table} -gt 0 ] ; then
-         /bin/bash ${QA_SRC}/findNotDelivered  --project=CORDEX ${DEBUG_X} \
-         --period=$outP \
-         --table=${std_table} \
-         --out=$outA \
-         --yaml \
-         isFoundNotDelivered=t
+      if [ ${isPeriodFault:-f} = t ] ; then
+        mv  $outP $summary/$exp/failed_periods.txt
+      else
+        # now its done with the human readable periods
+        \rm $outP &> /dev/null
       fi
     fi
   fi
 
-  if [ ${isPeriodFault:-f} = t ] ; then
-    echo -e " \n\n==== Time Range Annotations =========================\n" \
-           >> $outA
-
-    if [ -e $outP ] ; then
-      grep -B 3 'FAIL:' _Period/${exp}.period >> $outA
-      grep -B 3 'FAIL:' _Period/${exp}.period >> Summary/$exp/failed_periods
-      echo -e "\n"                            >> $outA
-    fi
-  else
-    echo -e "\n\nPeriods of atomic variables in\n\"
-    ${QA_RESULTS}/check_logs/_Period/${exp}.period" >> $outA
-    echo -e "\nno evidence" >> $outA
+  # find tags of the yaml annotation file, if any
+  if [ ! -f $aIn ] ; then
+    echo -e " \n\n==== Annotation: none =========================\n" \
+              >> $outA
+    return
   fi
 
-  # now its done with the human readable periods
-  \rm -f $outP 2> /dev/null
-
-  # find tags of the yaml annotation file
   local ix tags
   declare -a tags
 
@@ -183,10 +194,10 @@ txt="Annotation summary of the QA of experiment\n \
 
       tags[${#tags[*]}]="${line[1]}"
     fi
-  done < _Notes/${exp}.note
+  done < $aIn
 
   # clear old results
-  \rm -f Summary/$exp/L*
+  \rm -f $summary/$exp/L*
   local capt impct pth htag
   local isNotFirst
 
@@ -198,7 +209,7 @@ txt="Annotation summary of the QA of experiment\n \
 
     while read -a line ; do
       if [ "${line[0]}" = 'tag:' -a "${line[1]}" = $tag ] ; then
-        outT=Summary/$exp/${impct}-${tag:1:$(( ${#tag} - 2 ))}
+        outT=$summary/$exp/${impct}-${tag:1:$(( ${#tag} - 2 ))}
 
         # skip at the beginning and (automatically) at the end
         test ${#pth} -gt 0 -a ${isNotFirst} = t && \
@@ -234,11 +245,11 @@ txt="Annotation summary of the QA of experiment\n \
         unset line[0]
         impct="${line[*]}"
       fi
-    done < _Notes/${exp}.note
+    done < $aIn
   done
 
   local f fc
-  fc=( $( ls Summary/$exp/L* 2> /dev/null ) )
+  fc=( $( ls $summary/$exp/L* 2> /dev/null ) )
 
   for f in ${fc[*]} ; do
     echo -e " \n\n==== Annotation: ${f##*/} =========================\n" \
@@ -264,7 +275,7 @@ summaryY()
 
   test ! -e $exp.log && return
 
-  /bin/bash ${QA_SRC}/xtractNotes_from_log ${DEBUG_X} ${MERGE} -H $exp.log
+  /bin/bash ${QA_PATH}/scripts/xtractNotes_from_log ${DEBUG_X} ${MERGE} -H $exp.log
 
   return
 }
@@ -276,10 +287,7 @@ summaryY()
 ##{
 ######## main ############
 
-  # extract the path to scripts
-  if [ "$0" != taskSummary ] ; then
-    QA_SRC=${0%/*}
-  fi
+# QA_PATH was exported
 
   QA_RESULTS=QA_RESULTS # by default
   PROJECT='unkown_project'
@@ -294,10 +302,12 @@ summaryY()
       r)  QA_RESULTS=${OPTARG} ;;
       s)  std_table=${OPTARG} ;;
       t)  test -e ${OPTARG} -a ! -d ${OPTARG} && cl_table=${OPTARG} ;;
-      -)  if [ "$OPTARG" = "help" ] ; then
+      -)  if [ "${OPTARG:0:3}" = src ] ; then
+            QA_PATH=${OPTARG##*=}
+          elif [ "$OPTARG" = help ] ; then
             descript
             exit
-          elif [ "${OPTARG%%=*}" = "debug" ] ; then
+          elif [ "${OPTARG%%=*}" = debug ] ; then
             DEBUG_X="--${OPTARG}"
             this=${0##*/}
             test "${OPTARG}" = debug -o ${OPTARG##*=} = ${this} && set -x
@@ -324,7 +334,7 @@ summaryY()
     period
 
     # yaml annotations are sorted corresponding to the flag;
-    # output in _Notes/EXP_NAME/annotation_summary.txt.
+    # output in $annotation/EXP_NAME/annotation_summary.txt.
     summaryY
 
     # summary of annotations for humann reqaders.
@@ -332,6 +342,6 @@ summaryY()
   done
 
   # when there was no annotation
-#  rmdir _Notes &> /dev/null
+  rmdir $annotations &> /dev/null
 
 ##}

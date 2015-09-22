@@ -209,499 +209,104 @@ Date::addYears( long double v )
   return;
 }
 
-Date::Julian
-Date::date2Julian(double yr, double mo,
-           double d, double hour )
-{
-  if( currCalendarEnum == PROLEPTIC_GREGORIAN )
-    return prolGreg2Julian( yr, mo, d, hour);
-  else if( currCalendarEnum == GREGORIAN )
-    return gregorian2Julian( yr, mo, d, hour);
-  else
-    return modelDate2Julian( yr, mo, d, hour);
-}
-
-Date::Julian
-Date::date2Julian(double yr, double mo,
-           double d, double h, double mi, double s )
-{
-  double hour = h + mi / 60. + s / 3600. ;
-
-  return date2Julian(yr, mo, d, hour);
-}
-
 void
-Date::description(void)
+Date::clear(void)
 {
-   std::cout << "\nclass Date.cpp\n";
-   std::cout << "Set, modify and get date and time.\n";
-   std::cout << "The constructors and some methods accept various forms\n";
-   std::cout << "of setting the date. The constructors accepts absolute\n";
-   std::cout << "dates, whereas methods exist which set a date relatively\n";
-   std::cout << "to a basic date. Most forms of the ISO-8601 standard are\n";
-   std::cout << "valid, except those including a weekly format (i.e. not such\n";
-   std::cout << "as 2000-W28), a period, and excluded is also implicit century\n";
-   std::cout << "(e.g. 980203 does not mean a date in 1998).\n\n";
-   std::cout << "List of valid formats (ddd:= day of the year):\n";
-   std::cout << "Format      Example     Format       Example\n";
-   std::cout << "yyyy-mm-dd 2004-07-11  -yyyy-mm-dd     -0333-07-11\n";
-   std::cout << "yyyymmdd   20040711    -yyyymmdd       -03330711\n";
-   std::cout << "yy-mm-dd   04-07-11     Notice: This is 4 A.D.\n";
-   std::cout << "yymmdd     040711       Notice: This is 4 A.D.\n";
-   std::cout << "-yymmdd   -010711       Notice: This is 2 B.C.\n";
-   std::cout << "yyyy-mm    2004-07     -yyyy-mm        -0333-07\n";
-   std::cout << "yyyy       2004        -yyyy           -0333\n";
-   std::cout << "yyyy-ddd   2004-193    -yyyy-ddd       -0333-193\n";
-   std::cout << "yyyyddd    2004193     -yyyyddd        -0333193\n";
-   std::cout << "Special: yymmdd_HHMMSSf  with 20yy for yy<50 and\n";
-   std::cout << "19yy for yy>50. Here, the delimiter _ is mandatory.\n\n";
-   std::cout << "Formats of time (f means the fraction of a second):\n";
-   std::cout << "HH:MM:SS.f, HHMMSSf, HH:MM, HHMM, HH\n\n";
-   std::cout << "The date and time format may be used as separate strings\n";
-   std::cout << "or concatenated (Usually with the delimiter T). Any\n";
-   std::cout << "non-digit character can be used as delimiter between items.\n";
-   std::cout << "i.e. also the example 1999-12-31 01h02m03s is valid\n";
-   std::cout << "\nRules for times related to a reference time.\n";
-   std::cout << "A date set by method setDate(string) is a reference time.\n";
-   std::cout << "A string argument to method getDate(string) is a reference,\n";
-   std::cout << "if it contains at least one non-digit.\n";
-   std::cout << "A reference date overwrites a previous one.\n";
-   std::cout << "Before any related time can be evaluated, the unit of the\n";
-   std::cout << "relation must be stated (string: year, month, day, hour,\n";
-   std::cout << "minute, second). Such a unit may be concatenated with\n";
-   std::cout << "a related time.\n";
-   std::cout << "Reference date, unit, and related time may be given in a\n";
-   std::cout << "call of method getDate() unsorted; for multiple related\n";
-   std::cout << "time, the last is evaluated.\n";
-   std::cout << std::endl;
+  isDateSet=false;
+  isFormattedDate=false;
+
+  jul.jdn  = 0. ;
+  jul.time = 0. ;
 
   return;
 }
 
-void
-Date::exceptionError(std::string str)
-{
-  // Occurrence of an error usually stops the run at once.
-  // But, the calling program unit is due to exit.
-  static bool doInit=true;
-  if( doInit )
-  {
-    xcptn.strError += "error_Date.txt";
-
-    doInit = false;
-  }
-
-  // open file for writing
-  if( ! xcptn.ofsError )
-    xcptn.ofsError = new std::ofstream(xcptn.strError.c_str());
-
-  *xcptn.ofsError << str << std::endl;
-
-  return ;
-}
-
 std::string
-Date::getCurrentDate(void)
+Date::convertFormattedToISO_8601(double f)
 {
-  // return the current date in ISO-8601 format. Based on
-  // the example of the man-page of strftime(3).
-  std::string s;
+  // convert YYYYMMDDhhmmss.f formatted str to ISO-8601 where
+  // the decimal applies to the last item in the date
+  std::string iso("0000-01-01T00:00:00");
 
-  char outstr[25];
-  time_t t;
-  struct tm *tmp;
+  double fInt = static_cast<long int>(f);
+  double decim = f - fInt ;
 
-  t = time(0);
-  tmp = localtime(&t);
-  if( tmp == 0 )
-    return s; // failure: return empty string
+  std::string str( hdhC::double2String(fInt, "p=0|adj,float") );
+  size_t sz = str.size();
 
-  // the format string
-  s="%Y-%m-%dT%T%Z" ;
-  if( strftime(outstr, 25, s.c_str(), tmp ) == 0 )
-  {
-     s.clear();
-     return s;  // failure: return empty string
-  }
-
-  s = outstr ;
-  return s;
-}
-
-std::string
-Date::getDate( void )
-{
-  return getDateISO_8601();
-}
-
-std::string
-Date::getDate( double val, bool isJulDay)
-{
-  // If val is relative to a reference date set before, then
-  // the ISO-8601 format of the realative date is returned.
-
-  // If a reference is not set, then val is considered a Julian day.
-
-  // The bool set true states that val is a Julian day anyway.
-
-  if( isDateSet && ! isJulDay )
-  {
-    std::string s = hdhC::double2String(val);
-
-    // called with string gets back the relative date
-    return getDate( s );
-  }
-
-  // representation of the current julian day
-  Julian myJul(val);
-  isDateSet=true;
-
-  // if myJul.jdn and myJul.time are set with the true julian date.
-  // It must be adjusted to the internal representation
-  if( myJul.time < 0.5 )
-    myJul.time += 0.5 ;
-  else
-  {
-    myJul.time -= 0.5 ;
-    myJul.jdn  += 1. ;
-  }
-
-  double yr, mo, dy, hr, mi, se;
-  julian2Date( myJul, &yr, &mo, &dy, &hr, &mi, &se ) ;
-
-  return getDateISO_8601(yr, mo, dy, hr, mi, se);
-}
-
-std::string
-Date::getDate( Julian &myJul )
-{
-  // just return current date
-  double yr, mo, dy, hr, mi, se;
-  julian2Date( myJul, &yr, &mo, &dy, &hr, &mi, &se ) ;
-
-  return getDateISO_8601(yr, mo, dy, hr, mi, se);
-}
-
-std::string
-Date::getDate( double yr, double mo, double dy,
-      double hr, double mi, double se )
-{
-  Julian j = date2Julian( yr, mo, dy, hr, mi, se ) ;
-  julian2Date( j, &yr, &mo, &dy, &hr, &mi, &se ) ;
-
-  return getDateISO_8601(yr, mo, dy,hr, mi, se);
-}
-
-std::string
-Date::getDate( std::string arg, bool enableSetDate )
-{
-  if( enableSetDate )
-    setDate( arg );
-
-  std::string z;  // going to contains the results to return
-  double year, month, day, hour, minute, second;
-  julian2Date(jul, &year, &month, &day, &hour, &minute, &second);
-
-  // let's go for the direction from the relative date
-  double currUnitSign = refUnitSign;
-  if( arg[0] == '-' )
-  {
-    currUnitSign = -1.*refUnitSign;
-    arg = arg.substr(1);
-  }
-
-  double unitVal=hdhC::string2Double( arg,1);
-  z = "not-a-valid-date";
-
-  if( unitStr == "year" )
-  {
-    double myYr=year+unitVal*currUnitSign;
-    z = getDate(myYr, month, day, hour, minute, second );
-    return z ;
-  }
-
-  if( unitStr == "month" )
-  {
-    double myMonth=unitVal*currUnitSign;
-    z = getDate(year, myMonth, day, hour, minute, second );
-    return z ;
-  }
-
-  if( unitStr == "day" )
-  {
-    Julian myJul(jul);
-    myJul += unitVal*currUnitSign;
-    return getDate(myJul) ;
-  }
-
-  if( unitStr == "hour" )
-  {
-    Julian myJul(jul);
-    myJul += unitVal*currUnitSign/24.;
-    return getDate(myJul) ;
-  }
-
-  if( unitStr == "minute" )
-  {
-    Julian myJul(jul);
-    myJul += unitVal*currUnitSign/1440.;
-    return getDate(myJul) ;
-  }
-
-  if( unitStr == "second" )
-  {
-    Julian myJul(jul);
-    myJul += unitVal*currUnitSign/86400.;
-    return getDate(myJul) ;
-  }
-
-  if( dateCode.size() > 0 )
-  {
-    setDate(arg);
-    z = getDate(year, month, day, hour , minute,
-                     second);
-  }
-
-  return z ;  //no match;  not-a-valid-date
-}
-
-std::string
-Date::getDateISO_8601(void)
-{
-  double year, month, day, hour, minute, second;
-  julian2Date(jul, &year, &month, &day, &hour, &minute, &second);
-
-  // Date ISO 8601 Format: yyyy-mm-ddThh:mm:ss
-  return getDateISO_8601(year, month, day, hour, minute, second);
-}
-
-std::string
-Date::getDateISO_8601(double zy, double zmo, double zd,
-           double zh, double zmi, double zs, bool isErr)
-{
-  //static method
-  std::string t;
-
-  if( isErr )
-  {
-    t = "not-a-valid-date" ;
-    return t;
-  }
-
-  // Date ISO 8601 Format: yyyy-mm-ddThh:mm:ss
-
-  double s2=static_cast<double>( static_cast<int>(zs) );
-
-  double threshold=1.;
-  for( int i=0 ; i < precision ; ++i)
-    threshold /=10.;
-
-  if( (zs - s2 ) < threshold )
-    zs=s2;
-
-  if ( zy < 0. )
-  {
-    t = "-";
-    t += hdhC::double2String(-1.*zy,0,"4_0") ;
-  }
-  else
-    t = hdhC::double2String(zy,0,"4_0") ;
-
-  t += "-";
-  t += hdhC::double2String(zmo,0,"2_0") ;
-  t += "-";
-  t += hdhC::double2String(zd,0,"2_0") ;
-  t += "T" ;
-  t += hdhC::double2String(zh,0,"2_0") ;
-  t += ":" ;
-  t += hdhC::double2String(zmi,0,"2_0") ;
-  t += ":" ;
-
-  std::string ts;
-  if( (zs - static_cast<double>( static_cast<int>(zs) ) ) > 0. )
-  {
-    ts = hdhC::double2String(zs,precision,"2_0") ;
-  }
-  else
-    ts = hdhC::double2String(zs,0,"2_0") ;
-
-  //It is possible that ts was set ts 00.000 due to rounding
-  if( ts.find('.') < std::string::npos )
-  {
-    size_t i=ts.size()-1;
-    while ( ts[i] == '0' )
-    {
-      --i;  //used as index
-      if( ts[i] == '.' )
-      {
-        --i;
-        break;
-      }
-    }
-    ++i; // indicates a size
-    t += ts.substr(0,i);
-  }
-  else
-    t += ts;
-
-  return t;
-}
-
-double
-Date::getDay( void )
-{
-  double y, mo, d, h, mi, s;
-  julian2Date(jul, &y, &mo, &d, &h, &mi, &s);
-  return d;
-}
-
-double
-Date::getDayOfTheYear(void)
-{
-  double y, mo, d, h, mi, s ;
-  julian2Date(jul, &y, &mo, &d, &h, &mi, &s);
-
-  Julian j0 = date2Julian( y, 1., 1., 0.);
-
-  // the 1st of Jan, etc.!
-  return ( static_cast<double>( jul.jdn - j0.jdn ) + 1. ) ;
-}
-
-double
-Date::getDayOfTheYear(double y, double mo, double d,
-                      double h, double mi, double s)
-{
-  double deciH = h + mi/60. + s/3600. ;
-  Julian j0(date2Julian( y, 1., 1., 0.) );
-  Julian j1(date2Julian( y, mo, d, deciH) );
-
-  // the 1st of Jan, etc.!
-  return ( static_cast<double>( j1.jdn - j0.jdn ) + 1. ) ;
-}
-
-void
-Date::getDayTime(double d, double *h, double *m, double *s)
-{
-  // day time
-  d *= 24.;
-
-  *h = static_cast<double>( static_cast<int>(d) ) ;
-  d -= *h ;
-
-  d *=  60. ;
-  *m = static_cast<double>( static_cast<int>(d) );
-  d -= *m ;
-
-  *s = d * 60. ;
-
-  return ;
-}
-
-double
-Date::getDeciHour(void)
-{
-  return static_cast<double>( jul.time ) ;
-}
-
-double
-Date::getDeciMonth(void)
-{
-  double y,mo,d,h,mi,s;
-  julian2Date(jul, &y,&mo,&d,&h,&mi,&s);
-  return getDeciMonth( y, mo, d, h, mi, s );
-}
-
-double
-Date::getDeciMonth(double y, double mo, double d,
-       double h, double mi, double s )
-{
-  double monthDays = getMonthDaysNum( mo, y ) ;
-
-  return mo +( d - 1. + jul.time) /monthDays ;
-}
-
-double
-Date::getDeciYear(void)
-{
-  double y, mo, d, h, mi, s;
-  julian2Date(jul, &y, &mo, &d, &h, &mi, &s);
-
-  return Date::getDeciYear(y, mo, d, h, mi, s) ;
-}
-
-double
-Date::getDeciYear(double y, double mo, double d,
-                      double h, double mi, double s)
-{
-  double daysY = getYearDaysNum( y );
-  double currD = getDayOfTheYear(y, mo, d, h, mi, s) ;
-  double currTime = getDeciHour();
-
-  // -1: Jan 1st starts with 0.0 dYear
-  double dYear = y + (currD -1. + currTime)/daysY ;
-  return dYear ;
-}
-
-double
-Date::getHour( void )
-{
-  int h = static_cast<int>(jul.time*24.) ;
-  return static_cast<double>(h);
-}
-
-std::string
-Date::getIso8601(double f)
-{
-  // convert %Y%m%d.f formatted str to ISO-8601
-  std::string iso("0000-00-00T00:00:00");
-
-  std::string str( hdhC::double2String(f) );
-
-  if( str.size() > 3 )
+  if( sz > 3 )
     iso.replace(0, 4, str, 0, 4);
-  if( str.size() > 5 )
+  if( sz > 5 )
     iso.replace(5, 2, str, 4, 2);
-  if( str.size() > 7 )
+  if( sz > 7 )
     iso.replace(8, 2, str, 6, 2);
-  if( str.size() > 9 )
+
+  if( decim == 0. )
+    return iso;
+
+  // convert remainder to hour
+  double hour=0.;
+
+  if( sz > 12 )
   {
-    f = hdhC::string2Double( str.substr(8) ) ;
-    if( f == 0. )
-       return iso;
+    double f = hdhC::string2Double(str.substr(12,2)) + decim ;
+    decim=0.;
+    hour += f/3600.;
+  }
 
-    int h = static_cast<int>(f*24.) ;
-    str = hdhC::double2String(h);
-    iso.replace(11, 2, str, 0, 2);
+  if( sz > 10 )
+  {
+    double f = hdhC::string2Double(str.substr(10,2)) + decim ;
+    decim=0.;
+    hour += f/60.;
+  }
 
-    f -= static_cast<double>(h)/24.;
-    if( f == 0. )
-       return iso;
+  if( sz > 8 )
+  {
+    hour += hdhC::string2Double(str.substr(8,2)) + decim ;
+    decim=0.;
+  }
 
-    int m = static_cast<int>(f*60.) ;
-    f -= static_cast<double>(m)/60.;
-    if( f == 0. )
-       return iso;
+  double h, m, s;
+  hour /= 24.;
+  Date::getDayTime(hour, &h, &m, &s);
 
-    str = hdhC::double2String(m);
-    iso.replace(14, 2, str, 0, 2);
+  str = hdhC::double2String(h, "w2,f=0,p=0|adj");
+  iso.replace(11, 2, str, 0, 2);  // hour
 
-    int s = static_cast<int>(f*60.) ;
-    if( f == 0. )
-       return iso;
+  str = hdhC::double2String(m, "w2,f=0,p=0|adj");
+  iso.replace(14, 2, str, 0, 2); // minute
 
-    str = hdhC::double2String(static_cast<double>(s));
-    iso.replace(17, 2, str, 0, 2);
+  fInt = static_cast<int>(s);
+  str = hdhC::double2String(fInt, "w2,f=0,p=0|adj");
+  iso.replace(17, 2, str, 0, 2);  // second
+
+  s -= fInt;
+
+  if( s > 0 )
+  {
+    str = hdhC::double2String(s,"p=3|adj,float") ;
+    if( str[0] == '0' && str[1] == '.' )
+      iso += str.substr(1);
+    else
+      iso += str;
   }
 
   return iso;
 }
 
 std::string
-Date::getIso8601(std::string str )
+Date::convertFormattedToISO_8601(std::string str )
 {
   // Convention: Date ISO 8601 Format: yyyy-mm-ddThh:mm:ss
   // different compositions of str0 are converted.
   // Note: yy means really yy A.D., not the century + yy
+
+  if( hdhC::isNumber(str) )
+  {
+     double f = hdhC::string2Double(str);
+     return convertFormattedToISO_8601(f);
+  }
 
   std::string iso;
 
@@ -823,6 +428,325 @@ Date::getIso8601(std::string str )
   return iso ;
 }
 
+Date::Julian
+Date::date2Julian(double yr, double mo,
+           double d, double hour )
+{
+  if( currCalendarEnum == PROLEPTIC_GREGORIAN )
+    return prolGreg2Julian( yr, mo, d, hour);
+  else if( currCalendarEnum == GREGORIAN )
+    return gregorian2Julian( yr, mo, d, hour);
+  else
+    return modelDate2Julian( yr, mo, d, hour);
+}
+
+Date::Julian
+Date::date2Julian(double yr, double mo,
+           double d, double h, double mi, double s )
+{
+  double hour = h + mi / 60. + s / 3600. ;
+
+  return date2Julian(yr, mo, d, hour);
+}
+
+void
+Date::description(void)
+{
+   std::cout << "\nclass Date.cpp\n";
+   std::cout << "Set, modify and get date and time.\n";
+   std::cout << "The constructors and some methods accept various forms\n";
+   std::cout << "of setting the date. The constructors accepts absolute\n";
+   std::cout << "dates, whereas methods exist which set a date relatively\n";
+   std::cout << "to a basic date. Most forms of the ISO-8601 standard are\n";
+   std::cout << "valid, except those including a weekly format (i.e. not such\n";
+   std::cout << "as 2000-W28), a period, and excluded is also implicit century\n";
+   std::cout << "(e.g. 980203 does not mean a date in 1998).\n\n";
+   std::cout << "List of valid formats (ddd:= day of the year):\n";
+   std::cout << "Format      Example     Format       Example\n";
+   std::cout << "yyyy-mm-dd 2004-07-11  -yyyy-mm-dd     -0333-07-11\n";
+   std::cout << "yyyymmdd   20040711    -yyyymmdd       -03330711\n";
+   std::cout << "yy-mm-dd   04-07-11     Notice: This is 4 A.D.\n";
+   std::cout << "yymmdd     040711       Notice: This is 4 A.D.\n";
+   std::cout << "-yymmdd   -010711       Notice: This is 2 B.C.\n";
+   std::cout << "yyyy-mm    2004-07     -yyyy-mm        -0333-07\n";
+   std::cout << "yyyy       2004        -yyyy           -0333\n";
+   std::cout << "yyyy-ddd   2004-193    -yyyy-ddd       -0333-193\n";
+   std::cout << "yyyyddd    2004193     -yyyyddd        -0333193\n";
+   std::cout << "Special: yymmdd_HHMMSSf  with 20yy for yy<50 and\n";
+   std::cout << "19yy for yy>50. Here, the delimiter _ is mandatory.\n\n";
+   std::cout << "Formats of time (f means the fraction of a second):\n";
+   std::cout << "HH:MM:SS.f, HHMMSSf, HH:MM, HHMM, HH\n\n";
+   std::cout << "The date and time format may be used as separate strings\n";
+   std::cout << "or concatenated (Usually with the delimiter T). Any\n";
+   std::cout << "non-digit character can be used as delimiter between items.\n";
+   std::cout << "i.e. also the example 1999-12-31 01h02m03s is valid\n";
+   std::cout << "\nRules for times related to a reference time.\n";
+   std::cout << "A date set by method setDate(string) is a reference time.\n";
+   std::cout << "A string argument to method getDate(string) is a reference,\n";
+   std::cout << "if it contains at least one non-digit.\n";
+   std::cout << "A reference date overwrites a previous one.\n";
+   std::cout << "Before any related time can be evaluated, the unit of the\n";
+   std::cout << "relation must be stated (string: year, month, day, hour,\n";
+   std::cout << "minute, second). Such a unit may be concatenated with\n";
+   std::cout << "a related time.\n";
+   std::cout << "Reference date, unit, and related time may be given in a\n";
+   std::cout << "call of method getDate() unsorted; for multiple related\n";
+   std::cout << "time, the last is evaluated.\n";
+   std::cout << std::endl;
+
+  return;
+}
+
+void
+Date::exceptionError(std::string str)
+{
+  // Occurrence of an error usually stops the run at once.
+  // But, the calling program unit is due to exit.
+  static bool doInit=true;
+  if( doInit )
+  {
+    xcptn.strError += "error_Date.txt";
+
+    doInit = false;
+  }
+
+  // open file for writing
+  if( ! xcptn.ofsError )
+    xcptn.ofsError = new std::ofstream(xcptn.strError.c_str());
+
+  *xcptn.ofsError << str << std::endl;
+
+  return ;
+}
+
+Date
+Date::getDate( double val, bool isJulDay)
+{
+  // If val is relative to a reference date set before, then
+  // the ISO-8601 format of the realative date is returned.
+
+  // If a reference is not set, then val is considered a Julian day.
+
+  // The bool set true states that val is a Julian day.
+  Date myDate(*this);
+
+  if( isFormattedDate )
+    myDate.setDate(val);
+  else if( isJulDay )
+    // representation of the current julian day
+    myDate.jul=val;
+  else
+    myDate.addTime(val);
+
+  return myDate;
+}
+
+Date
+Date::getDate(std::string arg, bool isFormatted)
+{
+  // isFormatted=true for formatted value like 20010102.5*/
+  Date myDate(*this);
+
+  if( ! myDate.setDate(arg) )
+  {
+    if( isFormatted )
+      myDate.setFormattedDate();
+
+    if( myDate.isFormattedDate )
+      myDate.setDate( hdhC::string2Double(arg) );
+    else if( ! isDateSet )
+      myDate.jul=hdhC::string2Double(arg);
+    else
+      myDate.addTime(hdhC::string2Double(arg));
+  }
+
+  return myDate ;
+}
+
+double
+Date::getDay( void )
+{
+  double y, mo, d, h, mi, s;
+  julian2Date(jul, &y, &mo, &d, &h, &mi, &s);
+  return d;
+}
+
+double
+Date::getDayOfTheYear(void)
+{
+  double y, mo, d, h, mi, s ;
+  julian2Date(jul, &y, &mo, &d, &h, &mi, &s);
+
+  Julian j0 = date2Julian( y, 1., 1., 0.);
+
+  // the 1st of Jan, etc.!
+  return ( static_cast<double>( jul.jdn - j0.jdn ) + 1. ) ;
+}
+
+double
+Date::getDayOfTheYear(double y, double mo, double d,
+                      double h, double mi, double s)
+{
+  double deciH = h + mi/60. + s/3600. ;
+  Julian j0(date2Julian( y, 1., 1., 0.) );
+  Julian j1(date2Julian( y, mo, d, deciH) );
+
+  // the 1st of Jan, etc.!
+  return ( static_cast<double>( j1.jdn - j0.jdn ) + 1. ) ;
+}
+
+void
+Date::getDayTime(double d, double *h, double *m, double *s)
+{
+  // day time
+  d *= 24.;
+
+  *h = static_cast<double>( static_cast<int>(d) ) ;
+  d -= *h ;
+
+  d *= 60. ;
+  *m = static_cast<double>( static_cast<int>(d) );
+  d -= *m ;
+
+  *s = d * 60. ;
+
+  return ;
+}
+
+double
+Date::getDeciHour(void)
+{
+  return static_cast<double>( jul.time ) ;
+}
+
+double
+Date::getDeciMonth(void)
+{
+  double y,mo,d,h,mi,s;
+  julian2Date(jul, &y,&mo,&d,&h,&mi,&s);
+  return getDeciMonth( y, mo, d, h, mi, s );
+}
+
+double
+Date::getDeciMonth(double y, double mo, double d,
+       double h, double mi, double s )
+{
+  double monthDays = getMonthDaysNum( mo, y ) ;
+
+  return mo +( d - 1. + jul.time) /monthDays ;
+}
+
+double
+Date::getDeciYear(void)
+{
+  double y, mo, d, h, mi, s;
+  julian2Date(jul, &y, &mo, &d, &h, &mi, &s);
+
+  return Date::getDeciYear(y, mo, d, h, mi, s) ;
+}
+
+double
+Date::getDeciYear(double y, double mo, double d,
+                      double h, double mi, double s)
+{
+  double daysY = getYearDaysNum( y );
+  double currD = getDayOfTheYear(y, mo, d, h, mi, s) ;
+  double currTime = getDeciHour();
+
+  // -1: Jan 1st starts with 0.0 dYear
+  double dYear = y + (currD -1. + currTime)/daysY ;
+  return dYear ;
+}
+
+double
+Date::getHour( void )
+{
+  int h = static_cast<int>(jul.time*24.) ;
+  return static_cast<double>(h);
+}
+
+std::string
+Date::getISO_8601(void)
+{
+  double year, month, day, hour, minute, second;
+  julian2Date(jul, &year, &month, &day, &hour, &minute, &second);
+
+  // Date ISO 8601 Format: yyyy-mm-ddThh:mm:ss
+  return getISO_8601(year, month, day, hour, minute, second);
+}
+
+std::string
+Date::getISO_8601(double zy, double zmo, double zd,
+           double zh, double zmi, double zs, bool isErr)
+{
+  //static method
+  std::string t;
+
+  if( isErr )
+  {
+    t = "not-a-valid-date" ;
+    return t;
+  }
+
+  // Date ISO 8601 Format: yyyy-mm-ddThh:mm:ss
+
+  double s2=static_cast<double>( static_cast<int>(zs) );
+
+  double threshold=1.;
+  for( int i=0 ; i < precision ; ++i)
+    threshold /=10.;
+
+  if( (zs - s2 ) < threshold )
+    zs=s2;
+
+  if ( zy < 0. )
+  {
+    t = "-";
+    t += hdhC::double2String(-1.*zy,0,"4_0") ;
+  }
+  else
+    t = hdhC::double2String(zy,0,"4_0") ;
+
+  t += "-";
+  t += hdhC::double2String(zmo,0,"2_0") ;
+  t += "-";
+  t += hdhC::double2String(zd,0,"2_0") ;
+  t += "T" ;
+  t += hdhC::double2String(zh,0,"2_0") ;
+  t += ":" ;
+  t += hdhC::double2String(zmi,0,"2_0") ;
+  t += ":" ;
+
+  std::string ts;
+  if( (zs - static_cast<double>( static_cast<int>(zs) ) ) > 0. )
+  {
+    ts = hdhC::double2String(zs,precision,"2_0") ;
+  }
+  else
+    ts = hdhC::double2String(zs,0,"2_0") ;
+
+  //It is possible that ts was set ts 00.000 due to rounding
+  if( ts.find('.') < std::string::npos )
+  {
+    size_t i=ts.size()-1;
+    while ( ts[i] == '0' )
+    {
+      --i;  //used as index
+      if( ts[i] == '.' )
+      {
+        --i;
+        break;
+      }
+    }
+    ++i; // indicates a size
+    t += ts.substr(0,i);
+  }
+  else
+    t += ts;
+
+  return t;
+}
+
 double
 Date::getMinute( void )
 {
@@ -934,6 +858,34 @@ Date::getSince(std::string &curr, const char *ref)
   Date lag( curr, currCalendar );
 
   return getSince(lag, ref);
+}
+
+std::string
+Date::getTodayStr(void)
+{
+  // return the current date in ISO-8601 format. Based on
+  // the example of the man-page of strftime(3).
+  std::string s;
+
+  char outstr[25];
+  time_t t;
+  struct tm *tmp;
+
+  t = time(0);
+  tmp = localtime(&t);
+  if( tmp == 0 )
+    return s; // failure: return empty string
+
+  // the format string
+  s="%Y-%m-%dT%T%Z" ;
+  if( strftime(outstr, 25, s.c_str(), tmp ) == 0 )
+  {
+     s.clear();
+     return s;  // failure: return empty string
+  }
+
+  s = outstr ;
+  return s;
 }
 
 double
@@ -1066,7 +1018,7 @@ Date::julian2ModelDate( const Date::Julian &j,
   else
   {
     // explicitly: months and/or leap year and/or leap_month
-    // For calender: NO_LEAP, ALL_LEAP, NONE and not provided
+    // For calender: NO_LEAP, ALL_LEAP, UNDEF and not provided
     long double jd=j.jdn + j.time ;
 
     long double yrDays;
@@ -1224,32 +1176,70 @@ Date::modelDate2Julian( double y, double mo, double d, double h,
 }
 
 bool
-Date::parseISO_8601(std::string &str0)
+Date::parseISO_8601(std::string str0)
 {
   // ISO 8601 Format: yyyy-mm-ddThh:mm:ss
-  double year, month, day, hour, minute, second;
+  double year, month, day, hour;
 
   // defaults:
   year = 0.;
   month = 1.;
   day = 1.;
   hour=0.;
-  minute=0.;
-  second=0.;
 
-  Split x_str0(str0, 'T');
+  Split x_str0(str0, " T");
+
   Split x_d(x_str0[0],'-');
-  Split x_t(x_str0[1], ':');
 
-  year  = hdhC::string2Double( x_d[0] );
-  month = hdhC::string2Double( x_d[1] );
-  day   = hdhC::string2Double( x_d[2] );
+  if( x_d.size() > 2 )
+  {
+    year  = hdhC::string2Double( x_d[0] );
+    month = hdhC::string2Double( x_d[1] );
+    day   = hdhC::string2Double( x_d[2] );
+  }
+  else if( x_d.size() > 1 )
+  {
+    year  = hdhC::string2Double( x_d[0] );
+    month = hdhC::string2Double( x_d[1] );
+  }
+  else
+    year  = hdhC::string2Double( x_d[0] );
 
-  hour   = hdhC::string2Double( x_t[0] );
-  minute = hdhC::string2Double( x_t[1] );
-  second = hdhC::string2Double( x_t[2] );
+  if( x_str0.size() > 1 )
+  {
+    Split x_t(x_str0[1], ':') ;
 
-  jul = date2Julian( year, month, day, hour, minute, second);
+    if( x_t.size() > 2 )
+    {
+      hour  = hdhC::string2Double( x_t[0] );
+      hour += hdhC::string2Double( x_t[1] ) / 60.;
+      hour += hdhC::string2Double( x_t[2] ) / 3600.;
+    }
+    else if( x_t.size() > 1 )
+    {
+      hour  = hdhC::string2Double( x_t[0] );
+      hour += hdhC::string2Double( x_t[1] ) / 60.;
+    }
+    else
+      hour  = hdhC::string2Double( x_t[0] );
+  }
+
+  if( x_str0.size() == 3 )
+  {
+    // local time zone
+    Split x_t(x_str0[2], ':') ;
+    if( x_t.size() > 1 )
+    {
+      hour += hdhC::string2Double(x_t[0]) ;
+      hour += hdhC::string2Double(x_t[1]) / 60. ;  // minutes
+    }
+    else
+      hour += hdhC::string2Double(x_t[0]) ;
+
+  }
+
+  jul = date2Julian( year, month, day, 0., 0., 0.);
+  jul += hour/24.;
   isDateSet=true;
 
   return false ;
@@ -1299,7 +1289,7 @@ Date::setCalendar(std::string cal, std::string monLen)
     currCalendarEnum = PROLEPTIC_GREGORIAN ;
     currCalendar="proleptic_gregorian";
   }
-  else if( cal == "360_day")
+  else if( cal.substr(0,3) == "360")
   {
     currCalendarEnum = EQUAL_MONTHS ;
     currCalendar=cal.substr(0,3);
@@ -1311,13 +1301,13 @@ Date::setCalendar(std::string cal, std::string monLen)
     currCalendar=cal;
     jul.set(0.);
   }
-  else if( cal == "noleap" || cal == "365_day" )
+  else if( cal == "noleap" || cal.substr(0,3) == "365" )
   {
     currCalendarEnum = NO_LEAP ;
     currCalendar="365";
     jul.set(0.);
   }
-  else if( cal == "all_leap" || cal == "366_day" )
+  else if( cal == "all_leap" || cal.substr(0,3) == "366" )
   {
     currCalendarEnum = ALL_LEAP ;
     currCalendar="366";
@@ -1325,7 +1315,7 @@ Date::setCalendar(std::string cal, std::string monLen)
   }
   else
   {
-    currCalendarEnum = NONE ;
+    currCalendarEnum = UNDEF ;
     currCalendar=cal;
     jul.set(0.);
   }
@@ -1352,7 +1342,7 @@ Date::setCalendar(std::string cal, std::string monLen)
   if( currCalendar == "366" )
      regularMonthDays[1]=29.;
 
-  if( currCalendarEnum == NONE )
+  if( currCalendarEnum == UNDEF )
   {
     // a leap year is defined
     lY_is=true;
@@ -1440,23 +1430,33 @@ bool
 Date::setDate( const Date::Julian &j )
 {
   jul = j ;
+  isDateSet=true;
 
   return false;
 }
 
 bool
-Date::setDate(double f, std::string cal)
+Date::setDate(double f, std::string cal, std::string monLen)
 {
   if( cal.size() )
-    setCalendar(cal);
+    setCalendar(cal, monLen);
 
-  // convert %Y%m%d.f formatted str to ISO-8601
-  std::string iso(getIso8601(f));
+  std::string str;
 
-  if( ! parseISO_8601(iso) )
-    return false;
+  if( isFormattedDate )
+  {
+    // convert %Y%m%d.f formatted str
+    str = convertFormattedToISO_8601(f) ;
 
-  return true;
+    if( ! parseISO_8601(str) )
+      return true;
+  }
+  else if( isDateSet )
+    addTime(f);
+  else
+    jul = f ;
+
+  return false;
 }
 
 bool
@@ -1470,10 +1470,8 @@ Date::setDate( std::string str, std::string cal, std::string monLen)
 
   if( str.size() == 0 )
   {
-     std::ostringstream ostr(std::ios::app);
-     ostr << "Date::setDate(std::string)"
-          << "\nempty string." ;
-     exceptionError( ostr.str() );
+     std::string text("Date::setDate(): empty string");
+     exceptionError( text.c_str() );
   }
 
   if( cal.size() )
@@ -1483,30 +1481,50 @@ Date::setDate( std::string str, std::string cal, std::string monLen)
   // serves as a basic date and
   // key-words: years, months, days, hours, minutes, seconds
   // indicate the unit of the amount X in getDate(X) relative
-  // to the basic date.
-  setUnits( str );
+  // to the basic date. The method clears the string from any
+  // key-word.
+  setUnitsAndClear(str) ;
 
-  // conversion to ISO 8601
-  if( ! (str[4] == '-' && str[7] == '-'
-            && str[10] == 'T' && str[13] == ':' && str[16] == ':' ) )
-    str = getIso8601(str);
+  if( isFormattedDate || str.find(' ') < std::string::npos )
+    str = convertFormattedToISO_8601(str) ;
 
   if( ! parseISO_8601(str) )
-      return false;
+    return true;
+  else if( isDateSet && hdhC::isNumber(str) )
+  {
+    // try the string as float
+    if( setDate(hdhC::string2Double(str)) )
+      return true;
+  }
 
-  return true;
+  return false;
 }
 
-bool
-Date::setUnits(std::string str)
+void
+Date::setUnits(std::string str, int uSign)
 {
-  bool b=false;
-  Split splt(str);
+  refUnitSign=uSign;
+  unitStr = str;
+  return;
+}
 
-  for( size_t n=0 ; n<splt.size() ; ++n)
+void
+Date::setUnitsAndClear(std::string& str)
+{
+  // key-words "since" and "before" indicate that a date
+  // serves as a basic date and
+  // key-words: years, months, days, hours, minutes, seconds
+  // indicate the unit of the amount X in getDate(X) relative
+  // to the basic date. The method clears the string from any
+  // key-word.
+  Split x_str(str);
+  str.clear();
+
+  for( size_t n=0 ; n < x_str.size() ; ++n)
   {
-    std::string s(splt[n]);
+    std::string s(x_str[n]);
 
+    // accept singular and plural forms
     if( s[s.size()-1] == 's' )
        s = s.substr(0,s.size()-1);
 
@@ -1527,12 +1545,20 @@ Date::setUnits(std::string str)
     else if( s.find("second") < std::string::npos )
       unitStr = "second";
     else
-      continue;
-
-    b=true;
+    {
+      if( str.size() )
+        str += " " ;
+      str += x_str[n];
+    }
   }
 
-  return b;
+  return ;
+}
+
+std::string
+Date::str(void)
+{
+  return getISO_8601();
 }
 
 /*

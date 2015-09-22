@@ -1,47 +1,59 @@
 #! /bin/bash
 
-getPath()
+getSrcPath()
 {
-  # Note: each executable invoked on a bash command-line
-  # gets its name in parameter $0, which is available
-  # in functions.
+  # extract the path to the root of the QA package
 
-  if [ ${#qPath} -eq 0 ] ; then
-    # init
-    if [ ${0:0:1} = '/' ] ; then
-      qPath=${0%/*}
-    else
-      qPath=$(pwd)/${0%/*}
+  # is it in a conda built?
+  local x_conda=${0%/qa-dkrz}
+  if [ ${x_conda##*/} = bin ] ; then
+    x_conda=${x_conda%/bin}
+    if [ -d $x_conda/opt/qa-dkrz ] ; then
+       CONDA_ENV=t
+       export QA_PATH=$x_conda/opt/qa-dkrz
+       return
     fi
-
-    xName=${0##*/}
   fi
 
-  if [ -h $qPath/$xName ] ; then
+  local target isInvalid
 
-    qPath=$(ls -l $qPath/${xName} | awk  '{print $(NF)}')
-    xName=${qPath##*/}
-    qPath=${qPath%/*}
-
-    getPath
-
+  if [ ${1:0:1} = '/' ] ; then
+    target=$1
   else
+    target=$(pwd)/$1
+  fi
 
-    # resolve .. and .
-    local arr=( ${qPath//\// } )
+  if [ -h $target ] ; then
 
-    # any //, ., or .. in the middle of the path?
+    # get the link
+    local link=$(ls -l $target | awk  '{print $(NF)}')
+
+    # link is relative, so make it absolute
+    test ${link:0:1} != '/' && link=${target%/*}/${link}
+
+    getSrcPath ${link}
+
+  elif [ -f $target ] ; then
+
+    # a real instance, at first resolve .. and .
+    # works also for . or .. in the middle of the path
+
+    local xname=${target##*/}
+    target=${target%/*}  # remove the name of the script
+
+    local arr=( ${target//\// } )
+
     local i j sz
     sz=${#arr[*]}
 
     for(( i=1 ; i < sz ; ++i )) ; do
-      j=$((i-1))
 
-      if [ "${arr[i]}" = '/' -a "${arr[j]}" = '/' ] ; then
-        unset arr[j]
-      elif [ "${arr[i]}" = '.' ] ; then
+      if [ "${arr[i]}" = '.' ] ; then
         unset arr[i]
       elif [ "${arr[i]}" = '..' ] ; then
+        j=$((i-1))
+
+        # this takes into account adjacent . and/or .. with any depth
         while [ ${#arr[j]} -eq 0 ] ; do
           j=$((j-1))
         done
@@ -54,31 +66,40 @@ getPath()
     arr=( ${arr[*]} )
 
     sz=${#arr[*]}
-    qPath=
 
+    local tmp
     for(( i=0 ; i < sz ; ++i )) ; do
-      qPath=${qPath}/${arr[i]}
+      tmp=${tmp}/${arr[i]}
+
+      if [ -f ${tmp}/.install_configure ] ; then
+        QA_PATH=$tmp
+        break
+      fi
     done
 
+    test $i -eq $sz && isInvalid=t
+  else
+    isInvalid=t
   fi
 
-  local tmp
-  while [ "${qPath}" != "${qPath%/*}" ] ; do
-    tmp=${qPath##*/}
-    test ${tmp:0:3} = 'QC-' && return
+  if [ ${isInvalid:-f} = t ] ; then
 
-    qPath=${qPath%/*}
-  done
+    local str=$(ls -l $target 2> /dev/null | awk  '{print $(NF)}')
 
-  local str
-  str="\nThis script was executed from out-side of the QC package."
-  str="${str}\nIt was probably copied or hard-linked. Please, use a"
-  str="${str}\nsymbolic link, or call it directly from /path/QC-package/scripts,"
-  str="${str}\nor use option -x."
+    if [ ${#str} -gt 0 ] ; then
+      str="invalid path=$0"
+    else
+      str="broken path=$0"
+    fi
 
-  echo -e "${str}"
+    echo "${str}"
 
-  exit
+    exit 1
+  fi
+
+  export QA_PATH=${QA_PATH}
+
+  return
 }
 
 run()
@@ -132,13 +153,17 @@ run()
 
 
 #### main ##
-getPath
-cd $qPath/CF-TestSuite
+
+if [ -d "$1" ] ; then
+  QA_PATH=$1
+else
+  getSrcPath $0
+fi
+
+cd $QA_PATH/CF-TestSuite
 
 # make all nc-files of the CF Test Suite
 initPWD=$(pwd)
-
-test ${initPWD##*/} != CF-TestSuite && exit
 
 for d in Pass Fail ; do
 

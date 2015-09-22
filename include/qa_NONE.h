@@ -101,11 +101,12 @@ class QA : public IObj
    the data of fields.*/
   bool   init(void) ;
   void   linkObject(IObj *);
-  void   setFilename(std::string name);
-  void   setFilePath(std::string s){;}
-  void   setTablePath(std::string p){ tablePath=p; }
+  void   setFilename(hdhC::FileSplit&);
+  void   setTablePath(std::string p){tablePath=p;}
 
   void   applyOptions(bool isPost=false);
+
+  bool   checkDataBody(std::string vName="");
 
 //! Checks meta-data
   void   checkMetaData(InFile &) ;
@@ -130,13 +131,14 @@ class QA : public IObj
   std::string
          getCurrentTable(void){ return currTable ; }
 
+  bool   getExit(void);
   int    getExitCode(void){return exitCode;}
 
   std::string
          getFrequency(void);
 
-  std::string
-         getTablePath(void){ return tablePath; }
+//  std::string
+//         getTablePath(void){ return tablePath; }
 
   //! Brief description of options
   static void
@@ -167,7 +169,7 @@ class QA : public IObj
    Collect some properties of the in-netcdf-file in
    struct varMeDa. Also check properties against tables.
   */
-  void   openQcNc(InFile&);
+  void   openQA_Nc(InFile&);
 
   //! Perform only post-processing
   bool   postProc(void);
@@ -194,7 +196,10 @@ class QA : public IObj
   bool   testPeriod(void);
 
   //! Name of the netCDF file with results of the quality control
-  std::string qaFilename;
+  std::string tablePath;
+  struct hdhC::FileSplit qaFile;
+  struct hdhC::FileSplit projectTableFile;
+
   std::string qaNcfileFlags;
 
   int exitCode;
@@ -208,9 +213,12 @@ class QA : public IObj
 //private:
   int thisId;
 
-  size_t currQcRec;
+  size_t currQARec;
   size_t importedRecFromPrevQA; // initial num of recs in the write-to-nc-file
   MtrxArr<double> tmp_mv;
+
+  // the same buf-size for all buffer is required for testing replicated records
+  size_t bufferSize;
 
   // init for test about times
   bool enablePostProc;
@@ -238,22 +246,18 @@ class QA : public IObj
   std::vector<std::string> replicationOpts;
 
   std::string currTable;
-  std::string projectTableName;
-  std::string tablePath;
 
   std::string frequency;
+  int  frequency_pos;
 
   int identNum;
-  std::string dataFile;
-  std::string dataPath;
-  std::string dataFilename;
   std::string fVarname;
   char        fileSequenceState;
   std::string project;
   std::string project_as;
   std::string prevVersionFile;
   std::vector<std::string> srcStr;
-  std::string svnVersion;
+  std::string revision;
 
   std::string fail;
   std::string notAvailable;

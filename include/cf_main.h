@@ -42,7 +42,7 @@
 #include "qa_data.h"
 #include "qa_time.h"
 #include "qa_PT.h"
-#include "qa.h"
+#include "qa_NONE.h"
 #include "time_control.h"
 
 /*! Command-line options are gathered from ordinary command-line arguments,
@@ -55,11 +55,15 @@ objects. Brief explanation of Base-derived option-strings is given by
 --help on the command-line*/
 void
   parseOptions(int argc, char *org_argv[],
-    std::vector<std::string> &filename,
     InFile &in, CF &cf, Annotation &notes) ;
 
 /*! Called in function parseOptions(); see there.*/
 void
   readOptions(std::vector<std::string> &argv);
+
+  struct hdhC::FileSplit file;
+
+void
+  setFilename(std::string f){file.setFile(f);}
 
 #endif

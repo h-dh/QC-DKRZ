@@ -7,7 +7,7 @@ descript()
   echo "  Exclusive options:"
   echo "  -c       Clear file from redundant entries and exit."
   echo "           Note: a clearance is always done"
-  echo "  -d dir   stdout directory; default: [file-path/]_Notes"
+  echo "  -d dir   stdout directory; default: [file-path/]Annotations.yaml"
   echo "  -f str   Comma-sep-list of notes [default: all]"
   echo "  -g expr  Grep blocks containing expr (comma-sep-list)."
   echo "  -H       Output original header of input file."
@@ -20,7 +20,6 @@ descript()
   echo "  -t str   Comma-sep-list of 'name,ensemble' pairs"
   echo "           where 'ensemble' may be omitted."
   echo "           for a default and for particular files."
-  echo "  -Q       Suppress status message."
   echo "  --debug[=script]"
   echo "  --line=i only search the i-th line of each block."
   echo "  f(s)  these logfs (bash: *, ? allowed)"
@@ -32,7 +31,7 @@ add_partial_atomic()
   # events that are not atomic ones are marked to cancel from
   # the corresponding sub-temporal blocks
 
-  local i j k tgs
+  local i j k
   local ivs iv_0 iv_1 tg # indexes events:, event: - begin, - end, tag
   declare -a iv_0 iv_1 f_tgs
 
@@ -120,6 +119,8 @@ add_partial_atomic()
 
 adjustBadAtomic()
 {
+  local tg
+
   # eventually for no trailing empty line
   if [ ${isNew} = t ] ; then
     isTotallyAtomic[${ix}]=t
@@ -200,10 +201,12 @@ atomicBadConversion()
 
 atomicBadConversion_blk()
 {
-  local i ix j words
-  local ws f_ws
+  local i ix j
+  local f_ws
   local f_ix=-1
   local e_ix=-1
+
+  declare -a f_ws
 
   local sz=${#blk[*]}
 
@@ -223,7 +226,8 @@ atomicBadConversion_blk()
     fi
   done
 
-  test ${i} -eq ${sz} -a ${f_ix} -eq -1 && return  # not a usual block, e.g. qa_version
+  # not a usual block, e.g. qa_version
+  test ${i} -eq ${sz} -a ${f_ix} -eq -1 && return
 
   # look for a matching atomic scope
   for(( ix=0 ; ix < ${#scopeName[*]} ; ++ix )) ; do
@@ -282,19 +286,17 @@ atomicConversion()
   for(( k=0 ; k < ${#fs[*]} ; ++k )) ; do
     if [ ${#dir} -gt 0 ] ; then
       good="${path[k]}${dir}good/${f%.log}.note"
-      mv ${good} ${path[k]}${dir}${f%.log}.note
-
       bad="${path[k]}${dir}bad/${f%.log}.note"
 
-      # it is possible that bad files exist without any contents, but a single '',
-      # which is not a word
-      local t
-      t=$( wc -w  ${bad})
-      if [[ ! ( ${t:0:1} = '0' && ${t:1:1} = ' ' ) ]] ; then
-        cat ${bad} >> ${path[k]}${dir}${f%.log}.note
+      \rm  -f ${path[k]}${dir}${f%.log}.note
+
+      if [ -s $bad ] ; then
+        mv ${bad} ${path[k]}${dir}${f%.log}.note
+      else
+        \rm -f $bad
       fi
 
-      \rm -f $good $bad
+      \rm -f $good
       rmdir ${path[k]}${dir}good ${path[k]}${dir}bad 2> /dev/null
     fi
 
@@ -311,8 +313,6 @@ atomicGoodConversion()
   declare -a blk
 
   for(( k=0 ; k < ${#fs[*]} ; ++k )) ; do
-#    f=${fs[k]##*/}
-
     if [ ${#dir} -gt 0 ] ; then
       good="${path[k]}${dir}good/${f%.log}.note"
       out=${good}.$$
@@ -352,9 +352,11 @@ atomicGoodConversion()
 
 atomicGoodConversion_blk()
 {
-  local i ix j words
-  local ws f_ws
+  local i ix j
+  local f_ws
   local f_ix e_ix
+
+  declare -a f_ws
 
   local sz=${#blk[*]}
 
@@ -521,6 +523,7 @@ findBlock2Xtract()
 {
   # return 0 for a xtracting a block
   local i j tag tags
+  declare -a tags
 
   # the last line belongs to the next block
   local sz=$(( ${#blk[*]} -1 ))
@@ -556,6 +559,7 @@ findRedundantBlocks()
   # find redundant entries in terms of full file name
   local i j last matches pattern
   local is=t
+  declare -a matches
 
   # the last line belongs to the next block
   local sz=$(( ${#blk[*]} -1 ))
@@ -581,7 +585,7 @@ findRedundantBlocks()
   # note: first array item of pattern is FILE:
   matches=($(grep -n "[[:space:]]*file:[[:space:]]*${pattern}" ${path}${f} ))
 
-  # a unique block is represented by two matches per line
+  # a unique block is represented by three matches per line
   test ${#matches[*]} -eq 3 && return 0
 
   last=${matches[$(( ${#matches[*]} - 3 ))]}
@@ -601,6 +605,8 @@ getBadIndexes()
 
   # find events:
   local i j words sz v_indent indent
+  declare -a words
+
   v_indent=0
 
   sz=${#blk[*]}
@@ -639,6 +645,9 @@ gBAS_block()
   isNew=f  # a new atomic scope name
   isOld=f # same atomic scope as found before; go on in the block
   tag=
+
+  local words
+  declare -a words
 
   local sz=${#blk[*]}
   local range
@@ -700,6 +709,7 @@ getBadAtomicScopes()
   local fBase i ix j k line words range
   local good bad
   local blk
+  declare -a blk
 
   # on global scope: isTotallyAtomic scopeName tags
 
@@ -772,6 +782,9 @@ getByToken()
 
 gGAS_block()
 {
+  local words
+  declare -a words
+
   isNew=f  # a new atomic scope name
 
   # the last line belongs to the next block
@@ -824,6 +837,7 @@ getGoodAtomicScopes()
   local i ix j k line words range
   local good bad
   local blk
+  declare -a blk
 
   # on global scope: isTotallyAtomic scopeName tags
 
@@ -870,8 +884,6 @@ getGoodAtomicScopes()
 
 grepBlock()
 {
-  local words
-
   test ${isOut:-f} = f && exec 7<&1
 
   for(( i=0 ; i < ${#fs[*]} ; ++i )) ; do
@@ -1046,18 +1058,16 @@ remove_atomic_events()
 
 splitString()
 {
-#set +x
+ local arg=$1
+
   if [ $# -eq 2 ] ; then
     local IFS=' '
-    local arg=$1
     shift
   elif [ $# -eq 3 ] ; then
-    local arg=$1
     local IFS="$2"
     shift 2
   fi
 
-#set -x
   # a '#' could harm, but that is not looked for
   eval ${arg}=\( ${!1} \) 2> /dev/null
   return
@@ -1068,7 +1078,7 @@ xtrctGoodBad()
   local blk
   declare -a blk
 
-  local file i j line
+  local file i line
 
   for(( i=0 ; i < ${#fs[*]} ; ++i )) ; do
     file=${fs[i]##*/}
@@ -1155,7 +1165,7 @@ trap onExit EXIT
 
 isInternalExclude=f
 isOut=f
-dir=_Notes/
+dir=Annotations.yaml/
 isInverse=f
 isClearRedundant=f
 isSearchLine=f

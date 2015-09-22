@@ -120,6 +120,8 @@ class Split
   //! Is the i-th substring a number?
   bool   isNumber( size_t i );
 
+  bool   isValid(void){ return is_valid;}
+
   //! Get the substring between indicated separator positions.
   /*! The default for the second position or, if i1 exceeds the number of items,
       is the end of the input string. If i0 exceeds the number of items, then
@@ -195,7 +197,9 @@ private:
   size_t fixedWidth;
 
   std::string str;
-  std::string invalid;
+  std::string empty;
+  bool is_valid;
+  
   std::vector<std::string> sep;
   std::vector<std::string> ignore;
   std::vector<std::string> items;

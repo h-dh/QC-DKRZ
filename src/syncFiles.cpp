@@ -29,6 +29,7 @@
 
 netCDF files provided on the command-line (exclusive) or on stdin
 are synchronised to a command-line given target.\n
+The next filename to process is printed.\n
 
 Options:\n
    -E               Print info about the entire set of files (date-sorted names.\n
@@ -40,8 +41,6 @@ Options:\n
    -M               Test modification times.\n
    -P string        Path to the files.\n
    -p qa-nc-file    QA result file with path.\n
-   -s               Output of filenames sorted according to time.\n
-                    If a qa_target is given (-p), then only the later ones.\n
    -S               As -s, additionally with begin and end time.\n
                     Note that the range is given anyway in case of error.\n
    -T               Determine and append the total time range to the output.\n
@@ -51,20 +50,18 @@ Options:\n
 return:  output: \n
   0      Name of next file(s).\n
   1      "" , i.e. qa-file is up-to-date or invalid.\n
-         Also for a fixed field file that was already checked.\n
-         Note for --post: filename with latest dates.\n
   2      Last filename if the date is older than.\n
          the end-date in the QA-result file.\n
   3      Unspecific error.\n
   4      No unlimited variable found; output filename.\n
 >10      Ambiguity test failed (values accumulate):\n
- +1        misaligned dates in filenames \n
- +2        modification time check failed \n
- +4        identical start and/or end date across files \n
- +8        misaligned time-values across files \n
- +16       filenames with a mix of date formats \n
- +32       suspicion of a renewed ensemble. \n
-         Output: filenames sorted according to the modification time. */
+  +1        misaligned dates in filenames \n
+  +2        modification time check failed \n
+  +4        identical start and/or end date across files \n
+  +8        misaligned time-values across files \n
+  +16       filenames with a mix of date formats \n
+  +32       suspicion of a renewed ensemble. \n
+         Output: file names sorted according to the modification time. */
 
 class Member
 {
@@ -81,12 +78,8 @@ class Member
          getOutput(bool printSeparationLine=false);
   void   print(bool printSeparationLine=false);
   void   putState(std::string);
-  void   setBegin( std::string s)
-           { begin = refDate.getDate(s);}
-  void   setBegin(double f);
-  void   setEnd( std::string s)
-           { end = refDate.getDate(s);}
-  void   setEnd(double f);
+  void   setBegin(Date);
+  void   setEnd(Date);
   void   setFile(std::string&); // decomposes
   void   setFilename(std::string f){ filename = f;}
   void   setPath(std::string &p){ path = p;}
@@ -102,7 +95,7 @@ class Member
   Date        begin;
   Date        end;
   Date        refDate ;
-  long         modTime;
+  long        modTime;
 } ;
 
 class Ensemble
@@ -113,13 +106,10 @@ class Ensemble
    void   addTarget( std::string &qa_target );
    int    constraint(std::string &timeLimitStr);
    int    constraintSeries(void);
-   int    constraintSingle(void);
    int    constraintTimeLimit(std::string &timeLimitStr);
-   void   enablePost(void)  {isPost=true;}
    void   enablePrintEnsemble(void) {isPrintEnsemble=true;}
    void   enablePrintOnlyMarked(void){isPrintOnlyMarked=true;}
    void   enablePrintDateRange(void){isPrintDateRange=true;}
-   void   enableSeries(void){isSeries=true;}
    std::string
           getDateSpan(void);
    std::string
@@ -138,11 +128,9 @@ class Ensemble
    bool   isInvalid;
    bool   isFormattedDate;
    bool   isNoRec;
-   bool   isPost;
    bool   isPrintEnsemble;
    bool   isPrintOnlyMarked ;
    bool   isPrintDateRange;
-   bool   isSeries;
    bool   isWithTarget;
 
    size_t startIndex;  // default: 0, modifiable by a time-limit.
@@ -151,7 +139,7 @@ class Ensemble
 
    std::string           path;
    std::vector<Member*>  member ;
-   Annotation            *notes;
+   Annotation           *notes;
 } ;
 
 class SyncFiles
@@ -161,12 +149,9 @@ class SyncFiles
 
    void enableMixingRefused(void)       {isMixingRefused=true;}
    void enableModificationTimeTest(void){isModificationTest=true;}
-   void enablePost(void)
-              {isPost=true; ensemble->enablePost();}
    void enablePrintDateRange(void)      {ensemble->enablePrintDateRange();}
    void enablePrintEnsemble(void)       {ensemble->enablePrintEnsemble();}
    void enablePrintTotalTimeRange(void) {isPeriod=true;}
-   void enableSeries(void)              {ensemble->enableSeries();}
 
    void description(void);
    void initAnnotation(std::string &opts);
@@ -191,7 +176,6 @@ class SyncFiles
    bool isModificationTest;
    bool isNoRec;
    bool isPeriod;
-   bool isPost;
    bool isPrintOnlyMarked;
 
    int  returnValue;
@@ -226,8 +210,12 @@ int main(int argc, char *argv[])
   int copt;
   std::string str;
   std::string str0;
+  std::string oStr("Ad:Ehl:mMP:p:St:T");
+  oStr += "<--only-marked>";
+  oStr += "<--help>";
+  oStr += "<--note>:";
 
-  while( (copt = opt.getopt(argc, argv, "Ad:Ehl:mMP:p:sSt:T<--only-marked><--help><--post><--note>:")) != -1 )
+  while( (copt = opt.getopt(argc, argv, oStr.c_str() )) != -1 )
   {
     if( opt.longOption > 0 )
       str0=opt.longOption;
@@ -244,13 +232,6 @@ int main(int argc, char *argv[])
       syncFiles.description();
       str0.clear();
       return 3;
-    }
-
-    if( str0 == "--post" )
-    {
-      syncFiles.enablePost() ;
-      str0.clear();
-      continue;
     }
 
     if( str0 == "--note" )
@@ -306,9 +287,6 @@ int main(int argc, char *argv[])
       case 'p':
         syncFiles.setQA_target(opt.optarg) ;
         break;
-      case 's':
-        syncFiles.enableSeries();
-        break;
       case 'S':
         // printing date range of each file in output requested
         syncFiles.enablePrintDateRange();
@@ -360,11 +338,9 @@ Ensemble::Ensemble()
   isInvalid        = false;
   isFormattedDate  = false;
   isNoRec          = false;
-  isPost           = false;
   isPrintEnsemble  = false;
   isPrintOnlyMarked= false;
   isPrintDateRange = false;
-  isSeries         = false;
   isWithTarget     = false;
 
   startIndex  = 0;
@@ -408,17 +384,12 @@ Ensemble::constraint(std::string &timeLimitStr)
     {
        startIndex = sz; // ==> empty output
 
-       if( isPost )
-         startIndex = sz-1; // ==> output last filename
-
-       return 1;
+       if( sz == 1 )
+         return 1;
     }
   }
 
-  if( isSeries )
-    retVal += constraintSeries() ;
-  else
-    retVal += constraintSingle() ;
+  retVal += constraintSeries() ;
 
   return retVal;
 }
@@ -432,51 +403,22 @@ Ensemble::constraintSeries(void)
   if( ! isWithTarget )
     return 0;
 
+  int retVal=0;
+
   for( size_t i=startIndex ; i < sz ; ++i)
   {
     //Note that member[last] is for the target
     if( member[last]->end  <  member[i]->end)
     {
        startIndex = i;
-
-       if( ! isSeries )
-         sz = i+1 ;
+       if( i == (sz-1) )
+         retVal= 0;
 
        break;
     }
   }
 
-  return 0;
-}
-
-int
-Ensemble::constraintSingle(void)
-{
-  // Synchronisation according dates in a target file.
-
-  // If target not available, then first
-  if( ! isWithTarget )
-  {
-    sz=1;
-    return 0;
-  }
-
-  // If target not available, then all files
-  if( isWithTarget )
-  {
-    for( size_t i=startIndex ; i < sz ; ++i)
-    {
-      //Note that member[last] is for the target
-      if( member[last]->end  <  member[i]->end)
-      {
-         startIndex = i;
-         sz = i+1 ;
-         break;
-      }
-    }
-  }
-
-  return 0;
+  return retVal;
 }
 
 int
@@ -558,8 +500,7 @@ Ensemble::constraintTimeLimit(std::string &timeLimitStr)
     // find first member fulfilling the time limit
     if( tl_beg > member[sz-1]->end )
     {
-      startIndex=sz;  //in fact an up-to-date state without --post
-      isPost=false;
+      startIndex=sz;  //in fact an up-to-date state
       return 1;
     }
     else
@@ -592,8 +533,7 @@ Ensemble::constraintTimeLimit(std::string &timeLimitStr)
     }
     else
     {
-      startIndex=sz;  //in fact an up-to-date state without --post
-      isPost=false;
+      startIndex=sz;  //in fact an up-to-date state
       return 1;
     }
   }
@@ -606,9 +546,9 @@ Ensemble::getDateSpan(void)
 {
    std::string span("PERIOD=");
 
-   span += member[startIndex]->begin.getDate();
+   span += member[startIndex]->begin.str();
    span += '_' ;
-   span += member[sz-1]->end.getDate();
+   span += member[sz-1]->end.str();
    span +="\n";
 
    return span ;
@@ -675,6 +615,7 @@ Ensemble::getTimes(std::string &str)
   size_t recSize, len;
   size_t index=0;
   double val ;
+  bool isTimeless=false;
 
   std::string begStr;
   std::string endStr;
@@ -702,7 +643,9 @@ Ensemble::getTimes(std::string &str)
        nc_close(ncid);
 
        if( sz == 1 )
-       	 return 0;
+       	 return 0; // a single file
+       else
+         isTimeless=true;
 
        isInvalid = true;
        member[i]->state += "missing time dimension";
@@ -719,7 +662,8 @@ Ensemble::getTimes(std::string &str)
 
      if( status == 0 && recSize == 0 )
      {
-       // this could be wrong or just a fixed variable with time dimension defined.
+       // this could be wrong
+       // or just a fixed variable with time dimension defined.
        isNoRec = true;
        nc_close(ncid);
 
@@ -826,10 +770,7 @@ Ensemble::getTimes(std::string &str)
         continue;
      }
 
-     if( member[i]->refDate.isDateFormatted() )
-       member[i]->setBegin( val );
-     else
-       member[i]->setBegin( hdhC::double2String(val) );
+     member[i]->setBegin( member[i]->refDate.getDate(val) );
 
      index=recSize-1;
      if( (status = nc_get_var1_double(ncid, varid, &index, &val) ) )
@@ -850,10 +791,7 @@ Ensemble::getTimes(std::string &str)
         continue;
      }
 
-     if( member[i]->refDate.isDateFormatted() )
-       member[i]->setEnd( val );
-     else
-       member[i]->setEnd( hdhC::double2String(val) );
+     member[i]->setEnd( member[i]->refDate.getDate(val) );
 
      nc_close(ncid);
   }
@@ -865,21 +803,11 @@ Ensemble::getTimes(std::string &str)
      enablePrintOnlyMarked();
      str = getOutput();
 
-     return 3 ;  // unspecific error
+    if( isTimeless ) // num of files is > 1
+      return 5;
+    else
+      return 3 ;  // unspecific error
   }
-
-/*
-  // check units of refDates
-  for( size_t i=1 ; i < member.size() ; ++i)
-  {
-    if( member[0]->refDate.getUnit()
-          != member[i]->refDate.getUnit() )
-    {
-       isInvalid = true;
-       member[i]->state = "different reference date";
-    }
-  }
-*/
 
   // get modification times of files
   for(size_t i=0 ; i < member.size() ; ++i )
@@ -903,9 +831,9 @@ void
 Ensemble::printDateSpan(void)
 {
    std::string span;
-   span  = member[startIndex]->begin.getDate();
+   span  = member[startIndex]->begin.str();
    span += '_' ;
-   span += member[sz-1]->end.getDate();
+   span += member[sz-1]->end.str();
 
    std::cout << "PERIOD=" << span << std::endl;
    return ;
@@ -962,7 +890,7 @@ Ensemble::testAmbiguity( std::string &str,
   // test modification time against the target
   if( isModificationTest && isWithTarget )
   {
-    bool isFirst=true;
+    int rV=0;
     for( size_t i=0 ; i < sz ; ++i)
     {
        // note: 'later than' is equivalent to 'greater than'
@@ -972,9 +900,11 @@ Ensemble::testAmbiguity( std::string &str,
          member[i]->enableModTimeNote();
 
          member[i]->putState("modification time") ;
-         if( isFirst)
-           returnVal += 2;
-         isFirst=false;
+         if(!rV)
+         {
+           rV=2;
+           returnVal += rV;
+         }
        }
     }
   }
@@ -1043,15 +973,6 @@ Ensemble::testAmbiguity( std::string &str,
   // Detection of a mix of ranges of dates and singular dates in filenames
   if( isMixingRefused && isSingular && isRange )
   {
-/*
-       std::ostringstream ostr(std::ios::app);
-       ostr << "syncFiles: singular and ranges of dates are mixed\n" ;
-       ostr << "(files below are sorted according to the internal start time)\n" ;
-       if( path.size() )
-         ostr << " for path: " << path << "\n" ;
-       for( size_t i=0 ; i < sz ; ++i)
-         ostr << member[i]->filename << "\n" ;
-*/
        enablePrintEnsemble();
        str = getOutput();
 
@@ -1061,7 +982,7 @@ Ensemble::testAmbiguity( std::string &str,
   // check temporal coverage; any identical begin or end?
   for( size_t i=1 ; i < sz ; ++i)
   {
-     bool isFirst=true;
+     int rV=0;
      if( member[i-1]->begin == member[i]->begin )
      {
        enablePrintEnsemble();
@@ -1069,9 +990,11 @@ Ensemble::testAmbiguity( std::string &str,
        member[i-1]->putState("identical begin");
        member[i]->putState("identical begin");
 
-       if( isFirst )
-         returnVal += 2;
-       isFirst=false;
+         if(!rV)
+         {
+           rV=4;
+           returnVal += rV;
+         }
      }
      if( member[i-1]->end == member[i]->end )
      {
@@ -1079,25 +1002,30 @@ Ensemble::testAmbiguity( std::string &str,
 
        member[i-1]->putState("identical end");
        member[i]->putState("identical end");
-       if( isFirst )
-         returnVal += 4;
-       isFirst=false;
+
+       if(!rV)
+       {
+         rV=4;
+         returnVal += rV;
+       }
      }
   }
 
   // test for overlapping temporal coverage
   for( size_t i=1 ; i < sz ; ++i)
   {
-     bool isFirst=true;
+     int rV=0;
      if( member[i-1]->end > member[i]->begin )
      {
        enablePrintEnsemble();
 
        member[i-1]->putState("misaligned time across files");
 
-       if(isFirst)
-         returnVal += 8;
-       isFirst=false;
+       if(!rV)
+       {
+         rV=8;
+         returnVal += rV;
+       }
      }
   }
 
@@ -1158,13 +1086,13 @@ Member::getOutput(bool printSepLine)
 
   if( isPrintDateRange )
   {
-   std::string t0( begin.getDate() );
+   std::string t0( begin.str() );
    if( t0.substr(0,10) != "4294962583" )
    {
      str += "  ";
      str += t0 ;
      str += " - " ;
-     str += end.getDate() ;
+     str += end.str() ;
    }
   }
 
@@ -1206,19 +1134,17 @@ Member::putState(std::string s)
 }
 
 void
-Member::setBegin(double f)
+Member::setBegin(Date d)
 {
- refDate.setDate(f);
- begin = refDate.getDate();
+ begin = d;
 
  return;
 }
 
 void
-Member::setEnd(double f)
+Member::setEnd(Date d)
 {
- refDate.setDate(f);
- end = refDate.getDate();
+ end = d;
 
  return;
 }
@@ -1249,7 +1175,6 @@ SyncFiles::SyncFiles( Ensemble &e)
   isModificationTest = false;
   isNoRec            = false;
   isPeriod           = false;
-  isPost             = false;
 
   returnValue=0;
 }
@@ -1288,6 +1213,7 @@ SyncFiles::description(void)
   std::cout << "            +8  misaligned time-values across files.\n";
   std::cout << "            +16 filenames with a mix of date formats.\n";
   std::cout << "            +32 suspicion of a renewed ensemble.\n";
+  std::cout << "       +50 the last file of ensemble is next or up-to-date.\n";
 
   std::cout << std::endl;
 
@@ -1384,7 +1310,8 @@ SyncFiles::readInput(void)
 }
 
 void
-SyncFiles::readArgv(int i, int argc, char *argv[])
+SyncFiles::readArgv
+(int i, int argc, char *argv[])
 {
   for( ; i < argc ; ++i)
   {
@@ -1409,6 +1336,8 @@ SyncFiles::readArgv(int i, int argc, char *argv[])
 int
 SyncFiles::run(void)
 {
+  returnValue=0;
+
   // we append the qa_target, if available
   if( qa_target.size()  )
     ensemble->addTarget(qa_target);
@@ -1420,11 +1349,11 @@ SyncFiles::run(void)
   std::string str;
 
   returnValue = ensemble->getTimes(str) ;
+
   if( str.size() )  // exit condition found
   {
-   //  if( returnValue == 2 || returnValue == 3 )
     std::cout << str ;
-    return returnValue ;  // already printed
+    return returnValue ;
   }
 
   // Did any 'no-record' occur? Error cases are trapped.
@@ -1434,11 +1363,12 @@ SyncFiles::run(void)
     if( str.size() )
     {
       std::cout << str ;
-      return returnValue ;  // already printed
+      return returnValue ;
     }
   }
 
-  // check for ambiguities, return 0 for PASS
+  // Check for ambiguities, return 0 for PASS.
+  // Safe for a single file, because this was processed before
   if( (returnValue = ensemble->testAmbiguity
         (str, isPrintOnlyMarked, isModificationTest, isMixingRefused )) )
   {

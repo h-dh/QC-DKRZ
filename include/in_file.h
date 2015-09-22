@@ -28,13 +28,12 @@ public:
 
   //! Default constructor
   InFile() ;
-  ~InFile(){;}
+  ~InFile(){nc.close();}
 
   //! coresponding to virtual methods in IObj
   bool   entry(void);
   bool   init(void) ;
   void   linkObject(IObj *);
-  void   setTablePath(std::string p){ ; }
 
   void   applyOptions(void);
   void   applyOptions(std::vector<std::string> &v);
@@ -58,7 +57,7 @@ public:
 /*! If no unlimited variable is defined but time is provided, then
     try for all variables, not depending on time.*/
     std::vector<std::string>
-         getLimitedVarNames(void);
+         getLimitedVarName(void);
 
 //! Get the number of records.
 /*! If there is no unlimited variable, but time is defined, then
@@ -119,8 +118,10 @@ public:
   void   setRecEnd(size_t rec) {ncRecEnd=rec;}
 
   //! Store the path to the netcdf file.
-  void   setFilename(std::string);
-  void   setFilePath(std::string);
+  void   setFilename(std::string f) {file.setFile(f);}
+  void   setTablePath(std::string p) { ; }
+
+  struct hdhC::FileSplit file;
 
   bool   enableEntry;
   bool   isInfNan;

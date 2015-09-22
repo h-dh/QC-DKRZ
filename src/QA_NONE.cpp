@@ -1,4 +1,4 @@
-#include "qa.h"
+//#include "qa.h"
 
 // Macro option to enable output of all messages.
 // Please compile with '-D RAISE_ERRORS'
@@ -15,10 +15,10 @@ QA::~QA()
 }
 
 void
-QA::appendToHistory(size_t eCode)
+QA::appendToHistory(size_t xCode)
 {
   // date and time at run time
-  std::string today( Date::getCurrentDate() );
+  std::string today( Date::getTodayStr() );
   today += ":";
 
   std::string s;
@@ -38,12 +38,12 @@ QA::appendToHistory(size_t eCode)
       size_t pos;
       if( (pos=hstPath.rfind("\n")) < std::string::npos )
          hstPath.erase(pos,1);
-      if( dataPath != hstPath )
+      if( qaFile.path != hstPath )
       {
         hst += "\n" ;
         hst += today;
         hst += " changed path to data=";
-        hst += dataPath + "\n" ;
+        hst += qaFile.path + "\n" ;
       }
     }
   }
@@ -52,15 +52,7 @@ QA::appendToHistory(size_t eCode)
     // the root of the history string
     hst += today;
     hst += " path_to_data=";
-    hst += dataPath ;
-/*
-    hst += "\nfilenames and tracking_id in file tid_";
-
-    std::string t0(qaFilename.substr(3));
-    t0 = t0.substr(0, t0.size()-3);
-    hst += t0;
-    hst += ".txt" ;
-*/
+    hst += qaFile.path ;
   }
 
   // did the package version change? Yes? Then add to history
@@ -86,14 +78,14 @@ QA::appendToHistory(size_t eCode)
       tmp = splt[++index] ;
     else
       // not in the history, so take the one from the version attribute
-      tmp = nc->getAttString("QA_svn_revision");
+      tmp = nc->getAttString("QA revision");
 
-    if( svnVersion != tmp )
+    if( revision != tmp )
     {
       hst += "\n" ;
       hst += today;
-      hst += " changed QA svn revision=" ;
-      hst += svnVersion ;
+      hst += " changed QA revision=" ;
+      hst += revision ;
     }
   }
 
@@ -109,6 +101,8 @@ QA::appendToHistory(size_t eCode)
 void
 QA::applyOptions(bool isPost)
 {
+  enablePostProc=isPost;
+
   // the first loop for items with higher precedence
   for( size_t i=0 ; i < optStr.size() ; ++i)
   {
@@ -141,7 +135,7 @@ QA::applyOptions(bool isPost)
        if( split.size() == 2 )
          setCheckMode(split[1]);
 
-        continue;
+       continue;
      }
 
      if( split[0] == "dIP"
@@ -157,11 +151,10 @@ QA::applyOptions(bool isPost)
           || split[0] == "dataPath" || split[0] == "data_path" )
      {
        if( split.size() == 2 )
-       {
           // path to the directory where the execution takes place
-          dataPath=split[1];
-          continue;
-       }
+          qaFile.setPath(split[1]);
+
+       continue;
      }
 
      if( split[0] == "eA" || split[0] == "excludedAttribute"
@@ -170,51 +163,57 @@ QA::applyOptions(bool isPost)
        Split cvs(split[1],",");
        for( size_t i=0 ; i < cvs.size() ; ++i )
          excludedAttribute.push_back(cvs[i]);
+
        continue;
      }
 
      if( split[0] == "f" )
      {
        if( split.size() == 2 )
-       {
-          qaFilename=split[1];
-          continue;
-       }
+          qaFile.setFile(split[1]);
+       continue;
      }
 
      if( split[0] == "fS" || split[0] == "FileSequence"
          || split[0] == "file_sequence" )
      {
        if( split.size() == 2 )
-       {
           fileSequenceState=split[1][0];
-          continue;
-       }
+       continue;
+     }
+
+     if( split[0] == "fq" || split[0] == "Frequency"
+         || split[0] == "frequency" )
+     {
+       if( split.size() == 2 )
+          frequency=split[1];
+       continue;
+     }
+
+     if( split[0] == "fqp" || split[0] == "FrequencyPosition"
+         || split[0] == "frequency_position" )
+     {
+       if( split.size() == 2 )
+          frequency_pos = split.toInt(1);
+       continue;
      }
 
      if( split[0] == "oT"
            || split[0] == "outlierTest"
                 || split[0] == "outlier_test" )
      {
-       if( split.size() == 2 )
-       {
-          if( split[1].find("POST") < std::string::npos
-                   && ! enablePostProc )
-            continue;
-
+       if( enablePostProc && split.size() == 2 )
           outlierOpts.push_back(split[1]);
-          continue;
-       }
+
+       continue;
      }
 
      if( split[0] == "qNF" || split[0] == "qaNcfileFlags"
        || split[0] == "qa_ncfile_flags" )
      {
        if( split.size() == 2 )
-       {
           qaNcfileFlags=split[1];
-          continue;
-       }
+       continue;
      }
 
      if( split[0] == "rR"
@@ -241,46 +240,71 @@ QA::applyOptions(bool isPost)
             for( size_t i=0 ; i < csv.size() ; ++i )
               replicationOpts.push_back(csv[i]);
           }
-          continue;
        }
+       continue;
      }
 
      if( split[0] == "tP"
           || split[0] == "tablePath" || split[0] == "table_path")
      {
        if( split.size() == 2 )
-       {
           tablePath=split[1];
-          continue;
-       }
+       continue;
      }
 
      if( split[0] == "tPr"
           || split[0] == "tableProject" )  // dummy
      {
        if( split.size() == 2 )
-       {
-          size_t pos;
-          if( (pos=split[1].rfind('/')) < std::string::npos )
-          {
-            if( split[1][0] == '/' )
-            {  // absolute path
-              tablePath=split[1].substr(0, pos);
-              projectTableName=split[1].substr(pos+1);
-            }
-            else // relative path remains part of the tablename
-              projectTableName=split[1];
-          }
-          else
-            projectTableName=split[1];
+          projectTableFile.setFile(split[1]);
 
-          continue;
-       }
+       continue;
      }
-
    }
 
+   // apply a general path which could have also been provided by setTablePath()
+   if( projectTableFile.path.size() == 0 )
+      projectTableFile.setPath(tablePath);
+
    return;
+}
+
+bool
+QA::checkDataBody(std::string vName)
+{
+  // any empty data segments?
+
+  if( vName.size() )
+  {
+    for( size_t i=0 ; i < pIn->varSz ; ++i)
+    {
+      Variable& var = pIn->variable[i];
+      if( var.name == vName )
+        return pIn->nc.isEmptyData(var.name) ;
+    }
+  }
+  else if( ! pIn->dataVarIndex.size() )
+    return true;
+
+  std::vector<size_t> vs;
+  for( size_t i=0 ; i < pIn->dataVarIndex.size() ; ++i)
+  {
+    Variable& var = pIn->variable[ pIn->dataVarIndex[i] ];
+    if( ! pIn->nc.isEmptyData(var.name) )
+    {
+      vs.push_back(pIn->dataVarIndex[i]) ;
+      notes->setCheckDataStr(fail);
+    }
+  }
+
+  if( vs.size() )
+    // only try for variables with data
+    pIn->dataVarIndex = vs ;
+  else
+    // all data variables without any data
+    return true;
+
+  return false;
 }
 
 void
@@ -293,7 +317,7 @@ QA::checkMetaData(InFile &in)
   inqTables();
 
   // Read or write the project table.
-  ProjectTable projectTable(this, &in, tablePath, projectTableName);
+  ProjectTable projectTable(this, &in, projectTableFile);
   projectTable.setAnnotation(notes);
   projectTable.setExcludedAttributes( excludedAttribute );
 
@@ -337,7 +361,7 @@ QA::closeEntry(void)
      storeData(fA);
    }
 
-   ++currQcRec;
+   ++currQARec;
 
    return;
 }
@@ -369,13 +393,13 @@ QA::createVarMetaData(void)
     Split splt(vMD.dims);
     int effDim = splt.size() ;
     for( size_t j=0 ; j < splt.size() ; ++j )
-      if( splt[j] == qaTime.time )
+      if( splt[j] == qaTime.name )
         --effDim;
 
     if( replicationOpts.size() )
     {
       if( ReplicatedRecord::isSelected(
-             replicationOpts, vMD.name, enablePostProc, effDim ) )
+             replicationOpts, vMD.name, effDim ) )
       {
         vMD.qaData.replicated = new ReplicatedRecord(this, i, vMD.name);
         vMD.qaData.replicated->setAnnotation(notes);
@@ -383,12 +407,14 @@ QA::createVarMetaData(void)
       }
     }
 
-    if( outlierOpts.size() )
+    if( enablePostProc && outlierOpts.size() )
     {
       if( Outlier::isSelected(
-             outlierOpts, vMD.name, enablePostProc, effDim ) )
+             outlierOpts, vMD.name, effDim ) )
       {
-        vMD.qaData.outlier = new Outlier(this, i, vMD.name);
+        vMD.qaData.enableOutlierTest=true;
+
+        vMD.qaData.outlier = new Outlier(this, i, vMD.var->name);
         vMD.qaData.outlier->setAnnotation(notes);
         vMD.qaData.outlier->parseOption(outlierOpts);
       }
@@ -446,25 +472,29 @@ QA::entry(void)
 }
 
 int
-QA::finally(int eCode)
+QA::finally(int xCode)
 {
   if( nc )
-    setExit( finally_data(eCode) );
+    setExit( finally_data(xCode) );
+
+  if( xCode != 63 && isCheckTime )
+    qaTime.finally( nc );
+
+  setExit(xCode);
 
   // distinguish from a sytem crash (segmentation error)
-//  notes->print() ;
   std::cout << "STATUS-BEG" << exitCode << "STATUS-END";
   std::cout << std::flush;
 
-  setExit( exitCode ) ;
+  nc->close() ;
 
   return exitCode ;
 }
 
 int
-QA::finally_data(int eCode)
+QA::finally_data(int xCode)
 {
-  setExit(eCode);
+  setExit(xCode);
 
   // write pending results to qa-file.nc. Modes are considered there
   for( size_t i=0 ; i < varMeDa.size() ; ++i )
@@ -475,26 +505,21 @@ QA::finally_data(int eCode)
   if( exitCode < 3 )
   {  // 3 or 4 interrupted any checking
     if( enablePostProc )
+    {
       if( postProc() )
+      {
         if( exitCode == 63 )
-            exitCode=0;  // this is considered a change
-  }
-  else
-  {
-    // outlier test based on slope across n*sigma
-    // must follow flushOutput(), if the latter is effective
-    if( isCheckData )
-      for( size_t i=0 ; i < varMeDa.size() ; ++i )
-         if( varMeDa[i].qaData.enableOutlierTest )
-           varMeDa[i].qaData.outlier->test( &(varMeDa[i].qaData) );
+            exitCode=1;  // this is considered a change
+
+        notes->setCheckDataStr(fail);
+      }
+    }
   }
 
   if( exitCode == 63 ||
-     ( nc == 0 && exitCode ) || (currQcRec == 0 && pIn->isTime ) )
+     ( nc == 0 && exitCode ) || (currQARec == 0 && pIn->isTime ) )
   { // qa is up-to-date or a forced exit right from the start;
     // no data to write
-    nc->close();
-
     if( exitCode == 63 )
       exitCode=0 ;
 
@@ -523,9 +548,17 @@ QA::finally_data(int eCode)
     }
   }
 
-  nc->close();
-
   return exitCode ;
+}
+
+bool
+QA::getExit(void)
+{
+  // note that isExit==true was forced
+  if( exitCode > 1 || isExit )
+    return true;
+
+  return false;
 }
 
 std::string
@@ -539,70 +572,20 @@ QA::getFrequency()
 
   if( frequency.size() )
     return frequency;
-  else
+  else if( frequency_pos > -1 )
   {
-    // not found, but error issue is handled elsewhere
+    // try the frequency posdition within the filename
+    std::string f( pIn->file.basename );
+    Split splt;
+    splt.enableEmptyItems();
+    splt.setSeparator("_");
 
-    // try the filename
-    std::string f( pIn->filename );
-    size_t pos;
-    if( (pos=f.rfind('/')) < std::string::npos )
-      f = f.substr(pos+1);
-
-    if( f.rfind(".nc" ) )
-      f = f.substr( 0, f.size()-3 );  // strip ".nc"
-
-    Split splt(f, "_");
+    splt = f ;
 
     // test the last two items for time type. If both are,
     // then this would mean that they are separated by '_'.
-    // This would be a fault for CORDEX.
-    size_t off=0;  // takes into account a period separator '_'
-    if( splt.size() > 2 &&
-           hdhC::isDigit( splt[ splt.size() -1 ])
-             && hdhC::isDigit( splt[ splt.size() -2 ]) )
-      off=1;
-
-    if( splt.size() > 7 )
-    {
-      if( splt.size() == (9+off) )
-        frequency = splt[7] ;
-      else if( splt.size() == (8+off) )
-      {
-         if( hdhC::isDigit( splt[7][0] ) )
-           // with period; no RCMVersionID
-           frequency = splt[6] ;
-         else
-           // no period; with RCMVersionID
-           frequency = splt[7] ;
-      }
-      else if( splt.size() == (7+off) )
-         // no period; no RCMVersionID
-         frequency = splt[6] ;
-    }
-
-    if( frequency.size() )
-       return frequency;
-  }
-
-  // last resort: automatically from time values
-  if( pIn->nc.getNumOfRecords() > 1 )
-  {
-    double t0 = Base::getTime(pIn->nc, 0, pIn->timeName);
-    double t1 = Base::getTime(pIn->nc, 1, pIn->timeName);
-    double dt=t1-t0;
-
-    // only for units day (since ...)
-    if ( dt > 27 && dt < 32)
-      frequency = "mon";
-    else if ( dt > 89. && dt < 93. )
-      frequency = "sem";
-    else if ( dt > 0.9 && dt < 1.1 )
-      frequency = "day";
-    else if ( dt > 0.2 && dt < 0.3 )
-      frequency = "6hr";
-    else if ( dt > 0.1 && dt < 0.15)
-      frequency = "3hr";
+    if( static_cast<int>(splt.size()) > frequency_pos )
+      frequency = splt[ frequency_pos ] ;
   }
 
   return frequency ;
@@ -635,7 +618,9 @@ QA::init(void)
    // harm in testDate() called in closeEntry().
 
    notes->init();  // safe
-   setFilename(pIn->filename);
+
+   // default
+   setFilename( pIn->file );
 
    // apply parsed command-line args
    applyOptions();
@@ -669,11 +654,10 @@ QA::init(void)
    // get meta data from file and compare with tables
    checkMetaData(*pIn);
 
-   if( isCheckTime && pIn->isTime )
+   if(qaTime.init(pIn, notes, this))
    {
      // init the time object
      // note that freq is compared to the first column of the time table
-     qaTime.init(pIn, notes, this);
      qaTime.applyOptions(optStr);
      qaTime.initTimeTable( getFrequency() );
 
@@ -682,7 +666,7 @@ QA::init(void)
      if( testPeriod() )
      {
         std::string key("82");
-        if( notes->inq( key, qaTime.time) )
+        if( notes->inq( key, qaTime.name) )
         {
           std::string capt("status is apparently in progress");
 
@@ -690,14 +674,14 @@ QA::init(void)
        }
      }
    }
+   else
+     isCheckTime=false;
 
-   if(isExit)
-     return true;
 
    // open netCDF for creating, continuation or resuming qa_<varname>.nc
-   openQcNc(*pIn);
+   openQA_Nc(*pIn);
 
-   if( isExit || isNoProgress )
+   if( getExit() || qaTime.isNoProgress )
    {
      isCheckData=false;
      isCheckTime=false;
@@ -706,12 +690,12 @@ QA::init(void)
 
    if( isCheckTime )
    {
-     if( ! pIn->nc.isAnyRecord() )
+     if( qaTime.isTime && checkDataBody(qaTime.name) )
      {
        isCheckTime = false;
        notes->setCheckTimeStr(fail);
      }
-     else if( ! pIn->isTime )
+     else if( ! qaTime.isTime )
      {
        isCheckTime = false;
        notes->setCheckTimeStr("FIXED");
@@ -722,9 +706,9 @@ QA::init(void)
 
    if( isCheckData )
    {
-     if( ! pIn->nc.isAnyRecord() )
+     if( checkDataBody() )
      {
-       notes->setCheckDataStr(fail);
+       notes->setCheckDataStr("FAIL");
        return true;
      }
 
@@ -733,6 +717,7 @@ QA::init(void)
      // set pointer to function for operating tests
      execPtr = &IObj::entry ;
      bool is = entry();
+
      if( isExit || is )
        return true;
 
@@ -748,14 +733,14 @@ QA::initDataOutputBuffer(void)
 {
   if( isCheckTime )
   {
-    qaTime.timeOutputBuffer.initBuffer(nc, currQcRec);
-    qaTime.sharedRecordFlag.initBuffer(nc, currQcRec);
+    qaTime.timeOutputBuffer.initBuffer(this, currQARec, bufferSize);
+    qaTime.sharedRecordFlag.initBuffer(this, currQARec, bufferSize);
   }
 
   if( isCheckData )
   {
     for( size_t i=0 ; i < varMeDa.size() ; ++i)
-      varMeDa[i].qaData.initBuffer(nc, currQcRec);
+      varMeDa[i].qaData.initBuffer(this, currQARec, bufferSize);
   }
 
   return;
@@ -796,24 +781,25 @@ QA::initDefaults(void)
   nextRecords=0;  //see init()
 
   importedRecFromPrevQA=0; // initial #rec in out-nc-file.
-  currQcRec=0;
+  currQARec=0;
 
-  // by default
-  tablePath="./";
+  frequency_pos=-1;
 
   // pre-set check-modes: all are used by default
   isCheckMeta=true;
   isCheckTime=true;
   isCheckData=true;
 
+  bufferSize=1500;
+
   exitCode=0;
 
   // file sequence: f[first], s[equence], l[ast]
   fileSequenceState='x' ;  // 'x':= undefined
 
-#ifdef SVN_VERSION
+#ifdef REVISION
   // -1 by default
-  svnVersion=hdhC::double2String(static_cast<int>(SVN_VERSION));
+  revision=hdhC::double2String(static_cast<int>(REVISION));
 #endif
 
   // set pointer to member function init()
@@ -824,9 +810,9 @@ void
 QA::initGlobalAtts(InFile &in)
 {
   // global atts at creation.
-  std::string today( Date::getCurrentDate() );
+  std::string today( Date::getTodayStr() );
 
-  nc->setGlobalAtt( "QA_svn_revision", svnVersion);
+  nc->setGlobalAtt( "QA_revision", revision);
   nc->setGlobalAtt( "contact", "hollweg@dkrz.de");
 
   nc->setGlobalAtt( "creation_date", today);
@@ -852,7 +838,7 @@ QA::initResumeSession(void)
   // At first, a check over the ensemble of variables.
   // Get the name of the variable(s) used before
   // (only those with a trailing '_ave').
-  std::vector<std::string> vss( nc->getVarNames() ) ;
+  std::vector<std::string> vss( nc->getVarName() ) ;
 
   std::vector<std::string> prevTargets ;
 
@@ -912,8 +898,8 @@ QA::initResumeSession(void)
   }
 
   // now, resume
-  qaTime.timeOutputBuffer.setNextFlushBeg(currQcRec);
-  qaTime.setNextFlushBeg(currQcRec);
+  qaTime.timeOutputBuffer.setNextFlushBeg(currQARec);
+  qaTime.setNextFlushBeg(currQARec);
 
   if( isCheckTime )
     qaTime.initResumeSession();
@@ -930,26 +916,15 @@ QA::initResumeSession(void)
 void
 QA::inqTables(void)
 {
-  // check tablePath; must exist
-  std::string testFile("/bin/bash -c \'test -d ") ;
-  testFile += tablePath ;
-  testFile += '\'' ;
-
-  // see 'man system' for the return value, here we expect 0,
-  // if directory exists.
-
-  if( system( testFile.c_str()) )
+  if( ! projectTableFile.isExisting(projectTableFile.path) )
   {
      std::string key("70_3");
      if( notes->inq( key, fileStr) )
      {
-        std::string capt("no path to the tables") ;
+        std::string capt("no path to the tables, tried ") ;
+        capt += projectTableFile.path;
 
-        std::string text("No path to the tables; tried ");
-        text += tablePath + ".";
-        text += "\nPlease, check the setting in the configuration file.";
-
-        if( notes->operate(capt, text) )
+        if( notes->operate(capt) )
         {
           notes->setCheckMetaStr( fail );
           setExit( notes->getExitValue() ) ;
@@ -960,10 +935,10 @@ QA::inqTables(void)
   // tables names usage: both project and standard tables
   // reside in the same path.
   // Naming of the project table:
-  if( projectTableName.size() == 0 )
-    projectTableName = "pt_NONE";
-  else if( projectTableName.find(".csv") == std::string::npos )
-    projectTableName += ".csv" ;
+  if( !projectTableFile.is )
+    projectTableFile.setFilename("pt_NONE.csv");
+  else if( projectTableFile.extension != ".csv" )
+    projectTableFile.setExtension(".csv") ;
 
   return;
 }
@@ -994,23 +969,26 @@ QA::linkObject(IObj *p)
 }
 
 void
-QA::openQcNc(InFile &in)
+QA::openQA_Nc(InFile &in)
 {
   // Generates a new nc file for QA results or
   // opens an existing one for appending data.
   // Copies time variable from input-nc file.
 
   // name of the file begins with qa_
-  if ( qaFilename.size() == 0 )
+  if ( !qaFile.is )
   {
-    // use the input filename as basis;
-    // there could be a leading path
-    qaFilename = dataPath;
-    if( qaFilename.size() > 0 )
-      qaFilename += '/' ;
-    qaFilename += "qa_";
-    qaFilename += hdhC::getBasename(dataFilename);
-    qaFilename += ".txt";
+    std::string key("00");
+
+    if( notes->inq( key) )
+    {
+      std::string capt("openQA_Nc(): undefined file.") ;
+
+      (void) notes->operate(capt) ;
+      notes->setCheckMetaStr(fail);
+      setExit( notes->getExitValue() ) ;
+      return;
+    }
   }
 
   nc = new NcAPI;
@@ -1019,42 +997,35 @@ QA::openQcNc(InFile &in)
 
   // don't create a netCDF file, when only meta data are checked.
   // but, a NcAPI object m ust exist
-  if( ! isCheckTime )
+  if( ! (isCheckTime || isCheckData) )
     return;
 
-  if( nc->open(qaFilename, "NC_WRITE", false) )
+  if( nc->open(qaFile.getFile(), "NC_WRITE", false) )
 //   if( isQA_open ) // false: do not exit in case of error
   {
     // continue a previous session
     importedRecFromPrevQA=nc->getNumOfRecords();
-    currQcRec += importedRecFromPrevQA;
-    if( currQcRec )
+    currQARec += importedRecFromPrevQA;
+    if( currQARec )
       isNotFirstRecord = true;
 
     initDataOutputBuffer();
-    qaTime.sharedRecordFlag.initBuffer(nc, currQcRec);
 
     initResumeSession();
     isResumeSession=true;
 
-    // if files are synchronised, i.e. a file hasn't changed since
-    // the last qa
-    if( isCheckTime )
-      isNoProgress = qaTime.sync( isCheckData, enablePostProc );
-
     return;
   }
 
-  if( currQcRec == 0 && in.nc.getNumOfRecords() == 1 )
-    qaTime.isSingleTimeValue = true;
-
   // So, we have to generate a netCDF file from almost scratch;
+  if( currQARec == 0 && in.nc.getNumOfRecords() == 1 )
+    qaTime.isSingleTimeValue = true;
 
   // open new netcdf file
   if( qaNcfileFlags.size() )
-    nc->create(qaFilename,  qaNcfileFlags);
+    nc->create(qaFile.getFile(),  qaNcfileFlags);
   else
-    nc->create(qaFilename,  "Replace");
+    nc->create(qaFile.getFile(),  "Replace");
 
   if( pIn->isTime )
   {
@@ -1068,18 +1039,18 @@ QA::openQcNc(InFile &in)
       }
     }
 
-    qaTime.openQcNcContrib(nc);
+    qaTime.openQA_NcContrib(nc);
   }
   else if( isCheckTime )
   {
     // dimensions
-    qaTime.time="fixed";
+    qaTime.name="fixed";
     nc->defineDim("fixed", 1);
   }
 
   // create variable for the data statics etc.
   for( size_t m=0 ; m < varMeDa.size() ; ++m )
-    varMeDa[m].qaData.openQcNcContrib(nc, varMeDa[m].var);
+    varMeDa[m].qaData.openQA_NcContrib(nc, varMeDa[m].var);
 
   // global atts at creation.
   initGlobalAtts(in);
@@ -1260,16 +1231,6 @@ QA::pushBackVarMeDa(Variable *var)
 }
 
 void
-QA::setFilename(std::string f)
-{
-  dataFile = f;
-  dataPath = hdhC::getPath(f);
-  dataFilename = hdhC::getFilename(f);
-
-  return;
-}
-
-void
 QA::setCheckMode(std::string m)
 {
   isCheckMeta=false;
@@ -1298,6 +1259,34 @@ QA::setExit( int e )
     exitCode=e;
     isExit=true;
   }
+
+  return ;
+}
+
+void
+QA::setFilename(hdhC::FileSplit& fC)
+{
+  std::string f(fC.basename);
+
+  Split x(f, '_');
+
+  if( x.size() )
+  {
+    Split y(x[x.size()-1], '-');
+
+    size_t sz = y.size();
+
+    if( sz == 2 &&
+          hdhC::isDigit( y[0]) && hdhC::isDigit( y[1]) )
+    {
+      f = "qa";
+
+      for( size_t i=0 ; i < x.size()-1 ; ++i )
+        f += "_" + x[i] ;
+    }
+  }
+
+  qaFile.setFilename(f + ".nc");
 
   return ;
 }
@@ -1368,7 +1357,7 @@ QA::testPeriod(void)
 
   // Does the filename has a trailing date range?
   // Strip off the extension.
-  std::string f( dataFilename.substr(0, dataFilename.size()-3 ) );
+  std::string f( qaFile.getBasename() );
 
   std::vector<std::string> sd;
   sd.push_back( "" );
@@ -1401,90 +1390,142 @@ QA::testPeriod(void)
   // convert ascii formated date to class Date
   qaTime.getDRSformattedDateRange(period, sd);
 
+  Date* fN_left = &period[0];
+  Date* fN_right = &period[1];
+
   // necessary for validity (not sufficient)
-  if( period[0] > period[1] )
+  if( *fN_left > *fN_right )
   {
      std::string key("42_4");
      if( notes->inq( key, fileStr) )
      {
-       std::string capt("invalid range for period in the filename");
+       std::string capt("invalid range for period in the filename, found ");
+       capt += hdhC::tf_val(sd[0] + "-" + sd[1]);
 
-       std::string text( "range=");
-       text += sd[0];
-       text += " - ";
-       text += sd[1];
-
-       (void) notes->operate(capt, text) ;
+       (void) notes->operate(capt) ;
        notes->setCheckMetaStr( fail );
      }
 
      return false;
   }
 
-  bool bLeft0, bLeft1, bRight0, bRight1;
-  bLeft0 = bLeft1 = bRight0 = bRight1 = false;
+  Date* tV_left = 0 ;
+  Date* tV_right = 0;
+
+  Date* tV_left_obj = 0 ;
+  Date* tV_right_obj = 0;
+  Date* tB_left_obj = 0 ;
+  Date* tB_right_obj = 0;
+
+  bool isLeft_fT_not_tV ;
+  bool isRight_fT_not_tV ;
 
   if( qaTime.isTimeBounds)
   {
-    period.push_back( qaTime.getDate("first", "left") );
-    period.push_back( qaTime.getDate("last", "right") );
+    tB_left_obj = new Date(qaTime.refDate);
+    tB_left_obj->addTime(qaTime.firstTimeBoundsValue[0]);
+    tV_left = tB_left_obj;
 
-    bLeft1=(period[0].getJulianDay() + 1.25*qaTime.referenceTimeStep)
-              < period[2].getJulianDay();
-    bRight0=(period[1].getJulianDay() - 1.25*qaTime.referenceTimeStep)
-              < period[3].getJulianDay();
+    tB_right_obj = new Date(qaTime.refDate);
+    tB_right_obj->addTime(qaTime.firstTimeBoundsValue[1]);
+    tV_right = tB_right_obj;
+
+    isLeft_fT_not_tV = *tB_left_obj != *fN_left ;
+    isRight_fT_not_tV = *tB_right_obj != *fN_right ;
   }
   else
   {
-    period.push_back( qaTime.getDate("first") );
-    period.push_back( qaTime.getDate("last") );
+    tV_left_obj = new Date(qaTime.refDate);
+    if( qaTime.firstTimeValue != 0. )
+      tV_left_obj->addTime(qaTime.firstTimeValue);
+    tV_left = tV_left_obj;
+
+    tV_right_obj = new Date(qaTime.refDate);
+    if( qaTime.lastTimeValue != 0. )
+      tV_right_obj->addTime(qaTime.lastTimeValue);
+    tV_right = tV_right_obj;
+
+    isLeft_fT_not_tV = *tV_left != *fN_left ;
+    isRight_fT_not_tV = *tV_right != *fN_right ;
   }
 
-  bLeft0= period[2] < period[0] ;
-  bRight1= period[3] > period[1] ;
+  if( isLeft_fT_not_tV )
+  {
+    // CMOR isn't capable of working with the time_bounds. Hence, an exception
+    // rule is added to the CORDEX archive design as to the period in filenames:
+    // "It is also allowed to use time values of the first and last records
+    // in NetCDF files for averaged data." However, this does not lead to a
+    // working solution. In fact, CMOR sets StartTime to the beginning  of
+    // the month bearing the first time value.
+    // So, here is a LEX CMOR
+    if( tV_left_obj == 0 )
+    {
+      tV_left_obj = new Date(qaTime.refDate);
+      tV_left = tV_left_obj;
+      if( qaTime.firstTimeValue != 0. )
+        tV_left->addTime(qaTime.firstTimeValue);
+    }
+    double monDaysNum = tV_left->getMonthDaysNum();
+    tV_left->addTime(-monDaysNum, "day");
 
-  if( bLeft0 || bLeft1 )
+    if( tV_right_obj == 0 )
+    {
+      tV_right_obj = new Date(qaTime.refDate);
+      tV_right = tV_right_obj;
+      if( qaTime.lastTimeValue != 0. )
+        tV_right->addTime(qaTime.lastTimeValue);
+    }
+
+    isLeft_fT_not_tV = *tV_left != *fN_left ;
+    isRight_fT_not_tV = *tV_right != *fN_right ;
+  }
+
+  // the annotation
+  if( isLeft_fT_not_tV )
   {
      std::string key("16_2");
      if( notes->inq( key, fileStr) )
      {
-       std::string capt("period in filename (1st date) is misaligned to time values");
+       std::string capt("First date ");
+       capt += hdhC::sAssign("(filename)", fN_left->str()) ;
+       capt += " and time " ;
+       if( tB_left_obj )
+         capt += "bounds ";
+       capt += hdhC::sAssign("data", tV_left->str());
+       capt += " are misaligned";
 
-       std::string text("from time data=");
-       text += period[2].getDate();
-       text += "\nfilename=" ;
-       text += period[0].getDate() ;
-       if( ! qaTime.isTimeBounds)
-         text += "\n note: time_bounds not available" ;
-
-       (void) notes->operate(capt, text) ;
+       (void) notes->operate(capt) ;
        notes->setCheckMetaStr( fail );
      }
   }
 
   // test completeness: the end of the file
-  if( isFileComplete && ( bRight0 || bRight1 ) )
+  if( isFileComplete && isRight_fT_not_tV )
   {
      std::string key("16_3");
      if( notes->inq( key, fileStr) )
      {
-       std::string capt("period in filename (2nd date) is misaligned to time values");
+       std::string capt("Second date ");
+       capt += hdhC::sAssign("(filename)", fN_right->str()) ;
 
-       std::string text;
-       if( period[3] > period[1] )
-         text = "Time values exceed period in filename." ;
-       else
-         text = "Period in filename exceeds time values." ;
+       capt += " is misaligned to time " ;
+       if( tB_left_obj )
+         capt += "bounds ";
+       capt += hdhC::sAssign("data", tB_right_obj->str());
 
-       text += "\ndata=" ;
-       text += period[3].getDate() ;
-       text += "\nfilename=" ;
-       text += period[1].getDate();
-
-       (void) notes->operate(capt, text) ;
+       (void) notes->operate(capt) ;
        notes->setCheckMetaStr( fail );
      }
   }
+
+  if( tV_left_obj )
+    delete tV_left_obj;
+  if( tV_right_obj )
+    delete tV_right_obj;
+  if( tB_left_obj )
+    delete tB_left_obj;
+  if( tB_right_obj )
+    delete tB_right_obj;
 
   return false;
 }
@@ -1506,7 +1547,7 @@ VariableMetaData::~VariableMetaData()
 }
 
 int
-VariableMetaData::finally(int eCode)
+VariableMetaData::finally(int xCode)
 {
   // write pending results to qa-file.nc. Modes are considered there
   qaData.flush();
@@ -1515,9 +1556,9 @@ VariableMetaData::finally(int eCode)
   notes->printFlags();
 
   int rV = notes->getExitValue();
-  eCode = ( eCode > rV ) ? eCode : rV ;
+  xCode = ( xCode > rV ) ? xCode : rV ;
 
-  return eCode ;
+  return xCode ;
 }
 
 void

@@ -1,12 +1,12 @@
 #include "qa_PT.h"
 
-ProjectTable::ProjectTable(QA *p0, InFile *p1, std::string &s0, std::string &s1)
+ProjectTable::ProjectTable(QA *p0, InFile *p1,
+    struct hdhC::FileSplit& pTFile )
 {
    qa  = p0;
    pIn = p1;
 
-   path=s0;
-   table=s1;
+   projectTableFile = pTFile;
 
    excludedAttributes.push_back("comment");
    excludedAttributes.push_back("history");
@@ -35,8 +35,7 @@ ProjectTable::check(Variable &dataVar)
   // matching the varname and frequency (account also rotated).
 
   // Open project table. Mode:  read
-  std::string str0(path);
-  str0 += "/" + table ;
+  std::string str0(projectTableFile.getFile());
 
   std::ifstream ifs(str0.c_str(), std::ios::in);
   if( !ifs.is_open() )  // file does not exist
@@ -53,7 +52,7 @@ ProjectTable::check(Variable &dataVar)
   bool isNew=true;
   while( getline(ifs, str0) )
   {
-    if( str0.size() )
+    if( !str0.size() )
       continue;  // skip blank lines
 
     size_t p1, p2;  // positions of ','
@@ -223,7 +222,7 @@ BREAK:
               break;  // try the next attribute
 
             // different values --> annotation
-            std::string key("51_3");
+            std::string key("8_8");
             if( notes->inq( key, dataVar.name ) )
             {
               std::string capt;
@@ -279,7 +278,7 @@ BREAK:
 
         if( isAttMissing )
         {
-          std::string key("51_2");
+          std::string key("8_7");
           if( notes->inq( key, dataVar.name ) )
           {
             std::string capt;
@@ -302,7 +301,10 @@ BREAK:
               capt += xt_eq[0];
               capt += ": missing" ;
             }
-            capt += " compared to the project table";
+            if( qa->currQARec )
+              capt += " across sub-temporal files";
+            else
+              capt += " across parent experiments";
 
             (void) notes->operate(capt) ;
             notes->setCheckMetaStr( "FAIL" );
@@ -313,7 +315,7 @@ BREAK:
 
     if( isMissAux )
     {
-      std::string key("50_1");
+      std::string key("8_4");
       if( notes->inq( key, dataVar.name ) )
       {
         std::string capt;
@@ -390,7 +392,7 @@ BREAK:
         if( isAddAtt )
         {
           // additional attribute of auxiliary in the file
-          std::string key("51_1");
+          std::string key("8_6");
           if( notes->inq( key, dataVar.name ) )
           {
             std::string capt;
@@ -423,7 +425,7 @@ BREAK:
 
     if( isAddAux )
     {
-      std::string key("50_2");
+      std::string key("8_5");
       if( notes->inq( key, dataVar.name) )
       {
         std::string capt("additional auxiliary=");
@@ -684,7 +686,7 @@ ProjectTable::lockFile(std::string &fName )
 
     if( count == 1800 )  // 1/2 hr
     {
-      std::string key("72_2");
+      std::string key("8_3");
       if( notes->inq( key, "PT") )
       {
          std::string capt("project table is locked for 1/2 hour") ;
@@ -698,13 +700,12 @@ ProjectTable::lockFile(std::string &fName )
 
   if( system( lock.c_str() ) )
   {
-     std::string key("72_1");
+     std::string key("8_2");
      if( notes->inq( key, "PT") )
      {
-        std::string capt("could not set a project table lock") ;
-        std::string text("could not create lock-file to protect project table.") ;
+        std::string capt("could not lock the project table") ;
 
-        if( notes->operate(capt, text) )
+        if( notes->operate(capt) )
           qa->setExit( notes->getExitValue() ) ;
      }
 
@@ -756,9 +757,7 @@ ProjectTable::write(Variable &dataVar)
 
   getMetaData(dataVar, md);
 
-  std::string pFile(path);
-  pFile += '/' ;
-  pFile += table;
+  std::string pFile =  projectTableFile.getFile();
 
   lockFile(pFile);
 
@@ -774,7 +773,7 @@ ProjectTable::write(Variable &dataVar)
 
   if (! oifs.is_open() )
   {
-    std::string key("70_2");
+    std::string key("8_1");
     if( notes->inq( key, "PT") )
     {
       std::string capt("could not create a project table") ;

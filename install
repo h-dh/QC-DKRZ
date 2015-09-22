@@ -2,311 +2,319 @@
 
 package=QA-DKRZ
 
-hdf5=hdf5-1.8.11
-netcdf=netcdf-4.3.0
+hdf5=hdf5-1.8.14
+netcdf=netcdf-4.3.2
 zlib=zlib-1.2.8
-udunits=udunits-2.2.16
+udunits=udunits-2.2.19
 
 defaultProject=CORDEX
 
-auto-up()
+editConfigFile()
 {
-  local item=$1
+  # return 0: modified entry, but not disabled
+  local args item name
+
+  args=($*)
+  args=(${args[*]//=/ })
+
+#  if [ ${#args[*]} -eq 0 ] ; then
+#    return 1 # this is a fault
+#  el
+   if [ ${#args[*]} -eq 1 ] ; then
+    name=${args[0]}
+  else
+    name=${args[0]}
+    item=${args[1]}
+  fi
+
+  if grep -i -q $name=${item:-enabled} $CONFIG_FILE &> /dev/null; then
+    return 0
+  fi
 
   if [ "${item#*=}" = disable -o "${item#*=}" = d ] ; then
-    sed -i '/auto-up/ d' .conf &> /dev/null
-    test ! -s .conf && \rm .conf
-  else
-    if ! grep -i -q auto-up .conf &> /dev/null; then
-      echo auto-up=enabled >> .conf
-    fi
-  fi
-  return
-}
-
-check_QA_Path()
-{
-  # Note: each executable invoked on a bash command-line
-#   # gets its name in parameter $0, which is unchanged
-  # in a function.
-
-  # was the call for any (relative) path?
-  if [ ! -z ${0/install/} ] ; then
-    test ${0%/*} != '.' && cd ${0%/*}
-
-    if [ -d ${package} ] ; then
-      cd ${package}
-    fi
+    sed -i "/${name}/ d" $CONFIG_FILE &> /dev/null
+    test ! -s $CONFIG_FILE && \rm $CONFIG_FILE
+    return 1
+  elif grep -i -q ${name} $CONFIG_FILE &> /dev/null; then
+    sed -i "/${name}/ d" $CONFIG_FILE &> /dev/null
   fi
 
-  # remember the current path
-  local currPath
-  currPath=$(pwd)
-
-  if [ "${currPath##*/}" != ${package} ] ; then
-    isNew=t
-  fi
-
-  return
+  echo ${name}=${item:-enabled} >> $CONFIG_FILE
+  return 0
 }
 
 descript()
 {
   echo "Usage: install [options] [project[s]]"
   echo "Purpose: Install/update 'the Quality Control Software Package'"
-  echo "for checking climate simulation data provided in netCDF format."
-  echo "The install script runs on linux utilising bash and C/C++."
-  echo "The QA supports checks of data of projects CMIP5 and CORDEX"
-  echo "notably with CORDEX by default. Please, add project name CMIP5"
-  echo "to the command-line in case of such data."
-  echo ''
-  echo "This script is used for automatic or manual installation as well"
-  echo "as updating sources and executables. Note: after the installation,"
-  echo "compiler settings are always read from 'install_configure'."
-  echo "Proceedings of installation/update are logged in file 'install.log'."
-  echo "Contact: hollweg@dkrz.de"
-  echo ''
-  echo "Automatic installation (by default):"
-  echo "Command-line: ./install"
-  echo "  - required is gcc/g++,"
-  echo "  - create subversion working directory ${package} in the current directory,"
-  echo "  - download and install libraries ${zlib} from www.zlib.net,"
-  echo "    ${hdf5} from www.hdfgroup.org and ${netcdf} from "
-  echo "    www.unidata.ucar.edu (installation: static, no FORTRAN, non-parallel),"
-  echo "  - compile executables for checking CORDEX data,"
-  echo "  - test run in ${package}/example is building some results."
-  echo ''
-  echo "Manual installation:"
-  echo "   Command-line: ./install [options] [--prefix=path]"
-  echo "     Path where QA-DKRZ is to be installed; current directory by default."
-  echo "     Note that with --only-qc there is no downloading of libraries or compilation,"
-  echo "     but only of the QA sources and the creation of a file ${package}/install_configure."
-  echo ''
-  echo "     File install_configure with compiler settings."
-  echo "       1)  by default gcc/g++ with flags -O2"
-  echo "       2)  pre-set environmental variables CC, CXX, CFLAGS, and"
-  echo "           CXXFLAGS prevail."
-  echo "       3)  if 1) and 2) fail, then the user is prompted to edit"
-  echo "           file install_configure."
-  echo "     Note that if 'weird' compiler settings are required, use --only-qc"
-  echo "     and edit ${package}/install_configure."
-  echo ''
-  echo "     Access to zlib, hdf5, and/or netcdf libraries may be accomplished in three ways:"
-  echo "       1) Genuine installation of libraries ${zlib}, ${hdf5}, and ${netcdf}."
-  echo "          ./install"
-  echo "          Note that this is done by default."
-  echo "       2) Bound to ${package}/local by hard-links."
-  echo "          install --link=path"
-  echo "          Sub-directories 'include', 'bin', and 'lib' are required "
-  echo "          to reside in the same location, e.g. /home/local."
-  echo "       3) Referencing a site-provided location."
-  echo "          Please, edit ${package}/install_configure appropriately."
-  echo ''
-  echo "Update mode:"
-  echo "  Manually:"
-  echo "  Command-line: ./install --up[date] [options]"
-  echo "    This applies any changes in the svn repository."
-  echo "    If C/C++ programs are affected, then executables are remade."
-  echo "  Automatically:"
-  echo "    Once ./install was executed with option --auto-up, then the package"
-  echo "    is synchronised to the svn repositroy at the beginning of each"
-  echo "    QA session, i.e. started by ${package}/scripts/qc-DKRZ [opts]."
-  echo "    This mode may be disabled by option --auto-up=d[isable]."
-  echo "    Enabling/disabling the auto-mode works also with qc-DKRZ calls."
-  echo "  Local changes."
-  echo "    If neither auto-mode is enabled nor --update was provided, then."
-  echo "    ./install will compile sources for any local changes done."
-  echo "    Note: if there are any local changes, then you might risk a conflict"
-  echo "    at a next svn update."
-  echo ''
-  echo "Note: once libraries have been installed, these will not be modified"
-  echo "by this script. If you want to do so, then use './install --distclean [opts]'"
-  echo ''
-  echo "Note for examination of executables in a debugger:"
-  echo "Enable compilation with '-g' in 'install_configure', touch"
-  echo "${package}/src/qC_main.cpp, and run './install [PROJECT]'"
-  echo "Executable is ${package}/bin/qc-PROJECT.x."
-  echo "In order to get parameters for a specific QA run, please configure"
-  echo "data selection accordingly and run on the command-line:"
-  echo "${package}/scripts/qc-DKRZ -f qc-conf.file -E_NEXT -E_SHOW_CALL [opts]."
-  echo "Then, read the parameter file displayed within the debugger (either"
-  echo "by '--file=param_file' or the contents itself)."
+  echo "for checking climate simulation meta-data provided in netCDF format."
+  echo "Details at https://redmine.dkrz.de/projects/cordex/wiki/DKRZ_QC_Tool"
   echo ''
   echo "Options:"
   echo "  -B                Unconditionally re-make all QA executables."
   echo "  -d                Execute 'make' with debugging information."
   echo "  -h                Display usage and exit."
-  echo "  -r num            Subversion revision number; the latest by default."
-#  echo "  --auto-up         Enable automatic svn updates at the beginning of a run;"
-#  echo "                    --auto-up=disable cancels."
+  echo "  --auto-up         Enable automatic updates from the repository at the"
+  echo "                    beginning of a run. Suspended by --auto-up=d[isable]."
   echo "  --build           Download and build required libraries."
-  echo "  --debug[=script]  Display execution commands."
-  echo "  --distclean       For a re-installation of zlib, hdf5 and netcdf."
+  echo "  --debug[=script]  Display execution commands. If the name of a script"
+  echo "                    called internally is assigned, then debug only this one."
   echo "  --help            Display usage and exit."
   echo "  --link=path       Hard links of external NetCDF installations from the directories"
   echo "                    in 'your-path/${package}/local'."
   echo "                    Shared by all hdf, netcdf, udunits  and zlib."
-  echo "  --prefix=path     Path for installing the ${package} package;"
-  echo "                    current directory by default. "
-  echo "  --reset           Clear library setting and start from scratch."
-  echo "  --revision=num    Subversion revision number; the latest by default."
+  echo "  --link_type=path  Same as for 'link' but just for type=netcdf, hdf, zlib, or udunits"
+  echo "  --local=str       Path where lib and include directories are to be installed"
+  echo "                    [default: QA_DKRZ/local] for both real and hard-links."
+  echo "                    Note: unneccesary when install_configure points outside."
   echo "  --show-inst       Display properties of the current installation."
-  echo "  --src-path=path   To the place were all three libs reside."
-  echo "  --lib-dest=path   Destination for libs and includes; [${package}/local]."
-  echo "                    Note: probably in combination with: --prefix=path."
-#  echo "  --up[date]        Update the QA package from the svn repository."
-#  echo "                    Note: not for netCDF, HDF5, udunits2 or zlib."
+  echo "  --up[date]        Update the QA package from the repository."
+  echo "                    Note: not for netCDF, HDF5, udunits2 or zlib."
+  echo "  --workspace=str   Path to put updated tables [ ~/.qa-dkrz/tables by"
+  echo "                    default]. Also, str is the location of the CF test,"
+  echo "                    suite, an example run, and of qc check results for"
+  echo "                    omitted option QC_RESULTS. Special: Omitted str "
+  echo "                    defaults to the QA-DKRZ path, i.e. as for QC-0.4;"
+  echo "                    write permission required. The default for the workspace itself"
+  echo "                    is \$HOME\.qa-dkrz [if not available, then the user"
+  echo "                    is asked to provide --workspace".
   echo ""
-  echo "    project-name    At present CMIP5 and CORDEX; the latter by default."
-  echo "                    Note: no '--'."
+  echo "  project-name      At present CF, CMIP5, and CORDEX; the latter by default."
+}
+
+getCurrPaths()
+{
+  # where all the work is going to take place
+  if [ $QA_WORK ] ; then
+    test ! -d $QA_WORK && mkdir -p $QA_WORK 2> /dev/null
+  else
+    if [ $CONDA_ENV ] ; then
+      QA_WORK=~/.qa-dkrz
+      test ! -d $QA_WORK   && mkdir -p $QA_WORK   2> /dev/null
+    else
+      QA_WORK=$QA_PATH
+    fi
+  fi
+
+  # the config filename and location
+  local isPrint=f
+
+  if [ ! ${CONFIG_FILE} ] ; then
+    if [ -w ~ ] ; then
+      local cPath=~/.qa-dkrz
+      test ! -d $cPath && mkdir -p $cPath 2> /dev/null
+
+      if [ ${CONDA_ENV} ] ; then
+        CONFIG_FILE=$cPath/config.conda
+      else
+        CONFIG_FILE=$cPath/config.src
+      fi
+
+    elif [ -w "$QA_PATH" ] ; then
+      test ! -d $QA_PATH/.qa-dkrz && mkdir -p $QA_PATH/.qa-dkrz 2> /dev/null
+
+      if [ ${CONDA_ENV} ] ; then
+        if [ -w "$QA_PATH" ] ; then
+          CONFIG_FILE=$QA_PATH/.qa-dkrz/config.conda
+        else
+          isPrint=t
+        fi
+      else
+        CONFIG_FILE=$QA_PATH/.qa-dkrz/config.src
+      fi
+
+    elif [ -w "$QA_WORK" ] ; then
+      test ! -d $QA_WORK && mkdir -p $QA_WORK/.qa-dkrz 2> /dev/null
+
+      if [ ${CONDA_ENV} ] ; then
+        CONFIG_FILE=$QA_WORK/config.conda
+      else
+        CONFIG_FILE=$QA_WORK/config.src
+      fi
+
+    else
+      isPrint=t
+    fi
+  fi
+
+  if [ ${isPrint} = t ] ; then
+    echo "HOME and QA_DKRZ without write permissions,"
+    echo "please restart with provided option --workspace=str"
+    exit
+  fi
+
+  return
+}
+
+getGitBranch()
+{
+   git branch | grep '*' | awk '{print $2}'
+   return
 }
 
 getRevNum()
 {
   # get current revision number; this determines whether it is
   # before a change of defaults happened.
-  local arg=$1
-  shift
+  local branch currIdent
 
-  local LANG=en_US
-  local currRev tmp
-  if tmp="$( svn info $1 2> /dev/null | grep Revision:)" ; then
-    currRev=$(echo ${tmp} | awk '{print $2}' )
+  if [ $CONDA_ENV ] ; then
+    if branch=$(grep branch $QA_PATH/install.log 2> /dev/null) ; then
+      branch=${branch#*=}
+    fi
+    if currIdent=$(grep branch $QA_PATH/install.log 2> /dev/null) ; then
+      currIdent=${currIdent#*=}
+    fi
+  else
+    branch=$(getGitBranch)
+    currIdent=$(git log --pretty=format:'%h' -n 1)
   fi
 
-  eval ${arg}=${currRev:-0}
+  eval ${1}=${branch}-${currIdent}
 
-  if [ ${currRev:-0} -gt 5610 ] ; then
-     return 0
+  return
+}
+
+getSrcPath()
+{
+  # extract the path to the root of the QA package
+
+  # is it in a conda built?
+  local x_conda=${0%/qa-dkrz}
+  if [ ${x_conda##*/} = bin ] ; then
+    x_conda=${x_conda%/bin}
+    if [ -d $x_conda/opt/qa-dkrz ] ; then
+       CONDA_ENV=t
+       export QA_PATH=$x_conda/opt/qa-dkrz
+       return
+    fi
   fi
 
-  return 1
+  test ${QA_PATH} && return
+
+  local target isInvalid
+
+  if [ ${1:0:1} = '/' ] ; then
+    target=$1
+  else
+    target=$(pwd)/$1
+  fi
+
+  if [ -h $target ] ; then
+
+    # get the link
+    local link=$(ls -l $target | awk  '{print $(NF)}')
+
+    # link is relative, so make it absolute
+    test ${link:0:1} != '/' && link=${target%/*}/${link}
+
+    getSrcPath ${link}
+
+  elif [ -f $target ] ; then
+
+    # a real instance, at first resolve .. and .
+    # works also for . or .. in the middle of the path
+
+    local xname=${target##*/}
+    target=${target%/*}  # remove the name of the script
+
+    local arr=( ${target//\// } )
+
+    local i j sz
+    sz=${#arr[*]}
+
+    for(( i=1 ; i < sz ; ++i )) ; do
+
+      if [ "${arr[i]}" = '.' ] ; then
+        unset arr[i]
+      elif [ "${arr[i]}" = '..' ] ; then
+        j=$((i-1))
+
+        # this takes into account adjacent . and/or .. with any depth
+        while [ ! ${arr[j]} ] ; do
+          j=$((j-1))
+        done
+        unset arr[j]
+        unset arr[i]
+      fi
+    done
+
+    # get rid of empty items
+    arr=( ${arr[*]} )
+
+    sz=${#arr[*]}
+
+    local tmp
+    for(( i=0 ; i < sz ; ++i )) ; do
+      tmp=${tmp}/${arr[i]}
+
+      if [ -f ${tmp}/.install_configure ] ; then
+        export QA_PATH=$tmp
+        break
+      fi
+    done
+
+    test $i -eq $sz && isInvalid=t
+  else
+    isInvalid=t
+  fi
+
+  if [ ${isInvalid:-f} = t ] ; then
+
+    local str=$(ls -l $target 2> /dev/null | awk  '{print $(NF)}')
+
+    if [ ${#str} -gt 0 ] ; then
+      str="invalid path=$0"
+    else
+      str="broken path=$0"
+    fi
+
+    echo "${str}"
+
+    exit 1
+  fi
+
+  export QA_PATH=${QA_PATH}
+
+  return
 }
 
 log()
 {
-  if [ -f install.log ] ; then
-    logTxt="\n === Rebuild: $(date +'%F_%T') ===\n"
-  else
-    logTxt1="\n === Installation of ${package}: $(date +'%F_%T') ===\n"
-  fi
+  if [ ${isContinueLog:-f} = f ] ; then
+    isContinueLog=t
 
-  echo -e ${logTxt} >> install.log
-  echo -e "install $*" >> install.log
-}
-
-resetBuild()
-{
-  \rm -rf local
-
-  \rm -rf example/test_I
-  \rm -rf example/qc-test.task
-
-  return
-}
-
-svn_fnct()
-{
-  # is subversion available
-  if ! which svn &> /dev/null ; then return ; fi
-
-  # was install itself modified?
-  getRevNum instRev install
-
-  if [ ${isNew:-f} = t ] ; then
-    if ! which svn &> /dev/null ; then
-      echo -e "svn: no such command.\n Please, install subversion."
-      exit 1
-    fi
-
-  ## create working directory, if there is no one
-    # only read access
-    svn co ${revNum} \
-    http://svn-mad.dkrz.de/svn/mad/Model/QualCheck/QC/branches/${package} \
-     <<< yes >> install.log 2>&1 &
-#    <<< yes >> install.log &> bsdf &
-
-    sleep 1
-    timer $!
-
-    if [ -d ${package} ] ; then
-      mv install.log ${package}
-      cd ${package} &> /dev/null
-    else
-      echo -e "\ncould not download the ${package} package."
-      echo -n "Please, try manually:"
-      echo "svn co ${revNum} \
- http://svn-mad.dkrz.de/svn/mad/Model/QualCheck/QC/branches/${package}"
-      exit 1
-    fi
-
-    # revision num of the package
-    getRevNum packRev_1
-  elif [ ${isUpdateQA:-f} = t ] ; then
-    # revision num of the current package
-    getRevNum packRev_0
-
-    svn ${revNum} up <<< yes >> install.log 2>&1 &
-    if ! timer $! ; then
-      echo -e "\ncould not svn-update ${package}."
-      echo "Please, try manually:"
-      echo "  svn ${revNum} up"
-      exit 1
-    fi
-
-    # revison num of the updated package
-    getRevNum packRev_1
-  fi
-
-  # save current svn revision number, if new
-  local tmp
-  if tmp="$( grep 'revision=' .conf 2> /dev/null)" ; then
-    savedRev=$(echo $tmp | awk -F= '{print $2}' )
-  fi
-
-  if [ ${packRev_1:-0} -gt 0 ] ; then
-    # force compilation
-    test ${packRev_0:-0} -lt ${packRev_1} && \rm -f bin/qC-*.x
-    packRev=${packRev_1}
-  else
-    # an up-to-date revision, but without entry in .conf
-    if [ ${#saveRev} -eq 0 ] ; then
-      getRevNum packRev
-    fi
-  fi
-
-  if [ ${#savedRev} -eq 0 ] ; then
-    echo revision=${packRev:-0} >> .conf
-  elif [ ${savedRev} -lt ${packRev:-0} ] ; then
-    sed -i "s/revision=\(.*\)/revision=${packRev}/" .conf &> /dev/null
-  fi
-
-  # was install itself modified?
-  getRevNum newRev install
-
-  if [ ${newRev} -gt ${instRev} ] ; then
-    # re-run, but now with the modified install scripts
-    exec ./install ${isNew:+--build} ${sArgs[*]}
+    local logTxt="\n$(date +'%F_%T'):"
+    echo -e "${logTxt} install $*" >> install.log
   fi
 
   return
 }
 
-timer()
+saveAsCycle()
 {
-  # on normal execution, this function is closed externally in time
-  limit=30
-  for(( i=0 ; i < limit ; ++i )) ; do
-    if ! ps -p $1 -o pid= &> /dev/null  ; then
-      # there is no more active job
-      return 0
+  for f in $* ; do
+    if [ ! \( -f $f -o -d $f \) ] ; then
+      echo "install.saveAsCycle: no such file or directory $f"
+      return
     fi
 
-    sleep 5
+    local ext val x
+    local maxVal fs fx
+
+    maxVal=0
+    fs=( $(ls -d $f.* 2> /dev/null) )
+
+    for fx in ${fs[*]} ; do
+      ext=${fx##*.}
+
+      if val=$(expr match $ext '\([[:digit:]]\+$\)' 2> /dev/null) ; then
+        test ${val:-0} -gt ${maxVal} && maxVal=$val
+      fi
+    done
+
+    mv $f ${f}.$((++maxVal)) 2> /dev/null
   done
-
-  kill -TERM $1
-  return 1
 }
 
 tr_option()
@@ -321,10 +329,12 @@ tr_option()
 
   if [ ${i} -eq ${sz} ] ; then
     phrase=$( echo "${phrase/% /}" | tr "[:lower:]" "[:upper:]" )
+    phrase=$( echo "${phrase}" | tr "-" "_" )
   else
     local tmp0="${phrase:0:i}"
     tmp0="${tmp0//QC/QA}"
     tmp0=$( echo "${tmp0/% /}" | tr "[:lower:]" "[:upper:]" )
+    tmp0=$( echo "${tmp0}" | tr "-" "_" )
     phrase="${tmp0}""${phrase:i}"
   fi
 
@@ -332,41 +342,120 @@ tr_option()
   return
 }
 
+update()
+{
+  if [ ${isAutoUp} ] || \
+  editConfigFile AUTO_UPDATE=$AUTO_UPDATE ; then
+    if [ $CONDA_ENV ] ; then
+      # look for a new conda-built package
+      local tmp
+      declare -a tmp
+      tmp=( $(conda search -c birdhouse qa-dkrz 2> /dev/null) )
+
+      local i item
+      for(( i=0 ; i < ${#tmp[*]} ; ++i )) ; do
+        if [ ${tmp[i]} = '*' ] ; then
+          item=${tmp[++i]}
+          item=${item}-${tmp[++i]}
+
+          if ! editConfigFile CONDA_BUILD=$item ; then
+            conda update -c birdhouse qa-dkrz &> /dev/null
+
+            getRevNum packRev
+            editConfigFile QA_REVISION=$packRev
+
+            exitVal=101
+          fi
+          break
+        fi
+      done
+
+    elif [ ! -f ${QA_PATH}/.ignore_GitHub_update ] ; then
+      cd $QA_PATH
+
+      # is qa-dkrz going to change?
+      local qa_dkrzDate=$(ls -l \
+           --time-style=+'%s' ${QA_PATH}/scripts/qa_dkrz \
+           | awk '{print $6}' 2> /dev/null )
+
+      test "$(getGitBranch)" != master && \
+        git checkout master &> /dev/null
+
+      git pull --no-edit -q origin master &> /dev/null
+
+      if [ ${qa_dkrzDate} != $( ls -l \
+           --time-style=+'%s' ${QA_PATH}/scripts/qa_dkrz \
+           | awk '{print $6}' 2> /dev/null ) ] ; then
+        exitVal=101
+      fi
+
+      # revison num of the updated package
+      getRevNum packRev
+
+      editConfigFile QA_REVISION=$packRev
+    fi
+  fi
+
+  if editConfigFile AUTO_TABLE_UPDATE=$AUTO_TABLE_UPDATE \
+      || ${FORCE_RSYNC:-f} = t ; then
+    if [ "$QA_WORK" != "$QA_PATH" ] ; then
+      rsync -auz $QA_PATH/tables $QA_WORK &> /dev/null
+    fi
+
+    ${QA_PATH}/scripts/get_cfconventions \
+        --config_file=$CONFIG_FILE \
+        ${QA_WORK}/tables/projects/CF
+  fi
+
+  return
+}
+
 
 # ----- main ------
 
-allArgs="$*"
+zeroArg=$0
+allArgs=($*)
 
-# is svn available?
-#if ! which svn &> /dev/null ; then
-#  echo "subversion is not available; please, check."
-#  exit 1
-#fi
+if [ $# -gt 0 ] ; then
+  # save arguments
+  sArgs=($*)
 
-# save arguments
-sArgs=($*)
+  # higher priority options
+  for(( i=0 ; i < ${#sArgs[*]} ; ++i )) ; do
+    # some args are accepted without '--'
+    A="${sArgs[i]}"
+    tr_option A
 
-# higher priority options
-for a in $* ; do
-  A="$a"
-  tr_option A
-
-  if [ "${A%=*}" = '--DEBUG' ] ; then
-    test ${A} = '--DEBUG' -o ${A#*=} = ${0##*/} && set -x
-  elif [ "${A%%=*}" = "--PREFIX" ] ; then
-    if [ ! -d ${a#*=} ] ; then
-      if ! mkdir -p ${a#*=} ; then
-        echo "Could not mkdir -p ${a#*=}"
-        exit
-      fi
+    if [ "${A:0:5}" = AUTO_ ] ; then
+      sArgs[${i}]=--${sArgs[${i}]}
+      A="--${A}"
+    elif [ "${A:0:5}" = DEBUG ] ; then
+      sArgs[${i}]=--${sArgs[${i}]}
+      A="--${A}"
+    elif [ "${A:0:4}" = HELP ] ; then
+      sArgs[${i}]=--${sArgs[${i}]}
+      A="--${A}"
+    elif [ "${A:0:4}" = LINK ] ; then
+      sArgs[${i}]=--${sArgs[${i}]}
+      A="--${A}"
+    elif [ "${A:0:6}" = ONLY-Q ] ; then
+      sArgs[${i}]=--${sArgs[${i}]}
+      A="--${A}"
+    elif [ "${A:0:3}" = SRC  ] ; then
+      sArgs[${i}]=--${sArgs[${i}]}
+      A="--${A}"
+    elif [ "${A:0:2}" = UP ] ; then
+      sArgs[${i}]=--${sArgs[${i}]}
+      A="--${A}"
     fi
-    cd ${a#*=}
-  fi
-done
 
-check_QA_Path
+    if [ "${A%=*}" = '--DEBUG' ] ; then
+      test ${A} = '--DEBUG' -o ${A#*=} = ${0##*/} && set -x
+    fi
+  done
+fi
 
-while getopts Bdhr:-: option ${args[*]}
+while getopts Bdh-: option ${sArgs[*]}
 do
   UOPTARG="${OPTARG}"
   tr_option UOPTARG
@@ -376,17 +465,38 @@ do
     d)  coll[${#coll[*]}]=-d ;;
     h)  descript
         exit ;;
-    r)  revNum="-r ${OPTARG}" ;;
-    -)  test "${UOPTARG%=*}" = "AUTO_UP" && auto-up $OPTARG && continue
-        test "${UOPTARG}" = "DEBUG" && debug='--debug' && continue
-        test "${UOPTARG%%=*}" = "HELP" && descript && exit
-        test "${UOPTARG:0:6}" = "ONLY-Q" && continue
-        test "${UOPTARG}" = "reset" && resetBuild && continue
-        test "${UOPTARG%=*}" = "REVISION" && revNum="-r ${OPTARG#*=}" && continue
-        test "${UOPTARG}" = "SRC" && continue  # for backward compatibilty
-        test "${UOPTARG:0:2}" = "UP" && isUpdateQA=t && continue
+    -)  if [ "${UOPTARG:0:7}" = AUTO_UP ] ; then
+          AUTO_UP=${OPTARG##*=}
+          isAutoUp=t
+        elif [ "${UOPTARG:0:13}" = AUTO_TABLE_UP ] ; then
+          AUTO_TABLE_UPDATE=${OPTARG##*=}
+          isAutoTableUp=t
+        elif [ "${UOPTARG:0:5}" = BUILD ] ; then
+          isBuild=t
+        elif [ "${UOPTARG:0:11}" = CONFIG_FILE ] ; then
+          CONFIG_FILE=${OPTARG##*=}
+        elif [ ${UOPTARG:0:5} = DEBUG -o ${UOPTARG} = 'DEBUG=install' ] ; then
+          set -x
+        elif [ "${UOPTARG%%=*}" = HELP ] ; then
+          descript
+          exit
+        elif [ "${UOPTARG:0:4}" = LINK ] ; then
+          isLink=t
+        elif [ "${UOPTARG:0:6}" = ONLY_Q ] ; then
+          :  # for backward compatibilty
+        elif [ "${UOPTARG:0:7}" = QA_PATH ] ; then
+          export QA_PATH=${OPTARG##*=}
+        elif [ "${UOPTARG:0:7}" = QA_WORK ] ; then
+          QA_WORK=${OPTARG##*=}
+        elif [ "${UOPTARG}" = SRC ] ; then
+          :  # for backward compatibilty
+        elif [ "${UOPTARG:0:2}" = UP ] ; then
+          isUpdateQA=t
+        elif [ "${UOPTARG:0:9}" = WORKSPACE ] ; then
+          QA_WORK=${UOPTARG##*=}
+        fi
 
-        # collect options, which hav not been proceesed so far
+        # collect options, which have not been processed above
         coll[${#coll[*]}]=--${OPTARG}
         ;;
    \?)  descript
@@ -397,37 +507,43 @@ done
 
 shift $(( $OPTIND - 1 ))
 
-# accept some args with missing '--'
-item=( $* )
-for(( i=${#item[*]}-1 ; i >= 0 ; --i )) ; do
-  UITEM="${item[i]}"
-  tr_option UITEM
+for pck in $* ; do
+  PCK="${pck}"
+  tr_option PCK
 
-  if [ "${UITEM%=*}" = AUTO-UP ] ; then
-    auto-up ${item[i]}
-  elif [ "${UITEM}" = HELP ] ; then
-    descript
-    exit
-  elif [ "${UITEM:0:4}" = LINK ] ; then
-    coll[${#coll[*]}]=--${item[i]}
-  elif [ "${UITEM%=*}" = REVISION ] ; then
-    revNum="-r ${item[i]#*=}"
-  elif [ "${UITEM:0:2}" = UP ] ; then
-    isUpdateQA=t
+  if [ ${PCK:0:4} = ZLIB ] ; then
+    zlib=${pck}
+  elif [ ${PCK:0:4} = HDF5 ] ; then
+    hdf5=${pck}
+  elif [ ${PCK:0:6} = NETCDF ] ; then
+    netcdf=${pck}
+  elif [ ${PCK:0:7} = UDUNITS ] ; then
+    udunits=${pck}
+  elif [ ${PCK:0:7} = QA_WORK ] ; then
+    QA_WORK=${PCK:8}
+    FORCE_RSYNC=t
   else
-    continue
+    coll[${#coll[*]}]=$pck  # collect project names
   fi
-
-  unset item[i]
 done
 
-item=( ${item[*]} )
-test ${#item[*]} -eq 0 && item=(${defaultProject})
+getSrcPath $zeroArg  # sets also CONDA_ENV
+getCurrPaths
+update
 
-log ${allArgs}
+test ${CONDA_ENV} && exit  # miniconda built executables
 
-#svn_fnct
+pcks="--zlib=$zlib --hdf5=$hdf5 --netcdf=$netcdf --udunits=$udunits"
 
-exec scripts/install.sh ${debug} --pack=${package} --continue_log \
-  --zlib=${zlib} --hdf5=${hdf5} --netcdf=${netcdf} --udunits=${udunits} \
-  ${coll[*]} ${item[*]}
+if [ ${isBuild:-f} = t -a ${isLink:-f} = t ] ; then
+  echo "scripts/install.sh: options --build and --link exclude each other"
+  exit 1
+elif [ ${isBuild:-f} = t -o ${isLink:-f} = t ] ; then
+  log ${allArgs[*]}
+else
+  pcks=
+fi
+
+exec $QA_PATH/scripts/install.sh ${debug} --pack=${package} \
+${isContinueLog:+--continue_log} ${pcks} \
+${coll[*]}

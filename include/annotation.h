@@ -24,14 +24,14 @@
     This can be done for each variable. Specification of
     a certain level alone as well as of a common directive
     is optional.\n
-    Components of a directive: L1, L2, L3, D, EM, ST, PT, flag, var, V=value\n
+    Components of a directive: L1, L2, L3, D, EM, VR, PT, flag, var, V=value\n
     L1        Notifiy pecularities. Continue unrestricted.\n
     L2        Continue checking to the end of the file. Then, lock
        processing of the current variable.\n
     L3        Stop immediately (but complete meta-data checks). Lock
        processing of current variable.\n
     L4        Stop immediately and shutdown the QA session (no locks).\n
-    Table:    Standard Output Table (ST), Project Table (PT)\n
+    Table:    Standard Output Table (VR), Project Table (PT)\n
     Flag:     Given in column 1. Must match in the QA.cpp class.\n
     Task:     Email notification (EM), discard the check/test (D)\n
     Variable: A list of comma-separated acronyms of variables; directive is \n
@@ -41,7 +41,7 @@
     Record:   Exclude record(s) from being checked. A range may be specified, e.g. 1-12.\n
               Multiple occurrences of R in a braced statement are possible.\n
               Note: counting of numbers starts with one.
-    Default directives: {ST,L1}, {PT,L2,EM}, {L3,EM}.
+    Default directives: {VR,L1}, {PT,L2,EM}, {L3,EM}.
    */
 class Annotation : public IObj
 {
@@ -54,8 +54,8 @@ class Annotation : public IObj
     bool         entry(void){return false;}
     bool         init(void) ;
     void         linkObject(IObj *){;}
-    void         setFilename(std::string name);
-    void         setFilePath(std::string s){path=s;}
+    void         setFilename(hdhC::FileSplit& f) {file=f;}
+    void         setFilename(std::string f){file.setFile(f);}
     void         setProject(std::string s){project=s;}
     void         setTablePath(std::string p){ tablePath=p; }
 
@@ -79,6 +79,7 @@ class Annotation : public IObj
       was specified for a particular variable name,
       then a default is applied. 'mode' is composed of strings
       'INQ_ONLY' and 'NO_MT', separated by '|' if both are set. \n
+      ACCUM    NO_MT with accumulated text messages \n
       INQ_ONLY for simulation without triggering an action \n
       NO_MT    disables multiple identical tags \n
       NO_TXT   disable the default text from the check-list table.
@@ -161,8 +162,8 @@ class Annotation : public IObj
 
   size_t recErrCountLimit;
 
-  std::string filename;
-  std::string path;
+  struct hdhC::FileSplit file;
+
   std::string project;
   std::string tablePath;
 
@@ -173,7 +174,7 @@ class Annotation : public IObj
   std::vector<std::string> code;   // from check_list.txt
   std::vector<size_t>      count;  // number of of occurences
   std::vector<std::string> level;  // L1, ... ,L4
-  std::vector<std::string> table;  // ST/PT: standard/project
+  std::vector<std::string> table;  // VR/PT: standard/project
   std::vector<std::string> task;   // D/E/S/W: disable/error/warning
   std::vector<std::string> text;   // user-provided headlines
   std::vector<std::string> var;    // acronym; name
@@ -199,9 +200,10 @@ class Annotation : public IObj
   std::string currName;
   std::string useAlways;
 
+  bool isAccumText;
   bool isCheckResultsWasPrinted;
   bool isInit;
-  bool isListText;
+  bool isDescriptionFromTable;
   bool isMultipleTags;
   bool isDisplay;
   bool isOutputPASS;

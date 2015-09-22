@@ -5,7 +5,7 @@
 
 Cx    =  diskUsage.x fModTime.x  unixTime.x
 CPPx  =  check_CORDEX_standard-table.x convert_CF-standard-names.x \
-         getNC_att.x getStatus.x modifyNc.x syncFiles.x testValidNC.x
+         getNC_att.x getStatus.x syncFiles.x testValidNC.x
 
 UTIL_SOURCE = hdhC.cpp ReadLine.cpp Split.cpp Statistics.cpp GetOpt_hdh.cpp
 UTIL_HEADER = hdhC.h matrix_array.h readline.h split.h statistics.h getopt_hdh.h
@@ -17,9 +17,9 @@ BASE_HEADER = annotation.h base.h brace_op.h data_statistics.h date.h \
    time_control.h variable.h
 
 QA_SOURCE = CF.cpp CellStatistics.cpp FD_interface.cpp Oper.cpp OutFile.cpp Parse.cpp \
-   QA.cpp QA_data.cpp QA_time.cpp QA_PT.cpp QA_main.cpp
+    QA_data.cpp QA_time.cpp QA_PT.cpp QA_main.cpp
 QA_HEADER = cell_statistics.h cf.h fd_interface.h oper.h out_file.h parse.h \
-   qa.h qa_data.h qa_PT.h qa_main.h qa_time.h
+    qa_data.h qa_PT.h qa_main.h qa_time.h
 
 #vpath %.c   $(QA_PATH)/src
 #vpath %.cpp $(QA_PATH)/src
@@ -53,23 +53,18 @@ testValidNC.x: $(UTIL_SOURCE) $(UTIL_HEADER) nc_api.h NcAPI.cpp testValidNC.cpp
 
 ${PRJ_NAME}: ${PRJ_NAME}.x
 
-${PRJ_NAME}.x: ${BASE_SOURCE} ${BASE_HEADER} $(QA_SOURCE) $(QA_HEADER) $(UTIL_SOURCE) $(UTIL_HEADER)
+${PRJ_NAME}.x: ${BASE_SOURCE} ${BASE_HEADER} $(QA_PRJ_HEADER) $(QA_PRJ_SRC) \
+               $(QA_SOURCE) $(QA_HEADER) $(UTIL_SOURCE) $(UTIL_HEADER)
 	$(CXX) $(CXXFLAGS) -o ${PRJ_NAME}.x $(QA_PATH)/src/QA_main.cpp \
            -I $(QA_PATH)/include $(INCLUDE) \
            $(LIB) $(LIBDL) -ludunits2 -lnetcdf -lhdf5_hl -lhdf5 -lz
 
-#          -DSVN_VERSION=$(SVN_VERSION) \
+#          -DREVISION=$(REVISION) \
 
-CF-checker: cf-checker.x
+CF-checker: dkrz-cf-checker.x
 
-cf-checker.x: CF_main.cpp CF.cpp $(BASE_SOURCE) ${BASE_SOURCE} $(QA_HEADER) $(UTIL_SOURCE) $(UTIL_HEADER)
-	$(CXX) $(CXXFLAGS) -o cf-checker.x $(QA_PATH)/src/CF_main.cpp \
+dkrz-cf-checker.x: CF_main.cpp CF.cpp $(BASE_SOURCE) ${BASE_SOURCE} \
+                   $(QA_PRJ_HEADER) $(QA_HEADER) $(UTIL_SOURCE) $(UTIL_HEADER)
+	$(CXX) $(CXXFLAGS) -o dkrz-cf-checker.x $(QA_PATH)/src/CF_main.cpp \
            -I $(QA_PATH)/include $(INCLUDE) \
            $(LIB) $(LIBDL) -ludunits2 -lnetcdf -lhdf5_hl -lhdf5 -lz
-
-ModifyNc: modifyNc.x
-
-modifyNc.x: modifyNc.cpp modify_nc.h modify_fnct.cpp inquiry_fnct.cpp $(BASE_SOURCE) $(UTIL_SOURCE) $(UTIL_HEADER)
-	$(CXX) $(CXXFLAGS) -o modifyNc.x $(QA_PATH)/src/modifyNc.cpp \
-           -I $(QA_PATH)/include $(INCLUDE) \
-           $(LIB) $(LIBDL) -lnetcdf -lhdf5_hl -lhdf5 -lz -luuid

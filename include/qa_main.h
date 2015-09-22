@@ -42,7 +42,15 @@
 #include "qa_data.h"
 #include "qa_time.h"
 #include "qa_PT.h"
-#include "qa.h"
+
+#if defined CORDEX
+  #include "qa_CORDEX.h"
+#elif defined CMIP5
+  #include "qa_CMIP5.h"
+#else
+  #include "qa_NONE.h"
+#endif
+
 #include "time_control.h"
 
 /*! \file qa_main.h
@@ -98,8 +106,7 @@ bool
 This is done in a separate function due to the template capability.*/
 template <typename Type>
 void
-  instantiateObject(std::vector<Type> &, std::string &name, int id, std::string &options,
-        IObjContainer & );
+  instantiateObject(std::vector<Type> &, std::string &name, int id, std::string &options);
 
 /*! Link obj referenced in the link-list to the calling obj.*/
   void

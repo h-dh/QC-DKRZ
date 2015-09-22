@@ -7,7 +7,11 @@
 # Path to QC's results and log dir. Required. This will be expanded
 # automatically by the last path component of option DATA_ROOT.
 # Note: the former QC_DATA_ROOT was replaced by this, but is still valid.
-  QC_RESULTS=test_I
+  QA_RESULTS=results
+
+# A project name. If the project is unknown, but it is similar to
+# a known one, then use additionaly PROJECT_AS=name
+  PROJECT=CORDEX
 
 # Selection of paths and variables (RegExp of the 'expr' command,
 # i.e. full specification from the beginning of the word).
@@ -22,9 +26,7 @@
 # SELECT := .*/v?[[:digit:]]{3}=  # example for all DRS versions
 
 #  SELECT output/MPI-M/MPI-ESM-LR/L1A85/mon/atmos=
-  SELECT AFR-44/CLMcom/MPI-ESM-LR/historical/.*/CCLM4-8-17=
-
-#  LOCK  AFR-44/CLMcom/MPI-ESM-LR/historical/r1i1p1/CCLM4-8-17=not_
+  SELECT AFR-44/Inst/forcing/historical/.*/model=
 
 # Send a summary of notifications and checked periods of variables
 # to this (list of) email recipients after each finished QC session.
@@ -42,5 +44,5 @@
 # CHECK_MODE=meta  #[data]
 
 # embedded path to another qc configuration file with lower priority
-  QC_CONF=CORDEX_qc.conf
+  QA_CONF=CORDEX_qa.conf
 

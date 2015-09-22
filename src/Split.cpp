@@ -44,7 +44,7 @@ Split::Split(const Split &t)
   isEmptyItemsEnabled=t.isEmptyItemsEnabled;
   items = t.items ;
   itemPos = t.itemPos ;
-  invalid=t.invalid;
+  is_valid=t.is_valid;
 }
 
 Split::~Split()
@@ -88,7 +88,7 @@ Split::operator[](size_t i)
     decompose();
 
   if( i >= items.size() )
-    return invalid;
+    return empty;
 
   return items[i];
 }
@@ -362,8 +362,8 @@ Split::init(void)
   isDecomposed=false;
   isFixedWidth=false;
   isEmptyItemsEnabled=false;
+  is_valid=false;
 
-  invalid="invalid";
   return;
 }
 

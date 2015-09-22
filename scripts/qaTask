@@ -107,7 +107,7 @@ doTask()
   saveTaskFile
 
   # this starts a qc run
-  $QA_SRC/scripts/qc-DKRZ -Q -f $TASK_DIR/Executed/$$/$task ${collect[*]} &
+  $QA_PATH/scripts/qc-DKRZ -Q -f $TASK_DIR/Executed/$$/$task ${collect[*]} &
 
   spawnedPIDS[${#spawnedPIDS[*]}]=$!
   movedTask[${#movedTask[*]}]=$task
@@ -286,7 +286,7 @@ start()
     test ${arr[i]} = '--start' && unset arr[${i}]
   done
 
-  exec ${QA_SRC}/scripts/qc_task ${arr[*]} --daemon  &
+  exec ${QA_PATH}/scripts/qc_task ${arr[*]} --daemon  &
   exit 0
   return
 }
@@ -376,8 +376,8 @@ xtractSrcPath()
     return
   fi
 
-  QA_SRC=$(pwd)
-  QA_SRC=${QA_SRC%/scripts}
+  QA_PATH=$(pwd)
+  QA_PATH=${QA_PATH%/scripts}
 
   cd $oldPath
   return
@@ -392,7 +392,7 @@ xtractSrcPath()
   #extract the path to QA from $0
   xtractSrcPath
 
-  TASK_DIRS=( $QA_SRC/Tasks )
+  TASK_DIRS=( $QA_PATH/Tasks )
 
   OPTERR=0
   while getopts n:t:-: option ${args[*]}

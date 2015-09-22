@@ -82,7 +82,7 @@ public:
 // DIMENSIONS
 //! Names of the dimensions.
 /*! Note: dim IDs are identical to indexes.*/
-      std::vector<std::string> dimNames;
+      std::vector<std::string> dimName;
 
 //! Lengths of the dimensions.
       std::vector<size_t> dimSize;
@@ -92,7 +92,7 @@ public:
 
 // VARIABLES
 //! Names of variables
-      std::vector<std::string> varNames;
+      std::vector<std::string> varName;
 
 //! Mapping between varname and the index in 'var'.
       std::map<std::string, int> varMap;
@@ -109,22 +109,23 @@ public:
 //! Types of variables
       std::vector<nc_type> varType;
 
-//! Mapping between var type and the index of varNames.
+//! Mapping between var type and the index of varName.
       std::map<std::string, nc_type> varTypeMap;
 
 //! Has variable an unlimited dimension?
-      std::vector<bool> hasVarUnlimitedDim;
+      std::vector<bool> varIsRecordType;
 
 //! Is the data section empty for a given variable?
       std::vector<bool> noData;
 
 //! Names of variable's dimensions
-      std::vector<std::vector<std::string> > varDimNames;
+      std::vector<std::vector<std::string> > varDimName;
+      std::vector<std::vector<size_t> > varDimSize;
 
 // Attributes (of vars and then, globally)
 //! Vector of vector to the attribute names of a variable.
 /*! First vector corresponding to the vector of variables.*/
-      std::vector<std::vector<std::string> > varAttNames;
+      std::vector<std::vector<std::string> > varAttName;
 
 //! Vector of mapping of name and index of attributes.
 /*! The vector corresponds to the vector of varnames.*/
@@ -140,7 +141,7 @@ public:
 
 //! Vector of vector to the attribute names of a variable.
 /*! First vector corresponding to the vector of variables.*/
-      std::vector<std::string> globalAttNames;
+      std::vector<std::string> globalAttName;
 
 //! Mapping between global attribute name and index.
 /*! The vector correspopnds to the vector of varnames.*/
@@ -162,8 +163,10 @@ public:
       std::vector<size_t*> rec_count;
       std::vector<size_t>  rec_index;
 
-      std::vector<size_t>  prev_rec;
-      std::vector<size_t>  prev_leg;
+      std::vector<size_t>  rec_leg_begin;
+      std::vector<size_t>  rec_leg_sz;
+      std::vector<size_t>  rec_leg_end;
+      std::vector<void*>   rec_prev_taker;
 
 //! NC4: Compression
       std::vector<int> varShuffle;
@@ -420,13 +423,27 @@ void
 
 //! Access to data by a MtrxArr object.
 /*! The user has to take care that type conversion is possible.
-    The first value is also returned.*/
+    Return value: index of x corresponding to rec; -1 for invalid rec */
   template <typename ToT>
     ToT
-      getData(MtrxArr<ToT> &x, std::string vName, size_t rec=0, size_t leg=0 );
+      getData(MtrxArr<ToT> &x, std::string vName, size_t rec=0 );
+
+//! Access of a record by a MtrxArr object.
+/*! Note that data is sliced according to an internally specified maximum
+    range.*/
+    template <typename ToT>
+    ToT
+      getData(MtrxArr<ToT> &x, int varid, size_t rec=0);
 
     void
       getData(std::vector<std::string> &,std::string, size_t rec=0);
+
+    std::pair<int, int>
+      getDataIndexRange(std::string vName)
+        {return getDataIndexRange(getVarID(vName));}
+
+    std::pair<int, int>
+      getDataIndexRange(int varid);
 
 //! Get number of values per record of variable 'vName'.
 /*! If vName is not a valid variable, 0 is returned.
@@ -447,7 +464,7 @@ void
 /*! If the variable parameter is empty, all dimension names are returned.
     Else, only those the variable is depending on.*/
     std::vector<std::string>
-      getDimNames(std::string vName="");
+      getDimName(std::string vName="");
 
 //! Get the size of given dimension.
 /*! If dName is invalid, a value of -1 is returned.*/
@@ -493,19 +510,30 @@ void
 
 //! Get those variable names not depending on the unlimited dimension.
     std::vector<std::string>
-      getLimitedVarNames(void);
+      getLimitedVarName(void);
 
 //! Get the ncid number of the opened nc.
     int
       getNcid(void){return ncid;}
 
-//! Get the number of current records.
+//! Get the number of current records. Force==true re-checks the number
     size_t
-      getNumOfRecords(void);
+      getNumOfRecords(bool force=false);
 
-//! Get the number of records, if string is an unlimited variable
     size_t
-      getNumOfRecords(std::string);
+      getNumOfRows(std::string vName);
+
+//! Get the number of records, if var is unlimited
+    size_t
+      getNumOfRecords(std::string var, bool force=false);
+
+    size_t
+      getRecLegIndex(std::string vName, size_t rec)
+      { return getRecLegIndex(getVarID(vName), rec); }
+
+    size_t
+      getRecLegIndex(int varid, size_t rec)
+        { return rec - layout.rec_leg_begin[varid] ; }
 
 //! Get number of values per record of variable 'vName'.
 /*! If vName is not a valid variable, 0 is returned.
@@ -530,7 +558,7 @@ void
       getUnlimitedDimVarName(void);
 
 //! Get sizes of the dimensions variable 'vName' depends on.
-/*! Return sizes of all dimensions in the sequence getDimNames
+/*! Return sizes of all dimensions in the sequence getDimName
     would return names. If variable name is empty or invalid,
     return an empty vector.*/
     std::vector<size_t>
@@ -548,7 +576,7 @@ void
 
 //! Get all names of variables, limited and unlimited).
     std::vector<std::string>
-      getVarNames(void) { return layout.varNames;}
+      getVarName(void) { return layout.varName;}
 
 //! Get number of values of variable 'vName'.
 /*! In case of unlimited variables, the size of a record.*/
@@ -607,7 +635,10 @@ void
 
 //! Return true for an empty data section of the given variable name
     bool
-      isNoRecords(std::string varName) ;
+      isRecordType(std::string varName) ;
+
+    bool
+      isRecordType(int id){ return layout.varIsRecordType[id] ;}
 
 //! Return true if the type is index compatible
     bool
@@ -725,8 +756,7 @@ void
 //  vector ------------------
     template <typename Type>
     void
-      setAtt(std::string vName, std::string aName,
-             std::vector<Type> &values)
+      setAtt(std::string vName, std::string aName, std::vector<Type> &values)
          {setAtt(getVarID(vName), aName, values) ;}
 
     template <typename To, typename From>
@@ -749,14 +779,14 @@ void
     template <typename Type>
     void
       setAtt(std::string vName, std::string aName,
-             Type *values, size_t sz)
-         {setAtt(getVarID(vName), aName, values, sz) ;}
+             Type *arr, size_t sz)
+         {setAtt(getVarID(vName), aName, arr, sz) ;}
 
     template <typename To, typename From>
     void
       setAtt(std::string vName, std::string aName,
-             From *values, size_t sz, To x)
-         {setAtt(getVarID(vName), aName, sz, x) ;}
+             From *arr, size_t sz, To x)
+         {setAtt(getVarID(vName), aName, arr, sz, x) ;}
 
 //  plain value, but also a const char*. So , take special care.
     template <typename Type>
@@ -800,12 +830,12 @@ void
 //  array ------------------
     template <typename Type>
     void
-      setGlobalAtt(std::string aName, Type *values, size_t sz)
-         {setAtt(NC_GLOBAL, aName, values, sz) ;}
+      setGlobalAtt(std::string aName, Type *arr, size_t sz)
+         {setAtt(NC_GLOBAL, aName, arr, sz) ;}
 
     template <typename To, typename From>
     void
-      setGlobalAtt(std::string aName, From *values, size_t sz, To x)
+      setGlobalAtt(std::string aName, From *arr, size_t sz, To x)
          {setAtt(NC_GLOBAL, aName, sz, x) ;}
 
 //  plain value, but also a const char*. So , take special care.
@@ -882,6 +912,9 @@ private:
 
     size_t      effUnlimitedDimSize;
     std::vector<bool> hasEffVarUnlimitedDim;
+
+    int numOfRecords;
+    size_t rec_leg_max;
 
     // Spaces for records of various types
     std::vector<MtrxArr<signed char> >        rec_val_schar;
@@ -1024,14 +1057,6 @@ private:
     void*
       getData(int varid, size_t rec, size_t leg=0);
 
-//! Access of a record by a MtrxArr object.
-/*! A slice at the rec-th index of the unlimited dimension.
-    If the variable holds 1-D data and leg > rec, then get the leg.
-    Having leg > arr-size is safe. */
-    template <typename ToT>
-    ToT
-      getData(MtrxArr<ToT> &x, int varid, size_t rec=0, size_t leg=0);
-
 // Get number of values per record of variable 'vName'.
     size_t
       getDataSize(int varid);
@@ -1113,13 +1138,12 @@ private:
 // array
     template <typename T>
     void
-      setAtt(int varid, std::string aName, T *values, size_t sz);
+      setAtt(int varid, std::string aName, T *arr, size_t sz);
 
 // array and conversion
     template <typename To, typename From>
     void
-      setAtt(int varid, std::string aName,
-              From *values, size_t sz, To x);
+      setAtt(int varid, std::string aName, From *arr, size_t sz, To x);
 
 // plain value
     template <typename From>

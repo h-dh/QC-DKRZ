@@ -78,15 +78,6 @@ class Base : public IObj
   /*! If errCode>0 is provided, the program shall exit with this number.*/
   void finally(int errCode=0, std::string s="");
 
-  //! Return the time value of record 'rec' out of the nc-file.
-  static double
-       getTime(NcAPI &, size_t rec, std::string, double offset=0.);
-
-  //! Put all the time values of record 'rec' to the Matval obj.
-  /*! This method gives access to time bound values.*/
-  static bool
-       getTime(NcAPI &, size_t rec, std::string, MtrxArr<double>&, double offset=0.);
-
   //!  Get the name of the variable indicated by 'varname=...', 'vname=...',  'variable=...', or 'v=...'
   std::vector<std::string>
        getVarname( std::string &s);
@@ -100,8 +91,8 @@ class Base : public IObj
   bool isVarname( std::string &);
   void makeVariable (NcAPI *, std::string name, int id=-1);
 
-  void setFilename(std::string s){filename=s;}
-  void setFilePath(std::string p){filePath=p;}
+  // uses struct hdhC::FileSplit
+  void setFilename(std::string f){file.setFile(f);}
 
   //! Connect a frequency distribution object.
   void setFreqDistI(FD_interface *p){ fDI=p; return;}
@@ -121,8 +112,8 @@ class Base : public IObj
   void setVarPropsForOperation( void );
   void setVarPropsNoOperation( void );
 
-  std::string filename;
-  std::string filePath;
+  struct hdhC::FileSplit file;
+
   std::string linkObjName;
   bool        isAllocate;
   std::vector<std::string> srcStr;

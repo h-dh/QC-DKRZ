@@ -7,7 +7,6 @@ descript()
   echo "  --debug[=script]  Display execution commands."
   echo "  --help         Also option -h."
   echo "  --prefix=path  Path to the installation dir."
-  echo "  --src=string   Path to the sources."
 }
 
 tr_option()
@@ -35,11 +34,9 @@ tr_option()
 
 # ------ main -------
 
-QA_SRC=${0%/*}
-test ${QA_SRC##*/} = scripts && QA_SRC=${QA_SRC%/*}
-
-mkdir -p $QA_SRC/local/source
-out=$QA_SRC/local/source/INSTALL_hdf.log
+# QA_PATH was exported
+mkdir -p $QA_PATH/local/source
+out=$QA_PATH/local/source/INSTALL_hdf.log
 
 while getopts hp:q-: option ${args[*]}
 do
@@ -60,8 +57,6 @@ do
         elif [ "${UOPTARG%%=*}" = PREFIX ] ; then
            installPath=${OPTARG#*=}
            prefix=--${OPTARG}
-        elif [ "${UOPTARG%%=*}" = SRC ] ; then
-           src=${OPTARG#*=}
         fi
         ;;
    \?)  descript
@@ -70,6 +65,8 @@ do
 done
 
 shift $(( $OPTIND - 1 ))
+
+src=$installPath/source
 
 if [ -d "${src}" ] ; then
   cd $src &> /dev/null

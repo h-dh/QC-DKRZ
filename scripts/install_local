@@ -2,10 +2,9 @@
 
 package=QA-DKRZ  # default
 
-srcPath=local/source  # by default, absolute path comes later
-
 check_targets()
 {
+  # $1: variable name for a return value
   local kind=$1
   local target=$2
 
@@ -14,14 +13,14 @@ check_targets()
     return 1
   fi
 
-  local lib=lib
-
   if [ ${kind} = zlib ] ; then
 
-    if ! ls ${target}/$lib/libz.* &> /dev/null ; then
-      lib=lib64
-      if ! ls ${target}/$lib/libz.* &> /dev/null ; then
-        lib=
+    if ls ${target}/lib/libz.* &> /dev/null ; then
+      lib=lib
+    else
+      if ls ${target}/lib64/libz.* &> /dev/null ; then
+        lib=lib64
+      else
         return 1
       fi
     fi
@@ -32,10 +31,12 @@ check_targets()
 
   elif [ ${kind} = hdf5 ] ; then
 
-      if ! ls ${target}/$lib/libhdf5* &> /dev/null ; then
-      lib=lib64
-      if ! ls ${target}/$lib/libhdf5* &> /dev/null ; then
-        lib=
+    if  ls ${target}/lib/libhdf5* &> /dev/null ; then
+      lib=lib
+    else
+      if  ls ${target}/lib64/libhdf5* &> /dev/null ; then
+        lib=lib64
+      else
         return 1
       fi
     fi
@@ -46,10 +47,12 @@ check_targets()
 
   elif [ ${kind} = netcdf ] ; then
 
-      if ! ls ${target}/$lib/libnetcdf* &> /dev/null ; then
-      lib=lib64
-      if ! ls ${target}/$lib/libnetcdf* &> /dev/null ; then
-        lib=
+    if ls ${target}/lib/libnetcdf* &> /dev/null ; then
+        lib=lib
+    else
+      if ls ${target}/lib64/libnetcdf* &> /dev/null ; then
+        lib=lib64
+      else
         return 1
       fi
     fi
@@ -60,10 +63,12 @@ check_targets()
 
   elif [ ${kind} = udunits ] ; then
 
-      if ! ls ${target}/$lib/libudunits2* &> /dev/null ; then
-      lib=lib64
-      if ! ls ${target}/$lib/libudunits2* &> /dev/null ; then
-        lib=
+    if ls ${target}/lib/libudunits2* &> /dev/null ; then
+      lib=lib
+    else
+      if ls ${target}/lib64/libudunits2* &> /dev/null ; then
+        lib=lib64
+      else
         return 1
       fi
     fi
@@ -152,213 +157,190 @@ descript()
 distclean()
 {
   for f in bin include lib lib64 share ; do
-    \rm -rf ${QA_SRC}/local/$f
+    \rm -rf ${QA_PATH}/local/$f
   done
-  \rm -f ${QA_SRC}/local/source/INDSTALL_*.log
+  \rm -f ${QA_PATH}/local/source/INDSTALL_*.log
 
   local name
 
   for t in zlib hdf5 netcdf udunits ; do
     eval name=\${curr_${t}}
 
-    bash ${QA_SRC}/scripts/install_local_${t} --distclean  \
-       -q --prefix=${prefix} ${QUIET:+-q} --src=$srcPath/$name
+    bash ${QA_PATH}/scripts/install_local_${t} --distclean  \
+       -q --prefix=${qaLocalPath} ${QUIET:+-q}
   done
 
   return
 }
 
-f()
+editInstallConfigure_build()
 {
-  local c dirs is
-  declare -a dirs
+  # adjust eventually install_configure settings
+  # of LIB and INCLUDE to new paths
 
-  if [ $1 = zlib ] ; then
-    if ls ${prefix}/lib/libz.* &> /dev/null \
-          || ls ${prefix}/lib64/libz.* &> /dev/null ; then
-       log zlib DONE=up-to-date
-       return 0  # go on
-    fi
+  local ic=install_configure
 
-    # request: only hard links
-    if [ ${#link} -gt 0 ] ; then
-      is=f
-
-      if ln_zlib ${link} ; then
-        is=t
-      fi
-
-      if [ ${is} = t ] ; then
-        log "zlib linked to ${link}" DONE
-      else
-        log "linking of zlib to ${link}" FAIL
-        return 1
-      fi
-
-      return 0
-    fi
-
-    # instance already available?
-    dirs=( $( ls -d ${srcPath}/${curr_zlib}* 2> /dev/null) )
-  fi
-
-  if [ $1 = hdf5 ] ; then
-    if ls ${prefix}/lib/libhdf5.* &> /dev/null \
-           || ls ${prefix}/lib64/libhdf5.* &> /dev/null ; then
-      log hdf5 DONE=up-to-date
-      return 0  # go on
-    fi
-
-    # request: only hard links
-    if [ ${#link} -gt 0 ] ; then
-      is=f
-
-      if ln_hdf5 ${link} ; then
-        is=t
-      fi
-
-      if [ ${is} = t ] ; then
-        log "hdf5 linked to ${link}" DONE
-      else
-        log "linking of hdf5 to ${link}" FAIL
-        return 1
-      fi
-
-      return 0
-    fi
-
-    # instance already available?
-    dirs=( $( ls -d ${srcPath}/${curr_hdf5}* 2> /dev/null) )
-  fi
-
-  if [ $1 = netcdf ] ; then
-    if ls ${prefix}/lib/libnetcdf.* &> /dev/null \
-           || ls ${prefix}/lib64/libnetcdf.* &> /dev/null ; then
-      log netcdf DONE=up-to-date
-      return 0  # go on
-    fi
-
-    # request: only hard links
-    if [ ${#link} -gt 0 ] ; then
-      is=f
-
-      if ln_netcdf ${link} ; then
-        is=t
-      fi
-
-      if [ ${is} = t ] ; then
-        log "netcdf linked to ${link}" DONE
-      else
-        log "linking of netcdf to ${link}" FAIL
-        return 1
-      fi
-
-      return 0
-    fi
-
-    # instance already available?
-    dirs=( $( ls -d ${srcPath}/${curr_netcdf}* 2> /dev/null) )
-  fi
-
-  if [ $1 = udunits ] ; then
-    if ls ${prefix}/lib/libudunits2.* &> /dev/null \
-           || ls ${prefix}/lib64/libudunits2.* &> /dev/null ; then
-      log udunits2 DONE=up-to-date
-      return 0  # go on
-    fi
-
-    # request: only hard links
-    if [ ${#link} -gt 0 ] ; then
-      is=f
-
-      if ln_udunits ${link} ; then
-        is=t
-      fi
-
-      if [ ${is} = t ] ; then
-        log "udunits linked to ${link}" DONE
-      else
-        log "linking of udunits to ${link}" FAIL
-        return 1
-      fi
-
-      return 0
-    fi
-
-    # instance already available?
-    dirs=( $( ls -d ${srcPath}/${curr_udunits}* 2> /dev/null) )
-  fi
-
-  cd ${srcPath}
-
-  local dir
-
-  local isDownload isTar isTgz
-
-  local isDir isTar isTgz
-
-  if [ ${#dirs[*]} -eq 0 ] ; then
-    # get sources from svn
-: #    isDownload=t
+  if grep -q "^LIB=" ${QA_PATH}/$ic 2> /dev/null ; then
+    sed -i "/^LIB=/ c ${lib}" install_configure
   else
-    for dir in ${dirs[*]##*/} ; do
-      test -d ${dir} && isDir=t && break
-      if [ -f ${dir} ] ; then
-         test ${dir:$(( ${#dir}-2 ))} = 'gz'  && isTgz=t
-         test ${dir:$(( ${#dir}-3 ))} = 'tar' && isTar=t
+    # append after line '# e.g. LIB=...'
+    sed -i "/LIB=/ a LIB=${lib}" install_configure
+  fi
+
+  if grep -q "^INCLUDE=" ${QA_PATH}/$ic 2> /dev/null ; then
+    sed -i "/^INCLUDE=/ c ${incl}" install_configure
+  else
+    sed -i "/INCLUDE=/ a INCLUDE=${incl}" install_configure
+  fi
+
+  return
+}
+
+editInstallConfigure_link()
+{
+  local numOfLinks=$1
+
+  # adjust eventually install_configure settings
+  # of LIB and INCLUDE to new paths
+
+  # procedure for LIB is more intricate, because of lib and lib64
+
+  # linked libs are collected, but multiple names are possible.
+  local libs
+  declare -a libs
+
+  # map lib and lib64 always to QA_DKRZ/local
+
+  libs=( lib lib64 )
+  incls=( include )
+
+  local nI nL oI oL px
+  declare -a nI nL oI oL
+
+  local px i1 j
+
+  local ic=install_configure
+
+  # should not happen
+  test ! -f ${QA_PATH}/$ic && \
+     cp ${QA_PATH}/.$ic ${QA_PATH}/ic
+
+  # avoid duplicates
+  # get items from ic and test for a valid path
+  local isLIB isINCLUDE
+
+  # if there was not a change for all h, n ,u, z
+  if [ $numOfLinks -lt 4  ] ; then
+    if px=$(grep "^LIB=" ${QA_PATH}/$ic 2> /dev/null ) ; then
+      isLIB=t
+    fi
+    px=${px#LIB=}
+    oL=(${px//:/ })
+    for(( i1=0 ; i1 < ${#oL[*]} ; ++i1 )) ; do
+      if [ ! -d ${oL[i1]} ] ; then
+        oL[${i1}]=
       fi
     done
 
-    test ${isTar:-f} = t && isTgz=
+    if px=$(grep "^INCLUDE=" ${QA_PATH}/$ic 2> /dev/null ) ; then
+      isINCLUDE=t
+    fi
+    px=${px#INCLUDE=}
+    oI=(${px//:/ })
+    for(( i1=0 ; i1 < ${#oI[*]} ; ++i1 )) ; do
+      if [ ! -d ${oI[i1]} ] ; then
+        oI[${i1}]=
+      fi
+    done
   fi
 
-  local vers name
+  nL=( ${libs[*]/#/${QA_PATH}\/local\/} ${oL[*]} )
+  nI=( ${incls[*]/#/${QA_PATH}\/local\/} ${oI[*]} )
+
+  local lib
+  for i1 in ${nL[*]} ; do
+    lib=${lib}${lib:+:}$i1
+  done
+  lib='LIB='${lib}
+
+  local incl
+  for i1 in ${nI[*]} ; do
+    incl=${incl}${incl:+:}$i1
+  done
+  incl='INCLUDE='${incl}
+
+  # adjustment
+  if [ ${isLIB:-f} = t ] ; then
+    sed -i "/^LIB=/ c ${lib}" install_configure
+  else
+    # append after line '# e.g. LIB=...'
+    sed -i "/LIB=/ a LIB=${lib}" install_configure
+  fi
+
+  if [ ${isINCLUDE:-f} = t ] ; then
+    sed -i "/^INCLUDE=/ c ${incl}" install_configure
+  else
+    sed -i "/INCLUDE=/ a INCLUDE=${incl}" install_configure
+  fi
+
+  return
+}
+
+f_build()
+{
+  local c dir is
+
+  if ls ${qaLocalPath}/lib/lib${1}.* &> /dev/null \
+        || ls ${qaLocalPath}/lib64/lib${1}.* &> /dev/null ; then
+      log ${1} DONE=up-to-date
+      return 0  # go on
+  fi
+
+  cd ${qaLocalPath}/source
+
+  # rebuild
+
+  # instance already available?
+  dir=$( ls -d ${qaLocalPath}/source/curr_${1}* 2> /dev/null )
+#  test ${#dir} -gt 0 && \rm -rf $dir
+
+  local name
   eval name=\${curr_${1}}
 
-  if [ ${isDownload:-f} = t ] ; then
+  if [ ${#dir} -eq 0 ] ; then
+
     local text
     if [ ${name:0:1} = 'n' ] ; then
-      text="www.unidata.ucar.edu./downloads/netcdf/ftp/${name}.tar.gz"
-      wget -l1 -np -nc ${text} &> INSTALL_netcdf.log
+      text="-l1 -np -nc ftp://ftp.unidata.ucar.edu/pub/netcdf/old/${name}.tar.gz"
+      wget ${text} &> INSTALL_netcdf.log
     elif [ ${name:0:1} = 'h' ] ; then
-      cd $srcPath
-      text="www.hdfgroup.org/ftp/HDF5/releases/${name}/src/${name}.tar.gz"
-      wget -l1 -np -nc ${text} &> INSTALL_hdf.log
+      text="-l1 -np -nc www.hdfgroup.org/ftp/HDF5/releases/${name}/src/${name}.tar.gz"
+      wget ${text} &> INSTALL_hdf.log
     elif [ ${name:0:1} = 'z' ] ; then
-      cd $srcPath
-      text="www.zlib.net/${name}.tar.gz"
-      wget -l1 -np -nc ${text} &> INSTALL_zlib.log
+      text="-l1 -np -nc www.zlib.net/${name}.tar.gz"
+      wget ${text} &> INSTALL_zlib.log
     elif [ ${name:0:1} = 'u' ] ; then
-      cd $srcPath
-      text="ftp.unidata.ucar/edu/pub/udunits/udunits-2.2.16.tar.gz"
-      wget -O - ftp://ftp.unidata.ucar.edu/pub/udunits/udunits-2.2.16.tar.gz \
-        | gunzip -c | pax -r
+      text="-O - ftp://ftp.unidata.ucar.edu/pub/udunits/${name}.tar.gz"
+      wget ${text}
     fi
+
     if [ $? -eq 0 ] ; then
-      log "download: $name.tar.gz" DONE
-      isTgz=t
+      log "download: $name" DONE
     else
-      log "wget -l1 -np -nc ${text}" FAIL
+      log "wget ${text}:" FAIL
       exit 1
     fi
+
+    if [ -f $name.tar.gz ] ; then
+      gzip -d $name.tar.gz 2> /dev/null
+      tar xf $name.tar > /dev/null
+      \rm -f $name.tar
+    fi
   fi
 
-  if [ ${isTgz:-f} = t ] ; then
-    gzip -d $name.tar.gz
-    isTar=t
-  fi
-
-  if [ ${isTar:-f} = t ] ; then
-    tar xf $name.tar > /dev/null
-    \rm -f $name.tar
-  fi
-
-  mkdir -p $prefix
-
-  bash ${QA_SRC}/scripts/install_local_${1}  \
+  bash ${QA_PATH}/scripts/install_local_${1}  \
      ${isDebug:+--debug} ${QUIET:+-q} \
-     --prefix=${prefix} \
-     --src=$srcPath/$name
+     --prefix=${qaLocalPath} \
 
   local status=$?
 
@@ -368,14 +350,60 @@ f()
     myStat=DONE
   fi
 
-  log ${QA_SRC}/scripts/install_local_${1} ${isDebug:+--debug} \
-  --prefix=${prefix} ${QUIET:+-q} --src=${srcPath} ${myStat}
+  log ${QA_PATH}/scripts/install_local_${1} ${isDebug:+--debug} \
+  --prefix=${qaLocalPath} ${QUIET:+-q} ${myStat}
 
   test ${myStat} = FAIL && exit 1
 
   cd - &> /dev/null
 
+  editInstallConfigure_build
+
   return $status
+}
+
+f_link()
+{
+  local ret=0
+  local i is
+  local changeCount=0
+
+  local names=( hdf5 netcdf udunits zlib )
+  local ids=( h n u z )
+
+  local lib  # value is returned by ln_'name'()
+
+  for((i=0 ; i < ${#ids[*]} ; ++i )) ; do
+
+    local lnk llnk
+    eval lnk=\$link_${ids[i]}
+    lnk=${lnk%/lib*}  # if appended
+    test ${#lnk} -eq 0 && continue
+
+    # request: only hard links
+    if [ ${#lnk} -gt 0 ] ; then
+      is=f
+
+      if ln_${names[i]} ${lnk} ; then
+        is=t
+        changeCount=$(( changeCount +1 ))
+      fi
+
+      if [ ${is} = t ] ; then
+        log "${names[i]}: ${lnk}/${lib} hard-linked in ${QA_PATH}/local" DONE
+      else
+        log "linking of ${names[i]} to ${lnk}" FAIL
+        ret=1
+      fi
+    fi
+
+  done
+
+  test ${ret} -eq 1 && return 1
+
+  editInstallConfigure_link $changeCount
+
+  return 0
 }
 
 findPackage()
@@ -455,47 +483,49 @@ formatText()
 
 ln_hdf5()
 {
+  local link=$2
+
   # libs are made in check_targets
   mkdir -p local/include
 
-  local lib=lib  # could be mapped to lib64 by check_targets
+  # $1=lib  could be mapped to lib64 by check_targets
 
-  if ! check_targets hdf5 ${link} ; then
+  if ! check_targets hdf5 ${link_h} ; then
     return 1
   fi
 
-  test ${ret} -eq 1 && return 1
-
-  if ls ${link}/$lib/libhdf* &> /dev/null ; then
-    ln -f -L -t local/$lib ${link}/$lib/libhdf* 2> /dev/null
+  if ls ${link_h}/$lib/libhdf* &> /dev/null ; then
+    ln -f -L -t local/$lib ${link_h}/$lib/libhdf* 2> /dev/null
   else
-    log "no targets to link: ${link}/$lib/libhdf*" FAIL
+    log "no targets to link: ${link_h}/$lib/libhdf*" FAIL
     return 1
   fi
 
-  if ls ${link}/include/H5* &> /dev/null ; then
-    ln -f -L -t local/include ${link}/include/H5* 2> /dev/null
+  if ls ${link_h}/include/H5* &> /dev/null ; then
+    ln -f -L -t local/include ${link_h}/include/H5* 2> /dev/null
   else
-    log "no targets to link: ${link}/include/H5*" FAIL
+    log "no targets to link: ${link_h}/include/H5*" FAIL
     return 1
   fi
 
-  if ls ${link}/include/hdf5* &> /dev/null ; then
-    ln -f -L -t local/include ${link}/include/hdf5* 2> /dev/null
+  if ls ${link_h}/include/hdf5* &> /dev/null ; then
+    ln -f -L -t local/include ${link_h}/include/hdf5* 2> /dev/null
   else
-    log "no targets to link: ${link}/include/hdf5*" FAIL
+    log "no targets to link: ${link_h}/include/hdf5*" FAIL
     return 1
   fi
 
-  if ls ${link}/bin/h5* &> /dev/null ; then
+  if ls ${link_h}/bin/h5* &> /dev/null ; then
     mkdir  -p local/bin
-    ln -f -L -t local/bin ${link}/bin/h5* 2> /dev/null
+    ln -f -L -t local/bin ${link_h}/bin/h5* 2> /dev/null
       # a failure is not essential
   fi
 
-  if ls ${link}/bin/gif2h5* &> /dev/null ; then
-    ln -f -L -t local/bin ${link}/bin/gif2h5* 2> /dev/null
+  if ls ${link_h}/bin/gif2h5* &> /dev/null ; then
+    ln -f -L -t local/bin ${link_h}/bin/gif2h5* 2> /dev/null
   fi
+
+  eval $1=$lib
 
   return 0
 }
@@ -505,37 +535,39 @@ ln_netcdf()
   # libs are made in check_targets
   mkdir -p local/include
 
-  local lib=lib  # could be mapped to lib64 by check_targets
+  # $1=lib  could be mapped to lib64 by check_targets
 
-  if ! check_targets netcdf ${link} ; then
+  if ! check_targets netcdf ${link_n} ; then
     return 1
   fi
 
-  if ls ${link}/$lib/libnetcd* &> /dev/null ; then
-    ln -f -L -t local/$lib ${link}/$lib/libnetcd* 2> /dev/null
+  if ls ${link_n}/$lib/libnetcd* &> /dev/null ; then
+    ln -f -L -t local/$lib ${link_n}/$lib/libnetcd* 2> /dev/null
   else
-    log "no targets to link: ${link}/$lib/libnetcdf*" FAIL
+    log "no targets to link: ${link_n}/$lib/libnetcdf*" FAIL
     return 1
   fi
 
-  if ls ${link}/include/netcdf* &> /dev/null ; then
-    ln -f -L -t local/include ${link}/include/netcdf* 2> /dev/null
+  if ls ${link_n}/include/netcdf* &> /dev/null ; then
+    ln -f -L -t local/include ${link_n}/include/netcdf* 2> /dev/null
   else
-    log "no targets to link: ${link}/include/netcdf*" FAIL
+    log "no targets to link: ${link_n}/include/netcdf*" FAIL
     return 1
   fi
 
-  if ls ${link}/bin/nc* &> /dev/null ; then
+  if ls ${link_n}/bin/nc* &> /dev/null ; then
     mkdir  -p local/bin
-    ln -f -L -t local/bin ${link}/bin/nc* 2> /dev/null
+    ln -f -L -t local/bin ${link_n}/bin/nc* 2> /dev/null
     # a failure is not essential
   fi
 
-  if ls ${link}/lib/pkgconfig/netcd* &> /dev/null ; then
+  if ls ${link_n}/lib/pkgconfig/netcd* &> /dev/null ; then
     mkdir -p  local/$lib/pkgconfig
-    ln -f -L -t local/lib/pkgconfig ${link}/lib/pkgconfig/netcd* 2> /dev/null
+    ln -f -L -t local/lib/pkgconfig ${link_n}/lib/pkgconfig/netcd* 2> /dev/null
     # a failure is not essential
   fi
+
+  eval $1=$lib
 
   return 0
 }
@@ -545,37 +577,40 @@ ln_udunits()
   # libs are made in check_targets
   mkdir -p local/include
 
-  local lib=lib  # could be mapped to lib64 by check_targets
+  # $1=lib  could be mapped to lib64 by check_targets
 
-  if ! check_targets udunits ${link} ; then
+  if ! check_targets udunits ${link_u} ; then
     return 1
   fi
 
-  if ls ${link}/$lib/libudunits2* &> /dev/null ; then
-    ln -f -L -t local/$lib ${link}/$lib/libudunits2* 2> /dev/null
+  if ls ${link_u}/$lib/libudunits2* &> /dev/null ; then
+    ln -f -L -t local/$lib ${link_u}/$lib/libudunits2* 2> /dev/null
   else
-    log "no targets to link: ${link}/$lib/libudunits2*" FAIL
+    log "no targets to link: ${link_u}/$lib/libudunits2*" FAIL
     return 1
   fi
 
-  if ls ${link}/include/udunits2.h &> /dev/null ; then
-    ln -f -L -t local/include ${link}/include/udunits* 2> /dev/null
+  if ls ${link_u}/include/udunits2.h &> /dev/null ; then
+    ln -f -L -t local/include ${link_u}/include/udunits* 2> /dev/null
+    ln -f -L -t local/include ${link_u}/include/converter.h 2> /dev/null
   else
-    log "no targets to link: ${link}/include/netcdf*" FAIL
+    log "no targets to link: ${link_u}/include/netcdf*" FAIL
     return 1
   fi
 
-  if ls ${link}/bin/udunits2 &> /dev/null ; then
+  if ls ${link_u}/bin/udunits2 &> /dev/null ; then
     mkdir  -p local/bin
-    ln -f -L -t local/bin ${link}/bin/udunits2 2> /dev/null
+    ln -f -L -t local/bin ${link_u}/bin/udunits2 2> /dev/null
     # a failure is not essential
   fi
 
-  if ls ${link}/lib/pkgconfig/udunits2* &> /dev/null ; then
+  if ls ${link_u}/lib/pkgconfig/udunits2* &> /dev/null ; then
     mkdir -p  local/$lib/pkgconfig
-    ln -f -L -t local/lib/pkgconfig ${link}/lib/pkgconfig/udunits2* 2> /dev/null
+    ln -f -L -t local/lib/pkgconfig ${link_u}/lib/pkgconfig/udunits2* 2> /dev/null
     # a failure is not essential
   fi
+
+  eval $1=$lib
 
   return 0
 }
@@ -585,38 +620,40 @@ ln_zlib()
   # libs are made in check_targets
   mkdir -p local/include
 
-  local lib=lib  # could be mapped to lib64 by check_targets
+  # $1=lib  could be mapped to lib64 by check_targets
 
-  if ! check_targets zlib ${link} ; then
+  if ! check_targets zlib ${link_z} ; then
     return 1
   fi
 
-  if [ -f ${link}/$lib/libz.a ] ; then
-    ln -f -t local/$lib ${link}/$lib/libz.a 2> /dev/null
+  if [ -f ${link_z}/$lib/libz.a ] ; then
+    ln -f -t local/$lib ${link_z}/$lib/libz.a 2> /dev/null
   else
-    log "no targets to link: ${link}/$lib/libz.a" FAIL
+    log "no targets to link: ${link_z}/$lib/libz.a" FAIL
     return 1
   fi
 
-  if [ -f ${link}/include/zlib.h ] ; then
-    ln -f -t local/include ${link}/include/zlib.h 2> /dev/null
+  if [ -f ${link_z}/include/zlib.h ] ; then
+    ln -f -t local/include ${link_z}/include/zlib.h 2> /dev/null
   else
-    log "no targets to link: ${link}/include/zlib.h" FAIL
+    log "no targets to link: ${link_z}/include/zlib.h" FAIL
     return 1
   fi
 
-  if [ -f ${link}/include/zconf.h ] ; then
-    ln -f -t local/include ${link}/include/zconf.h 2> /dev/null
+  if [ -f ${link_z}/include/zconf.h ] ; then
+    ln -f -t local/include ${link_z}/include/zconf.h 2> /dev/null
   else
-    log "no targets to link: ${link}/include/zconf.h" FAIL
+    log "no targets to link: ${link_z}/include/zconf.h" FAIL
     return 1
   fi
 
-  if [ -f ${link}/$lib/pkgconfig/zlib.pc ] ; then
+  if [ -f ${link_z}/$lib/pkgconfig/zlib.pc ] ; then
     mkdir -p  local/$lib/pkgconfig
-    ln -f -t local/$lib/pkgconfig ${link}/$lib/pkgconfig/zlib.pc 2> /dev/null
+    ln -f -t local/$lib/pkgconfig ${link_z}/$lib/pkgconfig/zlib.pc 2> /dev/null
     # a failure is not essential
   fi
+
+  eval $1=$lib
 
   return 0
 }
@@ -634,11 +671,12 @@ log()
   local str isDONE
   local term
 
-#  if [ ${isContLog:-f} = f ] ; then
-#     str="\n === Install Session: $(date +'%F_%T') ===\n"
-#  fi
+  if [ ${isContLog:-f} = f ] ; then
+    isContLog=t
 
-  test "$1" = '--continue_log' && shift 1
+    echo -e "\n$(date +'%F_%T'):" >> ${log_pwd}install.log
+    isContLog=t
+  fi
 
   n=$#
   local lastWord=${!n}
@@ -678,47 +716,48 @@ log()
   return $status
 }
 
-xtractSrcPath()
+saveAsCycle()
 {
-  # Note: each executable invoked on a bash command-line
-  # gets its name in parameter $0, which is unchanged
-  # in a function.
-
-  # this function is called recursively
-
-  # remember the current path
-  if [ $# -eq 0 ] ; then
-    local oldPath=$(pwd)
-    local p=$0
-  else
-    p=$1
+  if [ "$1" = KEEP-ORIG ] ; then
+    local isKeep=t
+    shift 1
   fi
 
-  if [ ${p} != "${p//\./}" ] ; then
-    cd ${p%/*}
-    xtractSrcPath ${p##*/}
-  fi
+  for f in $* ; do
+    if [ ! \( -f $f -o -d $f \) ] ; then
+      echo "install.saveAsCycle: no such file or directory $f"
+      return
+    fi
 
-  # Is it a symbolic link?
-  # The symbolic link could point to another symbolic link
-  if [ -h $p ] ; then
-    local tmps
-    tmps=( $( ls -l $p ) )
+    local ext val x
+    local maxVal fs fx
 
-    # get the target of the symbolic link
-    p=${tmps[$(( ${#tmps[*]}-1 ))]}
-    cd ${p%/*}  # strip command
+    maxVal=0
+    fs=( $(ls -d $f.* 2> /dev/null) )
 
-    xtractSrcPath ${p##*/}
-    return
-  fi
+    for fx in ${fs[*]} ; do
+      ext=${fx##*.}
 
-  QA_SRC=$(pwd)
+      if val=$(expr match $ext '\([[:digit:]]\+$\)' 2> /dev/null) ; then
+        test ${val:-0} -gt ${maxVal} && maxVal=$val
+      fi
+    done
 
-  if [ ${QA_SRC} != ${QA_SRC%/scripts} ] ; then
-    QA_SRC=${QA_SRC%/scripts}
-    cd ..
-  fi
+    if [ ${isKeep:-f} = t ] ; then
+      cp -r $f ${f##*/}.$((++maxVal)) 2> /dev/null
+    else
+      mv $f ${f##*/}.$((++maxVal)) 2> /dev/null
+    fi
+  done
+}
+
+saveLocal()
+{
+  test -d $QA_PATH/local && \
+    saveAsCycle $QA_PATH/local
+
+  test -f $QA_PATH/install_configure && \
+    saveAsCycle KEEP-ORIG $QA_PATH/install_configure
 
   return
 }
@@ -748,12 +787,8 @@ tr_option()
 
 # ++++++++++++   main   +++++++++++++++
 
-#extract the path to QA from $0
-xtractSrcPath
-
-srcPath=${QA_SRC}/${srcPath}  # by default
-
-prefix=${QA_SRC}/local
+#QA_PATH was exported
+qaLocalPath=${QA_PATH}/local
 
 while getopts hq-: option ${args[*]}
 do
@@ -773,6 +808,8 @@ do
                  echo autofix=enabled >> .conf
               fi
            fi
+        elif [ "${UOPTARG:0:5}" = 'BUILD' ] ; then
+          isBuild=t
         elif [ "${UOPTARG}" = CONTINUE_LOG ] ; then
            isContLog=t
         elif [ "${UOPTARG%=*}" = DEBUG ] ; then
@@ -785,14 +822,30 @@ do
         elif [ "$UOPTARG" = HELP ] ; then
            descript
            exit 1
-        elif [ "${UOPTARG%%=*}" = LIB-DEST ] ; then
-           prefix=${OPTARG#*=}
-        elif [ "${UOPTARG%%=*}" = LINK ] ; then
-           link=${OPTARG#*=}
+        elif [ "${UOPTARG:0:5}" = 'LINK=' ] ; then
+           link_h=${OPTARG#*=}
+           link_n=${OPTARG#*=}
+           link_u=${OPTARG#*=}
+           link_z=${OPTARG#*=}
+           isLink=t
+        elif [ "${UOPTARG:0:6}" = LINK_H ] ; then
+           link_h=${OPTARG#*=}
+           isLink=t
+        elif [ "${UOPTARG:0:6}" = LINK_N ] ; then
+           link_n=${OPTARG#*=}
+           isLink=t
+        elif [ "${UOPTARG:0:6}" = LINK_U ] ; then
+           link_u=${OPTARG#*=}
+           isLink=t
+        elif [ "${UOPTARG:0:6}" = LINK_Z ] ; then
+           link_z=${OPTARG#*=}
+           isLink=t
+        elif [ "${UOPTARG:0:5}" = LOCAL ] ; then
+           qaLocalPath=${OPTARG#*=}
         elif [ "${UOPTARG%%=*}" = PACKAGE ] ; then
            package=${OPTARG#*=}
-        elif [ "${UOPTARG%%=*}" = SRC-PATH ] ; then
-           srcPath=${OPTARG#*=}
+        elif [ "${OPTARG}" = saveLocal ] ; then
+           saveLocal
 
         #undocumented; default from install overrides internal default
         elif [ "${UOPTARG%=*}" = HDF5 ] ; then
@@ -819,49 +872,36 @@ log_pwd=$(pwd)/
 
 # Installation of external packages.
 
-if ! mkdir -p ${prefix} 2> /dev/null ; then
+mkdir -p $qaLocalPath
+
+if ! mkdir -p $qaLocalPath/source 2> /dev/null ; then
   descript
-  txt="Could not mkdir -p ${prefix}"
+  txt="Could not mkdir -p $qaLocalPath/source"
   echo -e "\n${txt}"
 
   log ${txt} DONE
   exit 1
 fi
 
-mkdir -p $srcPath
-
-test ${#LIB} -eq 0 && LIB=local/lib
-
 test ${isDistClean:-f} = t  && distclean
 
-# only required for a genuine build
-if [ ${#link} -eq 0 ] ; then
-  if ! $( f zlib ) ; then
-    exit 1
+if [ ${isBuild:-f} = t ] ; then
+  f_build
+elif [ ${isLink:-f} = t ] ; then
+  if [ "${link_z}" ] ; then
+    test ! -d "${link_z}" && exit 1
+  fi
+  if [ "${link_h}" ] ; then
+    test ! -d "${link_h}" && exit 1
+  fi
+  if [ "${link_n}" ] ; then
+    test ! -d "${link_n}" && exit 1
+  fi
+  if [ "${link_u}" ] ; then
+    test ! -d "${link_u}" && exit 1
   fi
 
-  if ! $( f hdf5 ) ; then
-    exit 1
-  fi
+  f_link
 fi
-
-if ! $( f netcdf ) ; then
-  exit 1
-fi
-
-if ! $( f udunits ) ; then
-  exit 1
-fi
-
-# adjust install_configure setting
-lib=
-test -e ${prefix}/lib && lib=${prefix}/lib
-if [ -e ${prefix}/lib64 ] ; then
-  lib=${lib}${lib:+:}${prefix}/lib64
-fi
-sed -i "/^[[:space:]]*LIB=/ c LIB=${lib}" install_configure
-
-incl=${prefix}/include
-sed -i "/^[[:space:]]*INCLUDE=/ c INCLUDE=${incl}" install_configure
 
 exit 0

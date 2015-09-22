@@ -98,6 +98,37 @@ struct FieldDataMeta
   size_t size;
 };
 
+struct FileSplit
+{
+   FileSplit() : is(false) {;}
+   void clear(void);
+
+   std::string
+        getBasename(void){ return basename ; }
+   std::string
+        getExtension(void){ return extension ; }
+   std::string
+        getFile(void);
+   std::string
+        getFilename(void);
+   std::string
+        getPath(void){ return path ; }
+
+   bool isExisting(std::string f="");
+   void setExtension(std::string);
+   void setFile(std::string f );
+   void setFile(struct FileSplit& );
+
+   void setFilename(std::string);
+   void setPath(std::string f){ path=f; }
+
+   bool is;
+   std::string filename;
+   std::string basename;
+   std::string extension;
+   std::string path;
+};
+
 //! Struct defining a point coordinate
 struct Point
 {
@@ -139,15 +170,18 @@ convertTime(std::string targetUnit, std::string time,
             std::string unit="");
 
 //! Convert a floating number into a string.
-/*!Format: ?[w=int?][p=int[|adj]?][f=int?][s[ci]]?\n
+/*!Format: ?[w=int?][p=int[|][adj]?][f=char?][s[ci]|float]?\n
    ?: separator (by default ','). The pre- and post-fix may
      be omitted for the default. If changed, then the prefix
      has to be formed by twice a character (not: w, p,f,s).
    w: width of the field,
-   p: precision with 'adj' discarding tariling zeros and dec. point,
-   f: filling character, sci: scientific notation.
-   Note: assignment '=' may be omitted.*/
-
+   p: precision with 'adj' discarding trailing zeros and dec. point,
+   f: filling character
+   sci: scientific notation.
+   float: floating notation.
+   Note: assignment '=' may be omitted. By default sci is used for abs-values
+   greater than 100000. and smaller than 0.000001.
+*/
 std::string
 double2String( double z, std::string flag);
 
@@ -156,7 +190,8 @@ double2String( double z, std::string flag);
  Format of 'flag' is 'n_X with n leading positions filled by
  character X. The _-char may be omitted if X is not a number.
  Negative value of d indicates rounding with additional
- elimination of trailing zeros and a trailing decimal point.*/
+ elimination of trailing zeros and a trailing decimal point.
+*/
 std::string
 double2String( double z, int d=-5, std::string flag="");
 
@@ -398,19 +433,52 @@ double
 string2Double( std::string s, size_t nr ,int *restIndex,
                bool isRetNull=false) ;
 
+//! formatting of attribute|variable name in combination with value etc.
+static std::string s_blank(" ");
+static std::string no_blank("no_blank");
+static std::string s_colon(":");
+static std::string no_colon("no_colon");
+static std::string s_upper("upper");
+static std::string s_empty("");
+static std::string s_void("void_bool");
+
+std::string
+tf_att(std::string v=s_void, std::string a=s_void, std::string val=s_void,
+        std::string b1=s_void, std::string b2=s_void, std::string b3=s_void);
+
+std::string
+tf_att(std::vector<std::string*>& vs,  bool colon, bool blank, bool isUpper);
+
+std::string
+tf_val(std::string v, std::string blnk="");
+
+std::string
+tf_var(std::string v,
+        std::string b1=s_void, std::string b2=s_void, std::string b3=s_void);
+
+std::string
+tf_var(std::string& v,  bool colon, bool blank, bool isUpper);
+
 //! Remove all characters from a str.
 /*! By default, each character in 's' is removed. If isStr==true, then only
     every occurrence of the string 's'.*/
 std::string
 clearChars(std::string &str, std::string s="", bool isStr=false );
 
-//! replace multiple internal spaces by a single blank
+//! replace multiple characters by a single one
 std::string
-clearInternalMultipleSpaces(std::string &str );
+clearInternalMultipleSpaces(std::string &str);
 
-//! rermove white spaces and newlines
+std::string
+clearSuccessiveIdenticalCharacters(std::string &str, char );
+
+//! remove white spaces and newlines
 std::string
 clearSpaces(std::string &str );
+
+//! concatenate a string-vector to a comma-separated (with blanks) string
+std::string
+catVector2Str(std::vector<std::string>&);
 
 std::string
 sAssign(std::string lvalue, std::string rvalue) ;

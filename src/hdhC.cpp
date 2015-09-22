@@ -1,7 +1,177 @@
-#include "hdhC.h"
+// // epsiolon#include "hdhC.h"
 
 namespace hdhC
 {
+
+void
+FileSplit::clear()
+{
+   is=false;
+   filename.clear();
+   basename.clear();
+   extension.clear();
+   path.clear();
+   return;
+}
+
+std::string
+FileSplit::getFile(void)
+{
+  std::string f;
+
+  if( path.size() )
+    f = path + "/";
+
+  f += basename;
+
+  if( extension.size() )
+    f += "." + extension;
+
+  return f;
+}
+
+std::string
+FileSplit::getFilename(void)
+{
+  if( extension.size() )
+    return basename + "." + extension ;
+  else
+    return basename;
+}
+
+bool
+FileSplit::isExisting(std::string f)
+{
+  std::string testFile("/bin/bash -c \'test -d ") ;
+
+  if( f.size() )
+    testFile += f ;
+  else
+    testFile += getFile() ;
+
+  testFile += '\'' ;
+
+  // see 'man system' for the return value, here we expect 0,
+  // if directory exists.
+
+  if( system( testFile.c_str()) )
+    return false;
+
+  return true;
+}
+
+void
+FileSplit::setExtension(std::string f)
+{
+  extension=f;
+  filename = basename + "." + extension ;
+  return ;
+}
+
+// ----------------------------------------------------
+/*
+struct FileSplit
+FileSplit::setFile(std::string f)
+{
+   struct FileSplit fC;
+
+   setFile(f, fC);
+
+   return fC;
+}
+*/
+void
+FileSplit::setFile(hdhC::FileSplit& f)
+{
+  is=f.is;
+  filename =f.filename;
+  basename =f.basename;
+  extension=f.extension;
+  path     =f.path;
+  return;
+}
+
+void
+FileSplit::setFile(std::string f)
+{
+   // A file is split into path, filename, basename, and extension.
+   // Successive calls with different components are merged where
+   // a path must have a trailing / and an extension a leading '.' .
+
+   if( f.size() == 0 )
+     return;
+
+   is=true;
+   size_t pos ;
+
+   // remove multiple /
+   clearSuccessiveIdenticalCharacters(f, '/') ;
+
+   // path
+   if( (pos = f.rfind('/') ) < std::string::npos )
+   {
+     if( pos == 0 )
+     {
+       path = "/";
+       if( ++pos == f.size() )
+         return; // only a path
+
+       filename = f;
+     }
+     else
+     {
+       path = f.substr( 0, pos++ ) ;
+       if( pos == f.size() )
+         return; // only a path
+
+       filename = f.substr(pos);
+     }
+   }
+   else
+     filename = f;
+
+   // file components
+   if( (pos = filename.rfind('.') ) < std::string::npos )
+   {
+     if( pos == 0 )
+       extension = filename;  // no basename
+     else
+     {
+       basename = filename.substr( 0, pos++ ) ;
+
+       if( pos == filename.size() )
+         return; // only a basename
+
+       extension  = filename.substr(pos);
+     }
+   }
+   else
+     basename = filename ;
+
+   return ;
+}
+
+void
+FileSplit::setFilename(std::string f)
+{
+  std::string filename=f;
+
+  size_t pos;
+
+  if( (pos=f.rfind('/')) < std::string::npos )
+    f = f.substr(++pos);  // remove a leading path
+
+  if( (pos=f.rfind('.')) < std::string::npos )
+  {
+    basename = f.substr(0,pos++);
+    extension = f.substr(pos);
+  }
+  else
+    basename = f;
+
+  return;
+}
+
 
 template<typename T>
 T clearLeastBits( T v, size_t shft)
@@ -45,23 +215,25 @@ T clearLeastBits( T v, size_t shft)
   return v;
 }
 
-bool compare(double x, double y, std::string op, double epsilon)
+bool compare(double x, double y, char op, double epsilon)
 {
   // compare x and y within uncertainty ranges e
-  // A factor of 2 is substituted in epsilon
-  // modes: op: "==" --> x == y
-  //        op: "<"  --> x < y
-  //        op: ">"  --> x > y
+  // modes: op: '=' --> x == y
+  //        op: '<'  --> x < y
+  //        op: '>'  --> x > y
 
-  if( op == "==" )
+  if( op == '=' )
   {
+    if( x == y )
+       return true;
+
     if( fabs(x - y) < epsilon )
       return true;
     else
       return false;
   }
 
-  if( op == "<" )
+  if( op == '<' )
   {
     if( (x + epsilon) < y )
       return true;
@@ -69,7 +241,7 @@ bool compare(double x, double y, std::string op, double epsilon)
       return false;
   }
 
-  if( op == ">" )
+  if( op == '>' )
   {
     if( x > (y + epsilon) )
       return true;
@@ -81,7 +253,7 @@ bool compare(double x, double y, std::string op, double epsilon)
 }
 
 bool
-compare(double x, double y, std::string op, int decimals)
+compare(double x, double y, char op, int decimals)
 {
   // fabs( (x + x*10^-decimals) op (y + y*10^-decimals )
 
@@ -89,7 +261,7 @@ compare(double x, double y, std::string op, int decimals)
 
 // compare x and y within uncertainty ranges e
   // A factor of 2 is substituted in epsilon
-  // modes: op: "==" --> x == y
+  // modes: op: "=" --> x == y
   //        op: "<"  --> x < y
   //        op: ">"  --> x > y
   double delta_x = x;
@@ -104,12 +276,12 @@ compare(double x, double y, std::string op, int decimals)
   double epsilon = fabs(delta_y - delta_x);
   double val = fabs( x - y );
 
-  if( op == ">" )
+  if( op == '>' )
   {
     if( val > epsilon )
       return true;
   }
-  else if( op == "<" )
+  else if( op == '<' )
   {
     if( val < epsilon )
       return true;
@@ -380,7 +552,7 @@ std::string double2String( double z, int d, std::string flag)
 std::string double2String( double z, std::string flag)
 {
   /* a floating number is converted to a string.
-     Format: [??][w=int?][p=int[|adj]?][f=int?][s[ci]]
+     Format: [??][w=int?][p=int[|adj]?][f=int?][s[ci]|float]
 
      Separator ?: by default ',', The pre- and post-fix may
      be omitted for the default. If changed, then the prefix
@@ -392,6 +564,7 @@ std::string double2String( double z, std::string flag)
   */
 
   bool isSci=false;
+  bool isFloat=false;
   bool isAdjusted=false;
   std::string c;
   int width = -1;
@@ -416,6 +589,12 @@ std::string double2String( double z, std::string flag)
        continue;
      }
 
+     if( splt[i] == "float" )
+     {
+       isFloat=true;
+       continue;
+     }
+
      if( splt[i][0] == 'w' )
      {
        width = static_cast<int>( hdhC::string2Double(splt[i]) ) ;
@@ -428,7 +607,13 @@ std::string double2String( double z, std::string flag)
      }
      if( splt[i][0] == 'p' )
      {
-       Split splt_p(splt[i],"|");
+       size_t pos=1;
+       if( splt[i][1] == '=' )
+         ++pos;
+
+       std::string t0(splt[i].substr(pos));
+
+       Split splt_p(t0,"|");
        for( size_t i=0 ; i < splt_p.size() ; ++i )
        {
          if( splt_p[i].substr(0,3) == "adj" )
@@ -444,7 +629,8 @@ std::string double2String( double z, std::string flag)
 
   double z_abs(fabs(z));
 
-  if( isSci || z_abs > 100000. || (z_abs > 0.0 && z_abs < 0.000001) )
+  if( !isFloat && (isSci || z_abs > 100000.
+                   || (z_abs > 0.0 && z_abs < 0.000001)) )
     ostr.setf(std::ios::scientific, std::ios::floatfield);
   else
     ostr.setf(std::ios::fixed, std::ios::floatfield);
@@ -488,15 +674,19 @@ std::string double2String( double z, std::string flag)
        }
     }
 
-    int pos=str.size()-1;
-    for(  ; pos > -1 ; --pos)
-      if( str[pos] != '0' )
-        break ;
+    if( str.find('.') < std::string::npos )
+    {
+      int pos=str.size()-1;
+      for(  ; pos > -1 ; --pos)
+        if( str[pos] != '0' )
+          break ;
 
-    if( str[pos] == '.' )
-      --pos;
+      if( str[pos] == '.' )
+        --pos;
 
-    str = str.substr(0, ++pos);
+      str = str.substr(0, ++pos);
+    }
+
     str += sci_rep;
 
     return str;
@@ -559,12 +749,6 @@ bool equal(T x1, T x2, double epsilon)
 
   // Note: it is assumed the typenames are restricted to
   // a kind of float
-
-  //take the type into account
-  std::string ti( typeid(x1).name() );
-
-  if( ti == "d" )
-    epsilon *= epsilon ;
 
   // test for the same sign
   if( x1 > 0. )
@@ -1079,88 +1263,6 @@ uint32_t fletcher32_LE_clear( T *data, size_t len, bool *reset, size_t nShift )
 
 // ----------------------------------------------------
 
-std::string getBasename(std::string &str)
-{
-  std::string path, filename, basename, extension ;
-
-  getPathComponents(str, path, filename, basename, extension);
-
-  return basename;
-}
-
-std::string getExtension(std::string &str)
-{
-  std::string path, filename, basename, extension ;
-
-  getPathComponents(str, path, filename, basename, extension );
-
-  return extension;
-}
-
-std::string getFilename(std::string &str)
-{
-  std::string path, filename, basename, extension ;
-
-  getPathComponents(str, path, filename, basename, extension);
-
-  return filename;
-}
-
-std::string getPath(std::string &str, bool isWithSlash)
-{
-  std::string path, filename, basename, extension ;
-
-  getPathComponents(str, path, filename, basename, extension);
-
-  if( isWithSlash )
-    path += '/' ;
-
-  return path;
-}
-
-void getPathComponents(std::string &str,
-             std::string &path,   //path no trailing '/', except if root.
-                                  //if no path, then '.'
-             std::string &fName,  //complete filename
-             std::string &base,   //filename without extension
-             std::string &ext)    //the extension with leading '.'
-{
-  std::string::size_type pos0, pos1 ;
-
-  // path
-  if( (pos0 = str.rfind('/') ) == std::string::npos )
-    path.clear() ;  // empty path
-  else
-    if( pos0 == 0 )
-      path = "/";
-    else
-      path = str.substr( 0, pos0 ) ;
-
-  // filename
-  if( pos0  == std::string::npos )
-    fName = str ;                 // str is filename
-  else if( pos0 == str.size() )
-    fName = "" ;                  // str is just a path
-  else
-    fName = str.substr( pos0+1) ;
-
-  // basename
-  if( (pos1 = fName.rfind('.')) == std::string::npos )
-    base = fName ;
-  else
-    base = fName.substr( 0 , pos1  ) ;
-
-  // extension
-  if( pos1 >= fName.size() )
-    ext = "" ;
-  else
-    ext = fName.substr( pos1+1, fName.size() - pos1 -1 ) ;
-
-  return;
-}
-
-// ----------------------------------------------------
-
 template <typename T>
 T invertBits ( T val )
 {
@@ -1187,11 +1289,11 @@ T invertBits ( T val )
 
 bool isWhiteString( std::string &str )
 {
-  // a string only of spaces and tabs
+  // a string only of spaces, tabs or empty
   size_t pE=str.size();
 
   if( pE == 0 )
-    return false;
+    return true;
 
   for( size_t p=0 ; p < pE ; ++p )
   {
@@ -1508,6 +1610,137 @@ bool isNumber( std::string &str )
 
   return false ;
 }
+
+// ----------------------------------------------------
+//! formatting of attribute|variable name in combination with value etc.
+
+std::string
+tf_att(std::string p1, std::string p2, std::string p3,
+    std::string p4, std::string p5, std::string p6)
+{
+  bool isColon=false;
+  bool isBlank=true;
+  bool isUpper=false;
+
+  std::vector<std::string*> ps;
+  ps.push_back(&p1);
+  ps.push_back(&p2);
+  ps.push_back(&p3);
+  ps.push_back(&p4);
+  ps.push_back(&p5);
+  ps.push_back(&p6);
+
+  std::vector<std::string*> vs_str;
+
+  for( size_t i=0 ; i < ps.size() ; ++i )
+  {
+    if( *ps[i] == s_colon )
+      isColon=true;
+    else if( *ps[i] == no_blank )
+      isBlank=false;
+    else if( *ps[i] == s_upper )
+      isUpper=true;
+    else if( *ps[i] != s_void )
+      vs_str.push_back(ps[i]) ;
+  }
+
+  return tf_att(vs_str, isColon, isBlank, isUpper );
+}
+
+std::string
+tf_att(std::vector<std::string*>& p,
+       bool isColon, bool isBlank, bool isUpper)
+{
+  std::string s;
+
+  if( p.size() == 0 )
+    return s;
+
+  s = "attribute ";
+
+  if( p.size() == 1 )
+    s += *(p[0]);
+  else if( p.size() > 1 )
+  {
+    if( p[0]->size() )
+      s += "<" + *(p[0]) + ">:" + *(p[1]);
+    else
+      s += *(p[1]) ;
+  }
+
+  if( p.size() == 3 )
+    s += " = <" + *(p[2]) + ">";
+
+  if(isUpper )
+    s[0] = 'A' ;
+
+  if(isColon)
+    s += s_colon;
+
+  if(isBlank)
+    s += s_blank;
+
+  return s ;
+}
+
+std::string
+tf_val(std::string v, std::string no_blnk)
+{
+  std::string s(" <" + v + ">" );
+  if(no_blnk.size() == 0)
+    s += " ";
+
+  return s ;
+}
+
+std::string
+tf_var(std::string p1, std::string p2, std::string p3, std::string p4)
+{
+  bool isColon=false;
+  bool isBlank=true;
+  bool isUpper=false;
+
+  std::vector<std::string*> ps;
+  ps.push_back(&p2);
+  ps.push_back(&p3);
+  ps.push_back(&p4);
+
+  for( size_t i=0 ; i < ps.size() ; ++i )
+  {
+    if( *ps[i] == s_colon || *ps[i] == ":" )
+      isColon=true;
+    else if( *ps[i] == no_blank || *ps[i] == "" )
+      isBlank=false;
+    else if( *ps[i] == s_upper )
+      isUpper=true;
+  }
+
+  return tf_var(p1, isColon, isBlank, isUpper );
+}
+
+std::string
+tf_var(std::string& v,
+       bool isColon, bool isBlank, bool isUpper)
+{
+  std::string s;
+
+  if( v.size() == 0 )
+    return s;
+
+  s = "variable <" + v + ">";
+
+  if(isUpper )
+    s[0] = 'A' ;
+
+  if(isColon)
+    s += s_colon;
+
+  if(isBlank)
+    s += s_blank;
+
+  return s ;
+}
+
 
 // ----------------------------------------------------
 
@@ -1912,6 +2145,27 @@ std::string clearInternalMultipleSpaces(std::string &str )
   return s ;
 }
 
+std::string clearSuccessiveIdenticalCharacters(std::string &str, char c)
+{
+  // replace multiple identical characters by a single one
+  Split splt(str, c);
+
+  std::string s;
+  if( str[0] == c )
+    s += c;
+
+  for( size_t p=0 ; p < splt.size() ; ++p )
+  {
+    s += c ;
+    s += splt[p] ;
+  }
+
+  if( str.size() && str[str.size()-1] == c )
+    s += c;
+
+  return s ;
+}
+
 std::string clearSpaces(std::string &str )
 {
   // clear all spaces from string
@@ -1922,6 +2176,22 @@ std::string clearSpaces(std::string &str )
       s += str[p] ;
 
   return s ;
+}
+
+//! concatenate a string-vector to a comma-separated (with blanks) string
+std::string
+catVector2Str(std::vector<std::string>& vs)
+{
+  std::string s;
+  for( size_t i=0 ; i < vs.size() ; ++i)
+  {
+    if(i)
+      s += ", ";
+
+    s += vs[i];
+  }
+
+  return s;
 }
 
 std::string sAssign(std::string right)

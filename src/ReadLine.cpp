@@ -11,12 +11,14 @@ ReadLine::ReadLine()
 ReadLine::ReadLine( std::string file )
    : isExternalStream(false)
 {
-  inFile = file ;
+  if( setFilename(file) )
+  {
+    FStream = new std::ifstream ;
+    FStream->open( file.c_str());
+    opened=true;
 
-  FStream = new std::ifstream ;
-  FStream->open( file.c_str());
-
-  init();
+    init();
+  }
 }
 
 ReadLine::ReadLine( std::ifstream &is )
@@ -175,7 +177,9 @@ ReadLine::getItems( size_t beg, size_t end )
 bool
 ReadLine::getLine( std::string &str0)
 {
-  bool bret = readLine();
+  bool bret;
+  if( (bret=readLine()) )
+    return bret;
 
   if( isSkipCharacter )
   {
@@ -269,7 +273,10 @@ bool
 ReadLine::open( std::string f )
 {
   // setFilename() calls open(). Returns true for failure
-  return setFilename(f) ;
+  if( setFilename(f) )
+    return open() ;
+
+  return (opened=false) ;
 }
 
 int
@@ -439,10 +446,18 @@ bool
 ReadLine::setFilename( std::string f )
 {
   if( f.size() > 0 )
-    inFile=f;
+  {
+    std::string testFile("/bin/bash -c \'test -f " + f + "\'") ;
 
-  //method open() --> setFilename()  return true for failure
-  return open() ;
+    // see 'man system' for the return value, here we expect 0,
+    // if the file exists.
+    if( system( testFile.c_str()) )
+       return false;
+
+    inFile=f;
+  }
+
+  return true ;
 }
 
 bool

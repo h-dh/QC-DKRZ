@@ -36,10 +36,10 @@ class CF : public IObj
   bool   entry(void);
   bool   init(void) ;
   void   linkObject(IObj *);
-  void   setFilename(std::string s){;}
-  void   setFilePath(std::string p){;}
-  void   setTablePath(std::string p){ tablePath=p; }
 
+  void   setFilename(hdhC::FileSplit& f) {file=f;}
+  void   setFilename(std::string f) {file.setFile(f);}
+  void   setTablePath(std::string p) {tablePath=p;}
 
   void   chap(void);
   void   chap_reco(void);
@@ -148,30 +148,6 @@ class CF : public IObj
   void   applyOptions(void);
   void   attributeSpellCheck(void);
 
-  std::string
-         captAtt(std::string a);
-  std::string
-         captAtt(std::string v, std::string a);
-  std::string
-         captAtt(std::string v, std::string a, std::string&);
-  std::string
-         captAtt(std::string v, std::string a, std::string&, std::string&);
-  std::string
-         captAtt(std::string v, std::string a,
-                 std::string&, std::string&, std::string&);
-  std::string
-         captAtt(std::string& v, std::string& a, bool colon, bool blank, bool isUpper);
-
-  std::string
-         captVal(std::string v, bool trailingBlank=true);
-
-  std::string
-         captVar(std::string v, bool is_colon=true, bool is_blank=true);
-  std::string
-         captVar(std::string v, std::string&);
-  std::string
-         captVar(std::string v, std::string&, std::string&);
-
   void   checkCoordinateValues(Variable&, bool isFormTermAux=false) ;
 template <typename T>
   void   checkCoordinateValues(Variable&, bool, T);
@@ -229,7 +205,7 @@ template <typename T>
   bool   scanStdNameTable(ReadLine&, Variable&, std::string);
   void   setCheck(std::string&);
   void   setFollowRecommendations(bool b){followRecommendations=b;}
-  void   setTable(std::string p){ std_name_table=p; }
+//  void   setTable(std::string p){ std_name_table=p; }
   bool   timeUnitsFormat(Variable&, bool annot=true);
   std::string
          units_lon_lat(Variable&, std::string units="");
@@ -243,15 +219,18 @@ template <typename T>
   bool isFeatureType;
   std::string cFVersion;
 
+  std::string tablePath;
+  struct hdhC::FileSplit file;
+  struct hdhC::FileSplit std_name_table;
+  struct hdhC::FileSplit area_table;
+  struct hdhC::FileSplit region_table;
+
   ut_system*   unitSystem;
 
-  std::string std_name_table;
-  std::string region_table;
-  std::string tablePath;
 
   std::string timeName;  // the name of the unlimited/time variable
-  int         timeIx;
-  int         compressIx;
+  int         time_ix;
+  int         compress_ix;
 
   // a few names of attributes used throughout the checks
   std::string n_ancillary_variables;
@@ -299,7 +278,7 @@ template <typename T>
 
   std::string blank;
   std::string no_blank;
-  std::string no_colon;
+  std::string s_colon;
   std::string s_empty;
   std::string s_upper;
   std::string s_lower;

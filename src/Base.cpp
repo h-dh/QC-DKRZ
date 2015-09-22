@@ -135,7 +135,7 @@ Base::copy(const Base &b)
 {
   objName = b.objName;
   thisID=b.thisID;
-  filename=b.filename;
+  file=b.file;
 
   srcStr.clear();
   for( size_t i=0 ; i < b.srcStr.size() ; ++i)
@@ -231,10 +231,10 @@ Base::exceptionError(std::string str)
     xcptn.strError += "_error" ;
 
      // base-name if available, i.e. after initialisation of the InFile obj
-    if( filename.size() > 0 )
+    if( file.is )
     {
       xcptn.strError += "_";
-      xcptn.strError += hdhC::getBasename(filename) ;
+      xcptn.strError += file.basename ;
     }
     xcptn.strError += ".txt";
 
@@ -265,10 +265,10 @@ Base::exceptionWarning(std::string str)
     xcptn.strWarning = getObjName() ;
     xcptn.strWarning += "_warning" ;
 
-    if( filename.size() > 0 )
+    if( file.is )
     {
       xcptn.strWarning += "_";
-      xcptn.strWarning += hdhC::getBasename(filename) ;
+      xcptn.strWarning += file.basename ;
     }
     xcptn.strWarning += ".txt";
 
@@ -309,36 +309,6 @@ Base::finally(int errCode, std::string note)
     exit(errCode);
 
   return;
-}
-
-double
-Base::getTime(NcAPI &ncu, size_t rec, std::string tt, double offset)
-{
-  // the getData method below returns a void*
-  if( ! ncu.getNumOfRecords() )
-    return MAXDOUBLE;
-
-  MtrxArr<double> mv;
-  ncu.getData(mv, tt, rec);
-
-  return mv[0]+offset ;
-}
-
-bool
-Base::getTime(NcAPI &ncu, size_t rec, std::string tt,
-   MtrxArr<double> &mv, double offset)
-{
-  // the getData method below returns a void*
-  if( ! ncu.getNumOfRecords() )
-    return true;
-
-  if( ncu.getData(mv, tt, rec) )
-     return true;
-
-  if( offset != 0. )
-    mv += offset ;
-
-  return false ;
 }
 
 std::vector<std::string>

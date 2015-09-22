@@ -42,9 +42,7 @@ class TimeControl : public IObj
     then set according to the time-window's end.*/
     bool         init(void);
     void         linkObject(IObj *);
-    void         setFilename(std::string s){filename=s;}
-    void         setFilePath(std::string p){path=p;}
-    void         setTablePath(std::string p){ ; }
+    void         setFilename(std::string f){file.setFile(f);}
 
    void   applyOptions(void);
    void   copy( const TimeControl&);
@@ -57,22 +55,20 @@ class TimeControl : public IObj
     or any other for the right side. rVName indictes the name of
     the variable representing the unlimited dimension (record).*/
    size_t findRecAtTime(std::string rVName, double tLim, char side);
-   std::string
-          getAbsoluteFilename(void);
    void   getCurrDate(NcAPI &nc, size_t rec);
-   Date& getCurrDate(void){return currDate;}
-   Date  getEndDate(void){ return endDate;}
+   Date&  getCurrDate(void){return currDate;}
+   Date   getEndDate(void){ return endDate;}
    std::string
           getFilename(void);
 
    int    getSourceID(void){return identNum;}
-   Date  getStartDate(void){ return beginDate;}
+   Date   getStartDate(void){ return beginDate;}
    static void
           help(void);
 
    void   initDefaults(void);
    bool   isBuildFilename(void){return isBuildFileName;}
-   void   resetFilename(void){filename="";}
+   void   resetFilename(void){file.clear();}
 
 //! Set the begin/end of the time window.
 /*! If string s begins with letter 't' or 'T', then s indicates
@@ -113,6 +109,7 @@ class TimeControl : public IObj
    std::string recVarName;
 
    bool isTime;
+   MtrxArr<double> tmp_mv;
 
    int identNum;
    int argCount;
@@ -120,12 +117,11 @@ class TimeControl : public IObj
    std::string incrementPattern;
    double incrementValue;
    std::string filenamePattern;
-   std::string filename;
-   std::string path;
    std::vector<std::string> srcStr;
 
    // messaging in case of exceptions.
    struct ExceptionStruct xcptn;
+   struct hdhC::FileSplit file;
 };
 
 #endif

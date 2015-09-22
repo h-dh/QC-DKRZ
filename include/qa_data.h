@@ -28,7 +28,7 @@ class DataOutputBuffer
    void    flush(void);
 
    //! Change the flush counter; 1500 by default
-   void    initBuffer(NcAPI *n, size_t next=0, size_t max=1500);
+   void    initBuffer(QA*, size_t next=0, size_t max=1500);
    void    setName(std::string n){name=n;}
    void    setNextFlushBeg(size_t n){nextFlushBeg=n;};
    void    store(hdhC::FieldData &fA);
@@ -44,10 +44,79 @@ class DataOutputBuffer
    double *ave;
    double *std_dev;
    int    *fill_count;
-   uint32_t *checksum;
+   int    *checksum;
 
-   NcAPI *nc;
+   QA* pQA;
 };
+
+class Outlier
+{
+  public:
+  Outlier( QA *p, size_t vmdIX, std::string name);
+  ~Outlier(){;}
+
+  QA *pQA;
+
+  static bool
+        isSelected( std::vector<std::string> &opts,
+                     std::string &vName, int effDims );
+
+  //! Evaluate outlier test
+  /*! When of checking sub-temp files or in post-processing mode.
+      Acknowledgement: Dr. Andreas Chlond, MPI-M Hamburg, suggested to
+      exploit the function N(sigma) as criterion.*/
+  void  parseOption(std::vector<std::string>&);
+  void  setAnnotation(Annotation *p){notes=p;}
+  bool  test(QA_Data*);
+
+  std::vector<std::string> options;
+
+  size_t vMD_ix;
+  std::string name;
+  MtrxArr<double> ma_d;
+
+  Annotation *notes;
+} ;
+
+class ReplicatedRecord
+{
+  //! Test for replicated records.
+  /*! Before an array of values (e.g. ave, max ,min)
+      is flushed to the qa_<filename>.nc file, the values
+      in the array are tested for replicated records in
+      the priviously written qa_<filename>.nc as well as
+      in the array itself.*/
+
+  public:
+  ReplicatedRecord( QA*, size_t vMDix, std::string name);
+  ~ReplicatedRecord(){;}
+
+  void   getRange(size_t ix, size_t sz, size_t recNum,
+            size_t *arr_rep_ix, size_t *arr_1st_ix,
+            bool *arr_rep_bool, bool *arr_1st_bool,
+            std::vector<std::string>& range) ;
+  static bool
+         isSelected( std::vector<std::string> &options,
+            std::string &vName, int effDims );
+
+  void   parseOption( std::vector<std::string> &opts ) ;
+  void   report( std::vector<std::string> &note, size_t bufCount,
+            bool isMultiple );
+  void   setAnnotation(Annotation *p){notes=p;}
+  void   setGroupSize(size_t i){groupSize=i;}
+  void   test( int nRecs, size_t bufferCount, size_t nextFlushBeg,
+            bool isMultiple );
+
+  bool   enableReplicationOnlyGroups;
+
+  std::string name;
+  std::vector<std::string> options;
+  size_t groupSize;
+
+  size_t vMD_ix;
+  Annotation *notes;
+  QA* pQA;
+} ;
 
 class SharedRecordFlag
 {
@@ -59,7 +128,7 @@ class SharedRecordFlag
   void   flush(void);
 
   //! Change the flush counter; 1500 by default
-  void   initBuffer(NcAPI *, size_t next=0, size_t max=1500);
+  void   initBuffer(QA*, size_t next=0, size_t max=1500);
   void   setAnnotation(Annotation *p){notes=p;}
   void   setName(std::string n){name=n;}
   void   setNextFlushBeg(size_t n){nextFlushBeg=n;};
@@ -75,75 +144,8 @@ class SharedRecordFlag
   std::string name;
 
   Annotation *notes;
-  NcAPI *nc;
+  QA *pQA;
 };
-
-class Outlier
-{
-  public:
-  Outlier( QA *p, size_t vmdIX, std::string name);
-  ~Outlier(){;}
-
-  QA *pQA;
-
-  static bool
-        isSelected( std::vector<std::string> &opts,
-                     std::string &vName,
-                     bool isQA_enablePostProc,
-                     int effDims );
-
-  //! Evaluate outlier test
-  /*! When of checking sub-temp files or in post-processing mode.
-      Acknowledgement: Dr. Andreas Chlond, MPI-M Hamburg, suggested to
-      exploit the function N(sigma) as criterion.*/
-  void  parseOption(std::vector<std::string>&);
-  void  setAnnotation(Annotation *p){notes=p;}
-  bool  test(QA_Data*);
-
-  std::vector<std::string> options;
-
-  size_t vMDix;
-  std::string name;
-
-  Annotation *notes;
-} ;
-
-class ReplicatedRecord
-{
-  //! Test for replicated records.
-  /*! Before an array of values (e.g. ave, max ,min)
-      is flushed to the qa_<filename>.nc file, the values
-      in the array are tested for replicated records in
-      the priviously written qa_<filename>.nc as well as
-      in the array itself.*/
-
-  public:
-  ReplicatedRecord( QA *, size_t vMDix, std::string name);
-  ~ReplicatedRecord(){;}
-
-  static bool
-         isSelected( std::vector<std::string> &options,
-                     std::string &vName,
-                     bool isQA_enablePostProc,
-                     int effDims );
-
-  void   parseOption( std::vector<std::string> &opts ) ;
-  void   report( std::vector<std::string> &note, bool isMultiple );
-  void   setAnnotation(Annotation *p){notes=p;}
-  void   setGroupSize(size_t i){groupSize=i;}
-  void   test( int nRecs, size_t bufferCount, size_t nextFlushBeg,
-               bool isMultiple, bool isFirst );
-
-  bool   enableReplicationOnlyGroups;
-
-  std::string name;
-  std::vector<std::string> options;
-  size_t groupSize;
-
-  size_t vMDix;
-  Annotation *notes;
-  QA *pQA;
-} ;
 
 class QA_Data
 {
@@ -171,12 +173,12 @@ class QA_Data
   void   init(InFile*, QA*, std::string);
 
   //! Change the flush counter; 1500 by default
-  void   initBuffer(NcAPI *, size_t next=0, size_t max=1500);
+  void   initBuffer(QA*, size_t next=0, size_t max=1500);
 
   //! Initialisiation of a resumed session.
   void   initResumeSession(void);
 
-  void   openQcNcContrib(NcAPI*, Variable *var);
+  void   openQA_NcContrib(NcAPI*, Variable *var);
 
   void   setAnnotation(Annotation *p);
   void   setInFile(InFile *p){ pIn=p;}
@@ -184,6 +186,7 @@ class QA_Data
   void   setName(std::string);
   void   setNextFlushBeg(size_t n);
   void   setStatisticsAttribute(NcAPI*);
+  void   setValidRangeAtt(NcAPI*, std::string&, double* arr, size_t sz, nc_type);
   void   store(hdhC::FieldData &);
 
   void   test( int, hdhC::FieldData &);
@@ -193,6 +196,7 @@ class QA_Data
   bool   testValidity(hdhC::FieldData &);
 
   std::string name;
+  MtrxArr<double> tmp_mv;
 
   size_t bufferCount;
   size_t maxBufferSize;
@@ -220,6 +224,7 @@ class QA_Data
   bool   isForkedAnnotation;
   bool   isSingleValueField;
 
+  std::string   ANNOT_ACCUM;
   std::string   ANNOT_NO_MT;
   size_t        numOfClearedBitsInChecksum;
 

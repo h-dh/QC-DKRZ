@@ -10,40 +10,6 @@
 class QA;
 class SharedRecordFlag;
 
-class TimeInputBuffer
-{
-   public:
-
-//   TimeInputBuffer();
-
-   std::string name;
-   std::string name_bnds;
-
-   int    remainingRecs;
-
-   int sz ;
-   int sz_chunk;
-   size_t sz_passed;
-
-   bool hasNoTime;
-   bool hasBnds;
-   bool isValid;
-
-   size_t *start_b;
-   size_t *count_b;
-   size_t *start;
-   size_t *count;
-
-   double *pTime;
-   double *pBnds;
-   NcAPI  *pInNc;
-
-   void   getTimeBnds(double *pair, size_t currRec, double offset=0.) ;
-   double getTimeValue(size_t currRec, double offset=0.);
-   void   init(InFile*);
-   void   update(double offset=0.);
-} ;
-
 class TimeOutputBuffer
 {
   public:
@@ -54,7 +20,7 @@ class TimeOutputBuffer
   void    flush(void);
 
   //! Change the flush counter; 1500 by default
-  void    initBuffer(NcAPI *n, size_t next=0, size_t max=1500);
+  void    initBuffer(QA*, size_t next=0, size_t max=1500);
   void    setName(std::string n);
   void    setNextFlushBeg(size_t n){nextFlushBeg=n;};
   void    store(double val, double step);
@@ -66,7 +32,7 @@ class TimeOutputBuffer
   size_t  maxBufferSize;
   size_t  nextFlushBeg;
 
-  NcAPI  *nc;
+  QA* pQA;
 
   double *buffer;
   double *buffer_step;
@@ -75,7 +41,7 @@ class TimeOutputBuffer
 
 enum TimeTableMode
 {
-    NONE, REGULAR, ORPHAN, DISABLE, CYCLE
+    UNDEF, REGULAR, ORPHAN, DISABLE, CYCLE
 };
 TimeTableMode timeTableMode;
 
@@ -95,10 +61,10 @@ class QA_Time
   bool   entry(void);
   bool   init(void);
 
-  bool isCheckTime;
   bool isFormattedDate;
   bool isMaxDateRange;
   bool isNoCalendar;
+  bool isNoProgress;
   bool isRegularTimeSteps;
   bool isPrintTimeBoundDates;
   bool isReferenceDate;
@@ -106,35 +72,33 @@ class QA_Time
   bool isSingleTimeValue;
   bool isTimeBounds;
 
-  std::string time;  // the name
-  double      lastTimeStep;  // is set in flush()
-  double      refTimeDelay;
+  std::string name;  // the name
+  std::string boundsName;
+  int time_ix;    // the var-index
+  int timeBounds_ix;
+  bool isTime;
+
+  double lastTimeStep;  // is set in flush()
+  double refTimeOffset;
+  double refTimeStep;
 
   Date refDate;
-
-//  std::string cTime;
-  Date prevDate ;
-  Date firstDate;
-  Date currDate;
-  Date lastDate;
 
   double prevTimeValue ;
   double firstTimeValue;
   double currTimeValue;
   double lastTimeValue;
-  double referenceTimeStep, currTimeStep ;
-
-  std::string timeBoundsName;
+  double currTimeStep ;
 
   double prevTimeBoundsValue[2];
   double firstTimeBoundsValue[2];
   double currTimeBoundsValue[2];
   double lastTimeBoundsValue[2];
 
-  Date prevTimeBoundsDate[2];
-  Date firstTimeBoundsDate[2];
-  Date currTimeBoundsDate[2];
-  Date lastTimeBoundsDate[2];
+//  Date prevTimeBoundsDate[2];
+//  Date firstTimeBoundsDate[2];
+//  Date currTimeBoundsDate[2];
+//  Date lastTimeBoundsDate[2];
 
   // proleptic Gregorian, no_leap, 30day-month
   std::string calendar;  //default is empty for Gregorian
@@ -155,30 +119,28 @@ class QA_Time
 
   void   finally(NcAPI *);
 
-  bool   getTimeBounds(double *pair, size_t curr);
-
-  //! Return a date
-  /*!  string1: "first", "curr", "last"; string2 (time-bounds): "left", "right",
-       with "" by default for time-value*/
-  Date  getDate(std::string, std::string s="");
+  void   getDate(Date& , double t);
   void   getDRSformattedDateRange(std::vector<Date> &,
                    std::vector<std::string> &);
+  void   getTimeBoundsValues(double *pair, size_t rec, double offset=0.);
 
-  void   init(InFile*, Annotation*, QA*);
+  bool   init(InFile*, Annotation*, QA*);
+
+  /*! Absolute date encoded by a format given in time:units */
+  bool   initAbsoluteTime(std::string &units);
+
   void   initDefaults(void);
+
+  /*! Time relative to a reference date specified by time attributes */
+  bool   initRelativeTime(std::string &units);
 
   //! Initialisiation of a resumed session.
   void   initResumeSession(void);
 
-  /*! Absolute date encoded by a format given in time:units */
-  bool   initTimeAbsolute(std::string &units);
-
-  /*! Time relative to a reference date specified by time attributes */
-  bool   initTimeRelative(std::string &units);
-
+  bool   initTimeBounds(double offset=0.) ;
   void   initTimeTable(std::string id_1st, std::string id_2nd="");
 
-  void   openQcNcContrib(NcAPI*);
+  void   openQA_NcContrib(NcAPI*);
 
   //! Parse the time_table file
   bool   parseTimeTable(size_t rec);
@@ -193,7 +155,7 @@ class QA_Time
 
   //! Synchronise the in-file and the qa-netCDF file.
   /*! Return value==true for isNoProgress.*/
-  bool   sync(bool checkData, bool postProc);
+  bool   sync(void);
 
   //! Test time value.
   /*! This member is just the entry to different tests.*/
@@ -206,8 +168,8 @@ class QA_Time
   //! Check time steps
   bool   testTimeStep(void);
 
-  MtrxArr<double> tmp_mv;
-  std::string name;
+  MtrxArr<double> ma_tb;
+  MtrxArr<double> ma_t;
 
   // Time Table: hold the state over a record
   size_t tt_block_rec ;
@@ -223,8 +185,9 @@ class QA_Time
   size_t maxBufferSize;
   size_t nextFlushBeg;
 
+  std::string ANNOT_ACCUM;
+
   SharedRecordFlag sharedRecordFlag;
-  TimeInputBuffer timeInputBuffer ;
   TimeOutputBuffer timeOutputBuffer;
 
   Annotation *notes;

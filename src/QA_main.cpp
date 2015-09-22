@@ -30,7 +30,15 @@
 #include "QA_data.cpp"
 #include "QA_time.cpp"
 #include "QA_PT.cpp"
-#include "QA.cpp"
+
+#if defined CORDEX
+  #include "QA_CORDEX.cpp"
+#elif defined CMIP5
+  #include "QA_CMIP5.cpp"
+#else
+  #include "QA_NONE.cpp"
+#endif
+
 #include "TimeControl.cpp"
 
 // ------------------
@@ -50,20 +58,7 @@ int main(int argc,char *argv[])
     getCPUSeconds();
   }
 
-  // if filename was given by option -f name
-  if( ::NC_FILENAME.size() > 0 && ::NC_FILENAME.find('/') == std::string::npos )
-  {
-    std::string pf;
-    if( ::NC_PATH.size() )
-    {
-      pf = ::NC_PATH ;
-      pf += '/' ;
-    }
-
-    pf += ::NC_FILENAME;
-
-    ioc.in[0].setFilename( pf );
-  }
+  // path/filename was set in setObjProperties()
 
   // About processing: init() and entry() functions of the
   // base-derived objects are addressed by pointers,
@@ -183,47 +178,58 @@ finally(IObjContainer &ioc)
     // get check results
     std::vector<Split> cRes;
 
-    // precedence: FAIL==3, PASS==2, FIXED==1, OMIT==0
-    std::string cTag[4] = { "OMIT", "FIXED", "PASS", "FAIL" };
+    // precedence: N/A==4, FAIL==3, PASS==2, FIXED==1, OMIT==0
+    std::string cTag[5] = { "N/A", "OMIT", "FIXED", "PASS", "FAIL" };
+    size_t cTagSz = 5;
 
     std::vector<std::vector<int> >   cRank;
+
+    // collect the check results from all annotation objects.
     for( size_t i=0 ; i < ioc.an.size() ; ++i)
     {
       if( &ioc.an[i] )
       {
         ioc.an[i].printFlags();
 
-        cRank.push_back( std::vector<int>() );
-        for( size_t k=0 ; k < 8 ; ++k)
-          cRank.back().push_back( 0 );  // default
-
         cRes.push_back( Split( ioc.an[i].getCheckResults() ) );
-        for( size_t l=1 ; l < 8 ; l+=2)
+
+        size_t cRankSz = cRes.back().size() / 2;
+        cRank.push_back( std::vector<int>(cRankSz, 0) );
+
+        for( size_t j=0 ; j < cRankSz ; ++j)
         {
-          if( cRes.back()[l] == cTag[1] )
-            cRank.back()[l] = 1;
-          else if( cRes.back()[l] == cTag[2] )
-            cRank.back()[l] = 2;
-          else if( cRes.back()[l] == cTag[3] )
-            cRank.back()[l] = 3;
+          for( size_t l=0 ; l < cTagSz ; ++l)
+          {
+            // cRes-index: 0: type, 1: result, 2: ...
+            if( cRes.back()[2*j + 1] == cTag[l] )
+            {
+              cRank.back()[j] = l;
+              break;
+            }
+          }
         }
       }
     }
 
-    for( size_t i=1 ; i < cRes.size() ; ++i )
+    // When there are more than a single set of check results, then
+    // merge theses sets whith a ranking of precedence between 'N/A'
+    // and 'FAIL', the latter as highest.
+    for( size_t i=1 ; i < cRank.size() ; ++i )
     {
-      for( size_t j=1 ; j < cRank[i].size() ; j+=2 )
+      for( size_t j=0 ; j < cRank[i].size() ; ++j )
         if( cRank[i][j] > cRank[0][j] )
            cRank[0][j] = cRank[i][j] ;
     }
 
     // print check results
     std::string out( "CHECK-BEG" );
-    for( size_t i=0 ; i < 8 ; ++i )
+    size_t N = cRank[0].size();
+
+    for( size_t i=0 ; i < N ; ++i )
     {
-      out += cRes[0][i++] + " ";
+      out += cRes[0][2*i] + " ";
       out += cTag[ cRank[0][i] ];
-      if( i < 7 )
+      if( i < N )
         out += " ";
     }
 
@@ -280,8 +286,7 @@ void getCPUSeconds(void)
 
 template <typename Type>
 void
-instantiateObject(std::vector<Type> &obj, std::string &name, int id, std::string &param,
-    IObjContainer &ioc )
+instantiateObject(std::vector<Type> &obj, std::string &name, int id, std::string &param)
 {
   // Create instance of obj and append to vector.
   obj.push_back( Type() );
@@ -353,23 +358,23 @@ makeObject(std::vector<std::vector<std::string> > &list, IObjContainer &ioc)
     (void) Parse::getListObj( list[i0][0], name, id, param);
 
     if( name == "X" )
-      instantiateObject(ioc.an, name, id, param, ioc );
+      instantiateObject(ioc.an, name, id, param );
     else if( name == "CS" )
-      instantiateObject(ioc.cS, name, id, param, ioc );
+      instantiateObject(ioc.cS, name, id, param );
     else if( name == "CF" )
-      instantiateObject(ioc.cF, name, id, param, ioc );
+      instantiateObject(ioc.cF, name, id, param );
     else if( name == "FD" )
-      instantiateObject(ioc.fDI, name, id,  param, ioc );
+      instantiateObject(ioc.fDI, name, id,  param );
     else if( name == "IN" )
-      instantiateObject(ioc.in, name, id,  param, ioc );
+      instantiateObject(ioc.in, name, id,  param );
     else if( name == "OP" )
-      instantiateObject(ioc.op, name, id,  param, ioc );
+      instantiateObject(ioc.op, name, id,  param );
     else if( name == "OUT" )
-      instantiateObject(ioc.out, name, id,  param, ioc );
+      instantiateObject(ioc.out, name, id,  param );
     else if( name == "QA" )
-      instantiateObject(ioc.qA, name, id,  param, ioc );
+      instantiateObject(ioc.qA, name, id,  param );
     else if( name == "TC" )
-      instantiateObject(ioc.tC, name, id,  param, ioc );
+      instantiateObject(ioc.tC, name, id,  param );
   }
 
   // append the obj pointers to the list of IObj-casted pointers
@@ -726,8 +731,6 @@ setObjProperties(std::vector<std::vector<std::string> > &list, IObjContainer &io
     {
       Annotation *p = dynamic_cast<Annotation*>(ip);
       p->setTablePath(::TABLE_PATH);
-      p->setFilePath(::NC_PATH);
-      p->setFilename(::NC_FILENAME);
 
       if( id == 0 )
         notes = &ioc.an[i] ;
@@ -745,7 +748,7 @@ setObjProperties(std::vector<std::vector<std::string> > &list, IObjContainer &io
     else if( name == "IN" )
     {
       InFile *p = dynamic_cast<InFile*>(ip);
-      p->setFilename(::NC_FILENAME);
+      p->setFilename(::NC_PATH + "/" + ::NC_FILENAME);
     }
     else if( name == "OP" )
       ;

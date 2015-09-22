@@ -73,7 +73,7 @@ FD_interface::applyOptions(void)
         if( split[0][0] == 's' || split[0][0] == 'S' )
         {
           isSaveBuild=true;
-          filename=split[1];
+          setFilename( split[1]);
           continue;
         }
      }
@@ -132,7 +132,7 @@ FD_interface::applyOptions(void)
    if( rebuildFilename.size() && ! isSaveBuild )
    {
       isSaveBuild=true;
-      filename=rebuildFilename.substr(0,rebuildFilename.size()-6);
+      setFilename(rebuildFilename.substr(0,rebuildFilename.size()-6));
    }
 
    return;
@@ -148,13 +148,12 @@ FD_interface::entry(void)
 
   // used in finally and here
   if( pIn->isTime )
-    currTime=Base::getTime(pIn->nc, pIn->currRec, "time");
+    currTime = pIn->nc.getData(w, "time", pIn->currRec);
 
   if( timeWindowWidth.size() > 0 )
   {
-    currDate.setDate( refDate.getDate(
-                        hdhC::double2String(currTime) ) );
-    currDateStr = currDate.getDate();
+    currDate = refDate.getDate(currTime) ;
+    currDateStr = currDate.str();
 
     // If sub-division is enabled, then here is a reset of the window.
     // The FreqDist itself was already reset in print
@@ -207,10 +206,10 @@ FD_interface::exceptionError(std::string str)
     xcptn.strError = "fd_error" ;
 
      // base name if available, i.e. after the initialisation of the InFile obj
-    if( filename.size() > 0 )
+    if( file.is )
     {
       xcptn.strError += "_";
-      xcptn.strError += hdhC::getBasename(filename) ;
+      xcptn.strError += file.basename ;
     }
     xcptn.strError += ".txt";
 
@@ -238,10 +237,10 @@ FD_interface::exceptionWarning(std::string str)
 
     xcptn.strWarning = "fd_warning" ;
 
-    if( filename.size() > 0 )
+    if( file.is )
     {
       xcptn.strWarning += "_";
-      xcptn.strWarning += hdhC::getBasename(filename) ;
+      xcptn.strWarning += file.basename ;
     }
     xcptn.strWarning += ".txt";
 
@@ -293,9 +292,8 @@ FD_interface::finally(int errCode)
          {
             is=false;
             fD[i].infoLine[j] = "#END: " ;
-            currDate.setDate( refDate.getDate(
-                              hdhC::double2String(currTime) ) );
-            fD[i].infoLine[j] +=  currDate.getDate()  ;
+            currDate = refDate.getDate(currTime) ;
+            fD[i].infoLine[j] +=  currDate.str()  ;
           }
        }
 
@@ -303,7 +301,7 @@ FD_interface::finally(int errCode)
        {
           fD[i].infoLine.push_back( "#BEGIN: " ) ;
           if( pIn->isTime )
-            fD[i].infoLine.back() += beginDate.getDate()  ;
+            fD[i].infoLine.back() += beginDate.str()  ;
           else
             fD[i].infoLine.back() += "entire experiment"  ;
 
@@ -311,9 +309,8 @@ FD_interface::finally(int errCode)
           if( pIn->isTime )
           {
             // no partitioning
-            currDate.setDate( refDate.getDate(
-                             hdhC::double2String(currTime) ) );
-            fD[i].infoLine.back() +=   currDate.getDate()  ;
+            currDate = refDate.getDate(currTime) ;
+            fD[i].infoLine.back() +=   currDate.str()  ;
           }
           else
             fD[i].infoLine.back() += "entire experiment"  ;
@@ -380,15 +377,12 @@ FD_interface::init(void)
   // varnames in a request (or by default) and using stdout
   // will result in a mess, because several obj write to stdout.
 
-  vName = pIn->variable[0].name ;
+  if( file.is )
+    file.setFile( file.getFile() + "." + pIn->variable[0].name) ;
 //  pGM = pIn->variable[0].pGM;
 
-  std::string str(".");
-  str += vName;
 
-  if( filename.size() > 0 )
-     if( filename.find(vName) == std::string::npos )
-       filename += str;
+  std::string str;
 
   // A freqDist for the total domain (by default) or
   // any specified number of regions.
@@ -396,7 +390,7 @@ FD_interface::init(void)
   for( size_t i=0 ; i <= regioStr.size() ; ++i)
   {
     fD.push_back( FreqDist<float>() );
-    fD.back().setOutputFilename( filename) ;
+    fD.back().setOutputFilename( file.filename) ;
     if( isReadProperties )
       fD.back().setReadOnlyProperties();
   }
@@ -409,13 +403,12 @@ FD_interface::init(void)
     // set reference date
     refDate.setDate( str );
 
-    double startTime=Base::getTime(pIn->nc, pIn->currRec, "time",0.);
+    MtrxArr<double> mv_d;
+    double startTime = pIn->nc.getData(mv_d, "time", pIn->currRec);
 
-    std::string cTime = hdhC::double2String(startTime);
-    beginDate.setDate( refDate.getDate(cTime) );
-    cTime = beginDate.getDate();
-//  cTime = cTime.substr(0,4) + "-01-01T00:00:00" ;
-    beginDate = cTime;
+    beginDate = refDate.getDate(startTime) ;
+    std::string cTime = beginDate.str();
+
     endDate = beginDate; //for time window partitioning
   }
 
@@ -457,7 +450,7 @@ FD_interface::init(void)
     for(size_t i=0 ; i < fD.size() ; ++i)
     {
       str = "#FILE=" ;
-      str += pIn->filename;
+      str += pIn->file.filename;
       fD[i].setInfo(str);
 
       str ="#VARIABLE=";
@@ -541,10 +534,10 @@ FD_interface::initTimeWindow(void)
 //   jDays -= beginDate.getJulianDate() ;
 
    // change of context
-   beginDateStr = beginDate.getDate();
-   endDateStr = endDate.getDate() ;
+   beginDateStr = beginDate.str();
+   endDateStr = endDate.str() ;
 
-   str = hdhC::getBasename( filename);
+   str = file.basename;
    str = str.substr(3); // ignore leading three; no extension.
 
 // ++++++ Looking for a file +++++++++++++++++++++++
@@ -609,8 +602,8 @@ FD_interface::initTimeWindow(void)
              {
                 beginDate = fBeginDate;
                 endDate = fEndDate;
-                beginDateStr = fBeginDate.getDate();
-                endDateStr = fEndDate.getDate();
+                beginDateStr = fBeginDate.str();
+                endDateStr = fEndDate.str();
 
                 // resume previous, incomplete session
                 if( rebuild( str1 ) )
@@ -636,7 +629,7 @@ FD_interface::initTimeWindow(void)
 
    // compose output filename; use only integer years
    // ranging from year A inclusively and year B exclusively.
-   str = hdhC::getBasename( filename);
+   str = file.basename;
    str += "_" ;
 
    str += beginDateStr.substr(0,4);
@@ -715,8 +708,8 @@ FD_interface::print(std::string fromDate,
 
    std::string str;
 
-   if( filename.size() > 0 )
-     str=filename;
+   if( file.is )
+     str=file.filename;
    else
      str="frequencyDist." + vName;
 
@@ -816,3 +809,4 @@ FD_interface::rebuild( std::string f)
 
   return false;  // no rebuild
 }
+

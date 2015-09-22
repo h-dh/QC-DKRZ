@@ -20,11 +20,12 @@ public:
   bool         entry(void){return false;}
   bool         init(void) ;
   void         linkObject(IObj *);
-  void         setFilename(std::string name){;}
-  void         setFilePath(std::string s){;}
-  void         setTablePath(std::string p){ ; }
+
+  void         setFilename(std::string f){file.setFile(f);}
 
   void initDefaults(void);
+
+  struct hdhC::FileSplit file;
 };
 
 #endif
