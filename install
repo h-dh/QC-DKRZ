@@ -180,15 +180,21 @@ getSrcPath()
   # extract the path to the root of the QA package
 
   # is it in a conda built?
-  local x_conda=${0%/qa-dkrz}
-  if [ ${x_conda##*/} = bin ] ; then
-    x_conda=${x_conda%/bin}
-    if [ -d $x_conda/opt/qa-dkrz ] ; then
-       CONDA_ENV=t
-       export QA_PATH=$x_conda/opt/qa-dkrz
-       return
+  local x_conda=( ${0//\// } )
+  local i
+  for(( i=0 ; i < ${#x_conda[*]} ; ++i )) ; do
+    if [ ${x_conda[i]} = opt ] ; then
+      if [ ${x_conda[$((++i))]} = qa-dkrz ] ; then
+        CONDA_ENV=t
+        QA_PATH=
+        for(( j=0 ; j <= i ; ++j )) ; do
+          QA_PATH=${QA_PATH}/${x_conda[j]}
+        done
+        export QA_PATH
+        return
+      fi
     fi
-  fi
+  done
 
   test ${QA_PATH} && return
 
