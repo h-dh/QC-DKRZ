@@ -193,6 +193,8 @@ class QA : public IObj
   /*! For variables defined for a specific pressure level, eg.ta850*/
   void   checkPressureCoord(InFile&);
 
+  void   checkProjectTable(InFile &in);
+  
   void   checkVarTableEntry(
              VariableMetaData &,
              VariableMetaData &tbl_entry);

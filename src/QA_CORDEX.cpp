@@ -2232,18 +2232,6 @@ QA::checkMetaData(InFile &in)
     }
   }
 
-  // Read or write the project table.
-  ProjectTable projectTable(this, &in, projectTableFile);
-  projectTable.setAnnotation(notes);
-  projectTable.setExcludedAttributes( excludedAttribute );
-
-  if( ! isRotated )
-    projectTable.set_1st_ID( "_i" );
-
-  projectTable.set_2nd_ID( getFrequency() );
-
-  projectTable.check();
-
   // inquire whether the meta-data checks passed
   int ev;
   if( (ev = notes->getExitValue()) > 1 )
@@ -2485,6 +2473,29 @@ QA::checkFilename(InFile &in )
       }
     }
   }
+
+  return;
+}
+
+void
+QA::checkProjectTable(InFile &in)
+{
+  // Read or write the project table.
+  ProjectTable projectTable(this, &in, projectTableFile);
+  projectTable.setAnnotation(notes);
+  projectTable.setExcludedAttributes( excludedAttribute );
+
+  if( ! isRotated )
+    projectTable.set_1st_ID( "_i" );
+
+  projectTable.set_2nd_ID( getFrequency() );
+
+  projectTable.check();
+
+  // inquire whether the meta-data checks passed
+  int ev;
+  if( (ev = notes->getExitValue()) > 1 )
+    setExit( ev );
 
   return;
 }
@@ -3598,6 +3609,10 @@ QA::init(void)
    // note that this must happen before checkMetaData which uses currQARec
    openQA_Nc(*pIn);
 
+   // check consistency between sub-sequent files. Must come after
+   // openQA_Nc.
+   checkProjectTable(*pIn);
+
    if( getExit() || isUseStrict || qaTime.isNoProgress )
    {
      isCheckData=false;
@@ -4038,28 +4053,31 @@ QA::openQA_Nc(InFile &in)
   else
     nc->create(qaFile.getFile(),  "Replace");
 
-  if( pIn->isTime )
+  bool isNoTime=false;
+  if( isCheckTime && pIn->isTime )
   {
     // create a dimension for fixed variables only if there is any
     for( size_t m=0 ; m < varMeDa.size() ; ++m )
     {
       if( varMeDa[m].var->isFixed )
       {
-        nc->defineDim("fixed", 1);
+        isNoTime=true;
         break;
       }
     }
 
-    qaTime.openQA_NcContrib(nc);
+    if( !isNoTime )
+      qaTime.openQA_NcContrib(nc);
   }
-  else if( isCheckTime )
+  else
+    isNoTime=true;
+
+  if( isNoTime )
   {
     // dimensions
     qaTime.name="fixed";
     nc->defineDim("fixed", 1);
   }
-  else
-    nc->defineDim("fixed", 1);
 
     // create variable for the data statics etc.
   for( size_t m=0 ; m < varMeDa.size() ; ++m )

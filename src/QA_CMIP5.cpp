@@ -1676,16 +1676,6 @@ QA::checkMetaData(InFile &in)
      }
   }
 
-  // Read or write the project table.
-  ProjectTable projectTable(this, &in, projectTableFile);
-  projectTable.setAnnotation(notes);
-  projectTable.setExcludedAttributes( excludedAttribute );
-
-  // unsed set_1sr_ID(), because no appendix to the 1st item
-  projectTable.set_2nd_ID( MIP_tableName );
-
-  projectTable.check();
-
   // inquire passing the meta-data check
   int ev;
   if( (ev = notes->getExitValue()) > 1 )
@@ -1733,6 +1723,26 @@ QA::checkNetCDF(InFile &in)
       notes->setCheckMetaStr(fail);
     }
   }
+
+  return;
+}
+
+void
+QA::checkProjectTable(InFile &in)
+{
+  // Read or write the project table.
+  ProjectTable projectTable(this, &in, projectTableFile);
+  projectTable.setAnnotation(notes);
+  projectTable.setExcludedAttributes( excludedAttribute );
+
+  projectTable.set_2nd_ID( MIP_tableName );
+
+  projectTable.check();
+
+  // inquire whether the meta-data checks passed
+  int ev;
+  if( (ev = notes->getExitValue()) > 1 )
+    setExit( ev );
 
   return;
 }
@@ -3636,6 +3646,10 @@ QA::init(void)
    // open netCDF for continuation and resuming a session
    openQA_Nc(*pIn);
 
+   // check consistency between sub-sequent files. Must come after
+   // openQA_Nc.
+   checkProjectTable(*pIn);
+
    if( getExit() || qaTime.isNoProgress )
    {
      isCheckData=false;
@@ -4068,21 +4082,26 @@ QA::openQA_Nc(InFile &in)
   else
     nc->create(qaFile.getFile(),  "Replace");
 
-  if( pIn->isTime )
+  bool isNoTime=false;
+  if( isCheckTime && pIn->isTime )
   {
     // create a dimension for fixed variables only if there is any
     for( size_t m=0 ; m < varMeDa.size() ; ++m )
     {
       if( varMeDa[m].var->isFixed )
       {
-        nc->defineDim("fixed", 1);
+        isNoTime=true;
         break;
       }
     }
 
-    qaTime.openQA_NcContrib(nc);
+    if( !isNoTime )
+      qaTime.openQA_NcContrib(nc);
   }
-  else if( isCheckTime )
+  else
+    isNoTime=true;
+
+  if( isNoTime )
   {
     // dimensions
     qaTime.name="fixed";

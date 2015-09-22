@@ -111,6 +111,8 @@ class QA : public IObj
 //! Checks meta-data
   void   checkMetaData(InFile &) ;
 
+  void   checkProjectTable(InFile &in);
+  
   /*! Close records for time and data.*/
   void   closeEntry(void);
 
