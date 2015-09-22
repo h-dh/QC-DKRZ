@@ -1,0 +1,38 @@
+language: python
+branches:
+  only:
+    - birdhouse
+sudo: true
+python:
+  # We don't actually use the Travis Python, but this keeps it organized.
+  - "2.7"
+install:
+  - sudo apt-get install -y libuuid1 uuid-dev
+  - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh;
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  - conda install conda-build
+  # Useful for debugging any issues with conda
+  - conda info -a
+
+  # Replace dep1 dep2 ... with your dependencies
+  - conda config --add channels birdhouse
+  - conda install -q libnetcdf hdf5 zlib udunits
+
+  # Get build script
+  - export PREFIX="$HOME/miniconda"
+  - echo "CC=\"/usr/bin/gcc\"" > install_configure
+  - echo "CXX=\"/usr/bin/g++\"" >> install_configure
+  - echo "CFLAGS=\"-O2 -Wall\"" >> install_configure 
+  - echo "CXXFLAGS=\"-O2 -Wall -D NC4\"" >> install_configure
+  - echo "LIB=\"${PREFIX}/lib\":/lib64" >> install_configure
+  - echo "INCLUDE=\"${PREFIX}/include\":/usr/include/uuid" >> install_configure
+
+script:
+  - export QA_PATH="$PWD"
+  - touch .ignore_GitHub_update
+  - ./install CF
+  - ./install CORDEX
