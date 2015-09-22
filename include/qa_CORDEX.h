@@ -114,6 +114,8 @@ class QA : public IObj
    each variable at first time encounter in the CORDEX Project ensuring
    conformance.*/
 
+  bool   checkDataBody(std::string vName="");
+
   void   checkDimStandardTable(ReadLine &tbl, InFile &in,
             VariableMetaData &var,
             std::vector<struct DimensionMetaData>&,

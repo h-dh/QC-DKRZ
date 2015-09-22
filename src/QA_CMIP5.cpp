@@ -305,6 +305,44 @@ QA::applyOptions(bool isPost)
    return;
 }
 
+bool
+QA::checkDataBody(std::string vName)
+{
+  // any empty data segments?
+
+  if( vName.size() )
+  {
+    for( size_t i=0 ; i < pIn->varSz ; ++i)
+    {
+      Variable& var = pIn->variable[i];
+      if( var.name == vName )
+        return pIn->nc.isEmptyData(var.name) ;
+    }
+  }
+  else if( ! pIn->dataVarIndex.size() )
+    return true;
+
+  std::vector<size_t> vs;
+  for( size_t i=0 ; i < pIn->dataVarIndex.size() ; ++i)
+  {
+    Variable& var = pIn->variable[ pIn->dataVarIndex[i] ];
+    if( ! pIn->nc.isEmptyData(var.name) )
+    {
+      vs.push_back(pIn->dataVarIndex[i]) ;
+      notes->setCheckDataStr(fail);
+    }
+  }
+
+  if( vs.size() )
+    // only try for variables with data
+    pIn->dataVarIndex = vs ;
+  else
+    // all data variables without any data
+    return true;
+
+  return false;
+}
+
 void
 QA::checkDataVarNum(void)
 {
@@ -3607,7 +3645,7 @@ QA::init(void)
 
    if( isCheckTime )
    {
-     if( qaTime.isTime && ! pIn->nc.isAnyRecord() )
+     if( qaTime.isTime && checkDataBody(qaTime.name) )
      {
        isCheckTime = false;
        notes->setCheckTimeStr(fail);
@@ -3623,7 +3661,7 @@ QA::init(void)
 
    if( isCheckData )
    {
-     if( ! pIn->nc.isAnyRecord() )
+     if( checkDataBody() )
      {
        notes->setCheckDataStr(fail);
        return true;
@@ -4001,7 +4039,7 @@ QA::openQA_Nc(InFile &in)
 
   // don't create a netCDF file, when only meta data are checked.
   // but, a NcAPI object m ust exist
-  if( ! isCheckTime )
+  if( ! (isCheckTime || isCheckData) )
     return;
 
   if( nc->open(qaFile.getFile(), "NC_WRITE", false) )

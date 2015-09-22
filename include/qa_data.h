@@ -28,7 +28,7 @@ class DataOutputBuffer
    void    flush(void);
 
    //! Change the flush counter; 1500 by default
-   void    initBuffer(QA* , size_t next=0, size_t max=1500);
+   void    initBuffer(QA*, size_t next=0, size_t max=1500);
    void    setName(std::string n){name=n;}
    void    setNextFlushBeg(size_t n){nextFlushBeg=n;};
    void    store(hdhC::FieldData &fA);

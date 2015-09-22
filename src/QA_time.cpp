@@ -572,11 +572,6 @@ QA_Time::initRelativeTime(std::string &units)
 
    size_t recSz = pIn->nc.getNumOfRows(name) ;
 
-   lastTimeValue = pIn->nc.getData(ma_t, name, recSz-1) + refTimeOffset ;
-
-   if( isTimeBounds )
-     initTimeBounds(refTimeOffset) ;
-
    if( prevTimeValue == MAXDOUBLE )
    {
      // 0) no value; caught elsewhere
@@ -626,10 +621,16 @@ QA_Time::initRelativeTime(std::string &units)
          refTimeStep=currTimeValue;
      }
 
+     // note: ma_t.size() == 1 after calling for the last record, when
+     // internal getData-buffersize is smaller than number of records.
+     lastTimeValue = pIn->nc.getData(ma_t, name, recSz-1) + refTimeOffset ;
+
      prevTimeValue = currTimeValue - refTimeStep ;
 
      if( isTimeBounds )
      {
+       initTimeBounds(refTimeOffset) ;
+
        double dtb = firstTimeBoundsValue[1] - firstTimeBoundsValue[0];
 
        prevTimeBoundsValue[0]=firstTimeBoundsValue[0] - dtb ;
@@ -644,7 +645,7 @@ void
 QA_Time::initResumeSession(void)
 {
     // if files are synchronised, i.e. a file hasn't changed since
-    // the last qa, this will exit in member finally(6?)
+    // the last qa, this will exit in member finally()
    isNoProgress = sync();
 
    std::vector<double> dv;
@@ -1116,22 +1117,32 @@ QA_Time::sync(void)
   // num of recs in current data file
   int inRecNum = pIn->nc.getNumOfRecords() ;
 
-  // Any records available in the qa-ncfile?
+  // a new qa-ncfile? In fact, sync is not called for this case.
   size_t qaRecNum;
   if( (qaRecNum=pQA->nc->getNumOfRecords() ) == 0 )
-    return true;
+    return false;
 
   // get last time value from the previous file
   std::vector<double> dv;
   pQA->nc->getAttValues( dv, "last_time", pIn->timeName);
   double qa_t=dv[0];
 
+  double epsilon = refTimeStep/10.;
+
+  // preliminary tests
+  // a) a previous QA had checked a complete previous sub-temporal infile
+  //    and time continues in the current infile.
+  if( firstTimeValue > (qa_t+epsilon) )
+    return false;
+
+  if( hdhC::compare(qa_t, lastTimeValue, '=', epsilon) )
+    return true; // up-to-date
+
   // Note: QA always continues a previous session
   std::pair<int,int> range(0,0);
 
   // epsilon around a time value must not be too sharp, because
   // of the spread of months
-  double epsilon = refTimeStep/10.;
   double qa_t_eps = qa_t - epsilon;
 
   while( range.second < inRecNum )
@@ -1140,15 +1151,6 @@ QA_Time::sync(void)
     range = pIn->nc.getDataIndexRange(name) ;
 
     size_t sz = ma_t.size() ;
-    double val = ma_t[sz-1] + refTimeOffset ;
-
-    // try the last item first
-    if( val < qa_t_eps )
-      continue;
-
-    // a preliminary test
-    if( hdhC::compare(qa_t, val, '=', epsilon) )
-      return false; // up-to-date
 
     // scanning time
     for( size_t i=0 ; i < sz ; ++i )
@@ -1158,6 +1160,9 @@ QA_Time::sync(void)
       if( val < qa_t_eps )
         continue;
 
+      if( (qa_t + epsilon) < val )
+        return false ;  // the usual case
+
       if( hdhC::compare(qa_t, val, '=', epsilon) )
       {
         // a previous QA had checked an infile that was extended
@@ -1166,11 +1171,6 @@ QA_Time::sync(void)
 
         return false ;
       }
-
-      // a previous QA had checked a complete previous sub-temporal infile
-      // and time continues in the current infile.
-      if( (qa_t + epsilon) < val )
-        return false ;  // the usual case
     }
   }
 

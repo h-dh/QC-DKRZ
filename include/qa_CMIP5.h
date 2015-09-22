@@ -121,6 +121,8 @@ public:
 
   void   applyOptions(bool isPost=false);
 
+  bool   checkDataBody(std::string vName="");
+
   void   checkDataVarNum(void);
 
   //! Check of dimensionless variables

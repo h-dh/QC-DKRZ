@@ -106,7 +106,7 @@ class QA : public IObj
 
   void   applyOptions(bool isPost=false);
 
-  bool   checkDataBody(void);
+  bool   checkDataBody(std::string vName="");
 
 //! Checks meta-data
   void   checkMetaData(InFile &) ;
