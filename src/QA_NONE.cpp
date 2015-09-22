@@ -308,14 +308,8 @@ QA::checkDataBody(std::string vName)
 }
 
 void
-QA::checkMetaData(InFile &in)
+QA::checkProjectTable(InFile &in)
 {
-  notes->setCheckMetaStr("PASS");
-
-  //Check tables properties: path and names.
-  // program exits for an invalid path
-  inqTables();
-
   // Read or write the project table.
   ProjectTable projectTable(this, &in, projectTableFile);
   projectTable.setAnnotation(notes);
@@ -652,7 +646,13 @@ QA::init(void)
    }
 
    // get meta data from file and compare with tables
-   checkMetaData(*pIn);
+//   checkMetaData(*pIn);   // not for NONE
+   notes->setCheckMetaStr("PASS");
+
+   //Check tables properties: path and names.
+   // program exits for an invalid path
+   inqTables();
+
 
    if(qaTime.init(pIn, notes, this))
    {
@@ -680,6 +680,10 @@ QA::init(void)
 
    // open netCDF for creating, continuation or resuming qa_<varname>.nc
    openQA_Nc(*pIn);
+
+   // check consistency between sub-sequent files. Must come after
+   // openQA_Nc.
+   checkProjectTable(*pIn);
 
    if( getExit() || qaTime.isNoProgress )
    {
@@ -1027,21 +1031,26 @@ QA::openQA_Nc(InFile &in)
   else
     nc->create(qaFile.getFile(),  "Replace");
 
-  if( pIn->isTime )
+  bool isNoTime=false;
+  if( isCheckTime && pIn->isTime )
   {
     // create a dimension for fixed variables only if there is any
     for( size_t m=0 ; m < varMeDa.size() ; ++m )
     {
       if( varMeDa[m].var->isFixed )
       {
-        nc->defineDim("fixed", 1);
+        isNoTime=true;
         break;
       }
     }
 
-    qaTime.openQA_NcContrib(nc);
+    if( !isNoTime )
+      qaTime.openQA_NcContrib(nc);
   }
-  else if( isCheckTime )
+  else
+    isNoTime=true;
+
+  if( isNoTime )
   {
     // dimensions
     qaTime.name="fixed";

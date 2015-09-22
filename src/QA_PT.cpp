@@ -301,6 +301,7 @@ BREAK:
               capt += xt_eq[0];
               capt += ": missing" ;
             }
+            
             if( qa->currQARec )
               capt += " across sub-temporal files";
             else

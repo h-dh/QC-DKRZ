@@ -216,12 +216,7 @@ public:
   //! Is it NetCDF-4, is it compressed?
   void   checkNetCDF(InFile &);
 
-  //! Prepare the comparison of dimensions between file and project table.
-  /*! This is checked for each chunk or atomic data set in each
-  experiment ensuring conformance.*/
-  bool   checkProjectTable(std::ifstream &tbl, InFile &in,
-            VariableMetaData &,
-            std::vector<struct DimensionMetaData>&);
+  void   checkProjectTable(InFile &in);
 
   //! Starting function for all table cross-checks.
   void   checkTables(InFile &in, VariableMetaData &v);

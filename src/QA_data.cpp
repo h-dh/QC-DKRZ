@@ -1484,11 +1484,8 @@ QA_Data::openQA_NcContrib(NcAPI *nc, Variable *var)
   nc->copyAtts(pIn->nc, vName, vName);
 
   // define qa-variables
-  std::string dimStr;
-  if( var->isFixed )
-    dimStr = "fixed" ;
-  else
-    dimStr = pIn->unlimitedName.c_str() ;
+  // either the real time-name of "fixed"
+  std::string dimStr( pQA->qaTime.name ) ;
 
   // different, but derived, varnames
   vs.clear();

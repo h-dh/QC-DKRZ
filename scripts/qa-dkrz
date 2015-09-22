@@ -1675,6 +1675,7 @@ getNextVariable()
     elif ! expr match ${nV_fls[l]} "${1}.*\.nc" &> /dev/null ; then
       if [ ${QUERY_NON_NC_FILE:-f} = t ] ; then
         y_caption="invalid filename, found ${nV_fls[l]}"
+        y_impact=L1
         y_tag=M6
         initLog ${nV_fls[l]}
         unset nV_fls[${l}]
