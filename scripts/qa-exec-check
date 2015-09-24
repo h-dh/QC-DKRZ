@@ -39,7 +39,7 @@ analyseExec()
       sTxt[${#sTxt[*]}]='text: EMERGENCY STOP'
 
       isSignalTerm=t  # emergency stop, if not intercepted
-      isEmailAssigned=t
+      issueMail=t
 
     elif [ $status -gt 4 ] ; then
 
@@ -47,7 +47,7 @@ analyseExec()
 Note: possibly due to a bug in NetCDF 4.1.2 F90 lib. \
 However, the check was successful."
 
-      isEmailAssigned=t
+      issueMail=t
     fi
 
   else
@@ -72,7 +72,7 @@ However, the check was successful."
     nm=${name%.nc}
     tryCom echo -e "$s_out" >> qa_lock_${nm}.txt
 
-    isEmailAssigned=t
+    issueMail=t
     isSignalTerm=t  # emergency stop, if not intercepted
   fi
 
@@ -104,7 +104,7 @@ bind_checksum()
 
   local cs_table
 
-  if [ ${#CHECKSUM_DIR} -gt 0 ] ; then
+  if [ "${CHECKSUM_DIR}" ] ; then
      if [ ${CHECKSUM_DIR:0:1} = '/' ] ; then
        cs_table="-p ${CHECKSUM_DIR}"
      else
@@ -115,7 +115,7 @@ bind_checksum()
   fi
 
   local email
-  if [ ${#EMAIL_TO[*]} -gt 0 ] ; then
+  if [ "${EMAIL_TO[*]}" ] ; then
      email="${EMAIL_TO[*]}"
      email="-m ${email// /,}"
   fi
@@ -240,7 +240,7 @@ and PROJECT_DATA/SUB_PATH must not be identical"
 
  name=${ncFile##*/}
 
- if [ ${#NEXT_PERIOD} -gt 0 ] ; then
+ if [ "${NEXT_PERIOD}" ] ; then
    name=${name%_${NEXT_PERIOD}.nc}
  else
    name=${name%.nc}
@@ -335,7 +335,7 @@ fi
     local pos0=0
     local pos1
 
-    if [ ${#ans} -gt 0 ] ; then
+    if [ "${ans}" ] ; then
       local ix=${#sTxt[*]}  # num of text lines later
       sTxt[${ix}]="7text:"
 
@@ -357,7 +357,7 @@ fi
   sTxt[${#sTxt[*]}]="3status: ${status}"
   log  --keep
 
-  test ${isEmailAssigned:-f} = t && sendEMail
+  test ${issueMail:-f} = t && sendEMail
 
   return
 }
@@ -375,7 +375,7 @@ finally()
   # notify the end of this instance
 
   # any running process to be killed?
-  if [ ${runPID:-0} -gt 0 ] ; then
+  if [ "${runPID:-0}" ] ; then
     if ps -p ${runPID} -o pid= &> /dev/null  ; then
        kill -9 $runPID &> /dev/null
        wait $runPID &> /dev/null
@@ -593,7 +593,7 @@ init()
   PARENT_EXP_RIP=none
 
   # No check for correct and full parameters.
-  if [ ${#PROC_POOL} -eq 0 ] ; then
+  if [ ! "${PROC_POOL}" ] ; then
     test -c "$TTY" && echo 'No access to PROC_POOL'
     sTxt[${#sTxt[*]}]='text: no access to PROC_POOL'
 
@@ -896,11 +896,12 @@ parseOutput()
     if [ ${key} = STATUS ] ; then
       isNormalExecution=t
       status=$mess
+      test ${status} -gt 0 && issueMail=t
     elif [ ${key} = SUBJECT ] ; then
       sendSubject="${str:p0:$((l-p0))}"
-      isEmailAssigned=t
+      issueMail=t
     elif [ ${key} = EMAIL ] ; then
-      isEmailAssigned=t
+      issueMail=t
       test ${#mess} -gt 0 && sendText="${sendText}${mess}"
     elif [ ${key} = REAL ] ; then
       realTime=$mess
@@ -1127,37 +1128,21 @@ sendEMail()
      return
   fi
 
-  local sendSub
+  if which ${MAIL} &> /dev/null ; then
+    # mail or mailx
 
-  local sp
-  sp[0]=''
-  sp[1]=' '
-  sp[2]='  '
-  sp[3]='   '
-  sp[4]='    '
-  sp[5]='     '
-  sp[6]='      '
-  sp[7]='       '
-  sp[8]='        '
+    ${MAIL} -s "QA: ${ncFile##*/}" ${EMAIL_TO[*]} << EOF
+$(cat ${qaExceptionFile} )
+EOF
 
-  sendSub="QA ${PROJECT} ${EXP_NAME}:"
-  if [ ${sendSubject} -gt 0 ] ; then
-    sendSub="${sendSub} ${sendSubject}"
-  else
-    sendSub="${sendSub} ${sTxt[0]}"
+  elif which mutt &> /dev/null ; then
+
+    mutt -s "QA: ${ncFile##*/}" -- ${EMAIL_TO[*]} << EOF
+$(cat ${qaExceptionFile} )
+EOF
+
   fi
 
-  eval ${MAIL} -s \"\$sendSub\"  ${EMAIL_TO[*]} <<!
-$( for(( j=0 ; j < ${#sTxt[*]} ; ++j )) ; do \
-      echo -e "${sp[${sTxt[j]:0:1}]}${sTxt[j]}" ; done )
-$( test ${#sendText} -gt 0 && echo -e ${sendText})
-$(echo -e "\n-----------------------------------------------------")
-$(echo -e "\nContents of ${qaExceptionFile}:" )
-$(cat ${qaExceptionFile} )
-$(echo -e "\n-----------------------------------------------------")
-$(echo -e "\nqA-${PROJECT}.x called with parameter setting:")
-$(cat param_file_$$.txt )
-!
 
   return
 }
@@ -1276,7 +1261,7 @@ set_fd_par()
   # Note: the effective name will have a time interval appended.
   par=${par}":s=fd_${name}.build"
 
-  if [ ${#FD_TIME_PART} -gt 0 ] ; then
+  if [ "${FD_TIME_PART}" ] ; then
     par=${par}":part=${FD_TIME_PART}"
   fi
 
@@ -1286,7 +1271,7 @@ set_fd_par()
   if files=( $( ls fd_${name}*.build 2> /dev/null ) ) ; then
     # Rule 1: rebuild, i.e continue a FD
     par=${par}":r=${files[0]}"
-  elif [ ${#FD_PROPERTY_PATH} -gt 0 ] ; then
+  elif [ "${FD_PROPERTY_PATH}" ] ; then
     if files=( $(ls ${FD_PROPERTY_PATH}/fd_${name}*.build 2> /dev/null) )
     then # Rule 2a
       par=${par}":rp=${files[0]}"  #read properties
@@ -1294,7 +1279,7 @@ set_fd_par()
     then # Rule 2b
       par=${par}":rp=${files[0]}"  #read properties
     fi
-  elif [ ${#FD_EXPLICIT_PROPS} -gt 0 ] ; then  # rule 3
+  elif [ "${FD_EXPLICIT_PROPS}" ] ; then  # rule 3
     local props
     props=( ${FD_EXPLICIT_PROPS//\// } )
     par=${par}":w=${props[0]}@i=${props[1]}"
@@ -1313,7 +1298,7 @@ set_IN_par()
 
   test ${DISABLE_INF_NAN:-f} = t && par=${par}":dIN"
 
-  if [ ${#EXCLUDE_VARIABLE} -gt 0 ] ; then
+  if [ "${EXCLUDE_VARIABLE}" ] ; then
     # convert array to comma-separated list
     EXCLUDE_VARIABLE="${EXCLUDE_VARIABLE[*]}"
     EXCLUDE_VARIABLE="${EXCLUDE_VARIABLE// /,}"
@@ -1341,7 +1326,7 @@ set_qa_par()
 
  if [ ${APPLY_MAXIMUM_DATE_RANGE:-f} = t ] ; then
    par=${par}"${s}"aMDR
- elif [ ${#APPLY_MAXIMUM_DATE_RANGE} -gt 0 ] ; then
+ elif [ "${APPLY_MAXIMUM_DATE_RANGE}" ] ; then
    par=${par}"${s}"aMDR=${APPLY_MAXIMUM_DATE_RANGE}
  fi
 
@@ -1361,7 +1346,7 @@ set_qa_par()
  test ${DISABLE_TIME_BOUNDS_CHECK:-f} = t && \
    par=${par}"${s}"dTB
 
- if [ ${#EXCLUDE_ATTRIBUTE} -gt 0 ] ; then
+ if [ "${EXCLUDE_ATTRIBUTE}" ] ; then
    # convert array to comma-separated list
    EXCLUDE_ATTRIBUTE="${EXCLUDE_ATTRIBUTE[*]}"
    EXCLUDE_ATTRIBUTE="${EXCLUDE_ATTRIBUTE// /,}"
@@ -1390,7 +1375,7 @@ set_qa_par()
  test ${NON_REGULAR_TIME_STEP:-f} = t && \
    par=${par}"${s}"nRTS
 
- if [ ${#OUTLIER_TEST} -gt 0 ] ; then
+ if [ "${OUTLIER_TEST}" ] ; then
    tmp=
    OUTLIER_TEST="${OUTLIER_TEST[*]}"
    for(( i=0 ; i < ${#OUTLIER_TEST} ; ++i )) ; do
@@ -1416,32 +1401,40 @@ set_qa_par()
 # test ${#PROJECT} -gt 0 && \
 #   par=${par}"${s}"project=${PROJECT}
 
+ test ${#PROJECT_TABLE} -gt 0 && \
+   par=${par}"${s}"tPr=${PROJECT_TABLE}
+
  test ${#QA_NCFILE_FLAGS} -gt 0 && \
    par=${par}"${s}"qNF=${QA_NCFILE_FLAGS}
 
- if [ ${#REPLICATED_RECORD} -gt 0 ] ; then
+ if [ "${REPLICATED_RECORD}" ] ; then
    # convert array to comma-separated list
    REPLICATED_RECORD="${REPLICATED_RECORD[*]}"
    par=${par}"${s}"rR="${REPLICATED_RECORD// /,}"
  fi
 
- test ${#TABLE_GCM_NAME} -gt 0 && \
-   par=${par}"${s}"tGCM="${TABLE_GCM_NAME}"
-
- test ${#PROJECT_TABLE} -gt 0 && \
-   par=${par}"${s}"tPr=${PROJECT_TABLE}
-
+ # CORDEX
  test ${#TABLE_CAD} -gt 0 && \
    par=${par}"${s}"tCAD="${TABLE_CAD}"
-
+ test ${#TABLE_GCM_NAME} -gt 0 && \
+   par=${par}"${s}"tGCM="${TABLE_GCM_NAME}"
  test ${#TABLE_RCM_NAME} -gt 0 && \
    par=${par}"${s}"tRCM="${TABLE_RCM_NAME}"
+
+ # CMIP5
+ test ${#TABLE_ATT_REQ} -gt 0 && \
+   par=${par}"${s}"tAR=${TABLE_ATT_REQ}
+ test ${#TABLE_EXPERIMENT} -gt 0 && \
+   par=${par}"${s}"tX=${TABLE_EXPERIMENT}
+ test ${#TABLE_FORCING_DESCRIPT} -gt 0 && \
+   par=${par}"${s}"tFD=${TABLE_FORCING_DESCRIPT}
+
+ test ${#TABLE_TIME_SCHEDULE} -gt 0 && \
+   par=${par}"${s}"tTR=${TABLE_TIME_SCHEDULE}
 
  test ${#TABLE_VAR_REQ} -gt 0 && \
    par=${par}"${s}"tVR=${TABLE_VAR_REQ}
 
- test ${#TIME_TABLE} -gt 0 && \
-   par=${par}"${s}"tTR=${TIME_TABLE}
 
  test ${TABLE_RELAXED_DIM_CONSTRAINT:-f} = t && \
    par=${par}"${s}"tRDC
@@ -1486,7 +1479,7 @@ set_X_par()
     par=${par}:nCR
   fi
 
-  if [ ${#NOTE} -gt 0 ] ; then
+  if [ "${NOTE}" ] ; then
     NOTE="${NOTE[*]}"
     for(( i=0 ; i < ${#NOTE} ; ++i )) ; do
        test "${NOTE:i:1}" = '{' -o "${NOTE:i:1}" = '}' \
@@ -1496,7 +1489,7 @@ set_X_par()
     par=${par}":"note="${tmp// /,}"
   fi
 
-  if [ ${#NOTE_ALWAYS} -gt 0 ] ; then
+  if [ "${NOTE_ALWAYS}" ] ; then
     tmp=
     NOTE_ALWAYS="${NOTE_ALWAYS[*]}"
     for(( i=0 ; i < ${#NOTE_ALWAYS} ; ++i )) ; do
@@ -1507,7 +1500,7 @@ set_X_par()
     par=${par}":"nA="${tmp// /,}"
   fi
 
-  if [ ${#NOTE_LEVEL_LIMIT} -gt 0 ] ; then
+  if [ "${NOTE_LEVEL_LIMIT}" ] ; then
     tmp=
     NOTE_LEVEL_LIMIT="${NOTE_LEVEL_LIMIT[*]}"
     for(( i=0 ; i < ${#NOTE_LEVEL_LIMIT} ; ++i )) ; do
@@ -1532,7 +1525,7 @@ set_X_par()
 signalParent()
 {
    if [ ${NEVER_BREAK_SESSION:-f} = t ] ; then
-     isEmailAssigned=t  # always send email
+     issueMail=t  # always send email
      return
    fi
 
