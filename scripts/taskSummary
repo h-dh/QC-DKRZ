@@ -257,6 +257,25 @@ txt="Annotation summary of the QA of experiment\n \
     cat $f >> $outA
   done
 
+  test ${EMAIL:-f} = f && return
+
+  local caption="QA-DKRZ: ${exp}"
+
+  if which mutt &> /dev/null ; then
+    fc=( -a _Notes/$exp/annotation_outline.txt )
+
+    mutt -s "${caption}" ${outA} -- ${EMAIL[*]} << EOF
+$( echo "${caption}" )
+EOF
+
+  elif which mailx &> /dev/null ; then
+
+    mailx -s "${caption}" ${EMAIL[*]} << EOF
+$( cat ${outA} )
+EOF
+
+  fi
+
   return
 }
 
