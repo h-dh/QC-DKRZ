@@ -269,6 +269,9 @@ callQaConfig()
       eval ${key}=\("${items[i]#*=}"\)
     fi
 
+    # collection of variable names for tables
+    test ${key%%_*} = TABLE && tableVars[${#tableVars[*]}]=${key%=*}
+
     setKWL ${key}
   done
 
@@ -447,19 +450,14 @@ callQaExecutor()
           SESSION_LOGDIR \
           SHOW_CALL \
           SLEEP_TIME \
-          TABLE_VAR_REQ \
-          TABLE_CAD \
-          TABLE_GCM_NAME \
-          TABLE_PATH \
-          TABLE_VAR_REQ \
-          TABLE_RCM_NAME \
           TIME_LIMIT \
-          TIME_TABLE \
           TOTAL_PERIOD \
           TRACKING_ID_ONLY \
           USE_STRICT \
           WORK_AT_LOW_LOAD \
-          )
+  )
+
+  keyW=( ${keyW[*]} ${tableVars[*]} )
   i=0
 
   test ! ${DEBUG_MANAGER} && pauseX
@@ -2524,7 +2522,8 @@ init()
   test ! ${PROJECT_AS} && PROJECT_AS=${PROJECT}
 
   # package update requested and required?
-  if ! ${QA_PATH}/install ${INSTALL_ARGS//,/ } ${PROJECT_AS} ; then
+  if [ !${NO_GIT} ] \
+          && ! ${QA_PATH}/install ${INSTALL_ARGS//,/ } ${PROJECT_AS} ; then
     # could not make the executable for the given project
     std_out flush "could not make: install ${PROJECT_AS}"
     exit 1
@@ -2868,15 +2867,16 @@ initTables()
   #    projects are updated and are applied.
   # 5) 4) also for option USE_STRICT.
 
-  initT TABLE_VAR_REQ=${TABLE_VAR_REQ}
-  initT TIME_TABLE=${TIME_TABLE}
-  initT TABLE_GCM_NAME=${TABLE_GCM_NAME}
-  initT TABLE_RCM_NAME=${TABLE_RCM_NAME}
-  initT TABLE_CAD=${TABLE_CAD}
+  local tn name
+  for tn in ${tableVars[*]} ; do
+    eval name=\$${tn}
+    test ${tn} != TABLE_PATH && initT $tn=${name}
+  done
+
   initT QA_CHECK_LIST=${QA_CHECK_LIST}
-  initT CF_CHECK_LIST=${CF_CHECK_LIST}
 
 # get CF tables
+  initT CF_CHECK_LIST=${CF_CHECK_LIST}
   initT CF_AREA_TYPES=${CF_AREA_TYPES}
   initT CF_STANDARD_NAMES=${CF_STANDARD_NAMES}
   initT CF_STD_REGION_NAMES=${CF_STD_REGION_NAMES}
@@ -2889,6 +2889,12 @@ initT()
    local table=${1%=*}
    local value=${1#*=}
 
+   if [ ${value} ] ; then
+     value=${value##*/}
+   else
+     return  # not provided
+   fi
+
    local pDir  # index 0 -> 3 provides precedence
    local prj=${PROJECT_AS}
    test "${table:0:3}" = CF_ && prj=CF
@@ -2898,29 +2904,10 @@ initT()
    pDir[2]=tables/${prj}
    pDir[3]=tables
 
-   if [ "$table" = TABLE_RCM_NAME ] ; then
-     if [ -d ${QA_WORK}/${pDir[0]}/IS-ENES-Data.github.io ] ; then
-       ( cd ${QA_WORK}/${pDir[0]}/IS-ENES-Data.github.io && \
-         git pull origin ) &> /dev/null
-     else
-       ( cd ${QA_WORK}/${pDir[0]} && \
-         git clone  https://github.com/IS-ENES-Data/IS-ENES-Data.github.io ) \
-         &> /dev/null
-     fi
+   # specialisation
+   test ${prj} = CORDEX && initT_CORDEX
 
-     test ! -d ${QA_WORK}/${pDir[0]}/cordex_specs \
-                   && mkdir ${QA_WORK}/${pDir[0]}/cordex_specs
-
-     wget --tries=3 -q -N \
-     --directory-prefix=${QA_WORK}/${pDir[0]}/cordex_specs \
-     http://cordex.dmi.dk/joomla/images/CORDEX/RCMModelName.txt \
-     &> /dev/null
-   fi
-
-   test ! ${value} && return  # not provided
-
-   local p
-   local ix
+   local ix p
 
    # implicitly and highest: local file and file with absolute path
 
@@ -2942,26 +2929,8 @@ initT()
       fi
    fi
 
-   value=${value##*/}
-
-   if [ ${table} = TABLE_RCM_NAME ] ; then
-     local f_a=${QA_WORK}/${pDir[0]}/IS-ENES-Data.github.io/CORDEX_RCMs_ToU.txt
-     local f_b=${QA_WORK}/${pDir[0]}/cordex_specs/RCMModelName.txt
-     local f_c=${TABLE_PATH}/CORDEX_RCMModelName.txt
-
-     local isNew=f
-     if [ -f $f_a -a -f $f_b -a -f $f_c ] ; then
-       local sec_a=$(ls -l --time-style='+%Y%m%d' ${f_a} | awk '{print $6}')
-       local sec_b=$(ls -l --time-style='+%Y%m%d' ${f_b} | awk '{print $6}')
-       local sec_c=$(ls -l --time-style='+%Y%m%d' ${f_c} | awk '{print $6}')
-
-       test ${sec_a} -gt ${sec_c} -o ${sec_b} -gt ${sec_c} && isNew=t
-     else
-       isNew=t
-     fi
-
-     test $isNew = t &&  cat  $f_a $f_b > $f_c
-   elif [ -f "${p}${value}" ] ; then
+   # the regular copy part
+   if [ -f "${p}${value}" ] ; then
      if ! diff ${p}${value} ${TABLE_PATH}/${value} \
            &> /dev/null ; then
        tryCom \
@@ -2970,6 +2939,55 @@ initT()
 
      eval ${table}=${value}
      setKWL ${table}  # note: no value
+   fi
+
+   return
+}
+
+initT_CORDEX()
+{
+   local pth=${QA_WORK}/${pDir[0]}
+
+   if [ "$table" = TABLE_RCM_NAME ] ; then
+     if [ ${NO_GIT:-f} = f -a ${NO_WGET:-f} = f ] ; then
+       if [ -d ${pth}/IS-ENES-Data.github.io ] ; then
+         ( cd ${pth}/IS-ENES-Data.github.io && \
+           git pull origin ) &> /dev/null
+       else
+         ( cd ${pth} && \
+           git clone  https://github.com/IS-ENES-Data/IS-ENES-Data.github.io ) \
+           &> /dev/null
+       fi
+
+       test ! -d ${pth}/cordex_specs \
+                   && mkdir ${pth}/cordex_specs
+
+       wget --tries=3 -q -N \
+       --directory-prefix=${pth}/cordex_specs \
+       http://cordex.dmi.dk/joomla/images/CORDEX/RCMModelName.txt \
+       &> /dev/null
+
+       local f_a=${pth}/IS-ENES-Data.github.io/CORDEX_RCMs_ToU.txt
+       local f_b=${pth}/cordex_specs/RCMModelName.txt
+       local f_c=${TABLE_PATH}/CORDEX_RCMModelName.txt
+
+       local isNew=f
+       if [ -f $f_a -a -f $f_b -a -f $f_c ] ; then
+         local sec_a=$(ls -l --time-style='+%Y%m%d' ${f_a} | awk '{print $6}')
+         local sec_b=$(ls -l --time-style='+%Y%m%d' ${f_b} | awk '{print $6}')
+         local sec_c=$(ls -l --time-style='+%Y%m%d' ${f_c} | awk '{print $6}')
+
+         test ${sec_a} -gt ${sec_c} -o ${sec_b} -gt ${sec_c} && isNew=t
+       else
+         isNew=t
+       fi
+
+       test $isNew = t &&  cat  $f_a $f_b > $f_c
+     else
+       cat ${pth}/FallBack/CORDEX_RCMs_ToU.txt \
+           ${pth}/FallBack/RCMModelName.txt \
+           > ${TABLE_PATH}/CORDEX_RCMModelName.txt
+     fi
    fi
 
    return
@@ -4666,6 +4684,14 @@ if tty -s ; then TTY=$(tty) ; fi
 
 QA_CONFIG=qa-config
 QA_FILE_EXECUTER=qa-exec-check
+
+if ! which git &> /dev/null ; then
+  NO_GIT=t
+fi
+
+if ! which wget &> /dev/null ; then
+  NO_WGET=t
+fi
 
 rootPID=$$
 

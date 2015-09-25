@@ -454,68 +454,140 @@ $enableOptText
 
 findEmbeddedConf()
 {
-  local item
   local currConf=$1
-
-  # look for a PROJECT setting in the current conf-files.
-  local txt
-  txt=$(grep '^[[:space:]]*[^#][[:space:]]*ROJECT=' ${currConf} )
-  if [ "${txt}" ] ; then
-    txt=${txt#*=}
-    setKWL PROJECT=${txt%%#*}
-  fi
-
-  # look for a PROJECT_AS setting in the current conf-files.
-  local txt2
-  txt2=$(grep '^[[:space:]]*[^#][[:space:]]*ROJECT_AS=' ${currConf} )
-  if [ ${txt2} ] ; then
-    txt2=${txt2#*=}
-    setKWL PROJECT_AS=${txt2%%#*}
-  elif [ ! "${PROJECT_AS}" -a "${PROJECT}" ] ; then
-    setKWL PROJECT_AS=${PROJECT}
-  fi
 
   # Is there a QA_CONFIG assignment embedded in the current file?
   # This separates commented-out from enabled QA_CONF assignment
-  item="$(grep 'QA_CONF=' "${currConf}" 2> /dev/null )"
-  item="${item// /}"
-  item=( ${item} )           # several lines are possible
-  item=( ${item[*]%%\#*} )
-  item=( ${item[*]} )
-  item=${item#QA_CONF=}
+  # If fails, then try a backward comatibel approach
+  local item names name
+  names=( QA_CONF QC_CONF qa_conf qc_conf )
 
-  # backward compatibility
-  if [ ! ${item} ] ; then
-    item="$(grep 'QC_CONF=' "${currConf}" 2> /dev/null )"
+  for name in ${names[*]} ; do
+    item="$(grep ${name}= ${currConf} 2> /dev/null )"
     item="${item// /}"
     item=( ${item} )           # several lines are possible
     item=( ${item[*]%%\#*} )
     item=( ${item[*]} )
-    item=${item#QC_CONF=}
-  fi
+    item=${item#${name}=}
 
-  test ! ${item} && return
+    test ${item} && break
+  done
+
+  # when item is empty, but a PROJECT or PORJECT_AS is going to be
+  # found, then use this
+  findProject $currConf
+
+  if [ ! "${item}" ] ; then
+     if [ ${PROJECT_AS} ] ; then
+       item=${PROJECT_AS}_qa.conf
+     elif [ ${PROJECT} ] ; then
+       item=${PROJECT}_qa.conf
+     else
+       return
+     fi
+  fi
 
   local ix p
   local pDir  # index 0 -> 3 provides precedence
 
-  pDir[0]=  # absolute or local path
-  pDir[1]=${QA_WORK}/tables
-  pDir[2]=${QA_WORK}/tables/${PROJECT_AS}
-  pDir[3]=${QA_WORK}/tables/projects
-  pDir[4]=${QA_WORK}/tables/projects/${PROJECT_AS}
+  if [ ${item} != ${item##*/} ] ; then
+    pDir[0]=${item%/*}/  # absolute path
+    item=${item##*/}
+  else
+    pDir[0]=$(pwd)/  # local path
+  fi
+
+  # backward compatibility: qc
+  local pos
+  if findStr ${item} _qc pos ; then
+    local item_alt=${item:0:${pos}}_qa${item:$((pos+3))}
+  fi
+
+  pDir[1]=${QA_WORK}/tables/
+  pDir[2]=${QA_WORK}/tables/${item%_*}/
+  pDir[3]=${QA_WORK}/tables/projects/
+  pDir[4]=${QA_WORK}/tables/projects/${item%_*}/
   local ix
 
-  for(( ix=0 ; ix < 5 ; ++ix )) ; do
-    if [ -f ${pDir[ix]}/${item} ] ; then
-       p=${pDir[ix]}/
-       test ${ix} -eq 0 && p=$(pwd)/
+  local items
+  declare -a items
+  items=( ${item} ${item_alt} )
 
-       if add2qaConf ${p}${item##*/} ; then
-         findEmbeddedConf ${p}${item##*/}
-       fi
+  for(( ix=0 ; ix < 5 ; ++ix )) ; do
+    for item in ${items[*]} ; do
+      if [ -f ${pDir[ix]}${item} ] ; then
+        if add2qaConf ${pDir[ix]}${item} ; then
+          findEmbeddedConf ${pDir[ix]}${item}
+        fi
+        break
+      fi
+    done
+  done
+
+  return
+}
+
+findProject()
+{
+  # 1. Scan files for explicit PROJECT and PROJECT_AS specifications.
+  # 2. Try to identify known default projects names in the filename.
+
+  local currConf=$1
+  local prj
+
+  # look for a specification in the current conf-files.
+  local name arg val
+  declare -a name arg
+  name=
+  arg=
+
+  for prj in PROJECT PROJECT_AS ; do
+    val=( $(grep "^[[:space:]]*[^#][[:space:]]*${prj:1}=" ${currConf} ) )
+    if [ "${val}" ] ; then
+      name[${#name[*]}]=${val%=*}
+      arg[${#arg[*]}]=${val#*=}
     fi
   done
+
+  # only if not set previously
+  if [ !${PROJECT_AS} ] ; then
+    local i
+    for i in 0 1 ; do
+      if [ "${name[i]}" = PROJECT_AS ] ; then
+        setKWL PROJECT_AS=${arg[i]}
+        return
+      fi
+    done
+
+    for i in 0 1 ; do
+      if [ "${name[i]}" = PROJECT ] ; then
+        setKWL PROJECT_AS=${arg[i]}
+        return
+      fi
+    done
+  fi
+
+  if [ "${PROJECT_AS}" ] ; then
+    return # PROJECT may be unset
+  else
+    # find known project names
+    if [ ${#knownProjects[*]} -eq 0 ] ; then
+      knownProjects=( $( ls ${QA_WORK}/tables/projects) )
+    fi
+
+    # filename with a leading project name?
+    local item
+    for prj in ${knownProjects[*]} ; do
+      item=${currConf##*/}
+      if [ ${prj} = ${item:0:${#prj}} ] ; then
+        break
+      else
+        prj=
+      fi
+    done
+
+    test ${prj} && setKWL PROJECT_AS=$prj
+  fi
 
   return
 }
@@ -579,6 +651,7 @@ getConfPriority()
   done
 
   # if a config file found so far is not a valid file, then try in
+  #   0) local
   #   1) QA_PATH/tables
   #   2) QA_PATH/tables/projects
 
@@ -594,23 +667,6 @@ getConfPriority()
       findEmbeddedConf ${qaConf[i]}
     fi
   done
-
-  # PROJECT is given, then try for a default name in the
-  # paths: local, tables, tables/projects
-  if [ ${PROJECT_AS} ] ; then
-    local name
-    name=${PROJECT_AS}_qa.conf
-
-    local p
-    for p in '' ${QA_PATH}/tables/ ${QA_PATH}/tables/projects/ ; do
-      if [ -f ${p}${name} ] ; then
-         # add to qaConf array preserving uniquness
-         if ! add2qaConf ${p}${name} ; then
-           findEmbeddedConf ${p}${name}
-         fi
-      fi
-    done
-  fi
 
   # construct a comma-sep-list
   test ${#qaConf[*]} -gt 0 && QA_CONFS=${qaConf[0]}
@@ -1120,6 +1176,8 @@ parseConfigurationFile()
   set +f
   # disconnect filename to input
   exec 0<&-
+
+  return
 }
 
 naming()
@@ -1297,8 +1355,11 @@ parseOPTARG()
   test "${key}" = CYCLE && \
     setKWL CYCLE=${value:-1} && return
 
-  test "${key:0:7}" = DEBUG_C && \
-    set -x && return
+  if [ "${key:0:7}" = DEBUG_C ] ; then
+    set -x
+    isSET_x=t
+    return
+  fi
 
   test "${key:0:7}" = DEBUG_E && \
     setKWL DEBUG_EXECUTOR=t && return
@@ -1522,6 +1583,11 @@ FS data directory: ${PROJECT_DATA[*]}
 
 setKWL()
 {
+  if [ "${isSET_x}" = t ] ; then
+    set +x
+    isSET_x=f
+  fi
+
   local key item value i val vals isAdd
   item="$*"
 
@@ -1636,6 +1702,11 @@ setKWL()
 
   # add key to the list
   keyWordList[${#keyWordList[*]}]=$key
+
+  if [ "${isSET_x}" = f ] ; then
+    set -x
+    isSET_x=t
+  fi
 
   return
 }
@@ -1886,6 +1957,7 @@ do
   case $option in
   e|E)  if [ ${UOPTARG:0:8} = '_DEBUG_C' ] ; then
           set -x
+          isSET_x=t
         elif [ ${UOPTARG:0:9} = '_PROJECT=' ] ; then
           setKWL ${UOPTARG:1}
         elif [ ${UOPTARG:0:11} = '_PROJECT_AS=' ] ; then
@@ -1898,7 +1970,9 @@ do
     h)  isHelp=t ;;
     P)  setKWL PROJECT=$OPTARG ;;
     T)  TTY=${OPTARG} ;;
-    x)  set -x ;;
+    x)  set -x
+        isSET_x=t
+        ;;
     -)  test "$OPTARG" = "help" && isHelp=t && continue
         test "${UOPTARG%=*}" = "PROJECT_AS" && setKWL PROJECT_AS=${OPTARG#*=} && continue
         ;;
@@ -1922,6 +1996,9 @@ fi
 # may be overwritten by configuration file or command-line
 setDefaults
 
+#set -x
+#isSET_x=t
+
 # get valid configuration files corresponding to the priority list
 getConfPriority
 
@@ -1930,8 +2007,16 @@ for(( i=${#qaConf[*]}-1 ; i > -1 ; --i )) ; do
   parseConfigurationFile ${qaConf[i]}
 done
 
-test ! ${PROJECT} && setKWL PROJECT=NONE
-test ! ${PROJECT_AS}  && setKWL PROJECT_AS=${PROJECT}
+if [ ${PROJECT} ] ; then
+  test ! ${PROJECT_AS} && setKWL PROJECT_AS=${PROJECT}
+else
+  if [ ${PROJECT_AS} ] ; then
+    setKWL PROJECT=${PROJECT_AS}
+  else
+    setKWL PROJECT=NONE
+    setKWL PROJECT_AS=NONE
+  fi
+fi
 
 # command-line overwrites configuration file assignments
 comLine=( $* ) # for e-mail and initSession
@@ -2001,6 +2086,7 @@ do
 
         elif [ "${UOPTARG:0:5}" = DEBUG ] ; then
           set -x
+          isSET_x=t
           if [ ${#OPTARG} -eq 5 -o ${OPTARG#*=} = qa-parse-config ] ; then
             installArgs="${installArgs}--debug,"
             setKWL DEBUG_MANAGER=t
