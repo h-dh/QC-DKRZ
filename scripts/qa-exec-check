@@ -1472,6 +1472,24 @@ set_X_par()
   else
     par=${par}"$1"
 
+    if [ "${CF_NOTE}" ] ; then
+      local saveNOTE
+      test ${NOTE} && saveNOTE=( ${NOTE[*]} )
+      NOTE=( ${CF_NOTE} )
+    fi
+
+    if [ "${CF_NOTE_ALWAYS}" ] ; then
+      local saveNOTE_ALWAYS
+      test ${NOTE_ALWAYS} && saveNOTE_ALWAYS=( ${NOTE_ALWAYS[*]} )
+      NOTE_ALWAYS=( ${CF_NOTE_ALWAYS[*]} )
+    fi
+
+    if [ "${CF_NOTE_LEVEL_LIMIT}" ] ; then
+      local saveNOTE_LEVEL_LIMIT
+      test ${NOTE_LEVEL_LIMIT} && saveNOTE_LEVEL_LIMIT=( ${NOTE_LEVEL_LIMIT[*]} )
+      NOTE_LEVEL_LIMIT=( ${CF_NOTE_LEVEL_LIMIT[*]} )
+    fi
+
     test ${#CF_CHECK_LIST} -gt 0 && \
       par=${par}":"cL=${CF_CHECK_LIST}
 
@@ -1512,6 +1530,10 @@ set_X_par()
   fi
 
   par=${par}":Y"
+
+  test ${saveNOTE} && NOTE=( ${saveNOTE[*]} )
+  test ${saveNOTE_ALWAYS} && NOTE_ALWAYS=( ${saveNOTE_ALWAYS[*]} )
+  test ${saveNOTE_LEVEL_LIMIT} && NOTE_LEVEL_LIMIT=( ${saveNOTE_LEVEL_LIMIT[*]} )
 
   return
 }
