@@ -433,7 +433,7 @@ CF::checkCoordinateValues(Variable& var, bool isFormTermAux, T x)
   if( var.dimName.size() > 1 )
     return;
 
-  double sig;
+  double sig=1.;
   for( size_t j=0 ; j < mv.validRangeBegin.size() ; ++j )
   {
     // start at [1], because of the difference below
@@ -3985,7 +3985,10 @@ CF::chap2_4_reco(void)
 void
 CF::chap2_5_1(void)
 {
-  double minVal, maxVal, range[2];
+   // for preventing compiler warnings for -O2
+   double minVal=0.;
+   double maxVal=0.;
+   double range[] = { 0., 0.};
 
    // missing data
    for( size_t ix=0 ; ix < pIn->varSz ; ++ix )
@@ -8544,7 +8547,7 @@ CF::chap7_3_4b(Variable& var,
                     || x_cm_name[x] == n_latitude) )
       {
         std::string meaning;
-        std::string *kind;
+        std::string *kind=0;  // for preventing compiler warnings when -O2
 
         int i_lat, i_lon;
         i_lat = i_lon = -1 ;
