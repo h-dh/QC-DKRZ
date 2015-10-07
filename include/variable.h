@@ -98,6 +98,7 @@ class VariableMeta
   bool isFixed;  // isTime==false && isDataVar==true
   bool isFillValue;
   bool isFormulaTermsVar;
+  bool isInstant;
   bool isLabel;
   bool isMapVar;
   bool isMissingValue;

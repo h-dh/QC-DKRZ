@@ -2778,7 +2778,7 @@ QA::checkVarTableEntry_standardName(
 {
   if( tbl_entry.standardName != vMD.var->std_name
         && vMD.var->name != "evspsblpot" )
-  {  // note that evspsblpot had a different "valid" name in a former
+  {  // note that evspsblpot is not a standard_name definded by CF conventions
      // CORDEX_variables_requirement table
     std::string key("32_2");
     if( notes->inq( key, vMD.var->name) )
@@ -5204,13 +5204,17 @@ QA::testPeriod(void)
     isLeft_fT_not_tV = *tV_left != *fN_left ;
     isRight_fT_not_tV = *tV_right != *fN_right ;
 
-    std::string key("16_12");
-    if( notes->inq( key, fVarname) )
+    if( qaTime.time_ix > -1 &&
+          ! pIn->variable[qaTime.time_ix].isInstant )
     {
-      std::string capt("Variable time_bnds is missing");
+      std::string key("16_12");
+      if( notes->inq( key, fVarname) )
+      {
+        std::string capt("Variable time_bnds is missing");
 
-      (void) notes->operate(capt) ;
-      notes->setCheckMetaStr( fail );
+        (void) notes->operate(capt) ;
+        notes->setCheckMetaStr(fail);
+      }
     }
   }
 

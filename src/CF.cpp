@@ -7463,7 +7463,6 @@ CF::chap7_3(void)
     if( (jx=var.getAttIndex(n_cell_methods)) == -1 )
       continue;
 
-    // note that the loop is in fact gratuitous
     std::string cm ;
     for( size_t i=0 ; i < var.attValue[jx].size() ; ++i )
     {
@@ -7902,7 +7901,8 @@ CF::chap7_3_cellMethods_Method(std::string &str0, Variable& var)
   term.push_back("mid_range");
   term.push_back("minimum");
   term.push_back("mode");
-  term.push_back("point");
+  std::string point("point");
+  term.push_back(point);
   term.push_back("standard_deviation");
   term.push_back("sum");
   term.push_back("variance");
@@ -7927,6 +7927,11 @@ CF::chap7_3_cellMethods_Method(std::string &str0, Variable& var)
 
     return true;
   }
+
+  // a time-line of instant values without boundaries?
+  std::vector<std::string> x_m_Items(x_methods.getItems());
+  if( hdhC::isAmong(point, x_m_Items) && time_ix > -1 )
+    pIn->variable[time_ix].isInstant=true;
 
   // check valid mode
   if( x_methods.size() > 1 )
