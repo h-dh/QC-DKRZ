@@ -60,15 +60,15 @@ Parse::getListObj( std::string &s, std::string &name, int &id, std::string &para
     }
   }
 
-  Split splt(s,sep);
-  name=splt[0];
-  id=splt.toInt(1);
+  Split x_s(s,sep);
+  name=x_s[0];
+  id=x_s.toInt(1);
 
   std::string t(name);
   t += sep ; t += sep ;
-  t += splt[1];
+  t += x_s[1];
 
-  param = splt.range(2);
+  param = x_s.range(2);
   return t ;
 }
 
@@ -76,12 +76,12 @@ std::string
 Parse::parseObj( std::string &s, std::string &name, int &id, std::string &param)
 {
   // parameter (! indicates separator):
-  //      return: obj-name!!id  ( the latter possiblycompleted)
+  //      return: obj-name!!id  ( the latter possibly completed)
   //           s: input string. When leaving, the reduced by the ob-name!!id
   //        name: obj-name
   //          id:
   //         sep: separator (by default ':')
-  //  isEmbedded: true when an embedded obj wis found
+  //  isEmbedded: true when an embedded obj was found
 
   // syntax: XX[!!][n!][param]
   // examples: XX!!n!param                --> ret: XX!!1, name=XX, id=n
@@ -115,24 +115,24 @@ Parse::parseObj( std::string &s, std::string &name, int &id, std::string &param)
   if( pos == s.size() )
      return t;  // no obj found
 
-  Split splt;
-  splt.enableEmptyItems();
-  splt.setSeparator(sep);
-  splt = s;
+  Split x_s;
+  x_s.enableEmptyItems();
+  x_s.setSeparator(sep);
+  x_s = s;
 
   // the start of an obj description
-  name=splt[0];
+  name=x_s[0];
   size_t ix;
 
   // obj_name!!id
   t += name;
   t += sep; t += sep;
 
-  if( splt.size() > 2 && hdhC::isDigit(splt[2]) )
+  if( x_s.size() > 2 && hdhC::isDigit(x_s[2]) )
   {
      // go for the number
-     t += splt[2];
-     id=splt.toInt(2);
+     t += x_s[2];
+     id=x_s.toInt(2);
      ix = 3;
   }
   else
@@ -142,7 +142,9 @@ Parse::parseObj( std::string &s, std::string &name, int &id, std::string &param)
     ix=2;
   }
 
-  for( ; ix < splt.size() ; ++ix)
+  size_t sz = x_s.size();
+
+  for( ; ix < sz ; ++ix)
   {
      std::string tmp;
      std::string n_name;
@@ -150,16 +152,16 @@ Parse::parseObj( std::string &s, std::string &name, int &id, std::string &param)
 
      // recursion
 
-     if( splt[ix+1].size() == 0 )
+     if( (ix+1) < sz && x_s[ix+1].size() == 0 )
      {
        // NOTE: An embedded full-text obj descriptor MUST have a different separator
        //       than the one of the object it is embedded.
        //       This cannot be tested.
-       tmp=splt[ix];
+       tmp=x_s[ix];
        tmp += sep ; tmp += sep;
-       if( (ix+2) < splt.size() && hdhC::isDigit(splt[ix+2]) )
+       if( (ix+2) < x_s.size() && hdhC::isDigit(x_s[ix+2]) )
        {
-         tmp += splt[ix+2] ;
+         tmp += x_s[ix+2] ;
          ix += 2;
        }
        else
@@ -169,7 +171,7 @@ Parse::parseObj( std::string &s, std::string &name, int &id, std::string &param)
        }
      }
      else
-       tmp = parseObj(splt[ix], n_name, n_id, param) ;
+       tmp = parseObj(x_s[ix], n_name, n_id, param) ;
 
      if( tmp.size() )
      {
@@ -182,7 +184,7 @@ Parse::parseObj( std::string &s, std::string &name, int &id, std::string &param)
           tmp += param;  // full obj description with a different separator
 
           // append the embedded obj+index+text to the list of argv.
-          argv.push_back( splt[ix] );
+          argv.push_back( x_s[ix] );
        }
 
        linkList.back().push_back( tmp );
@@ -190,7 +192,7 @@ Parse::parseObj( std::string &s, std::string &name, int &id, std::string &param)
      else
      {
        param += sep;
-       param += splt[ix] ;
+       param += x_s[ix] ;
      }
   }
 
