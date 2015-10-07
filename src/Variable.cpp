@@ -17,6 +17,7 @@ VariableMeta::VariableMeta()
   isFixed=false;
   isFillValue=false;
   isFormulaTermsVar=false;
+  isInstant=false;
   isLabel=false;
   isMapVar=false;
   isMissingValue=false;
