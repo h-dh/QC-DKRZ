@@ -5280,7 +5280,7 @@ QA::testPeriod(void)
        capt += " is misaligned to time " ;
        if( tB_left_obj )
          capt += "bounds ";
-       capt += hdhC::sAssign("data", tB_right_obj->str());
+       capt += hdhC::sAssign("data", tV_right->str());
 
        (void) notes->operate(capt) ;
        notes->setCheckMetaStr( fail );
