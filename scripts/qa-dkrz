@@ -245,6 +245,7 @@ callQaConfig()
     exit
   fi
 
+
   IFS="$OLD_IFS"
 
   if [ ! ${items[0]} ] ; then
@@ -463,7 +464,7 @@ callQaExecutor()
   keyW=( ${keyW[*]} ${tableVars[*]} )
   i=0
 
-  test ! ${DEBUG_MANAGER} && pauseX
+  test ! ${DEBUG_MANAGER} && voidX
 
   #use keywords and corresponding values to construct file in pool
 
@@ -473,7 +474,7 @@ callQaExecutor()
 
      text="${text}\n${item}=${w}"
   done
-  test ! ${DEBUG_MANAGER} && pauseX
+  test ! ${DEBUG_MANAGER} && voidX
 
   # call qaExecutor with arg-list: format: name=value
   # Note: if execution takes place on a host different than
@@ -510,6 +511,44 @@ callQaExecutor()
   fi
 
   currPID=$!
+
+  return
+}
+
+catFiles()
+{
+  # check whether at least one of the files to be concatenated is younger
+  # than the target. Here, younger means that the time in seconds is higher
+
+  local target=$1
+  shift
+  local fs=( $* )
+
+  local i sec isNew=f
+  declare -a sec
+
+  if [ -f ${target} ] ; then
+    local secTarget=$(ls -l --time-style='+%Y%m%d' ${target} | awk '{print $6}')
+
+    for(( i=0 ; i < ${#fs[*]} ; ++i )) ; do
+       sec[i]=$(ls -l --time-style='+%Y%m%d' ${fs[i]} | awk '{print $6}')
+
+       if [ ${sec[i]} -gt ${secTarget} ] ; then
+          isNew=t
+          break
+       fi
+    done
+  else
+    isNew=t
+  fi
+
+  if [ ${isNew} = t ] ; then
+    cat ${fs[0]} > ${target}
+
+    for(( i=1 ; i < ${#fs[*]} ; ++i )) ; do
+      cat ${fs[i]} >> ${target}
+    done
+  fi
 
   return
 }
@@ -2033,7 +2072,7 @@ getNextSubPath()
 
 getPaths()
 {
-  test ! ${DEBUG_MANAGER} && pauseX
+  test ! ${DEBUG_MANAGER} && voidX
   # if set -x enabled, then disable for this function
 
   # Get all paths to sub-dirs that contain netCDF file(s)
@@ -2174,7 +2213,7 @@ getPaths()
     exit
   fi
 
-  test ! ${DEBUG_MANAGER} && pauseX # roll back enabled set -x
+  test ! ${DEBUG_MANAGER} && voidX # roll back enabled set -x
 }
 
 getProjectTableName()
@@ -2870,16 +2909,27 @@ initTables()
   #    projects are updated and are applied.
   # 5) 4) also for option USE_STRICT.
 
+  local currPrj=$PROJECT_AS
   local tn name
   for tn in ${tableVars[*]} ; do
     eval name=\$${tn}
     test ${tn} != TABLE_PATH && initT $tn=${name}
   done
 
-  initT QA_CHECK_LIST=${QA_CHECK_LIST}
+  if [ "${QA_CHECK_LIST}" = "${QA_CHECK_LIST//,/}" ] ; then
+    initT QA_CHECK_LIST=${QA_CHECK_LIST}
+  else
+    initTcat QA_CHECK_LIST=${QA_CHECK_LIST}
+  fi
+
+  currPrj=CF
+  if [ "${CF_CHECK_LIST}" = "${CF_CHECK_LIST//,/}" ] ; then
+    initT CF_CHECK_LIST=${CF_CHECK_LIST}
+  else
+    initTcat CF_CHECK_LIST=${CF_CHECK_LIST}
+  fi
 
 # get CF tables
-  initT CF_CHECK_LIST=${CF_CHECK_LIST}
   initT CF_AREA_TYPES=${CF_AREA_TYPES}
   initT CF_STANDARD_NAMES=${CF_STANDARD_NAMES}
   initT CF_STD_REGION_NAMES=${CF_STD_REGION_NAMES}
@@ -2890,7 +2940,7 @@ initTables()
 initT()
 {
    local table=${1%=*}
-   local value=${1#*=}
+   test "${1}" != "${1/=/}" && local value=${1#*=}
 
    if [ ${value} ] ; then
      value=${value##*/}
@@ -2899,8 +2949,7 @@ initT()
    fi
 
    local pDir  # index 0 -> 3 provides precedence
-   local prj=${PROJECT_AS}
-   test "${table:0:3}" = CF_ && prj=CF
+   local prj=$currPrj
 
    pDir[0]=tables/projects/${prj}
    pDir[1]=tables/projects
@@ -2947,6 +2996,43 @@ initT()
    return
 }
 
+initTcat()
+{
+   local table=${1%=*}
+   local value=${1#*=}
+
+   test ! ${value} && return  # not provided
+
+   if [ ${USE_STRICT:-f} = t ] ; then
+      # if USE_STRICT is enabled, then projects[/prj] is required
+      initT ${1##*,}  # only the file in table/project/PROJECT, i.e. the last one
+      return
+   fi
+
+   # the regular copy part
+   local fs=(${value//,/ })
+   local f
+
+   # cat Files, when younger; the target files must be the first parameter
+   local target=${fs[$((${#fs[*]}-1))]##*/}
+
+   catFiles $TABLE_PATH/$target ${fs[*]}
+
+   if [ ${#fs[*]} -gt 0 ] ; then
+     # get current annotation option PERMITTED_FLAG_BEGIN from any of the files
+     # and copy it in front of the others without
+     local pfb=$(grep -m 1 "^[[:space:]]*[^#][[:space:]]*PERMITTED_FLAG_BEGIN=" \
+                 $TABLE_PATH/$target )
+     sed -i "1 i ${pfb}" $TABLE_PATH/$target
+   fi
+
+   setKWL ${table}=$target  # note: no value
+
+   test ${fs[0]:0:4} = /tmp && \rm -f ${fs[0]}
+
+   return
+}
+
 initT_CORDEX()
 {
    local pth=${QA_WORK}/${pDir[0]}
@@ -2970,26 +3056,15 @@ initT_CORDEX()
        http://cordex.dmi.dk/joomla/images/CORDEX/RCMModelName.txt \
        &> /dev/null
 
-       local f_a=${pth}/IS-ENES-Data.github.io/CORDEX_RCMs_ToU.txt
-       local f_b=${pth}/cordex_specs/RCMModelName.txt
-       local f_c=${TABLE_PATH}/CORDEX_RCMModelName.txt
-
-       local isNew=f
-       if [ -f $f_a -a -f $f_b -a -f $f_c ] ; then
-         local sec_a=$(ls -l --time-style='+%Y%m%d' ${f_a} | awk '{print $6}')
-         local sec_b=$(ls -l --time-style='+%Y%m%d' ${f_b} | awk '{print $6}')
-         local sec_c=$(ls -l --time-style='+%Y%m%d' ${f_c} | awk '{print $6}')
-
-         test ${sec_a} -gt ${sec_c} -o ${sec_b} -gt ${sec_c} && isNew=t
-       else
-         isNew=t
-       fi
-
-       test $isNew = t &&  cat  $f_a $f_b > $f_c
+       # concatenate files, when recently modified or new
+       # the target must be the first parameter
+       catFiles ${TABLE_PATH}/CORDEX_RCMModelName.txt \
+                ${pth}/IS-ENES-Data.github.io/CORDEX_RCMs_ToU.txt \
+                ${pth}/cordex_specs/RCMModelName.txt
      else
-       cat ${pth}/FallBack/CORDEX_RCMs_ToU.txt \
-           ${pth}/FallBack/RCMModelName.txt \
-           > ${TABLE_PATH}/CORDEX_RCMModelName.txt
+       catFiles ${TABLE_PATH}/CORDEX_RCMModelName.txt \
+                ${pth}/FallBack/CORDEX_RCMs_ToU.txt \
+                ${pth}/FallBack/RCMModelName.txt
      fi
    fi
 
@@ -3343,7 +3418,7 @@ log_sessMessage()
 {
   # print messages to the log file
 
-  test ! ${DEBUG_MANAGER} && pauseX
+  test ! ${DEBUG_MANAGER} && voidX
 
   # date and host
   local k N str0 str
@@ -3383,7 +3458,7 @@ log_sessMessage()
   tryCom \
   echo -e "\n${str}" >> $SESSION_LOGDIR/session.log
 
-  test ! ${DEBUG_MANAGER} && pauseX
+  test ! ${DEBUG_MANAGER} && voidX
   return
 }
 
@@ -3670,7 +3745,7 @@ operatePipes()
       # returns 0 for success and 1 for no free host found
       host_nap=1  # increment for a sleeping period
 
-      test ! ${DEBUG_MANAGER} && pauseX
+      test ! ${DEBUG_MANAGER} && voidX
       while \
 #trace \
        ! getHost
@@ -3681,7 +3756,7 @@ operatePipes()
         sleep $host_nap
         test $host_nap -lt $maxSleep && host_nap=$(( host_nap +1 ))
       done
-      test ! ${DEBUG_MANAGER} && pauseX
+      test ! ${DEBUG_MANAGER} && voidX
 
       # check disk space
       if [ ${ENABLE_DISK_SPACE_INQ:-f} = t ] ; then
@@ -3764,30 +3839,6 @@ operatePipes()
   done
 
   return $retVal
-}
-
-pauseX()
-{
-  # toggle between set -x and set +x in a way that
-  # restores the original setting after calling twice
-
-  if [ ${isSetX:-t} = t ] ; then
-    test "$(set -o |grep xtrace | awk '{print $2}')" = off && return
-
-    # first call
-    isSetX=on
-  fi
-
-  # restore previous setting
-  if [ ${isSetX} = off ] ; then
-    set -x
-    isSetX=on
-  else
-    set +x
-    isSetX=off
-  fi
-
-  return
 }
 
 rmBlock()
@@ -3913,11 +3964,20 @@ setLD_LIB_PATH()
 setKWL()
 {
   # store keywords, no values
-  local key=$1
+  local key=${1%%=*}
+  test "${1}" != "${1/=/}" && local value=${1#*=}
 
   # was key already defined?
   for(( i=0 ; i < ${#keyWordList[*]} ; ++i )) ; do
      if [ "${keyWordList[i]}" = "$key" ] ; then
+      if [ ${value} ] ; then
+        local asdf
+        eval asdf=\$${key}
+        if [ "$asdf" != "$value" ] ; then
+          eval $key="$value"
+        fi
+      fi
+
       return
     fi
   done
@@ -4532,7 +4592,7 @@ tracePrint()
 
 tryCom()
 {
-  test ! ${DEBUG_MANAGER} && pauseX
+  test ! ${DEBUG_MANAGER} && voidX
 
   # leading options:
   # a) return the status after trying:   get_status
@@ -4620,8 +4680,32 @@ tryCom()
     break
   done
 
-  test ! ${DEBUG_MANAGER} && pauseX
+  test ! ${DEBUG_MANAGER} && voidX
   return $retVal
+}
+
+voidX()
+{
+  # toggle between set -x and set +x in a way that
+  # restores the original setting after calling twice
+
+  if [ ${isSetX:-t} = t ] ; then
+    test "$(set -o |grep xtrace | awk '{print $2}')" = off && return
+
+    # first call
+    isSetX=on
+  fi
+
+  # restore previous setting
+  if [ ${isSetX} = off ] ; then
+    set -x
+    isSetX=on
+  else
+    set +x
+    isSetX=off
+  fi
+
+  return
 }
 
 wait_fnct()

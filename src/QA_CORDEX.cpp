@@ -3551,8 +3551,9 @@ QA::init(void)
    applyOptions();
 //
    fVarname = getVarnameFromFilename(pIn->file.getFilename());
-   getFrequency();
+   notes->setConstraintFreq( getFrequency() );  // safe
    getSubTable() ;
+
 
    // Create and set VarMetaData objects.
    createVarMetaData() ;
@@ -3723,6 +3724,7 @@ QA::initDefaults(void)
   isCheckParentExpID=true;
   isCheckParentExpRIP=true;
   isExit=false;
+  isFileComplete=true;
   isFirstFile=false;
   isNotFirstRecord=false;
   isResumeSession=false;
@@ -5132,11 +5134,8 @@ QA::testPeriod(void)
   std::vector<Date> period;
   qaTime.getDRSformattedDateRange(period, sd);
 
-  Date* fN_left = &period[0];
-  Date* fN_right = &period[1];
-
   // necessary for validity (not sufficient)
-  if( *fN_left > *fN_right )
+  if( period[0] > period[1] )
   {
      std::string key("42_4");
      if( notes->inq( key, fileStr) )
@@ -5151,33 +5150,31 @@ QA::testPeriod(void)
      return false;
   }
 
-  Date* tV_left = 0 ;
-  Date* tV_right = 0;
+  Date* pDates[6];
+  pDates[0] = &period[0];  // StartTime in the filename
+  pDates[1] = &period[1];  // EndTime in the filename
 
-  Date* tV_left_obj = 0 ;
-  Date* tV_right_obj = 0;
-  Date* tB_left_obj = 0 ;
-  Date* tB_right_obj = 0;
+  // index 2: date of first time value
+  // index 3: date of last  time value
+  // index 4: date of first time-bound value, if available; else 0
+  // index 5: date of last  time-bound value, if available; else 0
 
-  bool isLeft_fT_not_tV ;
-  bool isRight_fT_not_tV ;
+  for( size_t i=2 ; i < 6 ; ++i )
+    pDates[i] = 0 ;
 
   if( qaTime.isTimeBounds)
   {
-    tB_left_obj = new Date(qaTime.refDate);
-    tB_left_obj->addTime(qaTime.firstTimeBoundsValue[0]);
-    tV_left = tB_left_obj;
+    pDates[4] = new Date(qaTime.refDate);
+    if( qaTime.firstTimeBoundsValue[0] != 0 )
+      pDates[4]->addTime(qaTime.firstTimeBoundsValue[0]);
 
-    tB_right_obj = new Date(qaTime.refDate);
-    tB_right_obj->addTime(qaTime.firstTimeBoundsValue[1]);
-    tV_right = tB_right_obj;
-
-    isLeft_fT_not_tV = *tB_left_obj != *fN_left ;
-    isRight_fT_not_tV = *tB_right_obj != *fN_right ;
+    pDates[5] = new Date(qaTime.refDate);
+    if( qaTime.lastTimeBoundsValue[1] != 0 )
+      pDates[5]->addTime(qaTime.lastTimeBoundsValue[1]);
 
     double db_centre=(qaTime.firstTimeBoundsValue[0]
                         + qaTime.firstTimeBoundsValue[1])/2. ;
-    if( db_centre != qaTime.firstTimeValue )
+    if( ! hdhC::compare(db_centre, '=', qaTime.firstTimeValue) )
     {
       std::string key("16_11");
       if( notes->inq( key, fVarname) )
@@ -5189,124 +5186,114 @@ QA::testPeriod(void)
       }
     }
   }
-  else
+
+  pDates[2] = new Date(qaTime.refDate);
+  if( qaTime.firstTimeValue != 0. )
+    pDates[2]->addTime(qaTime.firstTimeValue);
+
+  pDates[3] = new Date(qaTime.refDate);
+  if( qaTime.lastTimeValue != 0. )
+    pDates[3]->addTime(qaTime.lastTimeValue);
+
+  if( qaTime.time_ix > -1 &&
+        ! pIn->variable[qaTime.time_ix].isInstant )
   {
-    tV_left_obj = new Date(qaTime.refDate);
-    if( qaTime.firstTimeValue != 0. )
-      tV_left_obj->addTime(qaTime.firstTimeValue);
-    tV_left = tV_left_obj;
-
-    tV_right_obj = new Date(qaTime.refDate);
-    if( qaTime.lastTimeValue != 0. )
-      tV_right_obj->addTime(qaTime.lastTimeValue);
-    tV_right = tV_right_obj;
-
-    isLeft_fT_not_tV = *tV_left != *fN_left ;
-    isRight_fT_not_tV = *tV_right != *fN_right ;
-
-    if( qaTime.time_ix > -1 &&
-          ! pIn->variable[qaTime.time_ix].isInstant )
+    std::string key("16_12");
+    if( notes->inq( key, fVarname) )
     {
-      std::string key("16_12");
-      if( notes->inq( key, fVarname) )
+      std::string capt("Variable time_bnds is missing");
+
+      (void) notes->operate(capt) ;
+      notes->setCheckMetaStr(fail);
+    }
+  }
+
+  // alignment of of contained dates and those in the filename
+  // the booleanx indicate faults
+//  bool is_t_beg = is_t_end = is_tb_beg = is_tb_end = false;
+  bool isFault[4];
+  for(size_t i=0 ; i < 4 ; ++i )
+    isFault[i]=false;
+
+  // time value: left-side
+  Date myDate( *pDates[2] );
+  myDate.addTime(-qaTime.refTimeStep);
+  isFault[0] = myDate > *pDates[0] ;
+
+  // time value: right-side
+  myDate = *pDates[3] ;
+  myDate.addTime(qaTime.refTimeStep);
+  isFault[1] = myDate < *pDates[1] ;
+
+  if(qaTime.isTimeBounds)
+  {
+    // time_bounds: left-side
+    myDate = *pDates[4] ;
+    myDate.addTime(qaTime.refTimeStep);
+    isFault[2] = myDate > *pDates[0] ;
+
+    // time_bounds: right-side
+    myDate = *pDates[5] ;
+    myDate.addTime(-qaTime.refTimeStep);
+    isFault[3] = myDate < *pDates[1] ;
+  }
+
+  // the annotations
+  for(size_t i=0 ; i < 4 ; ++i)
+  {
+    // skip for the mode of checking during production
+    if( (i==1 || i==3) && !isFileComplete )
+       continue;
+
+    if(isFault[i])
+    {
+      std::string key("16_2");
+      if( notes->inq( key, fileStr) )
       {
-        std::string capt("Variable time_bnds is missing");
+        std::string token;
+
+        std::string capt("Misaligned periods in filename and data");
+        if( i < 2 )
+          capt += "(first)" ;
+        else
+          capt += "(last)" ;
+
+        capt += hdhC::sAssign("name", pDates[0]->str()) ;
+        capt += " and " ;
+        if( i==0 || i==2 )
+          token="time";
+        else
+          token="time bounds";
+
+        capt += hdhC::sAssign(token, pDates[i+2]->str()) ;
 
         (void) notes->operate(capt) ;
-        notes->setCheckMetaStr(fail);
+        notes->setCheckMetaStr( fail );
       }
     }
   }
 
-  if( isLeft_fT_not_tV )
-  {
-    // CMOR isn't capable of working with the time_bounds. Hence, an exception
-    // rule is added to the CORDEX archive design as to the period in filenames:
-    // "It is also allowed to use time values of the first and last records
-    // in NetCDF files for averaged data." However, this does not lead to a
-    // working solution. In fact, CMOR sets StartTime to the beginning  of
-    // the month bearing the first time value.
-    // So, here is a LEX CMOR
-    if( tV_left_obj == 0 )
-    {
-      tV_left_obj = new Date(qaTime.refDate);
-      tV_left = tV_left_obj;
-      if( qaTime.firstTimeValue != 0. )
-        tV_left->addTime(qaTime.firstTimeValue);
-    }
-    double monDaysNum = tV_left->getMonthDaysNum();
-    tV_left->addTime(-monDaysNum, "day");
-
-    if( tV_right_obj == 0 )
-    {
-      tV_right_obj = new Date(qaTime.refDate);
-      tV_right = tV_right_obj;
-      if( qaTime.lastTimeValue != 0. )
-        tV_right->addTime(qaTime.lastTimeValue);
-    }
-
-    isLeft_fT_not_tV = *tV_left != *fN_left ;
-    isRight_fT_not_tV = *tV_right != *fN_right ;
-  }
-
-  // the annotation
-  if( isLeft_fT_not_tV )
-  {
-     std::string key("16_2");
-     if( notes->inq( key, fileStr) )
-     {
-       std::string capt("First date ");
-       capt += hdhC::sAssign("(filename)", fN_left->str()) ;
-       capt += " and time " ;
-       if( tB_left_obj )
-         capt += "bounds ";
-       capt += hdhC::sAssign("data", tV_left->str());
-       capt += " are misaligned";
-
-       (void) notes->operate(capt) ;
-       notes->setCheckMetaStr( fail );
-     }
-  }
-
-  // test completeness: the end of the file
-  if( isFileComplete && isRight_fT_not_tV )
-  {
-     std::string key("16_3");
-     if( notes->inq( key, fileStr) )
-     {
-       std::string capt("Second date ");
-       capt += hdhC::sAssign("(filename)", fN_right->str()) ;
-
-       capt += " is misaligned to time " ;
-       if( tB_left_obj )
-         capt += "bounds ";
-       capt += hdhC::sAssign("data", tV_right->str());
-
-       (void) notes->operate(capt) ;
-       notes->setCheckMetaStr( fail );
-     }
-  }
-
   // format of period dates.
   if( testPeriodFormat(sd) )
+  {
     // period requires a cut specific to the various frequencies.
-    testPeriodCut(sd) ;
+    if( fileSequenceState == 'l' )
+      testPeriodStartTime(sd) ;
+    if( fileSequenceState == 'f' )
+      testPeriodEndTime(sd) ;
+  }
 
-  if( tV_left_obj )
-    delete tV_left_obj;
-  if( tV_right_obj )
-    delete tV_right_obj;
-  if( tB_left_obj )
-    delete tB_left_obj;
-  if( tB_right_obj )
-    delete tB_right_obj;
+  // note that indices 0 and 1 belong to a vector
+  for(size_t i=2 ; i < 6 ; ++i )
+    if( pDates[i] )
+      delete pDates[i];
 
   // complete
   return false;
 }
 
 void
-QA::testPeriodCut(std::vector<std::string> &sd)
+QA::testPeriodStartTime(std::vector<std::string> &sd)
 {
   // Partitioning of files check are equivalent.
   // Note that the format was tested before.
@@ -5314,11 +5301,9 @@ QA::testPeriodCut(std::vector<std::string> &sd)
   // lead to a wrong cut.
 
   std::string text;
-  std::string baseText("the period string in the filename should ");
+  std::string baseText("period in filename: ");
 
   bool isInstant = ! qaTime.isTimeBounds ;
-  bool isBegin = fileSequenceState == 'l'  ;
-  bool isEnd   = fileSequenceState == 'f'  ;
 
   if( frequency == "3hr" )
   {
@@ -5328,62 +5313,20 @@ QA::testPeriodCut(std::vector<std::string> &sd)
     else
     {
       // same year. But also an unsplit year
-      if( isBegin )
+      if( sd[0].substr(4,4) != "0101" )
+        text += baseText + "not aligned with the beginning of the year";
+
+      bool isA=sd[0].substr(8,2) == "00";
+      bool isB=sd[0].substr(8,2) == "03";
+
+      if( isInstant )
       {
-        if( sd[0].substr(4,4) != "0101" )
-          text += baseText + "begin with YYYY0101";
-
-        if( isInstant )
-        {
-          if( sd[0].substr(8,2) != "00" )
-          {
-            if( text.size() )
-              text += "\n";
-
-            text += baseText + "begin with YYYY010100";
-          }
-        }
-        else
-        {
-          if( sd[0].substr(8,4) != "0130" )
-          {
-            if( text.size() )
-              text += "\n";
-
-            text += baseText + "begin with YYYY01010130";
-          }
-        }
-      }
-
-      if( isEnd )
-      {
-        if( sd[1].substr(4,4) != "1231" )
+        if( ! (isA || isB ) )
         {
           if( text.size() )
             text += "\n";
 
-          text += baseText + "end with YYYY1231";
-        }
-
-        if( isInstant )
-        {
-          if( sd[1].substr(8,2) != "21" )
-          {
-            if( text.size() )
-              text += "\n";
-
-            text += baseText + "end with YYYY123121";
-          }
-        }
-        else
-        {
-          if( sd[1].substr(8,4) != "2230" )
-          {
-            if( text.size() )
-              text += "\n";
-
-            text += baseText + "end with YYYY12312230";
-          }
+          text += baseText + "begin with mistimed hour";
         }
       }
     }
@@ -5397,62 +5340,17 @@ QA::testPeriodCut(std::vector<std::string> &sd)
     else
     {
       // same year. But also an unsplit year
-      if( isBegin )
+      if( sd[0].substr(4,4) != "0101" )
+        text += baseText + "not aligned with the beginning of the year";
+
+      if( isInstant )
       {
-        if( sd[0].substr(4,4) != "0101" )
-          text += baseText + "begin with YYYY0101";
-
-        if( isInstant )
-        {
-          if( sd[0].substr(8,2) != "00" )
-          {
-            if( text.size() )
-              text += "\n";
-
-            text += baseText + "begin with YYYY010100";
-          }
-        }
-        else
-        {
-          if( sd[0].substr(8,2) != "03" )
-          {
-            if( text.size() )
-              text += "\n";
-
-            text += baseText + "begin with YYYY010103";
-          }
-        }
-      }
-
-      if( isEnd )
-      {
-        if( sd[1].substr(4,4) != "1231" )
+        if( sd[0].substr(8,2) != "00" )
         {
           if( text.size() )
             text += "\n";
 
-          text += baseText + "end with YYYY1231";
-        }
-
-        if( isInstant )
-        {
-          if( sd[1].substr(8,2) != "18" )
-          {
-            if( text.size() )
-              text += "\n";
-
-            text += baseText + "end with YYYY123118";
-          }
-        }
-        else
-        {
-          if( sd[1].substr(8,4) != "21" )
-          {
-            if( text.size() )
-              text += "\n";
-
-            text += baseText + "end with YYYY123121";
-          }
+          text += baseText + "begin with mistimed hour";
         }
       }
     }
@@ -5466,37 +5364,15 @@ QA::testPeriodCut(std::vector<std::string> &sd)
     if( (p1-p0) > 5. )
       text = "period should not exceed 5 years for daily data";
 
-    if( isBegin )
+    if( ! (sd[0][3] == '1' || sd[0][3] == '6') )
+      text += baseText + "begin with YYY1 or YYY6.";
+
+    if( sd[0].substr(4,4) != "0101" )
     {
-      if( ! (sd[0][3] == '1' || sd[0][3] == '6') )
-        text += baseText + "begin with YYY1 or YYY6.";
+      if( text.size() )
+        text += "\n";
 
-      if( sd[0].substr(4,4) != "0101" )
-      {
-        if( text.size() )
-          text += "\n";
-
-        text += baseText + "begin with YYYY0101";
-      }
-    }
-
-    if( isEnd )
-    {
-      if( ! (sd[1][3] == '0' || sd[1][3] == '5') )
-      {
-        if( text.size() )
-          text += "\n";
-
-        text += baseText + "end with YYY0 or YYY5.";
-      }
-
-      if( sd[1].substr(4,4) != "1231" )
-      {
-        if( text.size() )
-          text += "\n";
-
-        text += baseText + "end with YYYY1231";
-      }
+      text += baseText + "begin with YYYY0101";
     }
   }
   else if( frequency == "mon" )
@@ -5507,37 +5383,15 @@ QA::testPeriodCut(std::vector<std::string> &sd)
     if( (p1-p0) > 10. )
       text = "period should not exceed 10 years for monthly data";
 
-    if( isBegin )
+    if( sd[0][3] != '1')
+      text += baseText + "begin with YYY1.";
+
+    if( sd[0].substr(4,4) != "01" )
     {
-      if( sd[0][3] != '1')
-        text += baseText + "begin with YYY1.";
+      if( text.size() )
+        text += "\n";
 
-      if( sd[0].substr(4,4) != "01" )
-      {
-        if( text.size() )
-          text += "\n";
-
-        text += baseText + "begin with YYYY01";
-      }
-    }
-
-    if( isEnd )
-    {
-      if( ! (sd[1][3] == '0' || sd[1][3] == '5') )
-      {
-        if( text.size() )
-          text += "\n";
-
-        text += baseText + "end with YYY0.";
-      }
-
-      if( sd[1].substr(4,4) != "12" )
-      {
-        if( text.size() )
-          text += "\n";
-
-        text += baseText + "end with YYYY1231";
-      }
+      text += baseText + "begin with YYYY01";
     }
   }
   else if( frequency == "sem" )
@@ -5548,26 +5402,197 @@ QA::testPeriodCut(std::vector<std::string> &sd)
     if( (p1-p0) > 11. )
       text = "period should not exceed 10 years for seasonal data";
 
-    if( isBegin )
+    if( !isFirstFile && sd[0].substr(4,2) != "12" )
     {
-      if( !isFirstFile && sd[0].substr(4,2) != "12" )
+      if( text.size() )
+          text += "\n";
+
+      text += baseText + "begin in YYYY12";
+    }
+  }
+
+  if( text.size() )
+  {
+    std::string key("16_6");
+    if( notes->inq( key, fileStr) )
+    {
+      std::string capt("period in filename is not cut as recommended");
+
+      (void) notes->operate(capt, text) ;
+       notes->setCheckMetaStr( fail );
+    }
+  }
+
+  return;
+}
+
+void
+QA::testPeriodEndTime(std::vector<std::string> &sd)
+{
+  // Partitioning of files check are equivalent.
+  // Note that the format was tested before.
+  // Note that desplaced start/end points, e.g. '02' for monthly data, would
+  // lead to a wrong cut.
+
+  std::string text;
+  std::string baseText("period in filename: ");
+
+  bool isInstant = ! qaTime.isTimeBounds ;
+
+  if( frequency == "3hr" )
+  {
+    // should be the same year
+    if( sd[0].substr(0,4) != sd[1].substr(0,4) )
+      text = "only a single file annually for 3-hourly data";
+    else
+    {
+      // same year. But also an unsplit year
+      bool isA=sd[1].substr(4,4) == "1231";
+      bool isB=sd[1].substr(4,4) == "0101"
+                      && sd[1].substr(8,2) == "00" ;
+
+      if( isInstant )
       {
-        if( text.size() )
+        if( ! ( isA || isB ) )
+        {
+          if( text.size() )
             text += "\n";
 
-        text += baseText + "begin in YYYY12";
+          text += baseText + "not aligned with the end of the year";
+        }
+
+        if( ! (sd[1].substr(8,2) == "21"
+                  || sd[1].substr(8,2) == "24"
+                    || isB ) )
+        {
+          if( text.size() )
+            text += "\n";
+
+          text += baseText + "end with mistimed hour";
+        }
+      }
+      else
+      {
+        if( ! (isA || isB) )
+        {
+          if( text.size() )
+            text += "\n";
+
+          text += baseText + "not aligned with the end of the year";
+        }
+
+        if( sd[1].substr(8,4) != "2230" )
+        {
+          if( text.size() )
+            text += "\n";
+
+          text += baseText + "end with YYYY12312230";
+        }
       }
     }
+  }
 
-    if( isEnd )
+  else if( frequency == "6hr" )
+  {
+    // should be the same year
+    if( sd[0].substr(0,4) != sd[1].substr(0,4) )
+      text = "only a single file annually for 6-hourly data";
+    else
     {
-      if( !enablePostProc && sd[1].substr(4,2) != "11" )
+      // same year. But also an unsplit year
+      if( sd[1].substr(4,4) != "1231" )
       {
         if( text.size() )
           text += "\n";
 
-        text += baseText + "end in YYYY11";
+        text += baseText + "end with YYYY1231";
       }
+
+      if( isInstant )
+      {
+        if( sd[1].substr(8,2) != "18" )
+        {
+          if( text.size() )
+            text += "\n";
+
+          text += baseText + "end with YYYY123118";
+        }
+      }
+      else
+      {
+        if( sd[1].substr(8,4) != "21" )
+        {
+          if( text.size() )
+            text += "\n";
+
+          text += baseText + "end with YYYY123121";
+        }
+      }
+    }
+  }
+
+  else if( frequency == "day" )
+  {
+    // 5 years or less
+    double p0=hdhC::string2Double(sd[0].substr(0,4));
+    double p1=hdhC::string2Double(sd[1].substr(0,4));
+    if( (p1-p0) > 5. )
+      text = "period should not exceed 5 years for daily data";
+
+    if( ! (sd[1][3] == '0' || sd[1][3] == '5') )
+    {
+      if( text.size() )
+        text += "\n";
+
+      text += baseText + "end with YYY0 or YYY5.";
+    }
+
+    if( sd[1].substr(4,4) != "1231" )
+    {
+      if( text.size() )
+        text += "\n";
+
+      text += baseText + "end with YYYY1231";
+    }
+  }
+  else if( frequency == "mon" )
+  {
+    // 10 years or less
+    double p0=hdhC::string2Double(sd[0].substr(0,4));
+    double p1=hdhC::string2Double(sd[1].substr(0,4));
+    if( (p1-p0) > 10. )
+      text = "period should not exceed 10 years for monthly data";
+
+    if( ! (sd[1][3] == '0' || sd[1][3] == '5') )
+    {
+      if( text.size() )
+        text += "\n";
+
+      text += baseText + "end with YYY0.";
+    }
+
+    if( sd[1].substr(4,4) != "12" )
+    {
+      if( text.size() )
+        text += "\n";
+
+      text += baseText + "end with YYYY1231";
+    }
+  }
+  else if( frequency == "sem" )
+  {
+    // 10 years or less
+    double p0=hdhC::string2Double(sd[0].substr(0,4));
+    double p1=hdhC::string2Double(sd[1].substr(0,4));
+    if( (p1-p0) > 11. )
+      text = "period should not exceed 10 years for seasonal data";
+
+    if( !enablePostProc && sd[1].substr(4,2) != "11" )
+    {
+      if( text.size() )
+        text += "\n";
+
+      text += baseText + "end in YYYY11";
     }
   }
 

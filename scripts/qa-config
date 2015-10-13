@@ -86,11 +86,11 @@ add2qaConf()
 
   # found a name
   # test whether this name was already specified
-  for(( i=0 ; i < ${#qaConf[*]} ; ++i )) ; do
-    test "${qaConf[i]}" = "${prospect}" && return 1
+  for(( i=0 ; i < ${#filePrecedence[*]} ; ++i )) ; do
+    test "${filePrecedence[i]}" = "${prospect}" && return 1
   done
 
-  qaConf[${#qaConf[*]}]=${prospect}
+  filePrecedence[${#filePrecedence[*]}]=${prospect}
 
   return 0
 }
@@ -594,6 +594,8 @@ findProject()
 
 findStr()
 {
+  test ${DEBUG_CONF} && voidX
+
   # find position of sub-string in string
   # $1: the string
   # $2: sub-string to find
@@ -606,56 +608,129 @@ findStr()
   for(( i=0 ; i < end ; ++i )) ; do
     if [ "${1:i:len}" = "$2" ] ; then
       test ${#3} -gt 0 && eval ${3}=$i
+      test ${DEBUG_CONF} && voidX
       return 0
     fi
   done
 
+  test ${DEBUG_CONF} && voidX
   return 1
 }
 
-getConfPriority()
+getMultiLists()
 {
+  local pDir  # index 0 -> 3 provides precedence
+
+  pDir[0]=$(pwd)  # local path
+  pDir[1]=${QA_WORK}/tables
+  pDir[2]=${QA_WORK}/tables/${PROJECT}
+  pDir[3]=${QA_WORK}/tables/projects/${PROJECT}
+
+  local prjList cfList
+  declare -a prjList cfList
+
+  # precedence of check lists: user-defined --> default
+  local fs=( CF_check-list.conf ${PROJECT}_check-list.conf)
+
+  local p
+  for p in ${pDir[*]} ; do
+    test -f $p/${fs[1]} && prjList[${#prjList[*]}]=$p/${fs[1]}
+  done
+
+  pDir[3]=${QA_WORK}/tables/projects/CF
+  for p in ${pDir[*]} ; do
+    test -f $p/${fs[0]} && cfList[${#cfList[*]}]=$p/${fs[0]}
+  done
+
+  if [ $# -gt 0 ] ; then
+    # notes provided on the command-line;
+    # there are two types possible: one for CF the other for the project
+
+    set +B # disable brace expansion
+    local a arg cf_CL prj_CL isCF isPRJ
+    declare -a cf_CL prj_CL
+
+    for arg in $* ; do
+      if [ ${arg:0:2} = CF ] ; then
+        if [ ${isCF:-f} = f  ] ; then
+          local cl_CF_note=/tmp/CF_comLineNote_$$.txt
+          isCF=t
+        fi
+
+        # multiple notes could be given aus comma-sep-braces;
+        # print each note on a separate line of the file
+        arg="${arg#*=}"
+        arg=( ${arg//\},/\} } )
+        for a in ${arg[*]} ; do
+          echo "text & ${a}" >> /tmp/CF_comLineNote_$$.txt
+        done
+      else
+        if [ ${isPRJ:-f} = f  ] ; then
+          local cl_PRJ_note=/tmp/PRJ_comLineNote_$$.txt
+          isPRJ=t
+        fi
+
+        # multiple notes could be given aus comma-sep-braces;
+        # print each note on a separate line of the file
+        arg="${arg#*=}"
+        arg=( ${arg//\},/\} } )
+        for a in ${arg[*]} ; do
+          echo "text & ${a}" >> /tmp/PRJ_comLineNote_$$.txt
+        done
+      fi
+    done
+
+    set -B
+  fi
+
+  local cf="${cl_CF_note}${cl_CF_note:+ }${cfList[*]}"
+  local prj="${cl_PRJ_note}${cl_PRJ_note:+ }${prjList[*]}"
+
+  setKWL CF_CHECK_LIST="${cf// /,}"
+  setKWL QA_CHECK_LIST="${prj// /,}"
+
+  return
+}
+
+getPrecedence()
+{
+  filePrecedence=( $* )
+
   # the first two items of array 'task_priority' would have been
   # set while performing getops().
-
-#  test "${PROJECT}" = NONE && return
 
   local i item qaResults swp sz1 sz
 
   # in case there are multiple conf files, then 'task' files followed by
   # the sequence of embedded QA_CONF assignments get
   # priority with the order the task-files are specified.
-  sz1=$(( ${#qaConf[*]} -1 ))
-  sz=${#qaConf[*]}
+  sz1=$(( ${#filePrecedence[*]} -1 ))
+  sz=${#filePrecedence[*]}
   local i1 i2
 
   for(( i1=0 ; i1 < sz1 ; ++i1 )) ; do
     for((i2=i1+1 ; i2 < sz ; ++i2 )) ; do
-      if [ "${qaConf[i1]##*.}" != task -a "${qaConf[i2]##*.}" = task ] ; then
-      swp=${qaConf[i1]}
-      qaConf[${i1}]=${qaConf[i2]}
-      qaConf[${i2}]=${swp}
+      if [ "${filePrecedence[i1]##*.}" != task -a "${filePrecedence[i2]##*.}" = task ] ; then
+      swp=${filePrecedence[i1]}
+      filePrecedence[${i1}]=${filePrecedence[i2]}
+      filePrecedence[${i2}]=${swp}
     fi
     done
   done
 
   # resolve relative paths
   for(( i1=0 ; i1 < sz ; ++i1 )) ; do
-    if [ ${qaConf[i1]:0:2} = './' ] ; then
-      qaConf[i1]=${qaConf[i1]:2}
-    elif [ ${qaConf[i1]:0:3} = '../' ] ; then
+    if [ ${filePrecedence[i1]:0:2} = './' ] ; then
+      filePrecedence[i1]=${filePrecedence[i1]:2}
+    elif [ ${filePrecedence[i1]:0:3} = '../' ] ; then
       item=$(pwd)
       item=${item%/*}
-      qaConf[i1]=${item}/${qaConf[i1]:3}
+      filePrecedence[i1]=${item}/${filePrecedence[i1]:3}
     fi
   done
 
-  # if a config file found so far is not a valid file, then try in
-  #   0) local
-  #   1) QA_PATH/tables
-  #   2) QA_PATH/tables/projects
-
-  # go through the chain of config files unless no more
+  # This loop only works for filenames passed as parameters.
+  # Go through the chain of files unless no more
   # is found or a path found before is found again;
   # an invalid file would also break processing
   local j
@@ -663,21 +738,10 @@ getConfPriority()
   for(( i=0 ; i < sz ; ++i )) ; do
     # attach a chain of embedded conf-files
     # sets also PROJECT if found in the sequence of conf-files.
-    if ! add2qaConf ${qaConf[i]} ; then
-      findEmbeddedConf ${qaConf[i]}
+    if ! add2qaConf ${filePrecedence[i]} ; then
+      findEmbeddedConf ${filePrecedence[i]}
     fi
   done
-
-  # construct a comma-sep-list
-  test ${#qaConf[*]} -gt 0 && QA_CONFS=${qaConf[0]}
-
-  for(( i=1 ; i < ${#qaConf[*]} ; ++i )) ; do
-    QA_CONFS="${QA_CONFS},${qaConf[i]}"
-  done
-
-  if [ ${qaC} ] ; then
-    setKWL TASK=${qaConf[0]##*/}
-  fi
 
   return
 }
@@ -1335,10 +1399,12 @@ parseOPTARG()
 {
   local key value
 
-  key=${1:1}
-
-  value=
-  test $# -eq 2 && value=$2
+  key=${1%%=*}
+  if [ "${1}" = "${1/=/}"  ] ; then
+    value=t
+  else
+    value=${1#*=}
+  fi
 
   if [ "${key}" = "ADD_PROG_ARG" ] ; then
     ADD_PROG_ARG=( ${ADD_PROG_ARG[*]} ${value} )
@@ -1357,7 +1423,6 @@ parseOPTARG()
 
   if [ "${key:0:7}" = DEBUG_C ] ; then
     set -x
-    isSET_x=t
     return
   fi
 
@@ -1367,8 +1432,10 @@ parseOPTARG()
   test "${key:0:7}" = DEBUG_M && \
     setKWL DEBUG_MANAGER=${value:-t} && return
 
-  test "${key}" = NEXT && \
-    setKWL NEXT=${value:-1} && return
+  if [ "${key}" = NEXT ] ; then
+    test ${value} = t && value=1
+    setKWL NEXT=${value} && return
+  fi
 
   test "${key}" = SHOW_OPT && \
     displayComLineOptions 'dumb' && exit 1
@@ -1397,7 +1464,7 @@ parseOPTARG()
   fi
 
   # no more syntax checks; invoke all
-  setKWL ${key}=${value:-t}
+  setKWL ${key}=${value}
 
   return
 }
@@ -1583,10 +1650,7 @@ FS data directory: ${PROJECT_DATA[*]}
 
 setKWL()
 {
-  if [ "${isSET_x}" = t ] ; then
-    set +x
-    isSET_x=f
-  fi
+  test ${DEBUG_CONF} && voidX
 
   local key item value i val vals isAdd
   item="$*"
@@ -1693,7 +1757,8 @@ setKWL()
         eval $key=\${$tmp},${value// /\\ }
       fi
 
-      return
+      test ${DEBUG_CONF} && voidX
+      return 0
     fi
   done
 
@@ -1703,12 +1768,8 @@ setKWL()
   # add key to the list
   keyWordList[${#keyWordList[*]}]=$key
 
-  if [ "${isSET_x}" = f ] ; then
-    set -x
-    isSET_x=t
-  fi
-
-  return
+  test ${DEBUG_CONF} && voidX
+  return 0
 }
 
 std_out()
@@ -1768,6 +1829,8 @@ std_out()
 
 tryExist()
 {
+  test ${DEBUG_CONF} && voidX
+
   # if test fails, then something is written to sendText
 
   # $1:   'dir' | 'file' | 'com'
@@ -1784,6 +1847,7 @@ tryExist()
       return 1
     fi
 
+    test ${DEBUG_CONF} && voidX
     return 0
   fi
 
@@ -1793,6 +1857,7 @@ tryExist()
       return 1
     fi
 
+    test ${DEBUG_CONF} && voidX
     return 0
   fi
 
@@ -1801,10 +1866,12 @@ tryExist()
       return 0
     elif [ "$3" != 'compile' ] ; then
       if which $2 &>/dev/null ; then
+        test ${DEBUG_CONF} && voidX
         return 0
       fi
       test "$3" != 'void' && \
          sendText="${sendText}\n command $2 not found."
+      test ${DEBUG_CONF} && voidX
       return 1
     fi
 
@@ -1812,6 +1879,7 @@ tryExist()
     if [ -e ${QA_PATH}/src/${2%.x}.c ] ; then
       if [ ! ${CC} ] ; then
         sendText="${sendText}\nC compiler not found."
+        test ${DEBUG_CONF} && voidX
         return 1
       fi
 
@@ -1824,6 +1892,7 @@ tryExist()
         return 0
       else
         sendText="${sendText}\n${answ}"
+        test ${DEBUG_CONF} && voidX
         return 1
       fi
 
@@ -1831,6 +1900,7 @@ tryExist()
     elif [ -e ${QA_PATH}/src/${2%.x}.cpp ] ; then
       if [ ! ${CXX} ] ; then
         sendText="${sendText}\nC++ compiler not found CXX=${CXX}."
+        test ${DEBUG_CONF} && voidX
         return 1
       fi
 
@@ -1840,18 +1910,22 @@ tryExist()
 
       status=$?
       if [ ${status} -eq 0 ] ; then
-         return 0
+        test ${DEBUG_CONF} && voidX
+        return 0
       else
         sendText="${sendText}\n${answ}"
+        test ${DEBUG_CONF} && voidX
         return 1
       fi
     else
       if [ ! -e ${curr_QA_BIN#:*}/$2 ] ; then
         sendText="${sendText}\n${2%.x}.c|cpp not found in ${QA_PATH}/src."
         sendText="${sendText} No compilation."
+        test ${DEBUG_CONF} && voidX
         return 1
       fi
 
+      test ${DEBUG_CONF} && voidX
       return 0  # ok
     fi
 
@@ -1859,10 +1933,15 @@ tryExist()
     std_out flush
     exit 1
   fi
+
+  test ${DEBUG_CONF} && voidX
+  return
 }
 
 tr_option()
 {
+  test ${DEBUG_CONF} && voidX
+
   local line="${!1}"
 
   local sz i
@@ -1887,11 +1966,15 @@ tr_option()
   fi
 
   eval ${1}=\${line}
+
+  test ${DEBUG_CONF} && voidX
   return
 }
 
 unsetKWL()
 {
+  test ${DEBUG_CONF} && voidX
+
   local key
   item="$*"
 
@@ -1909,9 +1992,33 @@ unsetKWL()
     fi
   done
 
+  test ${DEBUG_CONF} && voidX
   return
 }
 
+voidX()
+{
+  # toggle between set -x and set +x in a way that
+  # restores the original setting after having been called twice
+
+  if [ ${isSetX:-t} = t ] ; then
+    test "$(set -o |grep xtrace | awk '{print $2}')" = off && return
+
+    # first call
+    isSetX=on
+  fi
+
+  # restore previous setting
+  if [ ${isSetX} = off ] ; then
+    set -x
+    isSetX=on
+  else
+    set +x
+    isSetX=off
+  fi
+
+  return
+}
 
 ##main()
 ##{
@@ -1956,8 +2063,8 @@ do
 
   case $option in
   e|E)  if [ ${UOPTARG:0:8} = '_DEBUG_C' ] ; then
+          DEBUG_CONF=t
           set -x
-          isSET_x=t
         elif [ ${UOPTARG:0:9} = '_PROJECT=' ] ; then
           setKWL ${UOPTARG:1}
         elif [ ${UOPTARG:0:11} = '_PROJECT_AS=' ] ; then
@@ -1971,7 +2078,6 @@ do
     P)  setKWL PROJECT=$OPTARG ;;
     T)  TTY=${OPTARG} ;;
     x)  set -x
-        isSET_x=t
         ;;
     -)  test "$OPTARG" = "help" && isHelp=t && continue
         test "${UOPTARG%=*}" = "PROJECT_AS" && setKWL PROJECT_AS=${OPTARG#*=} && continue
@@ -1996,15 +2102,20 @@ fi
 # may be overwritten by configuration file or command-line
 setDefaults
 
-#set -x
-#isSET_x=t
-
 # get valid configuration files corresponding to the priority list
-getConfPriority
+getPrecedence ${qaConf[*]}
+
+# construct a comma-sep-list
+if [ ${#filePrecedence[*]} -gt 0 ] ; then
+  QA_CONFS="${filePrecedence[*]}"
+  QA_CONFS="${QA_CONFS// /,}"
+
+  setKWL TASK=${filePrecedence[0]##*/}
+fi
 
 # proceed from low to high priority
-for(( i=${#qaConf[*]}-1 ; i > -1 ; --i )) ; do
-  parseConfigurationFile ${qaConf[i]}
+for(( i=${#filePrecedence[*]}-1 ; i > -1 ; --i )) ; do
+  parseConfigurationFile ${filePrecedence[i]}
 done
 
 if [ ${PROJECT} ] ; then
@@ -2023,6 +2134,20 @@ comLine=( $* ) # for e-mail and initSession
 
 test ${QA_CONFS} && setKWL QA_CONF=${QA_CONFS}
 
+# look for multiple occurrences; pass command-line notes as parameter
+for(( i=0 ; i < ${#comLine[*]} ; ++i )) ; do
+  cL=${comLine[i]:3}
+  test ! ${cL} && continue
+
+  tr_option cL
+
+  if findStr ${cL} NOTE ; then
+    comLineNotes[${#comLineNotes[*]}]="${cL}"
+  fi
+done
+
+getMultiLists ${comLineNotes[*]}
+
 # Note: option -T is used internally, when the qa-DKRZ
 #       executes the qaConfiguration script.
 set -f
@@ -2038,7 +2163,7 @@ do
     d|D) # disable previously enabled options
          unsetKWL ${OPTARG} ;;
     e|E) # Enable features or set parameters
-        test ${UOPTARG:0:8} != '_DEBUG_C' && parseOPTARG ${UOPTARG/=/ }
+        test ${UOPTARG:0:8} != '_DEBUG_C' && parseOPTARG ${UOPTARG:1}
         ;;
     f)  # already done
         ;;
@@ -2086,7 +2211,6 @@ do
 
         elif [ "${UOPTARG:0:5}" = DEBUG ] ; then
           set -x
-          isSET_x=t
           if [ ${#OPTARG} -eq 5 -o ${OPTARG#*=} = qa-parse-config ] ; then
             installArgs="${installArgs}--debug,"
             setKWL DEBUG_MANAGER=t
