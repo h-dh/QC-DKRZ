@@ -149,18 +149,6 @@ ReadLine::findLine( std::string &rline, std::string &str, int opos )
   return is;
 }
 
-std::string
-ReadLine::getItem( size_t index)
-{
-   return split[index] ;
-}
-
-std::vector<std::string>
-ReadLine::getItems( void)
-{
-   return split.getItems() ;
-}
-
 std::vector<std::string>
 ReadLine::getItems( size_t beg, size_t end )
 {

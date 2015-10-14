@@ -215,7 +215,8 @@ T clearLeastBits( T v, size_t shft)
   return v;
 }
 
-bool compare(double x, double y, char op, double epsilon)
+/*
+bool compare(double x, char op, double y, double epsilon)
 {
   // compare x and y within uncertainty ranges e
   // modes: op: '=' --> x == y
@@ -251,9 +252,10 @@ bool compare(double x, double y, char op, double epsilon)
 
   return false;
 }
+*/
 
 bool
-compare(double x, double y, char op, int decimals)
+compare(double x, char op, double y, int decimals)
 {
   // fabs( (x + x*10^-decimals) op (y + y*10^-decimals )
 
@@ -737,7 +739,7 @@ void envelope( std::vector<double> &x, std::vector<double> &y,
 template<typename T>
 bool equal(T x1, T x2, double epsilon)
 {
-  // Is (x1-x2) == 0 under the constraint of comuter inaccuracies?
+  // Is (x1-x2) == 0 under the constraint of computer inaccuracies?
   // Get the magnitude and compare values to an adjusted epsilon.
 
   // return: true if fabs(x1-x2) < magnitude*epsilon
