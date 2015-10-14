@@ -1529,8 +1529,6 @@ set_X_par()
     par=${par}":"nLL="${tmp// /,}"
   fi
 
-  par=${par}":Y"
-
   test ${saveNOTE} && NOTE=( ${saveNOTE[*]} )
   test ${saveNOTE_ALWAYS} && NOTE_ALWAYS=( ${saveNOTE_ALWAYS[*]} )
   test ${saveNOTE_LEVEL_LIMIT} && NOTE_LEVEL_LIMIT=( ${saveNOTE_LEVEL_LIMIT[*]} )

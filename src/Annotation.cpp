@@ -164,13 +164,11 @@ Annotation::copyInit(Annotation *n)
   for( size_t i=0 ; i < n->var.size() ; ++i )
      var.push_back( n->var[i] ) ;
 
-  for( size_t i=0 ; i < n->value.size() ; ++i )
-  {
-    value.push_back( std::vector<std::string>() );
+  for( size_t i=0 ; i < n->frq.size() ; ++i )
+    frq.push_back( std::vector<std::string>( n->frq[i]) );
 
-    for( size_t j=0 ; j < n->value[i].size() ; ++j )
-       value[i].push_back( n->value[i][j] ) ;
-  }
+  for( size_t i=0 ; i < n->value.size() ; ++i )
+    value.push_back( std::vector<std::string>(n->value[i]) );
 
   for( size_t i=0 ; i < n->permittedFlagBegin.size() ; ++i )
      permittedFlagBegin.push_back( n->permittedFlagBegin[i] ) ;
@@ -311,7 +309,7 @@ Annotation::findIndex(std::string &key, bool isOnly)
         {
           if( currTableAcronym == table[i] || table[i] == "*" )
           {
-             push_back( key, currName, level[i],
+             push_back( key, currName, frq[i], level[i],
                  table[i], task[i], "", value[i], xRecord_0[i], xRecord_1[i]);
 
               currIndex = code.size() -1 ;
@@ -497,22 +495,16 @@ Annotation::inq( std::string key, std::string name, std::string mode)
   // configured to discard?
   if( task[currIndex].find("D") < std::string::npos )
   {
-    bool isCommon=true;
-
     // check any specified constraint
-    if( constraintValue.size() )
+    if( value[currIndex].size() || frq[currIndex].size() )
     {
-      isCommon=false;
-
       for(size_t i=0 ; i < value[currIndex].size() ; ++i )
-      {
         if( value[currIndex][i] == constraintValue )
-        {
-          constraintValue.clear();
-
           return false;  // discard any kind of notification
-        }
-      }
+
+      for(size_t i=0 ; i < frq[currIndex].size() ; ++i )
+        if( frq[currIndex][i] == constraintFrq )
+          return false;  // discard any kind of notification
 
       return true;  // constraint was set but did not match
     }
@@ -520,7 +512,6 @@ Annotation::inq( std::string key, std::string name, std::string mode)
     // check excluded record
     for(size_t i=0 ; i < xRecord_0[currIndex].size() ; ++i )
     {
-      isCommon=false;
       for(size_t j=xRecord_0[currIndex][i] ; j < xRecord_1[currIndex][i] ; ++j )
       {
         if( j == currentRecord )
@@ -528,8 +519,7 @@ Annotation::inq( std::string key, std::string name, std::string mode)
       }
     }
 
-    if( isCommon )
-      return false;
+    return false;
   }
 
   return true;   // default exception handling
@@ -669,7 +659,8 @@ Annotation::parse(void)
   std::string              checkListText;
   std::string              str0;
 
-  std::vector<std::string> dedicatedValue;
+  std::vector<std::string> currFrq;
+  std::vector<std::string> currValue;
   std::vector<size_t>      xRec_0;
   std::vector<size_t>      xRec_1;
 
@@ -683,8 +674,10 @@ Annotation::parse(void)
      tmpCodes.clear();  // reset
      vars.clear();
 
-     if( dedicatedValue.size() )
-       dedicatedValue.clear();
+     if( currFrq.size() )
+       currFrq.clear();
+     if( currValue.size() )
+       currValue.clear();
 
      if( xRec_0.size() )
      {
@@ -790,12 +783,21 @@ Annotation::parse(void)
 
         }
 
+        if( str0.size() > 2 && str0[0] == 'F' )
+        {
+          size_t pos;
+
+          if( (pos=str0.find('=')) < std::string::npos )
+            currFrq.push_back( str0.substr(pos+1) );
+          continue;
+        }
+
         if( str0.size() > 2 && str0[0] == 'V' )
         {
           size_t pos;
 
           if( (pos=str0.find('=')) < std::string::npos )
-            dedicatedValue.push_back( str0.substr(pos+1) );
+            currValue.push_back( str0.substr(pos+1) );
           continue;
         }
 
@@ -879,9 +881,8 @@ Annotation::parse(void)
           count.push_back( 0 );
           text.push_back( checkListText );
 
-          value.push_back( std::vector<std::string>() );
-          for( size_t i=0 ; i < dedicatedValue.size() ; ++i )
-            value.back().push_back( dedicatedValue[i] ) ;
+          value.push_back( std::vector<std::string>(currValue) );
+          frq.push_back( std::vector<std::string>(currFrq) );
 
           xRecord_0.push_back( std::vector<size_t>() );
           xRecord_1.push_back( std::vector<size_t>() );
@@ -1149,13 +1150,14 @@ Annotation::printNotes(std::string &tag, std::string &caption,
 
 void
 Annotation::push_back(std::string pf_code, std::string pf_var,
-      std::string pf_level,
+      std::vector<std::string> &pf_frq, std::string pf_level,
       std::string pf_table, std::string pf_task, std::string pf_text,
       std::vector<std::string> &pf_value,
       std::vector<size_t> &pf_xRec_0, std::vector<size_t> &pf_xRec_1)
 {
    code.push_back(pf_code) ;
    count.push_back(0) ;
+   frq.push_back(pf_frq) ;
    level.push_back(pf_level) ;
    table.push_back(pf_table) ;
    task.push_back(pf_task) ;
@@ -1170,7 +1172,7 @@ Annotation::push_back(std::string pf_code, std::string pf_var,
 
 void
 Annotation::push_front(std::string pf_code, std::string pf_var,
-      std::string pf_level,
+      std::vector<std::string> &pf_frq, std::string pf_level,
       std::string pf_table, std::string pf_task, std::string pf_text,
       std::vector<std::string> &pf_value,
       std::vector<size_t> &pf_xRec_0, std::vector<size_t> &pf_xRec_1)
@@ -1180,6 +1182,7 @@ Annotation::push_front(std::string pf_code, std::string pf_var,
    {
      code.push_back(pf_code) ;
      count.push_back(0) ;
+     frq.push_back(pf_frq) ;
      level.push_back(pf_level) ;
      table.push_back(pf_table) ;
      task.push_back(pf_task) ;
@@ -1203,13 +1206,16 @@ Annotation::push_front(std::string pf_code, std::string pf_var,
    std::vector<std::string>::iterator it_table = table.begin();
    std::vector<std::string>::iterator it_task  = task.begin();
    std::vector<std::string>::iterator it_text  = text.begin();
-   std::vector<std::vector<std::string> >::iterator it_value = value.begin();
    std::vector<std::string>::iterator it_var   = var.begin();
+
+   std::vector<std::vector<std::string> >::iterator it_frq = frq.begin();
+   std::vector<std::vector<std::string> >::iterator it_value = value.begin();
    std::vector<std::vector<size_t> >::iterator it_xRecord_0 = xRecord_0.begin();
    std::vector<std::vector<size_t> >::iterator it_xRecord_1 = xRecord_1.begin();
 
    code.insert(it_code, pf_code) ;
    count.insert(it_count, 0) ;
+   frq.insert(it_frq, pf_frq) ;
    level.insert(it_level, pf_level) ;
    table.insert(it_table, pf_table) ;
    task.insert(it_task, pf_task) ;
@@ -1225,9 +1231,14 @@ Annotation::push_front(std::string pf_code, std::string pf_var,
 void
 Annotation::readConf(void)
 {
-  std::string notesConf= tablePath ;
-  if( tablePath[tablePath.size()-1] != '/' )
-    notesConf += '/' ;
+  std::string notesConf;
+
+  if( checkList[0] != '/' )
+  {
+    notesConf = tablePath ;
+    if( tablePath[tablePath.size()-1] != '/' )
+      notesConf += '/' ;
+  }
   notesConf += checkList ;
 
   ReadLine ifs( notesConf ) ;
@@ -1371,8 +1382,10 @@ Annotation::setTable(std::string t, std::string acronym)
   std::vector<std::string>::iterator it_table = table.end()-1;
   std::vector<std::string>::iterator it_task  = task.end()-1;
   std::vector<std::string>::iterator it_text  = text.end()-1;
-  std::vector<std::vector<std::string> >::iterator it_value = value.end()-1;
   std::vector<std::string>::iterator it_var   = var.end()-1;
+
+  std::vector<std::vector<std::string> >::iterator it_frq = frq.end()-1;
+  std::vector<std::vector<std::string> >::iterator it_value = value.end()-1;
   std::vector<std::vector<size_t> >::iterator it_xRecord_0 = xRecord_0.end()-1;
   std::vector<std::vector<size_t> >::iterator it_xRecord_1 = xRecord_1.end()-1;
 
@@ -1382,6 +1395,7 @@ Annotation::setTable(std::string t, std::string acronym)
      {
         code.erase(it_code);
         count.erase(it_count);
+        frq.erase(it_frq);
         level.erase(it_level);
         table.erase(it_table);
         task.erase(it_task);
@@ -1394,6 +1408,7 @@ Annotation::setTable(std::string t, std::string acronym)
 
      --it_code;
      --it_count;
+     --it_frq;
      --it_level;
      --it_table;
      --it_task;

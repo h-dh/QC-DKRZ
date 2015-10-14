@@ -194,7 +194,7 @@ class QA : public IObj
   void   checkPressureCoord(InFile&);
 
   void   checkProjectTable(InFile &in);
-  
+
   void   checkVarTableEntry(
              VariableMetaData &,
              VariableMetaData &tbl_entry);
@@ -401,7 +401,11 @@ class QA : public IObj
       the file is assumed to be completely qa-processed.
       Syntax of date ranges as given in CORDEX  DRS Syntax.*/
   bool   testPeriod(void);
+  bool   testPeriodAlignment(std::vector<std::string> &sd, Date** pDates, bool b[])  ;
   void   testPeriodCut(std::vector<std::string> &sd) ;
+  bool   testPeriodCut_CMOR_isGOD(std::vector<std::string> &sd, Date**);
+  void   testPeriodCutRegular(std::vector<std::string> &sd,
+              std::vector<std::string>& text);
   bool   testPeriodFormat(std::vector<std::string> &sd) ;
 
   //! Name of the netCDF file with results of the quality control

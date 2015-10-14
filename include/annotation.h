@@ -112,12 +112,12 @@ class Annotation : public IObj
 
   //! Insert a directive internally aside a check-list file.
   void push_back(std::string pf_code, std::string pf_var,
-          std::string pf_level,
+          std::vector<std::string> &pf_frq, std::string pf_level,
           std::string pf_table, std::string pf_task, std::string pf_text,
           std::vector<std::string> &pf_value,
           std::vector<size_t> &xRec_0, std::vector<size_t> &xRec_1 );
   void push_front(std::string pf_code, std::string pf_var,
-          std::string pf_level,
+          std::vector<std::string> &pf_frq, std::string pf_level,
           std::string pf_table, std::string pf_task, std::string pf_text,
           std::vector<std::string> &pf_value,
           std::vector<size_t> &xRec_0, std::vector<size_t> &xRec_1 );
@@ -130,7 +130,8 @@ class Annotation : public IObj
   void setCheckTimeStr(std::string s) {checkTimeStr=s;}
   void setCheckDataStr(std::string s) {checkDataStr=s;}
   void setConfVector(std::string txt, std::string brace);
-  void setConstraint(std::string s){ constraintValue=s;}
+  void setConstraintValue(std::string s){ constraintValue=s;}
+  void setConstraintFreq(std::string s){ constraintFrq=s;}
   void setCurrentRecord(size_t i){ currentRecord=i;}
 
   void setTable(std::string, std::string acronym="");
@@ -142,6 +143,7 @@ class Annotation : public IObj
   std::string mail_out_body;
   int         mail_level;  // for worst-case subject
 
+  std::string constraintFrq;
   std::string constraintValue;
   size_t      currentRecord;
 
@@ -155,7 +157,7 @@ class Annotation : public IObj
   std::map<std::string, std::string> mp;
   std::map<std::string, std::string> mp_capt;
   std::map<std::string, std::string> mp_lev;
-  std::map<std::string, int> mp_count;
+  std::map<std::string, int>         mp_count;
   std::map<std::string, std::string> mp_txt;
 
   std::ofstream *ofsNotes;
@@ -179,6 +181,7 @@ class Annotation : public IObj
   std::vector<std::string> text;   // user-provided headlines
   std::vector<std::string> var;    // acronym; name
 
+  std::vector<std::vector<std::string> > frq;  // specified constraining frequencies
   std::vector<std::vector<std::string> > value;  // specified constraining value(s)
   std::vector<std::string>  permittedFlagBegin;
 
