@@ -1429,8 +1429,11 @@ parseOPTARG()
   test "${key:0:7}" = DEBUG_E && \
     setKWL DEBUG_EXECUTOR=t && return
 
-  test "${key:0:7}" = DEBUG_M && \
-    setKWL DEBUG_MANAGER=${value:-t} && return
+  if [ "${key:0:7}" = DEBUG_M ] ; then
+    installArgs="${installArgs}--debug,"
+    setKWL DEBUG_MANAGER=${value:-t}
+    return
+  fi
 
   if [ "${key}" = NEXT ] ; then
     test ${value} = t && value=1
