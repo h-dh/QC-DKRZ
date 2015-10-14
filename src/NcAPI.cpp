@@ -2190,11 +2190,8 @@ NcAPI::getAttString(std::string attName, std::string varName)
   getAttValues(vs, attName, varName);
   if( vs.size() )
     return vs[0];
-  else
-  {
-    std::string s;
-    return s;
-  }
+
+  return "";
 }
 
 std::string

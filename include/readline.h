@@ -91,11 +91,11 @@ public:
 
 //! Get i-th item from line.
   std::string
-    getItem( size_t i);
+    getItem(size_t i) { return split[i]; }
 
 //! Get a vector filled with the line items.
   std::vector<std::string>
-    getItems( void );
+    getItems(void) { return split.getItems(); }
 
 //! Get range of items filled into a vector.
 /*! By default, range starts at index 'beg' to the end of the line.*/

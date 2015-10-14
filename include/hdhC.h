@@ -145,14 +145,15 @@ T clearLeastBits( T v, size_t shft=2);
         op: "<"  --> x + e < y \n
         op: ">"  --> x > y + e
 */
+/*
 bool
-compare(double x, double y,
-           std::string op="eq", double epsilon=NUMERICAL_TOLERANCE);
+compare(double x, std::string op, double y,
+           double epsilon=NUMERICAL_TOLERANCE);
+*/
 
 /*! epsilon is 10^-DECS of the smaller value of the magnitude of x and y*/
 bool
-compare(double x, double y,
-           std::string op="eq", int DECS=10);
+compare(double x, char op, double y, int DECS=10);
 
 //! Convert time
 /*! Time given in a certain unit is converted to a target unit.

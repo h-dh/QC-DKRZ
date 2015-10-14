@@ -575,10 +575,11 @@ InFile::init(void)
       std::string table="*";
       std::string level="L1";
       std::string task="";
+      std::vector<std::string> freq;
       std::vector<std::string> value;
-       std::vector<size_t> xRecord_01;
+      std::vector<size_t> xRecord_01;
 
-     	notes->push_front(key , "*", level, table, task, "", value,
+     	notes->push_front(key , "*", freq, level, table, task, "", value,
 	                         xRecord_01, xRecord_01);
       notes->inq(key);
 
