@@ -387,7 +387,8 @@ update()
       test "$(getGitBranch)" != master && \
         git checkout master &> /dev/null
 
-      git pull --no-edit -q origin master &> /dev/null
+      git fetch && git reset --hard origin/master &> /dev/null
+#      git pull --no-edit -q origin master &> /dev/null
 
       if [ ${qa_dkrzDate} != $( ls -l \
            --time-style=+'%s' ${QA_PATH}/scripts/qa_dkrz \
@@ -432,7 +433,7 @@ if [ $# -gt 0 ] ; then
     A="${sArgs[i]}"
     tr_option A
 
-    if [ "${A:0:5}" = AUTO_ ] ; then
+    if [ "${A:0:5}" = AUTO_ -o "${A:0:5}" = "AUTO-" ] ; then
       sArgs[${i}]=--${sArgs[${i}]}
       A="--${A}"
     elif [ "${A:0:5}" = DEBUG ] ; then
@@ -471,7 +472,7 @@ do
     d)  coll[${#coll[*]}]=-d ;;
     h)  descript
         exit ;;
-    -)  if [ "${UOPTARG:0:7}" = AUTO_UP ] ; then
+    -)  if [ "${UOPTARG:0:7}" = AUTO_UP -o "${UOPTARG:0:7}" = AUTO-UP ] ; then
           AUTO_UP=${OPTARG##*=}
           isAutoUp=t
         elif [ "${UOPTARG:0:13}" = AUTO_TABLE_UP ] ; then
