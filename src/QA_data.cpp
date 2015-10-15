@@ -280,15 +280,15 @@ Outlier::Outlier( QA *p, size_t vi, std::string nm)
 }
 
 bool
-Outlier::isSelected(
-     std::vector<std::string> &options,
-     std::string &vName, int effDim )
+Outlier::isSelected( Variable& var,
+     std::vector<std::string> &options, std::string& unlimName)
 {
   if( options.size() == 1 && options[0] == "t" )
     return true; // default for all
 
   bool isThis  =true;
   bool isZeroDim=false;
+  int effDim=-1;
 
   // dismember options
   for( size_t k=0 ; k < options.size() ; ++k )
@@ -300,9 +300,20 @@ Outlier::isSelected(
     Split cvs(options[k],",");
     for( size_t i=0 ; i < cvs.size() ; ++i )
     {
-      if( cvs[i] == "no_0-D" && effDim < 1 )
-        isZeroDim=true;
-      else if( cvs[i] == vName )
+      if( cvs[i] == "no_0-D" )
+      {
+        if( effDim == -1 )
+        {
+          effDim = var.dimName.size() ;
+          for( size_t j=0 ; j < var.dimName.size() ; ++j )
+            if( var.dimName[j] == unlimName )
+              --effDim;
+        }
+
+        if( effDim < 1 )
+          isZeroDim=true;
+      }
+      else if( cvs[i] == var.name )
         isVar=true;  // valid for this specific variable
     }
 
@@ -646,7 +657,7 @@ Outlier::test(QA_Data *pQAD)
         std::ostringstream ostr(std::ios::app);
         ostr.setf(std::ios::scientific, std::ios::floatfield);
 
-        if(pQA->varMeDa.size() > 1 )
+        if(pQA->qaExp.varMeDa.size() > 1 )
           ostr << name << ", ";
         ostr << "rec# ";
 
@@ -657,9 +668,11 @@ Outlier::test(QA_Data *pQAD)
         std::string capt(ostr.str());
 
         ostr.str("");  // clear previous contents
-        ostr << "variable=" << pQA->varMeDa[vMD_ix].var->name;
-        ostr << ", " << pQA->varMeDa[vMD_ix].var->std_name;
-        ostr << ", units=" << pQA->varMeDa[vMD_ix].var->units;
+        VariableMetaData& vMD = pQA->qaExp.varMeDa[vMD_ix] ;
+
+        ostr << "variable=" << vMD.var->name;
+        ostr << ", "        << vMD.var->std_name;
+        ostr << ", units="  << vMD.var->units;
 
         MtrxArr<int> ma_i;
         for( size_t k=0 ; k < outRec.size() ; ++k )
@@ -738,15 +751,15 @@ ReplicatedRecord::getRange(size_t i, size_t bufferCount, size_t recNum,
 }
 
 bool
-ReplicatedRecord::isSelected(
-     std::vector<std::string> &options,
-     std::string &vName, int effDim )
+ReplicatedRecord::isSelected(Variable& var,
+    std::vector<std::string>& options, std::string &unlimName )
 {
   if( options.size() == 1 && options[0] == "t" )
     return true; // default for all
 
   bool isThis  =true;
   bool isZeroDim=false;
+  int effDim=-1;
 
   for( size_t k=0 ; k < options.size() ; ++k )
   {
@@ -759,11 +772,22 @@ ReplicatedRecord::isSelected(
     {
       if( cvs[i].substr(0,10) == "clear_bits" )
         ;
-      else if( cvs[i] == "no_0-D" && effDim < 1 )
-        isZeroDim=true;
+      else if( cvs[i] == "no_0-D" )
+      {
+        if( effDim == -1 )
+        {
+          effDim = var.dimName.size() ;
+          for( size_t j=0 ; j < var.dimName.size() ; ++j )
+            if( var.dimName[j] == unlimName )
+              --effDim;
+        }
+
+        if( effDim < 1 )
+          isZeroDim=true;
+      }
       else if( cvs[i].substr(0,11) == "only_groups" )
         ;
-      else if( cvs[i] == vName )
+      else if( cvs[i] == var.name )
         isVar=true;  // valid for this specific variable
     }
 
@@ -808,9 +832,9 @@ ReplicatedRecord::parseOption(std::vector<std::string> &options)
         // enable clearing of the least significant bits for R32 flags
         if( numOfClearBits )
         {
-           pQA->varMeDa[vMD_ix].var->pDS->enableChecksumWithClearedBits(
+           pQA->qaExp.varMeDa[vMD_ix].var->pDS->enableChecksumWithClearedBits(
                  numOfClearBits ) ;
-           pQA->varMeDa[vMD_ix].qaData.numOfClearedBitsInChecksum = numOfClearBits;
+           pQA->qaExp.varMeDa[vMD_ix].qaData.numOfClearedBitsInChecksum = numOfClearBits;
         }
       }
       else if( cvs[i].substr(0,11) == "only_groups" )
@@ -854,7 +878,7 @@ ReplicatedRecord::test(int nRecs, size_t bufferCount, size_t nextFlushBeg,
   for( size_t j=0 ; j < bufferCount ; ++j )
   {
     int n ;
-    n = pQA->varMeDa[vMD_ix].qaData.sharedRecordFlag.buffer[j];
+    n = pQA->qaExp.varMeDa[vMD_ix].qaData.sharedRecordFlag.buffer[j];
 
     // exclude code numbers 100 and 200
     if( n > 99 && n < 400 )
@@ -899,7 +923,7 @@ ReplicatedRecord::test(int nRecs, size_t bufferCount, size_t nextFlushBeg,
         int high ;
 
         while( ma_low[i]
-          == (high=pQA->varMeDa[vMD_ix].qaData.dataOutputBuffer.checksum[j]) )
+          == (high=pQA->qaExp.varMeDa[vMD_ix].qaData.dataOutputBuffer.checksum[j]) )
         {
           // we suspect identity.
           // is it a group?
@@ -954,8 +978,8 @@ ReplicatedRecord::test(int nRecs, size_t bufferCount, size_t nextFlushBeg,
       size_t countGroupMembers=0;
       int high;
 
-      while( pQA->varMeDa[vMD_ix].qaData.dataOutputBuffer.checksum[j]
-        == (high=pQA->varMeDa[vMD_ix].qaData.dataOutputBuffer.checksum[i]) )
+      while( pQA->qaExp.varMeDa[vMD_ix].qaData.dataOutputBuffer.checksum[j]
+        == (high=pQA->qaExp.varMeDa[vMD_ix].qaData.dataOutputBuffer.checksum[i]) )
       {
         // we suspect identity.
         ++countGroupMembers;
@@ -971,7 +995,7 @@ ReplicatedRecord::test(int nRecs, size_t bufferCount, size_t nextFlushBeg,
         arr_1st_bool[i++] = false;
 
         if( low0 == -1 )
-          low0 = pQA->varMeDa[vMD_ix].qaData.dataOutputBuffer.checksum[j0];
+          low0 = pQA->qaExp.varMeDa[vMD_ix].qaData.dataOutputBuffer.checksum[j0];
 
         if( i == bufferCount )
           break;
@@ -1003,7 +1027,8 @@ ReplicatedRecord::test(int nRecs, size_t bufferCount, size_t nextFlushBeg,
   {
     if( status[i] && status[i] < 4 )
     {
-      pQA->varMeDa[vMD_ix].qaData.sharedRecordFlag.buffer[i] += 3200;
+      pQA->qaExp.varMeDa[vMD_ix].qaData.sharedRecordFlag.buffer[i]
+           += 3200;
 
       if( isGroup )
         isGroup=false;
@@ -1342,7 +1367,7 @@ QA_Data::flush(void)
          int nRecs=static_cast<int>( pQA->nc->getNumOfRecords() );
 
          replicated->test(nRecs, bufferCount, nextFlushBeg,
-                            pQA->varMeDa.size() > 1 ? true : false );
+              pQA->qaExp.varMeDa.size() > 1 ? true : false );
      }
 
      for( size_t i=0 ; i < bufferCount ; ++i)
@@ -1363,10 +1388,10 @@ QA_Data::flush(void)
 }
 
 void
-QA_Data::init(InFile *in, QA *q, std::string nm)
+QA_Data::init(QA *q, std::string nm)
 {
-   pIn = in;
    pQA =q;
+   pIn = pQA->pIn;
    name = nm;
 
    // apply parsed command-line args
@@ -1793,7 +1818,7 @@ QA_Data::testConst(hdhC::FieldData &fA)
   std::string val=hdhC::double2String(currMin);
 
   // add a constraint to the inquiry, if specified
-  notes->setConstraint(val);
+  notes->setConstraintValue(val);
 
   if( notes->inq( key, name, ANNOT_ACCUM) )
   {
