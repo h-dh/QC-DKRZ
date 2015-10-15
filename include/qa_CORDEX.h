@@ -1,22 +1,20 @@
-#ifndef _QA_H
-#define _QA_H
+#ifndef _QA_CORDEX_H
+#define _QA_CORDEX_H
 
 #include "hdhC.h"
 #include "date.h"
 #include "annotation.h"
+#include "qa.h"
 #include "qa_data.h"
 #include "qa_time.h"
 #include "qa_PT.h"
 
 //! Quality Control Program Unit for CORDEX.
-/*! All the QA considerations are covered by this class.\n
-The QA_CORDEX.cpp and qa_CORDEX.h files have to be linked to
-QA.cpp and qa.h, respectively.\n
+/*! All the QA considerations specific to CORDEX are covered by this class.\n
 Requested properties from the cordex_archive_specifications.pdf
 from http://cordex.dmi.dk/joomla/images/CORDEX are checked as well
 as specifications in CORDEX_variables_requirement_table.pdf.\n
-The netCDF data-file is linked by a pointer to the InFile class
-instance. Results of the QA are written to a netCDF file
+Results of the QA are written to a netCDF file
 (to the directory where the main program was started) with filename
 qa_<data-filename>.nc. Outlier test and such for replicated records
 are performed. Annotations are supplied via the Annotation class
@@ -79,42 +77,14 @@ class VariableMetaData
   void setParent(QA *p){pQA=p;}
 };
 
-class QA : public IObj
+class QA_Exp
 {
   public:
 
   //! Default constructor.
-  QA();
-  ~QA();
+  QA_Exp();
 
-  //! coresponding to virtual methods in IObj
-
-  //! Check field properties of the variable.
-  /*! Designed for multiple usage for sub-layers of a data block.
-      Each multiple-set must be invoked by calling method 'clearStatistics'.*/
-  bool   entry(void);
-
-  //! Initialisation of the QA object.
-  /*! Open the qa-result.nc file, when available or create
-   it from scratch. Meta data checks are performed.
-   Initialise time testing, time boundary testing, and cycles
-   within a time step. At the end  entry() is called to test
-   the data of fields.*/
-  bool   init(void) ;
-  void   linkObject(IObj *);
-
-  // special: from InFile with path and period stripped.
-  void   setFilename(hdhC::FileSplit&);
-  void   setTablePath(std::string p){tablePath=p;}
-
-  void   applyOptions(bool isPost=false);
-
-  //! Comparison of dimensions between file and standard table
-  /*! Cross-checks with the standard table are performed only once for
-   each variable at first time encounter in the CORDEX Project ensuring
-   conformance.*/
-
-  bool   checkDataBody(std::string vName="");
+  void   applyOptions(std::vector<std::string>&);
 
   void   checkDimStandardTable(ReadLine &tbl, InFile &in,
             VariableMetaData &var,
@@ -193,8 +163,6 @@ class QA : public IObj
   /*! For variables defined for a specific pressure level, eg.ta850*/
   void   checkPressureCoord(InFile&);
 
-  void   checkProjectTable(InFile &in);
-
   void   checkVarTableEntry(
              VariableMetaData &,
              VariableMetaData &tbl_entry);
@@ -225,9 +193,6 @@ class QA : public IObj
              VariableMetaData &,
              VariableMetaData &tbl_entry);
 
-  /*! Close records for time and data.*/
-  void   closeEntry(void);
-
   //! Make VarMetaData objects.
   void   createVarMetaData(void);
 
@@ -247,14 +212,6 @@ class QA : public IObj
             std::vector<std::vector<std::string> > &T2,
            int &table_id, size_t &row );
 
-  //! The final operations.
-  /*! An exit code is returned.*/
-  int    finally(int errCode=0);
-
-  //! The final qa data operations.
-  /*! Called from finall(). An exit code is returned.*/
-  int    finally_data(int errCode=0);
-
   //! Find entry of a requested variable in the standard table.
   bool   findTableEntry(ReadLine &, std::string &,
             VariableMetaData &tble_entry);
@@ -269,23 +226,11 @@ class QA : public IObj
   std::string
          getAttValue(size_t v_ix, size_t a_ix);
 
-  std::string
-         getCurrentTable(void){ return currTable ; }
-
   //! Store properties of a dimension in the struct.
   /*! Note: the name of the dimension is passed by the struct.*/
   bool   getDimMetaData(InFile &in,
              VariableMetaData &,
              struct DimensionMetaData &, std::string &);
-
-  int    getExitCode(void){return exitCode;}
-
-  //! Get path componenents.
-  /*! mode: "total": filename with total path, "file": filename,
-      "base": filename without extension, "ext": extension without '.',
-      "path": the path component without trailing '/'.*/
-  std::string
-         getPath(std::string& f, std::string mode="total");
 
   std::string
          getFrequency(void);
@@ -296,12 +241,10 @@ class QA : public IObj
   //! Get the Standard table name from the global attributes
   void   getSubTable(void);
 
-//  std::string
-//         getTablePath(void){ return tablePath; }
+  std::string
+         getTableEntryID(std::string vN="");
 
-  //! Brief description of options
-  static void
-         help(void);
+  void   init(QA*, std::vector<std::string>&);
 
   //! Initialisation of flushing gathered results to netCDF file.
   /*! Parameter indicates the number of variables. */
@@ -310,33 +253,12 @@ class QA : public IObj
   //! Set default values.
   void   initDefaults(void);
 
-  //! Global attributes of the qa-netCDF file.
-  /*! Partly reflecting global attributes from the sources. */
-  void   initGlobalAtts(InFile &);
-
   //! Initialisiation of a resumed session.
-  /*! Happens for non-atomic data sets and those that are yet incomplete. */
-  void   initResumeSession(void);
+  /*! For non-atomic data sets and such being incomplete, yet. */
+  void   initResumeSession(std::vector<std::string>& prevTargets);
 
-  //! Check the path to the tables;
-  void   inqTables(void);
-
-  bool   isProgress(void){ return ! qaTime.isNoProgress ; }
-
-  //! Get coordinates of grid-cells where an error occurred
-  /*! Does not work for tripolar coordinates */
-//  bool   locate( GeoMetaT<float>*, double *lat, double *lon, const char* );
-
-  //! Open a qa_result file for creation or appending data.
-  /*! CopY time variable from input-nc file.
-   Collect some properties of the in-netcdf-file in
-   struct varMeDa. Also check properties against tables.
-  */
-  void   openQA_Nc(InFile&);
-
-  //! Perform only post-processing
-  bool   postProc(void);
-  bool   postProc_outlierTest(void);
+  //! Check existence of tables
+  bool   inqTables(void);
 
   //! Read the headlines for dimensions and variable.
   /*! Read from the standard table; used to identify columns.*/
@@ -353,16 +275,6 @@ class QA : public IObj
   void   requiredAttributes_readFile(
            std::vector<std::string> &,
            std::vector<std::vector<std::string> > &);
-
-  void   resumeSession(void);
-
-  //! Connect this with the object to be checked
-  void   setInFilePointer(InFile *p) { pIn = p; }
-
-  //! Unused.
-  /*! Needed to be conform to a specific Base class functionality */
-  void   setSrcStr(std::string s)
-             {srcStr.push_back(s); return;}
 
   //! Cross-check with standard table.
   /*! Prepare the check for dimensions and variable.*/
@@ -389,12 +301,6 @@ class QA : public IObj
             std::map<std::string, size_t> &col) ;
 */
 
-  //! Store results in the internal buffer
-  /*! The buffer is flushed to file every 'flushCountMax' time steps.*/
-  void   store(std::vector<hdhC::FieldData> &fA);
-  void   storeData(VariableMetaData&, hdhC::FieldData& );
-  void   storeTime(void);
-
   //! Test the time-period of the input file.
   /*! If the end-date in the filename and the last time value
       match within the uncertainty of 0.75% of the time-step, then
@@ -409,65 +315,38 @@ class QA : public IObj
   bool   testPeriodFormat(std::vector<std::string> &sd) ;
 
   //! Name of the netCDF file with results of the quality control
-  std::string tablePath;
-  struct hdhC::FileSplit qaFile;
   struct hdhC::FileSplit archiveDesignTable;
   struct hdhC::FileSplit GCM_ModelnameTable;
-  struct hdhC::FileSplit projectTableFile;
   struct hdhC::FileSplit RCM_ModelnameTable;
   struct hdhC::FileSplit varReqTable;
-
-  std::string qaNcfileFlags;
-
-  int exitCode;
-  bool isExit;
 
   std::vector<VariableMetaData> varMeDa;
 
   NcAPI *nc;
-  QA_Time qaTime;
+  QA* pQA;
 
-  int thisId;
-
-  size_t currQARec;
-  size_t importedRecFromPrevQA; // initial num of recs in the write-to-nc-file
   MtrxArr<double> tmp_mv;
 
   // the same buf-size for all buffer is required for testing replicated records
   size_t bufferSize;
 
   // init for test about times
-  bool enablePostProc;
-  bool enableVersionInHistory;
+  bool enabledCompletenessCheck;
   bool isUseStrict;
   bool isCaseInsensitiveVarName;
   bool isCheckParentExpID;
   bool isCheckParentExpRIP;
   bool isClearBits;
-  bool isFileComplete;
-  bool isFirstFile;
-  bool isNotFirstRecord;
-  bool isPrintTimeBoundDates;
-  bool isResumeSession;
   bool isRotated;
-
-  size_t nextRecords;
-
-  bool isCheckMeta;
-  bool isCheckTime;
-  bool isCheckData;
 
   std::vector<std::string> excludedAttribute;
   std::vector<std::string> overruleAllFlagsOption;
 
   std::vector<std::string> constValueOption;
   std::vector<std::string> fillValueOption;
-  std::vector<std::string> outlierOpts;
-  std::vector<std::string> replicationOpts;
   std::vector<std::string> requiredAttributesOption;
 
   std::string cfStndNames;
-  std::string currTable;
 
   std::string frequency;
   std::string parentExpID;
@@ -475,46 +354,17 @@ class QA : public IObj
   std::string experiment_id;
   std::string subTable ;
 
-  int identNum;
   std::string fVarname;
-  char        fileSequenceState;
-  std::string prevVersionFile;
-  std::vector<std::string> srcStr;
-  std::string revision;
-
-  std::string fail;
-  std::string fileStr;
-  std::string notAvailable;
-  std::string blank;
-  std::string no_blank;
-  std::string s_colon;
-  std::string s_empty;
-  std::string s_mismatch;
-  std::string s_upper;
-  std::string s_lower;
-
-  std::string n_axis;
-  std::string n_cell_methods;
-  std::string n_long_name;
-  std::string n_outputVarName;
-  std::string n_positive;
-  std::string n_standard_name;
-  std::string n_units;
 
   std::string getCaptIntroDim(VariableMetaData &vMD,
                    struct DimensionMetaData &nc_entry,
                    struct DimensionMetaData &tbl_entry, std::string att="");
-  void        appendToHistory();
-  bool        getExit(void);
   std::string getSubjectsIntroDim(VariableMetaData &vMD,
                    struct DimensionMetaData &nc_entry,
                    struct DimensionMetaData &tbl_entry, bool isColon=true);
   std::string getVarnameFromFilename(std::string str);
-  bool        not_equal(double x1, double x2, double epsilon);
   void        pushBackVarMeDa(Variable*);
-  void        setExit(int);
   void        setCheckMode(std::string);
-  void        setTable(std::string, std::string acronym="");
 };
 
 #endif

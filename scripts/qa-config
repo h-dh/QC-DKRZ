@@ -651,7 +651,7 @@ getMultiLists()
     declare -a cf_CL prj_CL
 
     for arg in $* ; do
-      if [ ${arg:0:2} = CF ] ; then
+      if findStr ${arg} CF_ ; then
         if [ ${isCF:-f} = f  ] ; then
           local cl_CF_note=/tmp/CF_comLineNote_$$.txt
           isCF=t

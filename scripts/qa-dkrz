@@ -528,10 +528,10 @@ catFiles()
   declare -a sec
 
   if [ -f ${target} ] ; then
-    local secTarget=$(ls -l --time-style='+%Y%m%d' ${target} | awk '{print $6}')
+    local secTarget=$( $QA_PATH/bin/fModTime.x ${target} | awk '{print $6}')
 
     for(( i=0 ; i < ${#fs[*]} ; ++i )) ; do
-       sec[i]=$(ls -l --time-style='+%Y%m%d' ${fs[i]} | awk '{print $6}')
+       sec[i]=$( $QA_PATH/bin/fModTime.x ${fs[i]} | awk '{print $6}')
 
        if [ ${sec[i]} -gt ${secTarget} ] ; then
           isNew=t
@@ -1030,9 +1030,7 @@ copyPreamble()
 #      log
 #    fi
   else
-    if [ ${isShow:-f} = f ] ; then
        cp ${SESSION_LOGDIR}/session.prmbl $EXP_LOGDIR/${CURR_EXP_NAME}.log
-    fi
 #       local rev_1
 #       getRevNum rev_1
 
@@ -3011,20 +3009,11 @@ initTcat()
 
    # the regular copy part
    local fs=(${value//,/ })
-   local f
 
    # cat Files, when younger; the target files must be the first parameter
    local target=${fs[$((${#fs[*]}-1))]##*/}
 
    catFiles $TABLE_PATH/$target ${fs[*]}
-
-   if [ ${#fs[*]} -gt 0 ] ; then
-     # get current annotation option PERMITTED_FLAG_BEGIN from any of the files
-     # and copy it in front of the others without
-     local pfb=$(grep -m 1 "^[[:space:]]*[^#][[:space:]]*PERMITTED_FLAG_BEGIN=" \
-                 $TABLE_PATH/$target )
-     sed -i "1 i ${pfb}" $TABLE_PATH/$target
-   fi
 
    setKWL ${table}=$target  # note: no value
 

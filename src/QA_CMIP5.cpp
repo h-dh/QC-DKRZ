@@ -3557,6 +3557,15 @@ QA::getVarnameFromFilename(std::string fName)
   return fName;
 }
 
+std::string
+QA::getVarnameInPrjTable(std::string vName)
+{
+  vName += "," ;
+  vName += getFrequency() ;
+
+  return vName + ",";
+}
+
 void
 QA::help(void)
 {
