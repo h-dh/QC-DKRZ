@@ -4,6 +4,7 @@
 #include "hdhC.h"
 #include "date.h"
 #include "annotation.h"
+#include "qa.h"
 #include "qa_data.h"
 #include "qa_time.h"
 #include "qa_PT.h"
@@ -78,73 +79,28 @@ class VariableMetaData
   void setParent(QA *p){pQA=p;}
 };
 
-class QA : public IObj
+class QA_Exp
 {
   public:
 
    //! Default constructor.
-  QA();
-  ~QA();
+  QA_Exp();
 
-  //! coresponding to virtual methods in IObj
-
-  //! Check field properties of the variable.
-  /*! Designed for multiple usage for sub-layers of a data block.
-      Each multiple-set must be invoked by calling method 'clearStatistics'.*/
-  bool   entry(void);
-
-  //! Initialisation of the QA object.
-  /*! Open the qa-result.nc file, when available or create
-   it from scratch. Meta data checks are performed.
-   Initialise time testing, time boundary testing, and cycles
-   within a time step. At the end  entry() is called to test
-   the data of fields.*/
-  bool   init(void) ;
-  void   linkObject(IObj *);
-  void   setFilename(hdhC::FileSplit&);
-  void   setTablePath(std::string p){tablePath=p;}
-
-  void   applyOptions(bool isPost=false);
-
-  bool   checkDataBody(std::string vName="");
-
-//! Checks meta-data
-  void   checkMetaData(InFile &) ;
-
-  void   checkProjectTable(InFile &in);
-  
-  /*! Close records for time and data.*/
-  void   closeEntry(void);
+  void   applyOptions(std::vector<std::string>&);
 
   //! Make VarMetaData objects.
   void   createVarMetaData(void);
-
-  //! The final operations.
-  /*! An exit code is returned.*/
-  int    finally(int errCode=0);
-
-  //! The final qa data operations.
-  /*! Called from finall(). An exit code is returned.*/
-  int    finally_data(int errCode=0);
 
   std::string
          getAttValue(size_t v_ix, size_t a_ix);
 
   std::string
-         getCurrentTable(void){ return currTable ; }
-
-  bool   getExit(void);
-  int    getExitCode(void){return exitCode;}
-
-  std::string
          getFrequency(void);
 
-//  std::string
-//         getTablePath(void){ return tablePath; }
+  std::string
+         getTableEntryID(std::string vName);
 
-  //! Brief description of options
-  static void
-         help(void);
+  void   init(QA*, std::vector<std::string>&);
 
   //! Initialisation of flushing gathered results to netCDF file.
   /*! Parameter indicates the number of variables. */
@@ -153,91 +109,26 @@ class QA : public IObj
   //! Set default values.
   void   initDefaults(void);
 
-  //! Global attributes of the qa-netCDF file.
-  /*! Partly reflecting global attributes from the sources. */
-  void   initGlobalAtts(InFile &);
-
   //! Initialisiation of a resumed session.
   /*! Happens for non-atomic data sets and those that are yet incomplete. */
-  void   initResumeSession(void);
+  void   initResumeSession(std::vector<std::string>& prevTargets);
 
   //! Check the path to the tables;
-  void   inqTables(void);
+  void   inqTables(void){return;}
 
-  bool   isProgress(void){ return ! isNoProgress ; }
-
-  //! Open a qa_result file for creation or appending data.
-  /*! CopY time variable from input-nc file.
-   Collect some properties of the in-netcdf-file in
-   struct varMeDa. Also check properties against tables.
-  */
-  void   openQA_Nc(InFile&);
-
-  //! Perform only post-processing
-  bool   postProc(void);
-  bool   postProc_outlierTest(void);
-
-  //! Connect this with the object to be checked
-  void   setInFilePointer(InFile *p) { pIn = p; }
-
-  //! Unused.
-  /*! Needed to be conform to a specific Base class functionality */
-  void   setSrcStr(std::string s)
-             {srcStr.push_back(s); return;}
-
-  //! Store results in the internal buffer
-  /*! The buffer is flushed to file every 'flushCountMax' time steps.*/
-  void   store(std::vector<hdhC::FieldData> &fA);
-  void   storeData(std::vector<hdhC::FieldData> &fA);
-  void   storeTime(void);
-
-  //! Test the time-period of the input file.
-  /*! If the end-date in the filename and the last time value
-      match within the uncertainty of 0.75% of the time-step, then
-      the file is assumed to be completely qa-processed. */
-  bool   testPeriod(void);
-
-  //! Name of the netCDF file with results of the quality control
-  std::string tablePath;
-  struct hdhC::FileSplit qaFile;
-  struct hdhC::FileSplit projectTableFile;
-
-  std::string qaNcfileFlags;
-
-  int exitCode;
-  bool isExit;
+  bool   testPeriod(void); //{return false;}
 
   std::vector<VariableMetaData> varMeDa;
 
   NcAPI *nc;
-  QA_Time qaTime;
-
-//private:
-  int thisId;
-
-  size_t currQARec;
-  size_t importedRecFromPrevQA; // initial num of recs in the write-to-nc-file
-  MtrxArr<double> tmp_mv;
+  QA* pQA;
 
   // the same buf-size for all buffer is required for testing replicated records
   size_t bufferSize;
 
   // init for test about times
-  bool enablePostProc;
-  bool enableVersionInHistory;
   bool isCaseInsensitiveVarName;
   bool isClearBits;
-  bool isFileComplete;
-  bool isInstantaneous;
-  bool isNoProgress;
-  bool isNotFirstRecord;
-  bool isResumeSession;
-
-  size_t nextRecords;
-
-  bool isCheckMeta;
-  bool isCheckTime;
-  bool isCheckData;
 
   std::vector<std::string> excludedAttribute;
   std::vector<std::string> overruleAllFlagsOption;
@@ -247,30 +138,10 @@ class QA : public IObj
   std::vector<std::string> outlierOpts;
   std::vector<std::string> replicationOpts;
 
-  std::string currTable;
-
   std::string frequency;
-  int  frequency_pos;
-
-  int identNum;
   std::string fVarname;
-  char        fileSequenceState;
-  std::string project;
-  std::string project_as;
-  std::string prevVersionFile;
-  std::vector<std::string> srcStr;
-  std::string revision;
 
-  std::string fail;
-  std::string notAvailable;
-  std::string fileStr;
-  std::string fileTableMismatch;
-
-  void        appendToHistory(size_t);
   void        pushBackVarMeDa(Variable*);
-  void        setExit(int);
-  void        setCheckMode(std::string);
-  void        setTable(std::string, std::string acronym="");
 };
 
 #endif
