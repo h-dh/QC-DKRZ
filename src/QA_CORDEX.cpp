@@ -3,123 +3,14 @@
 // Macro option to enable output of all messages.
 // Please compile with '-D RAISE_ERRORS'
 
-QA::QA()
+QA_Exp::QA_Exp()
 {
   initDefaults();
 }
 
-QA::~QA()
-{
-  if( nc )
-  {
-    nc->close();
-    delete nc ;
-    nc=0;
-  }
-}
-
 void
-QA::appendToHistory(void)
+QA_Exp::applyOptions(std::vector<std::string>& optStr)
 {
-  // date and time at run time
-  std::string today( Date::getTodayStr() );
-  today += ":";
-
-  std::string s;
-  std::string hst;
-  std::string hstVersion;
-
-  s = nc->getAttString("history");
-  if( s.size() )
-  {
-    // append to history
-
-    // check for a changed path to data
-    Split splt(s);
-    if( splt.size() > 2 && splt[1] == "path_to_data:" )
-    {
-      std::string hstPath(splt[2]);
-      size_t pos;
-      if( (pos=hstPath.rfind("\n")) < std::string::npos )
-         hstPath.erase(pos,1);
-      if( qaFile.path != hstPath )
-      {
-        hst += "\n" ;
-        hst += today;
-        hst += " changed path to data=";
-        hst += qaFile.path + "\n" ;
-      }
-    }
-  }
-  else
-  {
-    // the root of the history string
-    hst += today;
-    hst += " path_to_data=";
-    hst += qaFile.path ;
-  }
-
-  // did the package version change? Yes? Then add to history
-  if( s.size() && enableVersionInHistory )
-  {
-    // look for the last version file named in the historys string,
-    // thus a reversed scan for the first version element
-    Split splt(s);
-    size_t index=splt.size()-1;
-    for( ; ; --index )
-    {
-      if( splt[index] == "revision:" )
-        break;
-
-      // note: i==0; --i; i== 4294967295
-      if( index == 0 )
-        break;
-    }
-
-    std::string tmp ;
-    if( index > 0 )
-      // version number in the next position
-      tmp = splt[++index] ;
-    else
-      // not in the history, so take the one from the version attribute
-      tmp = nc->getAttString("QA revision");
-
-    if( revision != tmp )
-    {
-      hst += "\n" ;
-      hst += today;
-      hst += " changed QA revision=" ;
-      hst += revision ;
-    }
-  }
-
-  if( hst.size() )
-  {
-    hst = s + hst ;
-    nc->setGlobalAtt( "history", hst);
-  }
-
-  return;
-}
-
-void
-QA::applyOptions(bool isPost)
-{
-  enablePostProc=isPost;
-
-  // the first loop for items with higher precedence
-  for( size_t i=0 ; i < optStr.size() ; ++i)
-  {
-     Split split(optStr[i], "=");
-
-     if( split[0] == "pP" || split[0] == "postProc"
-       || split[0] == "post_proc")
-     {
-       enablePostProc=true;
-       break;
-     }
-  }
-
   for( size_t i=0 ; i < optStr.size() ; ++i)
   {
      Split split(optStr[i], "=");
@@ -132,32 +23,12 @@ QA::applyOptions(bool isPost)
           continue;
      }
 
-     if( split[0] == "cM"
-       || split[0] == "checkMode"
-         || split[0] == "check_mode" )
-     {
-       if( split.size() == 2 )
-         setCheckMode(split[1]);
-
-        continue;
-     }
-
      if( split[0] == "dIP"
           || split[0] == "dataInProduction"
               || split[0] == "data_in_production" )
      {
         // effects completeness test in testPeriod()
-        isFileComplete=false;
-        continue;
-     }
-
-     if( split[0] == "dP"
-          || split[0] == "dataPath" || split[0] == "data_path" )
-     {
-        if( split.size() == 2 )
-          // path to the directory where the execution takes place
-          qaFile.setPath(split[1]);
-
+        enabledCompletenessCheck=false;
         continue;
      }
 
@@ -171,92 +42,11 @@ QA::applyOptions(bool isPost)
        continue;
      }
 
-     if( split[0] == "f" )
-     {
-       if( split.size() == 2 )
-          qaFile.setFile(split[1]);
-        continue;
-     }
-
-     if( split[0] == "fS" || split[0] == "FileSequence"
-         || split[0] == "file_sequence" )
-     {
-        if( split.size() == 2 )
-          fileSequenceState=split[1][0];
-
-        continue;
-     }
-
-     if( split[0] == "oT"
-           || split[0] == "outlierTest"
-                || split[0] == "outlier_test" )
-     {
-        if( enablePostProc && split.size() == 2 )
-          outlierOpts.push_back(split[1]);
-
-        continue;
-     }
-
-     if( split[0] == "qNF" || split[0] == "qaNcfileFlags"
-       || split[0] == "qa_ncfile_flags" )
-     {
-       if( split.size() == 2 )
-          qaNcfileFlags=split[1];
-        continue;
-     }
-
-     if( split[0] == "rR"
-            || split[0] == "replicatedRecord"
-                 || split[0] == "replicated_record" )
-     {
-       if( split.size() > 1 )
-       {
-          // input could be: ..., only_groups=num
-          // then num would be in split[2]
-          std::string tmp( split[1] );
-          if( split.size() == 3 )
-          {
-            tmp += '=' ;
-            tmp += split[2] ;
-          }
-
-          Split csv ;
-          csv.setSeparator(",");
-          BraceOP groups(tmp);
-          while ( groups.next(tmp) )
-          {
-            csv = tmp;
-            for( size_t i=0 ; i < csv.size() ; ++i )
-              replicationOpts.push_back(csv[i]);
-          }
-
-          continue;
-       }
-     }
-
      if( split[0] == "tGCM"
            || split[0] == "table_GCM_NAME" )
      {
        if( split.size() == 2 )
           GCM_ModelnameTable.setFile(split[1]) ;
-
-       continue;
-     }
-
-     if( split[0] == "tP"
-          || split[0] == "tablePath" || split[0] == "table_path")
-     {
-       if( split.size() == 2 )
-          tablePath=split[1];
-
-       continue;
-     }
-
-     if( split[0] == "tPr"
-          || split[0] == "tableProject" )  // dummy
-     {
-       if( split.size() == 2 )
-          projectTableFile.setFile(split[1]);
 
        continue;
      }
@@ -293,7 +83,7 @@ QA::applyOptions(bool isPost)
             || split[0] == "use_strict" )
      {
           isUseStrict=true ;
-          setCheckMode("meta");
+          pQA->setCheckMode("meta");
      }
 
      continue;
@@ -301,64 +91,22 @@ QA::applyOptions(bool isPost)
 
    // apply a general path which could have also been provided by setTablePath()
    if( archiveDesignTable.path.size() == 0 )
-      archiveDesignTable.setPath(tablePath);
+      archiveDesignTable.setPath(pQA->tablePath);
 
    if( GCM_ModelnameTable.path.size() == 0 )
-      GCM_ModelnameTable.setPath(tablePath);
-
-   if( projectTableFile.path.size() == 0 )
-      projectTableFile.setPath(tablePath);
+      GCM_ModelnameTable.setPath(pQA->tablePath);
 
    if( RCM_ModelnameTable.path.size() == 0 )
-      RCM_ModelnameTable.setPath(tablePath);
+      RCM_ModelnameTable.setPath(pQA->tablePath);
 
    if( varReqTable.path.size() == 0 )
-      varReqTable.setPath(tablePath);
+      varReqTable.setPath(pQA->tablePath);
 
    return;
 }
 
-bool
-QA::checkDataBody(std::string vName)
-{
-  // any empty data segments?
-
-  if( vName.size() )
-  {
-    for( size_t i=0 ; i < pIn->varSz ; ++i)
-    {
-      Variable& var = pIn->variable[i];
-      if( var.name == vName )
-        return pIn->nc.isEmptyData(var.name) ;
-    }
-  }
-  else if( ! pIn->dataVarIndex.size() )
-    return true;
-
-  std::vector<size_t> vs;
-
-  for( size_t i=0 ; i < pIn->dataVarIndex.size() ; ++i)
-  {
-    Variable& var = pIn->variable[ pIn->dataVarIndex[i] ];
-    if( ! pIn->nc.isEmptyData(var.name) )
-    {
-      vs.push_back(pIn->dataVarIndex[i]) ;
-      notes->setCheckDataStr(fail);
-    }
-  }
-
-  if( vs.size() )
-    // only try for variables with data
-    pIn->dataVarIndex = vs ;
-  else
-    // all data variables without any data
-    return true;
-
-  return false;
-}
-
 void
-QA::checkDimTableEntry(InFile &in,
+QA_Exp::checkDimTableEntry(InFile &in,
     VariableMetaData &vMD,
     struct DimensionMetaData &nc_entry,
     struct DimensionMetaData &tbl_entry)
@@ -412,7 +160,7 @@ QA::checkDimTableEntry(InFile &in,
 }
 
 void
-QA::checkDimAxis(InFile &in,
+QA_Exp::checkDimAxis(InFile &in,
     VariableMetaData &vMD,
     struct DimensionMetaData &nc_entry,
     struct DimensionMetaData &tbl_entry)
@@ -423,7 +171,7 @@ QA::checkDimAxis(InFile &in,
     std::string capt( getCaptIntroDim(vMD, nc_entry, tbl_entry) );
 
     if( tbl_entry.axis.size() && nc_entry.axis.size() )
-      capt += s_mismatch ;
+      capt += pQA->s_mismatch ;
     else if( tbl_entry.axis.size() )
       capt+= "not available in the file" ;
     else
@@ -433,23 +181,23 @@ QA::checkDimAxis(InFile &in,
     if( tbl_entry.axis.size() )
       text += tbl_entry.axis ;
     else
-      text += notAvailable ;
+      text += pQA->notAvailable ;
 
     text += "\naxis (file)=" ;
     if( nc_entry.axis.size() )
       text += nc_entry.axis ;
     else
-      text += notAvailable ;
+      text += pQA->notAvailable ;
 
     (void) notes->operate(capt, text) ;
-    notes->setCheckMetaStr(fail);
+    notes->setCheckMetaStr(pQA->fail);
   }
 
   return;
 }
 
 void
-QA::checkDimChecksum(InFile &in,
+QA_Exp::checkDimChecksum(InFile &in,
     VariableMetaData &vMD,
     struct DimensionMetaData &nc_entry,
     struct DimensionMetaData &tbl_entry)
@@ -472,14 +220,14 @@ QA::checkDimChecksum(InFile &in,
     text += hdhC::double2String(nc_entry.checksum) ;
 
     (void) notes->operate(capt, text) ;
-    notes->setCheckMetaStr(fail);
+    notes->setCheckMetaStr(pQA->fail);
   }
 
   return;
 }
 
 void
-QA::checkDimLongName(InFile &in,
+QA_Exp::checkDimLongName(InFile &in,
     VariableMetaData &vMD,
     struct DimensionMetaData &nc_entry,
     struct DimensionMetaData &tbl_entry)
@@ -488,10 +236,10 @@ QA::checkDimLongName(InFile &in,
   std::string key("40_3");
   if( notes->inq( key, vMD.var->name) )
   {
-    std::string capt(getCaptIntroDim(vMD, nc_entry, tbl_entry, n_long_name) ) ;
+    std::string capt(getCaptIntroDim(vMD, nc_entry, tbl_entry, pQA->n_long_name) ) ;
 
     if( tbl_entry.longname.size() && nc_entry.longname.size() )
-      capt += s_mismatch ;
+      capt += pQA->s_mismatch ;
     else if( tbl_entry.longname.size() )
       capt += "not available in the file" ;
     else
@@ -501,23 +249,23 @@ QA::checkDimLongName(InFile &in,
     if( tbl_entry.longname.size() )
       text += tbl_entry.longname ;
     else
-      text += notAvailable ;
+      text += pQA->notAvailable ;
 
     text += "\nlong name (file)=" ;
     if( nc_entry.longname.size() )
       text += nc_entry.longname ;
     else
-      text += notAvailable ;
+      text += pQA->notAvailable ;
 
     (void) notes->operate(capt, text) ;
-    notes->setCheckMetaStr(fail);
+    notes->setCheckMetaStr(pQA->fail);
   }
 
   return;
 }
 
 void
-QA::checkDimOutName(InFile &in,
+QA_Exp::checkDimOutName(InFile &in,
     VariableMetaData &vMD,
     struct DimensionMetaData &nc_entry,
     struct DimensionMetaData &tbl_entry)
@@ -530,7 +278,7 @@ QA::checkDimOutName(InFile &in,
     if( tbl_entry.outname.size() && nc_entry.outname.size() )
     {
       capt += "output name with " ;
-      capt += s_mismatch ;
+      capt += pQA->s_mismatch ;
     }
     else if( tbl_entry.outname.size() )
       capt += "output name not available in the file" ;
@@ -541,23 +289,23 @@ QA::checkDimOutName(InFile &in,
     if( tbl_entry.outname.size() )
       text += tbl_entry.outname ;
     else
-      text += notAvailable ;
+      text += pQA->notAvailable ;
 
     text += "\noutput name (file)=" ;
     if( nc_entry.outname.size() )
       text += nc_entry.outname ;
     else
-      text += notAvailable ;
+      text += pQA->notAvailable ;
 
     (void) notes->operate(capt, text) ;
-    notes->setCheckMetaStr(fail);
+    notes->setCheckMetaStr(pQA->fail);
   }
 
   return ;
 }
 
 void
-QA::checkDimSize(InFile &in,
+QA_Exp::checkDimSize(InFile &in,
     VariableMetaData &vMD,
     struct DimensionMetaData &nc_entry,
     struct DimensionMetaData &tbl_entry)
@@ -578,14 +326,14 @@ QA::checkDimSize(InFile &in,
     text += hdhC::double2String(nc_entry.size) ;
 
     (void) notes->operate(capt, text) ;
-    notes->setCheckMetaStr(fail);
+    notes->setCheckMetaStr(pQA->fail);
   }
 
   return;
 }
 
 void
-QA::checkDimStndName(InFile &in,
+QA_Exp::checkDimStndName(InFile &in,
     VariableMetaData &vMD,
     struct DimensionMetaData &nc_entry,
     struct DimensionMetaData &tbl_entry)
@@ -593,40 +341,40 @@ QA::checkDimStndName(InFile &in,
   std::string key("40_2");
   if( notes->inq( key, vMD.var->name) )
   {
-    std::string capt( getCaptIntroDim(vMD, nc_entry, tbl_entry, n_standard_name) ) ;
+    std::string capt( getCaptIntroDim(vMD, nc_entry, tbl_entry, pQA->n_standard_name) ) ;
 
     if( tbl_entry.stndname.size() && nc_entry.stndname.size() )
-      capt += s_mismatch ;
+      capt += pQA->s_mismatch ;
     else if( tbl_entry.stndname.size() )
       capt += "not available in the file" ;
     else
       capt += "not available in the table" ;
 
     std::string text("table=");
-    text += currTable + ", frequency=";
+    text += varReqTable.filename + ", frequency=";
     text += getFrequency() + ", variable=";
     text += vMD.var->name + ", dimension=";
     text += nc_entry.outname + "\nstandard_name (table)=" ;
     if( tbl_entry.stndname.size() )
       text += tbl_entry.stndname ;
     else
-      text += notAvailable ;
+      text += pQA->notAvailable ;
 
     text += "\nstandard_name (file)=" ;
     if( nc_entry.stndname.size() )
       text += nc_entry.stndname ;
     else
-      text += notAvailable ;
+      text += pQA->notAvailable ;
 
     (void) notes->operate(capt, text) ;
-    notes->setCheckMetaStr(fail);
+    notes->setCheckMetaStr(pQA->fail);
   }
 
   return;
 }
 
 void
-QA::checkDimULD(
+QA_Exp::checkDimULD(
      VariableMetaData &vMD,
      struct DimensionMetaData &nc_entry,
      struct DimensionMetaData &tbl_entry)
@@ -634,95 +382,92 @@ QA::checkDimULD(
   // Special for the unlimited dimension
 
   // Do the dimensional meta-data found in the netCDF file
-  // match those in the table (standard or project)?
+  // match those in the standard table?
   // Checking ranges is senseless, thus discarded.
 
-  // Compare against the project table.
-  if( currTable != varReqTable.filename )
+  if( tbl_entry.units != nc_entry.units )
   {
-    if( tbl_entry.units != nc_entry.units )
+    // Note: a different date between the two might not be a fault.
+    // If keywords match, but the dates do not, then emit
+    // only a warning.
+    if( ( tbl_entry.units.find("days") < std::string::npos
+          && tbl_entry.units.find("since") < std::string::npos )
+                        !=
+        (  nc_entry.units.find("days") < std::string::npos
+          &&  nc_entry.units.find("since") < std::string::npos ) )
     {
-      // Note: a different date between the two might not be a fault.
-      // If keywords match, but the dates do not, then emit
-      // only a warning.
-      if( ( tbl_entry.units.find("days") < std::string::npos
-            && tbl_entry.units.find("since") < std::string::npos )
-                         !=
-          (  nc_entry.units.find("days") < std::string::npos
-            &&  nc_entry.units.find("since") < std::string::npos ) )
+      std::string key("36_1");
+      if( notes->inq( key, vMD.var->name) )
       {
-        std::string key("36_1");
-        if( notes->inq( key, vMD.var->name) )
+        std::string capt( getCaptIntroDim(vMD, nc_entry, tbl_entry, pQA->n_units) ) ;
+
+        if( tbl_entry.units.size() && nc_entry.units.size() )
+          capt += "different periods" ;
+        else if( tbl_entry.units.size() )
+          capt += "missing period string (file)" ;
+        else
+          capt += "missing period string (table)" ;
+
+        std::string text("units (table)=") ;
+        if( tbl_entry.units.size() )
+          text += tbl_entry.units ;
+        else
+          text += "missing key string=days since" ;
+
+        text += "\nunits (file): " ;
+        if( nc_entry.units.size() )
+          text += nc_entry.units ;
+        else
+          text += "missing key string=days since" ;
+
+        (void) notes->operate(capt, text) ;
+        notes->setCheckMetaStr(pQA->fail);
+      }
+    }
+    else // deviating reference dates
+    {
+      // There is nothing wrong with deviating references
+      if( ! pQA->qaTime.isReferenceDate )
+        return ;  // do not check at all
+
+      // do not check at the beginning of a new experiment.
+      if( ! pQA->qaTime.isReferenceDateAcrossExp
+               && pQA->currQARec == 0 )
+        return ;
+
+      Date tbl_ref( tbl_entry.units, pQA->qaTime.calendar );
+      Date nc_ref( nc_entry.units, pQA->qaTime.calendar );
+
+      std::string key("36_2");
+      if( notes->inq( key, vMD.var->name) )
+      {
+        std::string capt( getCaptIntroDim(vMD, nc_entry, tbl_entry, pQA->n_units) ) ;
+
+        if( tbl_entry.units.size() && nc_entry.units.size() )
+          capt += "different reference dates" ;
+        else if( tbl_entry.units.size() )
+          capt += "missing reference date in the file" ;
+        else
+          capt += "missing reference date in the table" ;
+
+        std::string text ;
+        if( tbl_ref != nc_ref )
         {
-          std::string capt( getCaptIntroDim(vMD, nc_entry, tbl_entry, n_units) ) ;
-
-          if( tbl_entry.units.size() && nc_entry.units.size() )
-            capt += "different periods" ;
-          else if( tbl_entry.units.size() )
-            capt += "missing period string (file)" ;
-          else
-            capt += "missing period string (table)" ;
-
-          std::string text("units (table)=") ;
+          text += "units (table)=" ;
           if( tbl_entry.units.size() )
             text += tbl_entry.units ;
           else
-            text += "missing key string=days since" ;
+            text += pQA->notAvailable ;
 
-          text += "\nunits (file): " ;
+          text += "\nunits (file)=" ;
           if( nc_entry.units.size() )
             text += nc_entry.units ;
           else
-            text += "missing key string=days since" ;
-
-          (void) notes->operate(capt, text) ;
-          notes->setCheckMetaStr(fail);
+            text += pQA->notAvailable ;
         }
-      }
-      else // deviating reference dates
-      {
-        // There is nothing wrong with deviating references
-        if( ! qaTime.isReferenceDate )
-          return ;  // do not check at all
 
-        // do not check at the beginning of a new experiment.
-        if( ! qaTime.isReferenceDateAcrossExp && currQARec == 0 )
-          return ;
-
-        Date tbl_ref( tbl_entry.units, qaTime.calendar );
-        Date nc_ref( nc_entry.units, qaTime.calendar );
-
-        std::string key("36_2");
-        if( notes->inq( key, vMD.var->name) )
-        {
-          std::string capt( getCaptIntroDim(vMD, nc_entry, tbl_entry, n_units) ) ;
-
-          if( tbl_entry.units.size() && nc_entry.units.size() )
-            capt += "different reference dates" ;
-          else if( tbl_entry.units.size() )
-            capt += "missing reference date in the file" ;
-          else
-            capt += "missing reference date in the table" ;
-
-          std::string text ;
-          if( tbl_ref != nc_ref )
-          {
-            text += "units (table)=" ;
-            if( tbl_entry.units.size() )
-              text += tbl_entry.units ;
-            else
-              text += notAvailable ;
-
-            text += "\nunits (file)=" ;
-            if( nc_entry.units.size() )
-              text += nc_entry.units ;
-            else
-              text += notAvailable ;
-          }
-
-          (void) notes->operate(capt, text) ;
-          notes->setCheckMetaStr(fail);
-        }
+        (void) notes->operate(capt, text) ;
+        notes->setCheckMetaStr(pQA->fail);
       }
     }
   }
@@ -731,7 +476,7 @@ QA::checkDimULD(
 }
 
 void
-QA::checkDimUnits(InFile &in,
+QA_Exp::checkDimUnits(InFile &in,
      VariableMetaData &vMD,
      struct DimensionMetaData &nc_entry,
      struct DimensionMetaData &tbl_entry)
@@ -748,22 +493,15 @@ QA::checkDimUnits(InFile &in,
   if( tbl_entry.units == nc_entry.units )
     return;
 
-  std::string key;
-
-  std::string tableType;
-  if( currTable == varReqTable.filename )
-    tableType = "standard table=";
-  else
-    tableType = "project table=";
-
   //dimension's var-rep without units in the standard table
-  key = "40_4";
+  std::string key("40_4");
+
   if( notes->inq( key, vMD.var->name) )
   {
-    std::string capt( getCaptIntroDim(vMD, nc_entry, tbl_entry, n_units) ) ;
+    std::string capt( getCaptIntroDim(vMD, nc_entry, tbl_entry, pQA->n_units) ) ;
 
     if( tbl_entry.units.size() && nc_entry.units.size() )
-      capt += s_mismatch ;
+      capt += pQA->s_mismatch ;
     else if( tbl_entry.isUnitsDefined )
       capt += "not available in the file" ;
     else
@@ -779,19 +517,19 @@ QA::checkDimUnits(InFile &in,
     if( nc_entry.units.size() )
       text += nc_entry.units ;
     else if( nc_entry.isUnitsDefined )
-      text += notAvailable ;
+      text += pQA->notAvailable ;
     else
       text += "not defined" ;
 
     (void) notes->operate(capt, text) ;
-    notes->setCheckMetaStr(fail);
+    notes->setCheckMetaStr(pQA->fail);
   }
 
   return ;
 }
 
 void
-QA::checkDRS(InFile &in)
+QA_Exp::checkDRS(InFile &in)
 {
   // names of the global attributes in a sequence corresponding to
   // the path components from right to left.
@@ -924,12 +662,12 @@ QA::checkDRS(InFile &in)
   if( text.size() )
   {
     std::string key("10_1");
-    if( notes->inq( key, fileStr ) )
+    if( notes->inq( key, pQA->fileStr ) )
     {
       std::string capt( "directory structure does not match global attributes");
 
       (void) notes->operate(capt, text) ;
-      notes->setCheckMetaStr( fail );
+      notes->setCheckMetaStr( pQA->fail );
     }
   }
   else
@@ -968,12 +706,12 @@ QA::checkDRS(InFile &in)
   if( text.size() )
   {
     std::string key("10_2");
-    if( notes->inq( key, fileStr ) )
+    if( notes->inq( key, pQA->fileStr ) )
     {
       std::string capt( "directory structure expects global attribute ");
 
       (void) notes->operate(capt + text) ;
-      notes->setCheckMetaStr( fail );
+      notes->setCheckMetaStr( pQA->fail );
     }
   }
 
@@ -981,7 +719,7 @@ QA::checkDRS(InFile &in)
 }
 
 void
-QA::checkDRS_ModelName(InFile &in, std::string &aName, std::string &aValue,
+QA_Exp::checkDRS_ModelName(InFile &in, std::string &aName, std::string &aValue,
    char des, std::string instName, std::string instValue )
 {
    hdhC::FileSplit* tbl;
@@ -1013,8 +751,8 @@ QA::checkDRS_ModelName(InFile &in, std::string &aName, std::string &aValue,
 
          if( notes->operate(capt) )
          {
-           notes->setCheckMetaStr( fail );
-           setExit( notes->getExitValue() ) ;
+           notes->setCheckMetaStr( pQA->fail );
+           pQA->setExit( notes->getExitValue() ) ;
          }
       }
 
@@ -1067,16 +805,16 @@ QA::checkDRS_ModelName(InFile &in, std::string &aName, std::string &aValue,
      else
        key = "10_4" ;
 
-     if( notes->inq( key, fileStr) )
+     if( notes->inq( key, pQA->fileStr) )
      {
-       std::string capt("global " + hdhC::tf_att(s_empty, aName, aValue));
+       std::string capt("global " + hdhC::tf_att(pQA->s_empty, aName, aValue));
        capt += "is not registered in table " ;
        capt += tbl->getBasename();
 
        if( notes->operate(capt) )
        {
-         notes->setCheckMetaStr( fail );
-         setExit( notes->getExitValue() ) ;
+         notes->setCheckMetaStr( pQA->fail );
+         pQA->setExit( notes->getExitValue() ) ;
        }
      }
    }
@@ -1085,16 +823,16 @@ QA::checkDRS_ModelName(InFile &in, std::string &aName, std::string &aValue,
    {
      std::string key("10_5");
 
-     if( notes->inq( key, fileStr) )
+     if( notes->inq( key, pQA->fileStr) )
      {
-       std::string capt("global " + hdhC::tf_att(s_empty, instName, instValue));
+       std::string capt("global " + hdhC::tf_att(pQA->s_empty, instName, instValue));
        capt += "is not registered in table " ;
        capt += tbl->getBasename();
 
        if( notes->operate(capt) )
        {
-         notes->setCheckMetaStr( fail );
-         setExit( notes->getExitValue() ) ;
+         notes->setCheckMetaStr( pQA->fail );
+         pQA->setExit( notes->getExitValue() ) ;
        }
      }
    }
@@ -1103,18 +841,18 @@ QA::checkDRS_ModelName(InFile &in, std::string &aName, std::string &aValue,
    {
      std::string key("10_6");
 
-     if( notes->inq( key, fileStr) )
+     if( notes->inq( key, pQA->fileStr) )
      {
        std::string capt("combination of global") ;
-       capt += hdhC::tf_att(s_empty, aName, aValue);
+       capt += hdhC::tf_att(pQA->s_empty, aName, aValue);
        capt += "and " + hdhC::tf_val(instName, instValue);
        capt += "is unregistered in table ";
        capt += tbl->getBasename();
 
        if( notes->operate(capt) )
        {
-         notes->setCheckMetaStr( fail );
-         setExit( notes->getExitValue() ) ;
+         notes->setCheckMetaStr( pQA->fail );
+         pQA->setExit( notes->getExitValue() ) ;
        }
      }
    }
@@ -1123,7 +861,7 @@ QA::checkDRS_ModelName(InFile &in, std::string &aName, std::string &aValue,
 }
 
 void
-QA::checkPressureCoord(InFile &in)
+QA_Exp::checkPressureCoord(InFile &in)
 {
    // Check for missing pressure coordinate and for the correct value
    // This has to be done for all variables with appended number
@@ -1152,7 +890,7 @@ QA::checkPressureCoord(InFile &in)
        capt += "in the filename is missing a pressure level." ;
 
        (void) notes->operate( capt ) ;
-       notes->setCheckMetaStr(fail);
+       notes->setCheckMetaStr(pQA->fail);
      }
    }
 
@@ -1169,7 +907,7 @@ QA::checkPressureCoord(InFile &in)
        std::string text("Expected: 200 500 or 850");
 
        (void) notes->operate( capt, text ) ;
-       notes->setCheckMetaStr(fail);
+       notes->setCheckMetaStr(pQA->fail);
      }
    }
 
@@ -1200,7 +938,7 @@ QA::checkPressureCoord(InFile &in)
        std::string capt("Auxiliary " + hdhC::tf_var("plev") + "is missing") ;
 
        (void) notes->operate( capt ) ;
-       notes->setCheckMetaStr(fail);
+       notes->setCheckMetaStr(pQA->fail);
      }
 
      return ;
@@ -1217,7 +955,7 @@ QA::checkPressureCoord(InFile &in)
        capt += " and " + hdhC::sAssign("p(var-name)", pVarname);
 
        (void) notes->operate( capt) ;
-       notes->setCheckMetaStr(fail);
+       notes->setCheckMetaStr(pQA->fail);
      }
    }
 
@@ -1232,7 +970,7 @@ QA::checkPressureCoord(InFile &in)
      {
        for( jx=0 ; jx < var.attName.size() ; ++jx )
        {
-         if( var.attName[jx] == n_units )
+         if( var.attName[jx] == pQA->n_units )
          {
             if( var.attValue[jx][0] != "Pa" )
               return;  // is annotated elsewhere;
@@ -1256,13 +994,13 @@ QA::checkPressureCoord(InFile &in)
        std::string key("5_4");
        if( notes->inq( key, in.variable[ix].name ) )
        {
-         std::string capt(hdhC::tf_var("plev", s_colon));
+         std::string capt(hdhC::tf_var("plev", pQA->s_colon));
          capt += "Data value does not match Pa units." ;
          capt += ", found: " + hdhC::sAssign("p", pData);
          capt += ", expected" + hdhC::sAssign("p", pVarname);
 
          (void) notes->operate(capt) ;
-         notes->setCheckMetaStr(fail);
+         notes->setCheckMetaStr(pQA->fail);
        }
      }
    }
@@ -1271,7 +1009,7 @@ QA::checkPressureCoord(InFile &in)
 }
 
 void
-QA::domainCheck(ReadLine &ifs)
+QA_Exp::domainCheck(ReadLine &ifs)
 {
    std::string line;
    ifs.getLine(line);
@@ -1373,15 +1111,15 @@ QA::domainCheck(ReadLine &ifs)
      // coordinates, then the checks will be discarded.
      bool is=true;
      std::string v;
-     for( size_t i=0 ; i < pIn->varSz ; ++i )
+     for( size_t i=0 ; i < pQA->pIn->varSz ; ++i )
      {
-       v = hdhC::Lower()(pIn->variable[i].name);
+       v = hdhC::Lower()(pQA->pIn->variable[i].name);
 
        // check attributes for key-word 'rotated' and 'pole'
-       for( size_t j=0 ; j < pIn->variable[i].attName.size() ; ++j )
+       for( size_t j=0 ; j < pQA->pIn->variable[i].attName.size() ; ++j )
        {
-         if( pIn->variable[i].attName[j].find("rotated") < std::string::npos
-              &&  pIn->variable[i].attName[j].find("pole") < std::string::npos )
+         if( pQA->pIn->variable[i].attName[j].find("rotated") < std::string::npos
+              &&  pQA->pIn->variable[i].attName[j].find("pole") < std::string::npos )
          {
             is=false;
             break;
@@ -1431,19 +1169,19 @@ QA::domainCheck(ReadLine &ifs)
 
   // used domain name not found in Table 1 or 2
   std::string key = "7_6";
-  if( notes->inq(key, fileStr) )
+  if( notes->inq(key, pQA->fileStr) )
   {
     std::string capt("Domain not specified neither in Table 1 or 2.") ;
 
     (void) notes->operate(capt) ;
-    notes->setCheckMetaStr(fail);
+    notes->setCheckMetaStr(pQA->fail);
   }
 
   return ;
 }
 
 bool
-QA::domainFindTableTypeByRange(
+QA_Exp::domainFindTableTypeByRange(
    std::vector<std::vector<std::string> > &T1,
    std::vector<std::vector<std::string> > &T2,
    int &table_id, size_t &row )
@@ -1455,25 +1193,25 @@ QA::domainFindTableTypeByRange(
    std::vector<std::string> cName;
    std::vector<size_t> cSize;
 
-   for(size_t i=0 ; i < pIn->varSz ; ++i )
+   for(size_t i=0 ; i < pQA->pIn->varSz ; ++i )
    {
-      if( pIn->variable[i].isDATA )
+      if( pQA->pIn->variable[i].isDATA )
       {
-         for(size_t j=0 ; j < pIn->variable[i].dimName.size() ; ++j )
+         for(size_t j=0 ; j < pQA->pIn->variable[i].dimName.size() ; ++j )
          {
-           std::string &name = pIn->variable[i].dimName[j];
+           std::string &name = pQA->pIn->variable[i].dimName[j];
 
-           for(size_t k=0 ; k < pIn->varSz ; ++k )
+           for(size_t k=0 ; k < pQA->pIn->varSz ; ++k )
            {
-              if( pIn->variable[k].name == name )
+              if( pQA->pIn->variable[k].name == name )
               {
-                if( pIn->variable[k].isUnlimited() )
+                if( pQA->pIn->variable[k].isUnlimited() )
                   break;
 
-                if( pIn->variable[k].coord.isCoordVar )
+                if( pQA->pIn->variable[k].coord.isCoordVar )
                 {
                   cName.push_back( name );  // is a candidate
-                  cSize.push_back( pIn->variable[k].dimSize ) ;
+                  cSize.push_back( pQA->pIn->variable[k].dimSize ) ;
                 }
 
                 break;
@@ -1555,7 +1293,7 @@ QA::domainFindTableTypeByRange(
 }
 
 void
-QA::domainCheckData(std::string &var_lon, std::string &var_lat,
+QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
     std::vector<std::string> &row, std::string tName)
 {
   // compare values of lat/lon specified in CORDEX Table 1 with
@@ -1568,13 +1306,13 @@ QA::domainCheckData(std::string &var_lon, std::string &var_lat,
   // get data
   MtrxArr<double> mv_lon;
   MtrxArr<double> mv_lat;
-  pIn->nc.getData(mv_lon, var_lon);
-  pIn->nc.getData(mv_lat, var_lat);
+  pQA->pIn->nc.getData(mv_lon, var_lon);
+  pQA->pIn->nc.getData(mv_lat, var_lat);
 
   if( mv_lon.size() < 2 || mv_lat.size() < 2 )
   {
     std::string key = "7_9";
-    if( notes->inq(key, fileStr) )
+    if( notes->inq(key, pQA->fileStr) )
     {
       std::string capt("CORDEX " + hdhC::sAssign("domain", tName)) ;
       capt += " with missing data for ";
@@ -1596,7 +1334,7 @@ QA::domainCheckData(std::string &var_lon, std::string &var_lat,
       }
 
       (void) notes->operate(capt) ;
-      notes->setCheckMetaStr(fail);
+      notes->setCheckMetaStr(pQA->fail);
     }
   }
 
@@ -1631,7 +1369,7 @@ QA::domainCheckData(std::string &var_lon, std::string &var_lat,
   if( is_lon || is_lat )
   {
     std::string key = "7_10";
-    if( notes->inq(key, fileStr) )
+    if( notes->inq(key, pQA->fileStr) )
     {
       std::string capt("resolution of CORDEX ");
       capt += hdhC::sAssign("domain", tName) ;
@@ -1657,7 +1395,7 @@ QA::domainCheckData(std::string &var_lon, std::string &var_lat,
       capt += "; required is "  + t_resol;
 
       (void) notes->operate(capt) ;
-      notes->setCheckMetaStr(fail);
+      notes->setCheckMetaStr(pQA->fail);
     }
   }
 
@@ -1668,10 +1406,10 @@ QA::domainCheckData(std::string &var_lon, std::string &var_lat,
   bool is_edge[4];
   if( ! is_lon )
   {
-     int j = pIn->getVarIndex(var_lon) ;
-     Variable &var = pIn->variable[j];
+     int j = pQA->pIn->getVarIndex(var_lon) ;
+     Variable &var = pQA->pIn->variable[j];
 
-     std::string units(pIn->nc.getAttString(n_units, var.name) );
+     std::string units(pQA->pIn->nc.getAttString(pQA->n_units, var.name) );
 
      size_t i_1st  = 0;
      size_t i_last = mv_lon.size()-1;
@@ -1696,10 +1434,10 @@ QA::domainCheckData(std::string &var_lon, std::string &var_lat,
 
   if( ! is_lat )
   {
-     int j = pIn->getVarIndex(var_lat) ;
-     Variable &var = pIn->variable[j];
+     int j = pQA->pIn->getVarIndex(var_lat) ;
+     Variable &var = pQA->pIn->variable[j];
 
-     std::string units( var.getAttValue(n_units) );
+     std::string units( var.getAttValue(pQA->n_units) );
 
      size_t i_1st  = 0;
      size_t i_last = mv_lat.size()-1;
@@ -1789,7 +1527,7 @@ QA::domainCheckData(std::string &var_lon, std::string &var_lat,
   if( is )
   {
     std::string key = "7_11";
-    if( notes->inq(key, fileStr) )
+    if( notes->inq(key, pQA->fileStr) )
     {
       std::string capt("unmatched CORDEX boundaries for ");
       capt += hdhC::sAssign("domain", tName) ;
@@ -1797,7 +1535,7 @@ QA::domainCheckData(std::string &var_lon, std::string &var_lat,
       capt += ", required " + hdhC::tf_val(text1);
 
       (void) notes->operate(capt) ;
-      notes->setCheckMetaStr(fail);
+      notes->setCheckMetaStr(pQA->fail);
     }
   }
 
@@ -1805,7 +1543,7 @@ QA::domainCheckData(std::string &var_lon, std::string &var_lat,
 }
 
 void
-QA::domainCheckDims(std::string item,
+QA_Exp::domainCheckDims(std::string item,
     std::string &t_num, std::string &f_name, std::string tbl_id)
 {
   // compare lat/lon specified in CORDEX Table 1 or 2 with the dimensions
@@ -1813,11 +1551,11 @@ QA::domainCheckDims(std::string item,
   std::string f_num;
 
   // names of all dimensions
-  std::vector<std::string> dNames(pIn->nc.getDimName() );
+  std::vector<std::string> dNames(pQA->pIn->nc.getDimName() );
 
   for( size_t i=0 ; i < dNames.size() ; ++i )
   {
-     int num = pIn->nc.getDimSize(dNames[i]);
+     int num = pQA->pIn->nc.getDimSize(dNames[i]);
      f_num = hdhC::itoa(num);
 
      if( f_num == t_num )
@@ -1830,7 +1568,7 @@ QA::domainCheckDims(std::string item,
   std::string key = "7_7 (";
   key += item;
   key += ")";
-  if( notes->inq(key, fileStr) )
+  if( notes->inq(key, pQA->fileStr) )
   {
     std::string capt("CORDEX domain Table ") ;
     capt += tbl_id ;
@@ -1842,14 +1580,14 @@ QA::domainCheckDims(std::string item,
     capt += ", required: " + hdhC::tf_val(t_num);
 
     (void) notes->operate(capt) ;
-    notes->setCheckMetaStr(fail);
+    notes->setCheckMetaStr(pQA->fail);
   }
 
   return ;
 }
 
 void
-QA::domainCheckPole(std::string item,
+QA_Exp::domainCheckPole(std::string item,
     std::string &t_num, std::string &f_name)
 {
   // compare lat/lon of N. Pole  specified in CORDEX Table 1 with
@@ -1867,9 +1605,9 @@ QA::domainCheckPole(std::string item,
   // try for the assumption of variable name 'rotated_pole' with
   // attribute grid_north_pole_latitude / ..._longitude
   int ix;
-  if( (ix=pIn->getVarIndex("rotated_pole")) > -1 )
+  if( (ix=pQA->pIn->getVarIndex("rotated_pole")) > -1 )
   {
-    Variable &var = pIn->variable[ix];
+    Variable &var = pQA->pIn->variable[ix];
 
     if( item == "N.Pole lon" )
     {
@@ -1902,14 +1640,14 @@ QA::domainCheckPole(std::string item,
     std::string key = "7_8 (";
     key += item ;
     key += ")";
-    if( notes->inq(key, fileStr) )
+    if( notes->inq(key, pQA->fileStr) )
     {
       std::string capt("rotated N.Pole of CORDEX domain Table 1 does not match");
       capt += ", found " + hdhC::tf_val(f_num);
       capt += ", required " + hdhC::tf_val(t_num);
 
       (void) notes->operate(capt) ;
-      notes->setCheckMetaStr(fail);
+      notes->setCheckMetaStr(pQA->fail);
     }
   }
   else
@@ -1917,13 +1655,13 @@ QA::domainCheckPole(std::string item,
     std::string key = "50_1 (";
     key += item ;
     key += ")";
-    if( notes->inq(key, fileStr) )
+    if( notes->inq(key, pQA->fileStr) )
     {
       std::string capt("auxiliary " + hdhC::tf_var("rotated_pole") );
       capt += "is missing in sub-temporal file" ;
 
       (void) notes->operate(capt) ;
-      notes->setCheckMetaStr(fail);
+      notes->setCheckMetaStr(pQA->fail);
     }
   }
 
@@ -1931,7 +1669,7 @@ QA::domainCheckPole(std::string item,
 }
 
 void
-QA::domainFindTableType(
+QA_Exp::domainFindTableType(
     std::vector<std::vector<std::string> > &tbl1,
     std::vector<std::vector<std::string> > &tbl2,
     int &ix_1, int &ix_2)
@@ -1945,10 +1683,10 @@ QA::domainFindTableType(
    std::vector<std::string> candidate ;
 
    // a) the domain is given as attribute
-   candidate.push_back( (pIn->getAttValue("CORDEX_domain")) ) ;
+   candidate.push_back( (pQA->pIn->getAttValue("CORDEX_domain")) ) ;
 
    // b) domain name from the filename, e.g. EUR-11
-   Split fd(pIn->file.getFilename(), "_");
+   Split fd(pQA->pIn->file.getFilename(), "_");
    if( fd.size() > 1 )
       candidate.push_back( fd[1] );
    else
@@ -2010,7 +1748,7 @@ QA::domainFindTableType(
 }
 
 void
-QA::checkDrivingExperiment(InFile &in)
+QA_Exp::checkDrivingExperiment(InFile &in)
 {
   std::string str;
 
@@ -2037,14 +1775,14 @@ QA::checkDrivingExperiment(InFile &in)
   if( vs.size() != 3 )
   {
     std::string key("2_9");
-    if( notes->inq( key, fileStr ) )
+    if( notes->inq( key, pQA->fileStr ) )
     {
       std::string capt("global " + hdhC::tf_att("driving_experiment") );
       capt += "with wrong number of items" ;
       capt += ", found " + hdhC::tf_val(str) ;
 
       (void) notes->operate( capt) ;
-      notes->setCheckMetaStr(fail);
+      notes->setCheckMetaStr(pQA->fail);
     }
 
     return;
@@ -2077,7 +1815,7 @@ QA::checkDrivingExperiment(InFile &in)
     if( value != vs[i] && value != "r0i0p0" && vs[i] != "r0i0p0" )
     {
       std::string key("2_10");
-      if( notes->inq( key, fileStr ) )
+      if( notes->inq( key, pQA->fileStr ) )
       {
         std::string capt("global ");
         capt += hdhC::tf_att("driving_experiment(" + hdhC::itoa(i) + ")" );
@@ -2105,7 +1843,7 @@ QA::checkDrivingExperiment(InFile &in)
         }
 
         (void) notes->operate( capt, text) ;
-        notes->setCheckMetaStr(fail);
+        notes->setCheckMetaStr(pQA->fail);
       }
     }
   }
@@ -2114,7 +1852,7 @@ QA::checkDrivingExperiment(InFile &in)
 }
 
 void
-QA::checkHeightValue(InFile &in)
+QA_Exp::checkHeightValue(InFile &in)
 {
    // Check near-surface height value between 0 - 10m
    // Note that a variable height may be available for something differnt,
@@ -2124,13 +1862,13 @@ QA::checkHeightValue(InFile &in)
    // then a false fault could be raised for height value
 
    int ix;
-   if( (ix=pIn->getVarIndex("height")) == -1 )
+   if( (ix=pQA->pIn->getVarIndex("height")) == -1 )
      return;
 
    Variable &var = in.variable[ix];
 
    // check the units
-   std::string units(var.getAttValue(n_units));
+   std::string units(var.getAttValue(pQA->n_units));
 
    if( units.size() == 0 )
      return;  // annotated elsewhere
@@ -2138,7 +1876,7 @@ QA::checkHeightValue(InFile &in)
    if( units != "m" )
      return;  // annotated elsewhere
 
-   std::string longName(var.getAttValue(n_long_name));
+   std::string longName(var.getAttValue(pQA->n_long_name));
 
    // try for a variable height and a variable with pattern nearXsurface
    // in lon_name where X means space, - or _
@@ -2181,7 +1919,7 @@ QA::checkHeightValue(InFile &in)
          }
 
          (void) notes->operate( capt) ;
-         notes->setCheckMetaStr(fail);
+         notes->setCheckMetaStr(pQA->fail);
        }
      }
    }
@@ -2190,7 +1928,7 @@ QA::checkHeightValue(InFile &in)
 }
 
 void
-QA::checkMetaData(InFile &in)
+QA_Exp::checkMetaData(InFile &in)
 {
   notes->setCheckMetaStr("PASS");
 
@@ -2235,13 +1973,13 @@ QA::checkMetaData(InFile &in)
   // inquire whether the meta-data checks passed
   int ev;
   if( (ev = notes->getExitValue()) > 1 )
-    setExit( ev );
+    pQA->setExit( ev );
 
   return;
 }
 
 void
-QA::checkNetCDF(InFile &in)
+QA_Exp::checkNetCDF(InFile &in)
 {
   // NC_FORMAT_CLASSIC (1)
   // NC_FORMAT_64BIT   (2)
@@ -2273,7 +2011,7 @@ QA::checkNetCDF(InFile &in)
       text += s;
 
       (void) notes->operate( capt, text ) ;
-      notes->setCheckMetaStr( fail);
+      notes->setCheckMetaStr( pQA->fail);
     }
   }
 
@@ -2281,7 +2019,7 @@ QA::checkNetCDF(InFile &in)
 }
 
 void
-QA::checkFilename(InFile &in )
+QA_Exp::checkFilename(InFile &in )
 {
   // The global attributes in the section for global attributes
   // must satisfy the filename.
@@ -2302,10 +2040,10 @@ QA::checkFilename(InFile &in )
   a_glob_att.push_back("institute_id");
 
   // missing global atts is checked elsewhere
-  if( pIn->varSz == pIn->varSz )
+  if( pQA->pIn->varSz == pQA->pIn->varSz )
      return;
 
-  Variable &glob = pIn->variable[ pIn->varSz ];
+  Variable &glob = pQA->pIn->variable[ pQA->pIn->varSz ];
 
   for( size_t i=0 ; i < a_glob_att.size() ; ++i )
   {
@@ -2341,12 +2079,12 @@ QA::checkFilename(InFile &in )
     off=1;
 
     std::string key("16_1");
-    if( notes->inq( key, fileStr ) )
+    if( notes->inq( key, pQA->fileStr ) )
     {
       std::string capt("wrong separator in the period in the filename") ;
 
       (void) notes->operate( capt) ;
-      notes->setCheckMetaStr(fail);
+      notes->setCheckMetaStr(pQA->fail);
     }
   }
 
@@ -2390,12 +2128,12 @@ QA::checkFilename(InFile &in )
   else
   {
      std::string key("15_1");
-     if( notes->inq( key, fileStr ) )
+     if( notes->inq( key, pQA->fileStr ) )
      {
        std::string capt("filename not compliant to CORDEX encoding");
 
        (void) notes->operate(capt) ;
-       notes->setCheckMetaStr(fail);
+       notes->setCheckMetaStr(pQA->fail);
 
        isMiss = true;
     }
@@ -2461,14 +2199,14 @@ QA::checkFilename(InFile &in )
         a_val=a_glob_value[a_name];
 
         std::string key("15_2");
-        if( notes->inq( key, fileStr))
+        if( notes->inq( key, pQA->fileStr))
         {
            std::string capt("filename does not match global ");
-           capt += hdhC::tf_att(s_empty, a_name, a_val);
+           capt += hdhC::tf_att(pQA->s_empty, a_name, a_val);
            capt += ", found " + hdhC::sAssign(f_name, f_val) ;
 
            (void) notes->operate(capt) ;
-           notes->setCheckMetaStr( fail );
+           notes->setCheckMetaStr( pQA->fail );
         }
       }
     }
@@ -2478,30 +2216,7 @@ QA::checkFilename(InFile &in )
 }
 
 void
-QA::checkProjectTable(InFile &in)
-{
-  // Read or write the project table.
-  ProjectTable projectTable(this, &in, projectTableFile);
-  projectTable.setAnnotation(notes);
-  projectTable.setExcludedAttributes( excludedAttribute );
-
-  if( ! isRotated )
-    projectTable.set_1st_ID( "_i" );
-
-  projectTable.set_2nd_ID( getFrequency() );
-
-  projectTable.check();
-
-  // inquire whether the meta-data checks passed
-  int ev;
-  if( (ev = notes->getExitValue()) > 1 )
-    setExit( ev );
-
-  return;
-}
-
-void
-QA::checkVarTableEntry(
+QA_Exp::checkVarTableEntry(
     VariableMetaData &vMD,
     VariableMetaData &tbl_entry)
 {
@@ -2522,7 +2237,7 @@ QA::checkVarTableEntry(
 }
 
 void
-QA::checkVarTableEntry_cell_methods(
+QA_Exp::checkVarTableEntry_cell_methods(
     VariableMetaData &vMD,
     VariableMetaData &tbl_entry)
 {
@@ -2548,7 +2263,7 @@ QA::checkVarTableEntry_cell_methods(
   Split x_t_cmo(tbl_entry.cellMethodsOpt);
   Split x_f_cm;
 
-  int cm_ix = vMD.var->getAttIndex(n_cell_methods) ;
+  int cm_ix = vMD.var->getAttIndex(pQA->n_cell_methods) ;
 
   if( cm_ix > -1 && ( x_t_cm.size() || x_t_cmo.size() ) )
   {
@@ -2606,7 +2321,7 @@ QA::checkVarTableEntry_cell_methods(
       }
 
       (void) notes->operate(capt) ;
-      notes->setCheckMetaStr( fail );
+      notes->setCheckMetaStr( pQA->fail );
     }
   }
 
@@ -2614,7 +2329,7 @@ QA::checkVarTableEntry_cell_methods(
 }
 
 void
-QA::checkVarTableEntry_longName(
+QA_Exp::checkVarTableEntry_longName(
     VariableMetaData &vMD,
     VariableMetaData &tbl_entry)
 {
@@ -2731,26 +2446,26 @@ QA::checkVarTableEntry_longName(
 
     if( vMD.longName.size() )
     {
-      capt = hdhC::tf_att(vMD.var->name, n_long_name, vMD.longName) ;
+      capt = hdhC::tf_att(vMD.var->name, pQA->n_long_name, vMD.longName) ;
       capt += "does not match required value" ;
       capt += hdhC::tf_val(tbl_entry.longName);
     }
     else
     {
-      capt = hdhC::tf_att(vMD.var->name, n_long_name) ;
+      capt = hdhC::tf_att(vMD.var->name, pQA->n_long_name) ;
       capt += "is missing required value" ;
       capt += hdhC::tf_val(tbl_entry.longName);
     }
 
     (void) notes->operate(capt) ;
-    notes->setCheckMetaStr( fail );
+    notes->setCheckMetaStr( pQA->fail );
   }
 
   return;
 }
 
 void
-QA::checkVarTableEntry_name(
+QA_Exp::checkVarTableEntry_name(
     VariableMetaData &vMD,
     VariableMetaData &tbl_entry)
 {
@@ -2760,11 +2475,11 @@ QA::checkVarTableEntry_name(
     std::string key("32_7");
     if( notes->inq( key, vMD.var->name) )
     {
-      std::string capt(hdhC::tf_var(vMD.var->name, s_colon) ) ;
+      std::string capt(hdhC::tf_var(vMD.var->name, pQA->s_colon) ) ;
       capt += "output variable name matches only for case-insensitivity" ;
 
       (void) notes->operate(capt) ;
-      notes->setCheckMetaStr( fail );
+      notes->setCheckMetaStr( pQA->fail );
     }
   }
 
@@ -2772,7 +2487,7 @@ QA::checkVarTableEntry_name(
 }
 
 void
-QA::checkVarTableEntry_standardName(
+QA_Exp::checkVarTableEntry_standardName(
     VariableMetaData &vMD,
     VariableMetaData &tbl_entry)
 {
@@ -2787,18 +2502,18 @@ QA::checkVarTableEntry_standardName(
 
       if( vMD.var->std_name.size() )
       {
-        capt += hdhC::tf_att(vMD.var->name, n_standard_name, vMD.var->std_name) ;
+        capt += hdhC::tf_att(vMD.var->name, pQA->n_standard_name, vMD.var->std_name) ;
         capt += "does not match required " + hdhC::tf_val(tbl_entry.standardName);
       }
       else
       {
-        capt += hdhC::tf_att(vMD.var->name, n_standard_name) ;
+        capt += hdhC::tf_att(vMD.var->name, pQA->n_standard_name) ;
         capt += "is missing" ;
       }
 
       (void) notes->operate(capt) ;
 
-      notes->setCheckMetaStr( fail );
+      notes->setCheckMetaStr( pQA->fail );
     }
   }
 
@@ -2806,7 +2521,7 @@ QA::checkVarTableEntry_standardName(
 }
 
 void
-QA::checkVarTableEntry_units(
+QA_Exp::checkVarTableEntry_units(
     VariableMetaData &vMD,
     VariableMetaData &tbl_entry)
 {
@@ -2815,12 +2530,13 @@ QA::checkVarTableEntry_units(
       std::string key("32_5");
       if( notes->inq( key, vMD.var->name) )
       {
-        std::string capt(hdhC::tf_att(vMD.var->name, n_units, vMD.var->units, no_blank) ) ;
+        std::string capt( hdhC::tf_att(vMD.var->name,
+               pQA->n_units, vMD.var->units, pQA->no_blank) ) ;
         capt += ", but required is " ;
         capt += hdhC::tf_val(tbl_entry.units);
 
         (void) notes->operate(capt) ;
-        notes->setCheckMetaStr( fail );
+        notes->setCheckMetaStr( pQA->fail );
       }
   }
 
@@ -2828,46 +2544,8 @@ QA::checkVarTableEntry_units(
 }
 
 void
-QA::closeEntry(void)
+QA_Exp::createVarMetaData(void)
 {
-   if( isCheckData )
-   {
-     // data: structure defined in hdhC.h
-     for( size_t i=0 ; i < varMeDa.size() ; ++i )
-     {
-       if( varMeDa[i].var->isNoData )
-          continue;
-
-       // skip time test for proceeding time steps when var is fixed
-       if( isNotFirstRecord && varMeDa[i].var->isFixed  )
-         continue;
-
-       hdhC::FieldData fA( varMeDa[i].var->pDS->get() ) ;
-
-       // test overflow of ranges specified in a table, or
-       // plausibility of the extrema.
-       varMeDa[i].qaData.test(i, fA);
-
-       storeData(varMeDa[i], fA);
-     }
-   }
-
-   // This here is only for the regular QA time series file
-   if( isCheckTime )
-     storeTime();
-
-
-   ++currQARec;
-
-   return;
-}
-
-void
-QA::createVarMetaData(void)
-{
-  // set corresponding isExcluded=true
-  pIn->excludeVars();
-
   // sub table name, i.e. frequency, has previously been checked
 
   // create instances of VariableMetaData. These have been identified
@@ -2876,9 +2554,9 @@ QA::createVarMetaData(void)
   // of identified targets is stored in vector in.dataVarIndex.
 
   size_t i;
-  for( i=0 ; i < pIn->dataVarIndex.size() ; ++i )
+  for( i=0 ; i < pQA->pIn->dataVarIndex.size() ; ++i )
   {
-    Variable &var = pIn->variable[pIn->dataVarIndex[i]];
+    Variable &var = pQA->pIn->variable[pQA->pIn->dataVarIndex[i]];
 
     //push next instance
     pushBackVarMeDa( &var );
@@ -2888,17 +2566,17 @@ QA::createVarMetaData(void)
     for( size_t k=0; k < var.dimName.size() ; ++k)
     {
       int sz;
-      if( (sz=pIn->nc.getDimSize( var.dimName[k] )) == 1 )
+      if( (sz=pQA->pIn->nc.getDimSize( var.dimName[k] )) == 1 )
       {
         std::string key("41");
         if( notes->inq( key, var.name) )
         {
-          std::string capt(hdhC::tf_var(var.getDimNameStr(true), s_colon));
+          std::string capt(hdhC::tf_var(var.getDimNameStr(true), pQA->s_colon));
           capt += "CORDEX favours a scalar variable for dimension " ;
 
           for( size_t l=0 ; l < var.dimName.size() ; ++l )
           {
-             if( pIn->nc.getDimSize(var.dimName[l]) == 1 )
+             if( pQA->pIn->nc.getDimSize(var.dimName[l]) == 1 )
              {
                capt += var.dimName[l] ;
                capt += "=1";
@@ -2907,7 +2585,7 @@ QA::createVarMetaData(void)
           }
 
           (void) notes->operate(capt) ;
-          notes->setCheckMetaStr( fail );
+          notes->setCheckMetaStr( pQA->fail );
         }
       }
     }
@@ -2918,197 +2596,35 @@ QA::createVarMetaData(void)
 //      varMeDa.back().isInStandardTable.push_back( false ) ;
 
     // some more properties
-    vMD.longName     = var.getAttValue(n_long_name) ;
-    vMD.positive     = var.getAttValue(n_positive) ;
+    vMD.longName     = var.getAttValue(pQA->n_long_name) ;
+    vMD.positive     = var.getAttValue(pQA->n_positive) ;
   }
 
   // Check varname from filename with those in the file.
   // Is the shortname in the filename also defined in the nc-header?
-  for( i=0 ; i < pIn->varSz ; ++i )
-    if( fVarname == pIn->variable[i].name )
+  for( i=0 ; i < pQA->pIn->varSz ; ++i )
+    if( fVarname == pQA->pIn->variable[i].name )
       break;
 
-  if( i == pIn->varSz )
+  if( i == pQA->pIn->varSz )
   {
      std::string key("15_3");
-     if( notes->inq( key, fileStr) )
+     if( notes->inq( key, pQA->fileStr) )
      {
        std::string capt("variable ");
        capt += hdhC::sAssign("acronym", fVarname);
        capt += " in the filename does not match any variable in the file" ;
 
        (void) notes->operate(capt) ;
-       notes->setCheckMetaStr( fail );
+       notes->setCheckMetaStr( pQA->fail );
      }
-  }
-
-   // very special: discard particular tests
-  for( i=0 ; i < varMeDa.size() ; ++i )
-  {
-    VariableMetaData &vMD = varMeDa[i] ;
-
-    int effDim = vMD.var->dimName.size() ;
-    for( size_t j=0 ; j < vMD.var->dimName.size() ; ++j )
-      if( vMD.var->dimName[j] == qaTime.name )
-        --effDim;
-
-    if( replicationOpts.size() )
-    {
-      if( ReplicatedRecord::isSelected(
-             replicationOpts, vMD.var->name, effDim ) )
-      {
-        vMD.qaData.replicated = new ReplicatedRecord(this, i, vMD.var->name);
-        vMD.qaData.replicated->setAnnotation(notes);
-        vMD.qaData.replicated->parseOption(replicationOpts) ;
-      }
-    }
-
-    if( enablePostProc && outlierOpts.size() )
-    {
-      if( Outlier::isSelected(
-             outlierOpts, vMD.var->name, effDim ) )
-      {
-        vMD.qaData.enableOutlierTest=true;
-
-        vMD.qaData.outlier = new Outlier(this, i, vMD.var->name);
-        vMD.qaData.outlier->setAnnotation(notes);
-        vMD.qaData.outlier->parseOption(outlierOpts);
-      }
-    }
   }
 
   return;
 }
 
 bool
-QA::entry(void)
-{
-   if( isCheckData )
-   {
-     // read next field
-     pIn->entry() ;
-
-     for( size_t i=0 ; i < pIn->dataVarIndex.size() ; ++i)
-     {
-       Variable &var = pIn->variable[pIn->dataVarIndex[i]];
-
-       if( var.isNoData )
-          continue;
-
-       if( pIn->currRec && var.isFixed )
-         continue;
-
-       var.pDS->clear();
-
-       if( var.isArithmeticMean )
-         // use the entire record
-         var.pDS->add( (void*) var.pMA );
-       else
-       {
-         // loop over the layers and there should be at least one.
-         var.pGM->resetLayer();
-         do
-         {
-           // due to area weighted statistics, we have to cycle
-           // through the layers one by one.
-//         if( var.pGM->isLayerMutable() )
-//           ;
-
-           var.pDS->add( var.pGM->getCellValue(),
-                       *var.pGM->getCellWeight() );
-           // break the while loop, if the last layer was processed.
-         } while ( var.pGM->cycleLayers() ) ; //cycle through levels
-       }
-     }
-   }
-
-   // the final for this record
-   closeEntry();
-   return false;
-}
-
-int
-QA::finally(int xCode)
-{
-  if( nc )
-    xCode = finally_data(xCode) ;
-
-  if( xCode != 63 && isCheckTime )
-    qaTime.finally( nc );
-
-  setExit(xCode);
-
-  // distinguish from a sytem crash (segmentation error)
-  std::cout << "STATUS-BEG" << xCode << "STATUS-END";
-  std::cout << std::flush;
-
-  nc->close();
-
-  return exitCode ;
-}
-
-int
-QA::finally_data(int xCode)
-{
-  setExit(xCode);
-
-  // write pending results to qa-file.nc. Modes are considered there
-  for( size_t i=0 ; i < varMeDa.size() ; ++i )
-    setExit( varMeDa[i].finally() );
-
-  // post processing, but not for conditions which indicate
-  // incomplete checking.
-  if( exitCode < 3 )
-  {  // 3 or 4 interrupted any checking
-    if( enablePostProc )
-    {
-      if( postProc() )
-      {
-        if( exitCode == 63 )
-            exitCode=1;  // this is considered a change
-
-        notes->setCheckDataStr(fail);
-      }
-    }
-  }
-
-  if( exitCode == 63 ||
-     ( nc == 0 && exitCode ) || (currQARec == 0 && pIn->isTime ) )
-  { // qa is up-to-date or a forced exit right from the start;
-    // no data to write
-    if( exitCode == 63 )
-      exitCode=0 ;
-
-    isExit=true;
-    return exitCode ;
-  }
-
-  // read history from the qa-file.nc and append new entries
-  appendToHistory();
-
-  // check for flags concerning the total data set,
-  // but exclude the case of no record
-  if( pIn->currRec > 0 )
-    for( size_t j=0 ; j < varMeDa.size() ; ++j )
-      varMeDa[j].qaData.checkFinally(varMeDa[j].var);
-
-  if( isCheckData )
-  {
-    for( size_t j=0 ; j < varMeDa.size() ; ++j )
-    {
-       // write qa-results attributes about statistics
-       varMeDa[j].qaData.setStatisticsAttribute(nc);
-
-       // plausibility range checks about units
-       varMeDa[j].verifyPercent();
-    }
-  }
-
-  return exitCode ;
-}
-
-bool
-QA::findTableEntry(ReadLine &ifs, std::string &name_f,
+QA_Exp::findTableEntry(ReadLine &ifs, std::string &name_f,
      size_t col_outName, std::string &str0 )
 {
    Split splt_line;
@@ -3139,7 +2655,7 @@ QA::findTableEntry(ReadLine &ifs, std::string &name_f,
 }
 
 bool
-QA::findTableEntry(ReadLine &ifs, std::string &name_f,
+QA_Exp::findTableEntry(ReadLine &ifs, std::string &name_f,
    VariableMetaData &tbl_entry)
 {
    // return true: entry is not the one we look for.
@@ -3197,21 +2713,21 @@ QA::findTableEntry(ReadLine &ifs, std::string &name_f,
              tbl_entry.name = splt_line[ col["outVarName"] ];
 
          if( tbl_entry.standardName.size() == 0 &&
-                col.find(n_standard_name) != col.end() )
-             tbl_entry.standardName = splt_line[ col[n_standard_name] ];
+                col.find(pQA->n_standard_name) != col.end() )
+             tbl_entry.standardName = splt_line[ col[pQA->n_standard_name] ];
 
          if( tbl_entry.longName.size() == 0 &&
-                col.find(n_long_name) != col.end() )
+                col.find(pQA->n_long_name) != col.end() )
          {
-             tbl_entry.longName = splt_line[ col[n_long_name] ];
+             tbl_entry.longName = splt_line[ col[pQA->n_long_name] ];
              tbl_entry.longName
                 = hdhC::clearInternalMultipleSpaces(tbl_entry.longName);
          }
 
          if( tbl_entry.units.size() == 0 &&
-                col.find(n_units) != col.end() )
+                col.find(pQA->n_units) != col.end() )
          {
-             tbl_entry.units = splt_line[ col[n_units] ];
+             tbl_entry.units = splt_line[ col[pQA->n_units] ];
              tbl_entry.units
                 = hdhC::clearInternalMultipleSpaces(tbl_entry.units);
 
@@ -3222,12 +2738,12 @@ QA::findTableEntry(ReadLine &ifs, std::string &name_f,
          }
 
          if( tbl_entry.positive.size() == 0 &&
-                col.find(n_positive) != col.end() )
-                   tbl_entry.positive = splt_line[ col[n_positive] ];
+                col.find(pQA->n_positive) != col.end() )
+                   tbl_entry.positive = splt_line[ col[pQA->n_positive] ];
 
          if( tbl_entry.cellMethods.size() == 0 &&
-                col.find(n_cell_methods) != col.end() )
-                   tbl_entry.cellMethods = splt_line[ col[n_cell_methods] ];
+                col.find(pQA->n_cell_methods) != col.end() )
+                   tbl_entry.cellMethods = splt_line[ col[pQA->n_cell_methods] ];
 
          if( tbl_entry.cellMethodsOpt.size() == 0 &&
                 col.find("cell_methods_opt") != col.end() )
@@ -3253,7 +2769,7 @@ QA::findTableEntry(ReadLine &ifs, std::string &name_f,
 }
 
 std::string
-QA::getCaptIntroDim(VariableMetaData &vMD,
+QA_Exp::getCaptIntroDim(VariableMetaData &vMD,
                    struct DimensionMetaData &nc_entry,
                    struct DimensionMetaData &tbl_entry,
                    std::string att )
@@ -3279,7 +2795,7 @@ QA::getCaptIntroDim(VariableMetaData &vMD,
 }
 
 bool
-QA::getDimMetaData(InFile &in,
+QA_Exp::getDimMetaData(InFile &in,
       VariableMetaData &vMD,
       struct DimensionMetaData &dimMeDa,
       std::string &dName)
@@ -3311,7 +2827,7 @@ QA::getDimMetaData(InFile &in,
   // attributes from the file
   for(size_t l=0 ; l < vMD.var->dim_ix.size() ; ++l)
   {
-    Variable &var = pIn->variable[vMD.var->dim_ix[l]];
+    Variable &var = pQA->pIn->variable[vMD.var->dim_ix[l]];
 
     if( var.name != dName )
        continue;
@@ -3325,7 +2841,7 @@ QA::getDimMetaData(InFile &in,
           dimMeDa.bounds = aV ;
       else if( aN == "climatology" && aN == "time" )
           dimMeDa.bounds = aV ;
-      else if( aN == n_units )
+      else if( aN == pQA->n_units )
       {
           if( var.isUnitsDefined )
           {
@@ -3335,11 +2851,11 @@ QA::getDimMetaData(InFile &in,
           else
             dimMeDa.isUnitsDefined=false;
       }
-      else if( aN == n_long_name )
+      else if( aN == pQA->n_long_name )
           dimMeDa.longname = aV ;
-      else if( aN == n_standard_name )
+      else if( aN == pQA->n_standard_name )
           dimMeDa.stndname = aV ;
-      else if( aN == n_axis )
+      else if( aN == pQA->n_axis )
           dimMeDa.axis = aV ;
     }
   }
@@ -3371,7 +2887,7 @@ QA::getDimMetaData(InFile &in,
     }
   }
 
-  if( dName == qaTime.name )
+  if( dName == pQA->qaTime.name )
   {
     // exclude time from size
     dimMeDa.size = 0;
@@ -3381,29 +2897,19 @@ QA::getDimMetaData(InFile &in,
   return false;
 }
 
-bool
-QA::getExit(void)
-{
-  // note that isExit==true was forced
-  if( exitCode > 1 || isExit )
-    return true;
-
-  return false;
-}
-
 std::string
-QA::getFrequency(void)
+QA_Exp::getFrequency(void)
 {
   if( frequency.size() )
     return frequency;  // already known
 
   // get frequency from attribute (it is required)
-  frequency = pIn->nc.getAttString("frequency") ;
+  frequency = pQA->pIn->nc.getAttString("frequency") ;
 
   if( ! frequency.size() )
   {
     // try the filename
-    std::string f( pIn->file.basename );
+    std::string f( pQA->pIn->file.basename );
 
     Split splt(f, "_");
 
@@ -3435,17 +2941,17 @@ QA::getFrequency(void)
     }
   }
 
-  if( frequency == "fx" && pIn->nc.isDimUnlimited() )
+  if( frequency == "fx" && pQA->pIn->nc.isDimUnlimited() )
   {
      std::string key("17");
-     if( notes->inq( key, fileStr) )
+     if( notes->inq( key, pQA->fileStr) )
      {
        std::string capt(hdhC::sAssign("frequency","fx") + " with time dependency" );
 
        if( notes->operate(capt) )
        {
-         notes->setCheckMetaStr(fail);
-         setExit( notes->getExitValue() ) ;
+         notes->setCheckMetaStr(pQA->fail);
+         pQA->setExit( notes->getExitValue() ) ;
         }
      }
   }
@@ -3454,7 +2960,7 @@ QA::getFrequency(void)
 }
 
 void
-QA::getSubTable(void)
+QA_Exp::getSubTable(void)
 {
   if( subTable.size() )
     return ;  // already checked
@@ -3489,7 +2995,7 @@ QA::getSubTable(void)
   if( is )
   {
      std::string key("7_5");
-     if( notes->inq( key, fileStr) )
+     if( notes->inq( key, pQA->fileStr) )
      {
        std::string capt(hdhC::sAssign("frequency","fx"));
        capt += " not found in the CORDEX_variables_requirement table" ;
@@ -3498,8 +3004,8 @@ QA::getSubTable(void)
 
        if( notes->operate(capt) )
        {
-         notes->setCheckMetaStr(fail);
-         setExit( notes->getExitValue() ) ;
+         notes->setCheckMetaStr(pQA->fail);
+         pQA->setExit( notes->getExitValue() ) ;
         }
      }
   }
@@ -3509,7 +3015,18 @@ QA::getSubTable(void)
 }
 
 std::string
-QA::getVarnameFromFilename(std::string fName)
+QA_Exp::getTableEntryID(std::string vName)
+{
+  vName += "," ;
+  vName += getFrequency() ;
+  if( !isRotated )
+    vName += "_i" ;
+
+  return vName + ",";
+}
+
+std::string
+QA_Exp::getVarnameFromFilename(std::string fName)
 {
   size_t pos;
   if( (pos = fName.find("_")) < std::string::npos )
@@ -3519,292 +3036,58 @@ QA::getVarnameFromFilename(std::string fName)
 }
 
 void
-QA::help(void)
+QA_Exp::init(QA* p, std::vector<std::string>& optStr)
 {
-  std::cerr << "Option string of the quality control class QA:\n" ;
-  std::cerr << "(may be embedded in option strings of Base derived\n" ;
-  std::cerr << "classes)\n";
-  std::cerr << "or connected to these by explicit index 'QA0...'.\n" ;
-  std::cerr << "   checkTimeBounds\n" ;
-  std::cerr << "   noCalendar\n" ;
-  std::cerr << "   printASCII (disables writing to netCDF file.\n" ;
-  std::cerr << "   printTimeBoundDates\n" ;
-  std::cerr << std::endl;
-
-  return;
-}
-
-bool
-QA::init(void)
-{
-   // Open the qa-result.nc file, when available or create
-   // it from scratch. Meta data checks are performed.
-   // Initialisation of time and time boundary testing.
-   // Eventually, entry() is called to test the data of fields.
-   notes->init();  // safe
-
-   // default for the qaFile
-   setFilename( pIn->file );
+   pQA = p;
+   notes = p->notes;
 
    // apply parsed command-line args
-   applyOptions();
-//
-   fVarname = getVarnameFromFilename(pIn->file.getFilename());
-   notes->setConstraintFreq( getFrequency() );  // safe
+   applyOptions(optStr);
+
+   fVarname = getVarnameFromFilename(pQA->pIn->file.getFilename());
+   getFrequency();
    getSubTable() ;
 
+   if( inqTables() )
+     return ;
 
    // Create and set VarMetaData objects.
    createVarMetaData() ;
 
-   // check existance of any data at all
-   if( (isCheckTime || isCheckData )
-            && pIn->ncRecBeg == 0 && pIn->ncRecEnd == 0 )
-   {
-      isCheckData=false;
-      isCheckTime=false;
-
-      std::string key("6_15");
-      if( notes->inq( key, fileStr) )
-      {
-        std::string capt("No records in the file") ;
-
-        if( notes->operate(capt) )
-        {
-          notes->setCheckMetaStr( fail );
-          notes->setCheckTimeStr( fail );
-          notes->setCheckDataStr( fail );
-          setExit( notes->getExitValue() ) ;
-        }
-      }
-   }
-
    // get meta data from file and compare with tables
-   checkMetaData(*pIn);
+   checkMetaData(*(pQA->pIn));
 
-   if(qaTime.init(pIn, notes, this))
-   {
-     // init the time obj.
-     // note that freq is compared to the first column of the time table
-     qaTime.applyOptions(optStr);
-     qaTime.initTimeTable( getFrequency() );
-
-     // note that this test is not part of the QA_Time class, because
-     // coding depends on projects
-     if( testPeriod() )
-     {
-        std::string key("9_2");
-        if( notes->inq( key, qaTime.name) )
-        {
-          std::string capt("status is apparently in progress");
-
-          (void) notes->operate(capt) ;
-       }
-     }
-   }
-   else
-     isCheckTime=false;
-
-   // open netCDF for creating, continuation or resuming qa_<varname>.nc.
-   // note that this must happen before checkMetaData which uses currQARec
-   openQA_Nc(*pIn);
-
-   // check consistency between sub-sequent files. Must come after
-   // openQA_Nc.
-   checkProjectTable(*pIn);
-
-   if( getExit() || isUseStrict || qaTime.isNoProgress )
-   {
-     isCheckData=false;
-     isCheckTime=false;
-     return true;
-   }
-
-   if( isCheckTime )
-   {
-     if( qaTime.isTime && checkDataBody(qaTime.name) )
-     {
-       // time is defined, but there is no data
-       isCheckTime = false;
-       notes->setCheckTimeStr(fail);
-     }
-     else if( ! qaTime.isTime )
-     {
-       isCheckTime = false;
-       notes->setCheckTimeStr("FIXED");
-     }
-     else
-       notes->setCheckTimeStr("PASS");
-   }
-
-   if( isCheckData )
-   {
-     if( checkDataBody() )
-     {
-       notes->setCheckDataStr(fail);
-       return true;
-     }
-
-     notes->setCheckDataStr("PASS");
-
-     // set pointer to function for operating tests
-     execPtr = &IObj::entry ;
-     bool is = entry();
-
-     if( getExit() || is )
-       return true;
-
-     isNotFirstRecord = true;
-     return false;
-   }
-
-   return true;  // only meta-data check
+   return ;
 }
 
 void
-QA::initDataOutputBuffer(void)
+QA_Exp::initDataOutputBuffer(void)
 {
-  if( isCheckTime )
-  {
-    qaTime.timeOutputBuffer.initBuffer(this, currQARec, bufferSize);
-    qaTime.sharedRecordFlag.initBuffer(this, currQARec, bufferSize);
-  }
-
-  if( isCheckData )
-  {
     for( size_t i=0 ; i < varMeDa.size() ; ++i)
-      varMeDa[i].qaData.initBuffer(this, currQARec, bufferSize);
-  }
+      varMeDa[i].qaData.initBuffer(pQA, pQA->currQARec, bufferSize);
 
   return;
 }
 
 void
-QA::initDefaults(void)
+QA_Exp::initDefaults(void)
 {
-  setObjName("QA");
-
-  // pre-setting of some pointers
-  nc=0;
-  notes=0;
-
-  cF=0;
-  pIn=0;
-  fDI=0;
-  pOper=0;
-  pOut=0;
-  qA=0;
-  tC=0;
-
-  // time steps are regular. Unsharp logic (i.e. month
-  // Jan=31, Feb=2? days is ok, but also numerical noise).
-
-  blank=" ";
-  fail="FAIL";
-  fileStr="file";
-  no_blank="no_blank";
-  notAvailable="not available";
-  s_colon=":";
-  s_mismatch="mismatch";
-  s_upper="upper";
-
-  n_axis="axis";
-  n_cell_methods="cell_methods";
-  n_long_name="long_name";
-  n_outputVarName="output variable name";
-  n_positive="positive";
-  n_standard_name="standard_name";
-  n_units="units";
-
-  enablePostProc=false;
-  enableVersionInHistory=true;
+  enabledCompletenessCheck=true;
 
   isCaseInsensitiveVarName=false;
   isCheckParentExpID=true;
   isCheckParentExpRIP=true;
-  isExit=false;
-  isFileComplete=true;
-  isFirstFile=false;
-  isNotFirstRecord=false;
-  isResumeSession=false;
   isRotated=true;
   isUseStrict=false;
 
-  nextRecords=0;  //see init()
-
-  importedRecFromPrevQA=0; // initial #rec in out-nc-file.
-//  currQARec=UINT_MAX;
-  currQARec=0;
-
-  // pre-set check-modes: all are used by default
-  isCheckMeta=true;
-  isCheckTime=true;
-  isCheckData=true;
-
   bufferSize=1500;
-
-  exitCode=0;
-
-  // file sequence: f[first], s[equence], l[ast]
-  fileSequenceState='x' ;  // 'x':= undefined
-
-#ifdef REVISION
-  // -1 by default
-  revision=hdhC::double2String(static_cast<int>(REVISION));
-#endif
-
-  // set pointer to member function init()
-  execPtr = &IObj::init ;
-}
-
-void
-QA::initGlobalAtts(InFile &in)
-{
-  // global atts at creation.
-  std::string today( Date::getTodayStr() );
-
-  nc->setGlobalAtt( "project", "CORDEX");
-  nc->setGlobalAtt( "product", "quality check of CORDEX data set");
-
-  nc->setGlobalAtt( "QA revision", revision);
-  nc->setGlobalAtt( "contact", "hollweg@dkrz.de");
-
-  std::string t("csv formatted ");
-  t += varReqTable.basename + "xlsx" ;
-  nc->setGlobalAtt( "standard_table", t);
-
-  nc->setGlobalAtt( "creation_date", today);
-
-  // helper vector
-  std::vector<std::string> vs;
-
-  for( size_t m=0 ; m < varMeDa.size() ; ++m )
-    vs.push_back( varMeDa[m].var->name );
-
-  nc->copyAtts(in.nc, "NC_GLOBAL", &vs);
 
   return;
 }
 
 void
-QA::initResumeSession(void)
+QA_Exp::initResumeSession(std::vector<std::string>& prevTargets)
 {
-  // this method may be used for two different purposes. First,
-  // resuming within the same experiment. Second, continuation
-  // from a parent experiment.
-
-  // At first, a check over the ensemble of variables.
-  // Get the name of the variable(s) used before
-  // (only those with a trailing '_ave').
-  std::vector<std::string> vss( nc->getVarName() ) ;
-
-  std::vector<std::string> prevTargets ;
-
-  size_t pos;
-  for( size_t i=0 ; i < vss.size() ; ++i )
-     if( (pos = vss[i].find("_ave")) < std::string::npos )
-       prevTargets.push_back( vss[i].substr(0, pos) );
-
   // a missing variable?
   for( size_t i=0 ; i < prevTargets.size() ; ++i)
   {
@@ -3823,8 +3106,8 @@ QA::initResumeSession(void)
 
          if( notes->operate(capt) )
          {
-           notes->setCheckMetaStr( fail );
-           setExit( notes->getExitValue() ) ;
+           notes->setCheckMetaStr( pQA->fail );
+           pQA->setExit( notes->getExitValue() ) ;
          }
        }
     }
@@ -3848,404 +3131,45 @@ QA::initResumeSession(void)
 
          if( notes->operate(capt) )
          {
-           notes->setCheckMetaStr( fail );
-           setExit( notes->getExitValue() ) ;
+           notes->setCheckMetaStr( pQA->fail );
+           pQA->setExit( notes->getExitValue() ) ;
          }
        }
     }
   }
 
-  // now, resume
-  qaTime.timeOutputBuffer.setNextFlushBeg(currQARec);
-  qaTime.setNextFlushBeg(currQARec);
-
-  if( isCheckTime )
-    qaTime.initResumeSession();
-
-  if( isCheckData )
-  {
-    for( size_t i=0 ; i < varMeDa.size() ; ++i )
-    varMeDa[i].qaData.initResumeSession();
-  }
-
   return;
 }
 
-void
-QA::inqTables(void)
+bool
+QA_Exp::inqTables(void)
 {
   if( ! varReqTable.isExisting(varReqTable.path) )
   {
      std::string key("7_1");
-     if( notes->inq( key, fileStr) )
+     if( notes->inq( key, pQA->fileStr) )
      {
         std::string capt("no path to the tables, tried " + varReqTable.path) ;
 
         if( notes->operate(capt) )
         {
-          notes->setCheckMetaStr( fail );
-          setExit( notes->getExitValue() ) ;
+          notes->setCheckMetaStr( pQA->fail );
+          pQA->setExit( notes->getExitValue() ) ;
         }
      }
+
+     return true;
   }
 
-  // tables names usage: both project and standard tables
-  // reside in the same path.
-  // Naming of the project table:
-  if( ! projectTableFile.is )
-    projectTableFile.setFilename("pt_NONE.csv");
-
-  return;
-}
-
-void
-QA::linkObject(IObj *p)
-{
-  std::string className = p->getObjName();
-
-  if( className == "X" )
-    notes = dynamic_cast<Annotation*>(p) ;
-  else if( className ==  "CF" )
-    cF = dynamic_cast<CF*>(p) ;
-  else if( className == "FD_interface" )
-    fDI = dynamic_cast<FD_interface*>(p) ;
-  else if( className ==  "IN" )
-    pIn = dynamic_cast<InFile*>(p) ;
-  else if( className == "Oper" )
-    pOper = dynamic_cast<Oper*>(p) ;
-  else if( className == "Out" )
-    pOut = dynamic_cast<OutFile*>(p) ;
-  else if( className == "QA" )
-    qA = dynamic_cast<QA*>(p) ;
-  else if( className == "TC" )
-    tC = dynamic_cast<TimeControl*>(p) ;
-
-  return;
-}
-
-/*
-bool
-QA::locate( GeoData<float> *gd, double *alat, double *alon, const char* crit )
-{
-  std::string str(crit);
-
-// This is a TxOxDxO; but not needed for QA
-  MtrxArr<float> &va=gd->getCellValue();
-  MtrxArr<double> &wa=gd->getCellWeight();
-
-  size_t i=0;
-  double val;  // store extrem value
-  int ei=-1;   // store index of extreme
-
-  // find first valid value for initialisation
-  for( ; i < va.size() ; ++i)
-  {
-      if( wa[i] == 0. )
-        continue;
-
-      val= va[i];
-      ei=i;
-      break;
-  }
-
-  // no value found
-  if( ei < 0 )
-  {
-    *alat = 999.;
-    *alon = 999.;
-    return true;
-  }
-
-  if( str == "min" )
-  {
-    for( ; i < va.size() ; ++i)
-    {
-        if( wa[i] == 0. )
-          continue;
-
-        if( va[i] < val )
-        {
-          val= va[i];
-          ei=i;
-        }
-    }
-  }
-  else if( str == "max" )
-  {
-    for( ; i < va.size() ; ++i)
-    {
-        if( wa[i] == 0. )
-          continue;
-
-        if( va[i] > val )
-        {
-          val= va[i];
-          ei=i;
-        }
-    }
-  }
-
-  *alat = gd->getCellLatitude(static_cast<size_t>(ei) );
-  *alon = gd->getCellLongitude(static_cast<size_t>(ei) );
+  pQA->setTable( varReqTable.filename, "ST" );
 
   return false;
 }
-*/
-
 
 void
-QA::openQA_Nc(InFile &in)
+QA_Exp::pushBackVarMeDa(Variable *var)
 {
-  // Generates a new nc file for QA results or
-  // opens an existing one for appending data.
-  // Copies time variable from input-nc file.
-
-  // name of the result file was set before
-  if ( !qaFile.is )
-  {
-    std::string key("00");
-
-    if( notes->inq( key) )
-    {
-      std::string capt("openQA_Nc(): undefined file.") ;
-
-      (void) notes->operate(capt) ;
-      notes->setCheckMetaStr(fail);
-      setExit( notes->getExitValue() ) ;
-      return;
-    }
-  }
-
-  nc = new NcAPI;
-  if( notes )
-    nc->setNotes(notes);
-
-  // don't create a netCDF file, when only meta data are to be checked.
-  // but, NcAPI object nc must exist.
-  if( ! (isCheckTime || isCheckData)  )
-    return;
-
-  if( nc->open(qaFile.getFile(), "NC_WRITE", false) )
-//   if( isQA_open ) // false: do not exit in case of error
-  {
-    // continue a previous session
-    importedRecFromPrevQA=nc->getNumOfRecords();
-    currQARec += importedRecFromPrevQA;
-    if( currQARec )
-      isNotFirstRecord = true;
-
-    initDataOutputBuffer();
-
-    initResumeSession();
-    isResumeSession=true;
-
-    return;
-  }
-
-  // So, we have to generate a netCDF file from almost scratch;
-  isFirstFile=true;
-
-  if( currQARec == 0 && in.nc.getNumOfRecords() == 1 )
-    qaTime.isSingleTimeValue = true;
-
-  // open new netcdf file
-  if( qaNcfileFlags.size() )
-    nc->create(qaFile.getFile(),  qaNcfileFlags);
-  else
-    nc->create(qaFile.getFile(),  "Replace");
-
-  bool isNoTime=false;
-  if( isCheckTime && pIn->isTime )
-  {
-    // create a dimension for fixed variables only if there is any
-    for( size_t m=0 ; m < varMeDa.size() ; ++m )
-    {
-      if( varMeDa[m].var->isFixed )
-      {
-        isNoTime=true;
-        break;
-      }
-    }
-
-    if( !isNoTime )
-      qaTime.openQA_NcContrib(nc);
-  }
-  else
-    isNoTime=true;
-
-  if( isNoTime )
-  {
-    // dimensions
-    qaTime.name="fixed";
-    nc->defineDim("fixed", 1);
-  }
-
-    // create variable for the data statics etc.
-  for( size_t m=0 ; m < varMeDa.size() ; ++m )
-    varMeDa[m].qaData.openQA_NcContrib(nc, varMeDa[m].var);
-
-  // global atts at creation.
-  initGlobalAtts(in);
-
-  initDataOutputBuffer();
-
-  return;
-}
-
-bool
-QA::postProc(void)
-{
-  bool retCode=false;
-
-  if( ! isCheckData )
-    return retCode;
-
-  if( postProc_outlierTest() )
-     retCode=true;
-
-  return retCode;
-
-}
-
-bool
-QA::postProc_outlierTest(void)
-{
-  bool retCode=false;
-
-  for( size_t i=0 ; i < varMeDa.size() ; ++i )
-  {
-     VariableMetaData &vMD = varMeDa[i] ;
-
-     if( ! vMD.qaData.enableOutlierTest )
-        continue ;
-
-     if( ! vMD.qaData.statAve.getSampleSize()  )
-     {
-       // compatibility mode: determine the statistics of old-fashioned results
-       // note: the qa_<variable>.nc file becomes updated
-       std::vector<std::string> vars ;
-       std::string statStr;
-
-       size_t recNum=nc->getNumOfRecords();
-       double val;
-       std::vector<double> dv;
-       MtrxArr<double> mv;
-
-       if( vMD.var->isNoData )
-         continue;
-
-       vars.clear();
-
-       // post-processing of data before statistics was vMD inherent?
-       vars.push_back( vMD.var->name + "_min" );
-       vars.push_back( vMD.var->name + "_max" );
-       vars.push_back( vMD.var->name + "_ave" );
-       vars.push_back( vMD.var->name + "_std_dev" );
-
-       bool is=false;
-       bool is2=true;
-       for( size_t j=0 ; j < vars.size() ; ++j )
-       {
-         // read the statistics
-         nc->getAttValues( dv, "valid_range", vars[j]);
-         if( dv[0] == MAXDOUBLE )
-         {
-            is=true; // no valid statistics
-            break;
-         }
-         statStr  ="sampleMin=" ;
-         statStr += hdhC::double2String( dv[0] );
-         statStr +=", sampleMax=" ;
-         statStr += hdhC::double2String( dv[1] );
-         statStr += ", ";
-         statStr += nc->getAttString("statistics", vars[j], is2) ;
-         if( ! is2 )
-         {
-            is=true; // no valid statistics
-            break;
-         }
-
-         if( j == 0 )
-           vMD.qaData.statMin.setSampleProperties( statStr );
-         else if( j == 1 )
-           vMD.qaData.statMax.setSampleProperties( statStr );
-         else if( j == 2 )
-           vMD.qaData.statAve.setSampleProperties( statStr );
-         else if( j == 3 )
-           vMD.qaData.statStdDev.setSampleProperties( statStr );
-
-         is=false;
-       }
-
-       if( is )
-       {
-         val = nc->getData(mv, vars[0], 0);
-         if( val < MAXDOUBLE )
-         {
-           // build the statistics from scratch
-           int nRecs = static_cast<int>(recNum);
-
-           // constrain memory allocation to a buffer size
-           int sz_max=1000;
-           size_t start[] = {0};
-           size_t count[] = {0};
-
-           // buffer for netCDF data storage
-           double vals_min[sz_max];
-           double vals_max[sz_max];
-           double vals_ave[sz_max];
-           double vals_std_dev[sz_max];
-
-           // read data from file, chunk by chunk
-           while (nRecs > 0)
-           {
-             int sz = nRecs > sz_max ? sz_max : nRecs;
-             nRecs -= sz;
-
-             count[0]=static_cast<size_t>(sz);
-
-             nc_get_vara_double(
-                nc->getNcid(), nc->getVarID(vars[0]),
-                   start, count, vals_min );
-             nc_get_vara_double(
-                nc->getNcid(), nc->getVarID(vars[1]),
-                   start, count, vals_max );
-             nc_get_vara_double(
-                nc->getNcid(), nc->getVarID(vars[2]),
-                   start, count, vals_ave );
-             nc_get_vara_double(
-                nc->getNcid(), nc->getVarID(vars[3]),
-                   start, count, vals_std_dev );
-
-             start[0] += static_cast<size_t>(sz) ;
-
-// vals_max[10]=400.;
-// vals_min[10]=150.;
-             // feed data to the statistics
-             vMD.qaData.statMin.add( vals_min, sz );
-             vMD.qaData.statMax.add( vals_max, sz );
-             vMD.qaData.statAve.add( vals_ave, sz );
-             vMD.qaData.statStdDev.add( vals_std_dev, sz );
-           }
-
-           // write statistics attributes
-           vMD.qaData.setStatisticsAttribute(nc);
-         }
-       }
-     }
-
-     // the test: regular post-processing on the basis of stored statistics
-     if( vMD.qaData.outlier->test(&vMD.qaData) )
-       retCode = true;
-  }
-
-  return retCode;
-}
-
-void
-QA::pushBackVarMeDa(Variable *var)
-{
-   varMeDa.push_back( VariableMetaData(this, var) );
+   varMeDa.push_back( VariableMetaData(pQA, var) );
 
    if( var )
    {
@@ -4256,14 +3180,14 @@ QA::pushBackVarMeDa(Variable *var)
      // disable tests by given options
      vMD.qaData.disableTests(var->name);
 
-     vMD.qaData.init(pIn, this, var->name);
+     vMD.qaData.init(pQA, var->name);
    }
 
    return;
 }
 
 bool
-QA::readTableCaptions(ReadLine &ifs, std::string freq,
+QA_Exp::readTableCaptions(ReadLine &ifs, std::string freq,
    std::map<std::string, size_t> &v_col, std::string &str0 )
 {
    // Each sub table is indicted by "Table:" in the second column and
@@ -4325,21 +3249,21 @@ BREAK2:
 
    std::vector<std::string> vs_ix;
    vs_ix.push_back( "outVarName" );
-   vs_ix.push_back( n_cell_methods );
-   vs_ix.push_back( n_cell_methods + "_opt" );
-   vs_ix.push_back( n_long_name );
-   vs_ix.push_back( n_standard_name );
-   vs_ix.push_back( n_units );
-   vs_ix.push_back( n_positive );
+   vs_ix.push_back( pQA->n_cell_methods );
+   vs_ix.push_back( pQA->n_cell_methods + "_opt" );
+   vs_ix.push_back( pQA->n_long_name );
+   vs_ix.push_back( pQA->n_standard_name );
+   vs_ix.push_back( pQA->n_units );
+   vs_ix.push_back( pQA->n_positive );
 
    std::vector<std::string> vs_val;
-   vs_val.push_back( n_outputVarName );
-   vs_val.push_back( n_cell_methods );
-   vs_val.push_back( n_cell_methods + " (2nd option)" );
-   vs_val.push_back( n_long_name );
-   vs_val.push_back( n_standard_name );
-   vs_val.push_back( n_units );
-   vs_val.push_back( n_positive );
+   vs_val.push_back( pQA->n_outputVarName );
+   vs_val.push_back( pQA->n_cell_methods );
+   vs_val.push_back( pQA->n_cell_methods + " (2nd option)" );
+   vs_val.push_back( pQA->n_long_name );
+   vs_val.push_back( pQA->n_standard_name );
+   vs_val.push_back( pQA->n_units );
+   vs_val.push_back( pQA->n_positive );
 
    std::string t;
 
@@ -4368,7 +3292,7 @@ BREAK2:
 }
 
 void
-QA::requiredAttributes_check(InFile &in)
+QA_Exp::requiredAttributes_check(InFile &in)
 {
   std::vector<std::vector<std::string> > reqA ;
   std::vector<std::string> reqVname ;
@@ -4430,7 +3354,7 @@ QA::requiredAttributes_check(InFile &in)
             capt += "does not match required value=1.E20";
 
             (void) notes->operate(capt) ;
-            notes->setCheckMetaStr( fail );
+            notes->setCheckMetaStr( pQA->fail );
           }
         }
       }
@@ -4438,9 +3362,9 @@ QA::requiredAttributes_check(InFile &in)
   }
 
   // both _FillValue and missing_value must be defined in CORDEX
-  for( size_t i=0 ; i < pIn->dataVarIndex.size() ; ++i)
+  for( size_t i=0 ; i < pQA->pIn->dataVarIndex.size() ; ++i)
   {
-    Variable &var = pIn->variable[pIn->dataVarIndex[i]];
+    Variable &var = pQA->pIn->variable[pQA->pIn->dataVarIndex[i]];
 
     bool is_fV = var.isValidAtt(fV) ;
     bool is_mV = var.isValidAtt(mV) ;
@@ -4451,13 +3375,13 @@ QA::requiredAttributes_check(InFile &in)
 
       if( notes->inq( key, var.name) )
       {
-        std::string capt(hdhC::tf_var(var.name, s_colon)) ;
+        std::string capt(hdhC::tf_var(var.name, pQA->s_colon)) ;
         capt += "if " + hdhC::tf_att(fV);
         capt += "or " + mV ;
         capt += ", then both must be defined";
 
         (void) notes->operate(capt) ;
-        notes->setCheckMetaStr( fail );
+        notes->setCheckMetaStr( pQA->fail );
       }
     }
   }
@@ -4466,7 +3390,7 @@ QA::requiredAttributes_check(InFile &in)
 }
 
 void
-QA::requiredAttributes_checkCloudVariableValues(InFile &in,
+QA_Exp::requiredAttributes_checkCloudVariableValues(InFile &in,
       std::string &auxName, std::string &reqA)
 {
   // reqA  := vector of required: att_name=att_value
@@ -4564,7 +3488,7 @@ QA::requiredAttributes_checkCloudVariableValues(InFile &in,
        }
 
        (void) notes->operate(capt, ostr.str()) ;
-       notes->setCheckMetaStr( fail );
+       notes->setCheckMetaStr( pQA->fail );
      }
   }
 
@@ -4572,7 +3496,7 @@ QA::requiredAttributes_checkCloudVariableValues(InFile &in,
 }
 
 void
-QA::requiredAttributes_checkGlobal(InFile &in,
+QA_Exp::requiredAttributes_checkGlobal(InFile &in,
      std::vector<std::string> &reqA)
 {
   // reqA  := vector of required: att_name=att_value
@@ -4581,7 +3505,7 @@ QA::requiredAttributes_checkGlobal(InFile &in,
   x_reqA.setSeparator('=');
 
   // it is clear that global attributes exist
-  Variable &glob = pIn->variable[pIn->varSz];
+  Variable &glob = pQA->pIn->variable[pQA->pIn->varSz];
 
   // check required attributes
   // note: first item is the variable name itself
@@ -4594,13 +3518,13 @@ QA::requiredAttributes_checkGlobal(InFile &in,
     {
        std::string key("2_6");
 
-       if( notes->inq( key, fileStr) )
+       if( notes->inq( key, pQA->fileStr) )
        {
          std::string capt("required global " + hdhC::tf_att(x_reqA[0]));
          capt += "is missing" ;
 
          (void) notes->operate(capt) ;
-         notes->setCheckMetaStr( fail );
+         notes->setCheckMetaStr( pQA->fail );
 
          continue;
        }
@@ -4614,7 +3538,7 @@ QA::requiredAttributes_checkGlobal(InFile &in,
       if( aV.size() == 0 )
       {
         std::string key("2_7");
-        if( notes->inq( key, fileStr) )
+        if( notes->inq( key, pQA->fileStr) )
         {
            std::string capt("global attribute=");
            capt += x_reqA[0];
@@ -4622,7 +3546,7 @@ QA::requiredAttributes_checkGlobal(InFile &in,
            capt += x_reqA[1];
 
            (void) notes->operate(capt) ;
-           notes->setCheckMetaStr( fail );
+           notes->setCheckMetaStr( pQA->fail );
 
            continue;
          }
@@ -4632,13 +3556,13 @@ QA::requiredAttributes_checkGlobal(InFile &in,
        else if( aV != x_reqA[1] )
        {
          std::string key("2_8");
-         if( notes->inq( key, fileStr) )
+         if( notes->inq( key, pQA->fileStr) )
          {
-           std::string capt("global " + hdhC::tf_att(s_empty, x_reqA[0], aV));
+           std::string capt("global " + hdhC::tf_att(pQA->s_empty, x_reqA[0], aV));
            capt="does not match required value=" + x_reqA[1] ;
 
            (void) notes->operate(capt) ;
-           notes->setCheckMetaStr( fail );
+           notes->setCheckMetaStr( pQA->fail );
 
            continue;
          }
@@ -4652,7 +3576,7 @@ QA::requiredAttributes_checkGlobal(InFile &in,
 }
 
 void
-QA::requiredAttributes_checkVariable(InFile &in,
+QA_Exp::requiredAttributes_checkVariable(InFile &in,
      Variable &var, std::vector<std::string> &reqA)
 {
   // reqA  := vector of required: att_name=att_value
@@ -4693,7 +3617,7 @@ QA::requiredAttributes_checkVariable(InFile &in,
          capt += "is missing";
 
          (void) notes->operate(capt) ;
-         notes->setCheckMetaStr( fail );
+         notes->setCheckMetaStr( pQA->fail );
 
          continue;
        }
@@ -4714,11 +3638,11 @@ QA::requiredAttributes_checkVariable(InFile &in,
            if( notes->inq( key, vName) )
            {
              std::string capt("auxiliary ");
-             capt += hdhC::tf_var(plev + " for cloud amounts", s_colon);
+             capt += hdhC::tf_var(plev + " for cloud amounts", pQA->s_colon);
              capt += "missing " + hdhC::tf_att("plev_bnds");
 
              (void) notes->operate(capt) ;
-             notes->setCheckMetaStr( fail );
+             notes->setCheckMetaStr( pQA->fail );
            }
          }
 
@@ -4734,7 +3658,7 @@ QA::requiredAttributes_checkVariable(InFile &in,
              capt += "for cloud amounts is missing";
 
              (void) notes->operate(capt) ;
-             notes->setCheckMetaStr( fail );
+             notes->setCheckMetaStr( pQA->fail );
            }
          }
        }
@@ -4768,12 +3692,12 @@ QA::requiredAttributes_checkVariable(InFile &in,
         std::string key("2_2");
         if( notes->inq( key, vName) )
         {
-           std::string capt(hdhC::tf_att(vName, aN, s_colon));
+           std::string capt(hdhC::tf_att(vName, aN, pQA->s_colon));
            capt="missing required value=" ;
            capt += x_reqA[1];
 
            (void) notes->operate(capt) ;
-           notes->setCheckMetaStr( fail );
+           notes->setCheckMetaStr( pQA->fail );
 
            continue;
          }
@@ -4783,7 +3707,7 @@ QA::requiredAttributes_checkVariable(InFile &in,
        else if( aV != x_reqA[1] )
        {
          bool is=true;
-         if( x_reqA[0] == n_long_name)
+         if( x_reqA[0] == pQA->n_long_name)
          {
            // mismatch tolerated, because the table does not agree with CMIP5
            if( x_reqA[1] == "pressure" && aV == "pressure level" )
@@ -4791,7 +3715,7 @@ QA::requiredAttributes_checkVariable(InFile &in,
            if( x_reqA[1] == "pressure level" && aV == "pressure" )
              is=false;
          }
-         else if( (x_reqA[0] == n_positive) || (x_reqA[0] == n_axis) )
+         else if( (x_reqA[0] == pQA->n_positive) || (x_reqA[0] == pQA->n_axis) )
          {
            // case insensitive
            if( x_reqA[1] == hdhC::Lower()(aV) )
@@ -4806,7 +3730,7 @@ QA::requiredAttributes_checkVariable(InFile &in,
            capt += x_reqA[1];
 
            (void) notes->operate(capt) ;
-           notes->setCheckMetaStr( fail );
+           notes->setCheckMetaStr( pQA->fail );
 
            continue;
          }
@@ -4818,7 +3742,7 @@ QA::requiredAttributes_checkVariable(InFile &in,
 }
 
 void
-QA::requiredAttributes_readFile(
+QA_Exp::requiredAttributes_readFile(
     std::vector<std::string> &reqVname,
     std::vector<std::vector<std::string> > &reqA)
 {
@@ -4827,15 +3751,15 @@ QA::requiredAttributes_readFile(
    if( ! ifs.isOpen() )
    {
       std::string key("7_2") ;
-      if( notes->inq( key, fileStr) )
+      if( notes->inq( key, pQA->fileStr) )
       {
          std::string capt("could not open the CORDEX_archive_design table, tried") ;
          capt += hdhC::tf_val(archiveDesignTable.filename) ;
 
          if( notes->operate(capt) )
          {
-           notes->setCheckMetaStr( fail );
-           setExit( notes->getExitValue() ) ;
+           notes->setCheckMetaStr( pQA->fail );
+           pQA->setExit( notes->getExitValue() ) ;
          }
       }
    }
@@ -4897,84 +3821,10 @@ QA::requiredAttributes_readFile(
 }
 
 void
-QA::setCheckMode(std::string m)
-{
-  isCheckMeta=false;
-  isCheckTime=false;
-  isCheckData=false;
-
-  Split cvs(m, ',');
-  for( size_t j=0 ; j < cvs.size() ; ++j )
-  {
-    if( cvs[j] == "meta" )
-      isCheckMeta=true ;
-    else if( cvs[j] == "time" )
-      isCheckTime=true ;
-    else if( cvs[j] == "data" )
-      isCheckData=true ;
-  }
-
-  return;
-}
-
-void
-QA::setExit( int e )
-{
-  if( e > exitCode )
-    exitCode=e;
-
-  return ;
-}
-
-void
-QA::setFilename(hdhC::FileSplit& fC)
-{
-  std::string f(fC.basename);
-
-  Split x(f, '_');
-
-  if( x.size() )
-  {
-    Split y(x[x.size()-1], '-');
-
-    size_t sz = y.size();
-
-    if( sz == 2 &&
-          hdhC::isDigit( y[0]) && hdhC::isDigit( y[1]) )
-    {
-      f = "qa";
-
-      for( size_t i=0 ; i < x.size()-1 ; ++i )
-        f += "_" + x[i] ;
-    }
-  }
-
-  qaFile.setFilename(f + ".nc");
-
-  return ;
-}
-
-void
-QA::setTable(std::string t, std::string acronym)
-{
-  // it is possible that this method is called from a spot,
-  // where there is still no valid table name.
-  if( t.size() )
-  {
-    currTable = t ;
-    notes->setTable(t, acronym);
-  }
-
-  return;
-}
-
-void
-QA::varReqTableCheck(InFile &in, VariableMetaData &vMD,
+QA_Exp::varReqTableCheck(InFile &in, VariableMetaData &vMD,
              std::vector<struct DimensionMetaData> &dimNcMeDa)
 {
    // scanning the standard table.
-
-   setTable( varReqTable.filename, "ST" );
 
 //   std::fstream ifs(str0.c_str(), std::ios::in);
    // This class provides the feature of putting back an entire line
@@ -4990,9 +3840,9 @@ QA::varReqTableCheck(InFile &in, VariableMetaData &vMD,
 
          if( notes->operate(capt) )
          {
-           notes->setCheckMetaStr( fail );
+           notes->setCheckMetaStr( pQA->fail );
 
-           setExit( notes->getExitValue() ) ;
+           pQA->setExit( notes->getExitValue() ) ;
          }
       }
    }
@@ -5000,7 +3850,7 @@ QA::varReqTableCheck(InFile &in, VariableMetaData &vMD,
    // remove all " from input
    ifs.skipCharacter('"');
 
-   VariableMetaData tbl_entry(this);
+   VariableMetaData tbl_entry(pQA);
 
    // find the sub table, corresponding to the frequency column
    // try to identify the name of the sub table in str0,
@@ -5023,7 +3873,7 @@ QA::varReqTableCheck(InFile &in, VariableMetaData &vMD,
 
      for(size_t l=0 ; l < vMD.var->dim_ix.size() ; ++l)
      {
-       if( pIn->variable[ vMD.var->dim_ix[l] ].dimSize == 1 )
+       if( pQA->pIn->variable[ vMD.var->dim_ix[l] ].dimSize == 1 )
           continue;
 
        // new instance
@@ -5033,7 +3883,7 @@ QA::varReqTableCheck(InFile &in, VariableMetaData &vMD,
        // note: CORDEX standard tables doesn't provide anything, but
        // it is necessary for writing the project table.
        getDimMetaData(in, vMD, dimNcMeDa.back(),
-                      pIn->variable[ vMD.var->dim_ix[l] ].name) ;
+                pQA->pIn->variable[ vMD.var->dim_ix[l] ].name) ;
      }
 
      return;
@@ -5044,47 +3894,19 @@ QA::varReqTableCheck(InFile &in, VariableMetaData &vMD,
    if( notes->inq( key, vMD.var->name) )
    {
      std::string capt(hdhC::tf_var(vMD.var->name + " for "
-                      + hdhC::sAssign("frequency", getFrequency()), s_colon)) ;
+        + hdhC::sAssign("frequency", getFrequency()), pQA->s_colon)) ;
      capt += "Not found in the CORDEX_variables_requirement table";
 
      (void) notes->operate(capt) ;
-     notes->setCheckMetaStr( fail );
+     notes->setCheckMetaStr( pQA->fail );
    }
 
    // variable not found in the standard table.
    return;
 }
 
-void
-QA::storeData(VariableMetaData& vMD, hdhC::FieldData& fA)
-{
-  //FieldData structure defined in geoData.h
-
-    if( vMD.var->isNoData )
-      return;
-
-    if( isNotFirstRecord && vMD.var->isFixed  )
-      return;
-
-    vMD.qaData.store(fA) ;
-
-  return ;
-}
-
-void
-QA::storeTime(void)
-{
-   // testing time steps and bound (if any)
-   qaTime.testDate(pIn->nc);
-
-   qaTime.timeOutputBuffer.store(qaTime.currTimeValue, qaTime.currTimeStep);
-   qaTime.sharedRecordFlag.store();
-
-   return ;
-}
-
 bool
-QA::testPeriod(void)
+QA_Exp::testPeriod(void)
 {
   // return true, if a file is supposed to be not complete.
   // return false, a) if there is no period in the filename
@@ -5102,7 +3924,7 @@ QA::testPeriod(void)
 
   // Does the filename has a trailing date range?
   // Strip off the extension.
-  std::string f( pIn->file.getBasename() );
+  std::string f( pQA->pIn->file.getBasename() );
 
   std::vector<std::string> sd;
   sd.push_back( "" );
@@ -5131,19 +3953,19 @@ QA::testPeriod(void)
   // now we have found two candidates for a date
   // compose ISO-8601 strings
   std::vector<Date> period;
-  qaTime.getDRSformattedDateRange(period, sd);
+  pQA->qaTime.getDRSformattedDateRange(period, sd);
 
   // necessary for validity (not sufficient)
   if( period[0] > period[1] )
   {
      std::string key("42_4");
-     if( notes->inq( key, fileStr) )
+     if( notes->inq( key, pQA->fileStr) )
      {
        std::string capt("invalid range for period in the filename, found ");
        capt += hdhC::tf_val(sd[0] + "-" + sd[1]);
 
        (void) notes->operate(capt) ;
-       notes->setCheckMetaStr( fail );
+       notes->setCheckMetaStr( pQA->fail );
      }
 
      return false;
@@ -5161,19 +3983,19 @@ QA::testPeriod(void)
   for( size_t i=2 ; i < 6 ; ++i )
     pDates[i] = 0 ;
 
-  if( qaTime.isTimeBounds)
+  if( pQA->qaTime.isTimeBounds)
   {
-    pDates[4] = new Date(qaTime.refDate);
-    if( qaTime.firstTimeBoundsValue[0] != 0 )
-      pDates[4]->addTime(qaTime.firstTimeBoundsValue[0]);
+    pDates[4] = new Date(pQA->qaTime.refDate);
+    if( pQA->qaTime.firstTimeBoundsValue[0] != 0 )
+      pDates[4]->addTime(pQA->qaTime.firstTimeBoundsValue[0]);
 
-    pDates[5] = new Date(qaTime.refDate);
-    if( qaTime.lastTimeBoundsValue[1] != 0 )
-      pDates[5]->addTime(qaTime.lastTimeBoundsValue[1]);
+    pDates[5] = new Date(pQA->qaTime.refDate);
+    if( pQA->qaTime.lastTimeBoundsValue[1] != 0 )
+      pDates[5]->addTime(pQA->qaTime.lastTimeBoundsValue[1]);
 
-    double db_centre=(qaTime.firstTimeBoundsValue[0]
-                        + qaTime.firstTimeBoundsValue[1])/2. ;
-    if( ! hdhC::compare(db_centre, '=', qaTime.firstTimeValue) )
+    double db_centre=(pQA->qaTime.firstTimeBoundsValue[0]
+                        + pQA->qaTime.firstTimeBoundsValue[1])/2. ;
+    if( ! hdhC::compare(db_centre, '=', pQA->qaTime.firstTimeValue) )
     {
       std::string key("16_11");
       if( notes->inq( key, fVarname) )
@@ -5181,14 +4003,14 @@ QA::testPeriod(void)
         std::string capt("Range of variable time_bnds is not centred around variable time.");
 
         (void) notes->operate(capt) ;
-        notes->setCheckMetaStr( fail );
+        notes->setCheckMetaStr( pQA->fail );
       }
     }
   }
   else
   {
-    if( qaTime.time_ix > -1 &&
-        ! pIn->variable[qaTime.time_ix].isInstant )
+    if( pQA->qaTime.time_ix > -1 &&
+        ! pQA->pIn->variable[pQA->qaTime.time_ix].isInstant )
     {
       std::string key("16_12");
       if( notes->inq( key, fVarname) )
@@ -5196,18 +4018,18 @@ QA::testPeriod(void)
         std::string capt("Variable time_bnds is missing");
 
         (void) notes->operate(capt) ;
-        notes->setCheckMetaStr(fail);
+        notes->setCheckMetaStr(pQA->fail);
       }
     }
   }
 
-  pDates[2] = new Date(qaTime.refDate);
-  if( qaTime.firstTimeValue != 0. )
-    pDates[2]->addTime(qaTime.firstTimeValue);
+  pDates[2] = new Date(pQA->qaTime.refDate);
+  if( pQA->qaTime.firstTimeValue != 0. )
+    pDates[2]->addTime(pQA->qaTime.firstTimeValue);
 
-  pDates[3] = new Date(qaTime.refDate);
-  if( qaTime.lastTimeValue != 0. )
-    pDates[3]->addTime(qaTime.lastTimeValue);
+  pDates[3] = new Date(pQA->qaTime.refDate);
+  if( pQA->qaTime.lastTimeValue != 0. )
+    pDates[3]->addTime(pQA->qaTime.lastTimeValue);
 
   // alignment of of contained dates and those in the filename
   // the booleanx indicate faults
@@ -5218,24 +4040,24 @@ QA::testPeriod(void)
 
   // time value: left-side
   Date myDate( *pDates[2] );
-  myDate.addTime(-qaTime.refTimeStep);
+  myDate.addTime(-pQA->qaTime.refTimeStep);
   isFault[0] = myDate == *pDates[0] ;
 
   // time value: right-side
   myDate = *pDates[3] ;
-  myDate.addTime(qaTime.refTimeStep);
+  myDate.addTime(pQA->qaTime.refTimeStep);
   isFault[1] = myDate ==*pDates[1] ;
 
-  if(qaTime.isTimeBounds)
+  if(pQA->qaTime.isTimeBounds)
   {
     // time_bounds: left-side
     myDate = *pDates[4] ;
-    myDate.addTime(qaTime.refTimeStep);
+    myDate.addTime(pQA->qaTime.refTimeStep);
     isFault[2] = myDate == *pDates[0] ;
 
     // time_bounds: right-side
     myDate = *pDates[5] ;
-    myDate.addTime(-qaTime.refTimeStep);
+    myDate.addTime(-pQA->qaTime.refTimeStep);
     isFault[3] = myDate == *pDates[1] ;
   }
 
@@ -5268,7 +4090,7 @@ QA::testPeriod(void)
         {
           (void) notes->operate(capt + text[i]) ;
 
-          notes->setCheckMetaStr( fail );
+          notes->setCheckMetaStr( pQA->fail );
         }
       }
     }
@@ -5284,7 +4106,7 @@ QA::testPeriod(void)
 }
 
 bool
-QA::testPeriodAlignment(std::vector<std::string> &sd, Date** pDates, bool b[])
+QA_Exp::testPeriodAlignment(std::vector<std::string> &sd, Date** pDates, bool b[])
 {
   // some pecularities of CMOR, which will probably not be modified
   // for a behaviour as expected.
@@ -5301,13 +4123,13 @@ QA::testPeriodAlignment(std::vector<std::string> &sd, Date** pDates, bool b[])
     // i == 0: left; 1: right
 
     // skip for the mode of checking during production
-    if( i && !isFileComplete )
+    if( i && !pQA->isFileComplete )
        continue;
 
     if( !( !b[0+i] || !b[2+i] ) )
     {
       std::string key("16_2");
-      if( notes->inq( key, fileStr) )
+      if( notes->inq( key, pQA->fileStr) )
       {
         std::string token;
 
@@ -5320,7 +4142,7 @@ QA::testPeriodAlignment(std::vector<std::string> &sd, Date** pDates, bool b[])
 
         size_t ix;
 
-        if( qaTime.isTimeBounds )
+        if( pQA->qaTime.isTimeBounds )
         {
           capt="time bounds: ";
           ix = 4 + i ;
@@ -5336,7 +4158,7 @@ QA::testPeriodAlignment(std::vector<std::string> &sd, Date** pDates, bool b[])
         capt += pDates[ix]->str();
 
         (void) notes->operate(capt) ;
-        notes->setCheckMetaStr( fail );
+        notes->setCheckMetaStr( pQA->fail );
       }
     }
   }
@@ -5345,7 +4167,7 @@ QA::testPeriodAlignment(std::vector<std::string> &sd, Date** pDates, bool b[])
 }
 
 void
-QA::testPeriodCutRegular(std::vector<std::string> &sd,
+QA_Exp::testPeriodCutRegular(std::vector<std::string> &sd,
                   std::vector<std::string>& text)
 {
   // Partitioning of files check are equivalent.
@@ -5353,10 +4175,10 @@ QA::testPeriodCutRegular(std::vector<std::string> &sd,
   // Note that desplaced start/end points, e.g. '02' for monthly data, would
   // lead to a wrong cut.
 
-  bool isInstant = ! qaTime.isTimeBounds ;
+  bool isInstant = ! pQA->qaTime.isTimeBounds ;
 
-  bool isBegin = fileSequenceState == 'l' || fileSequenceState == 's' ;
-  bool isEnd   = fileSequenceState == 'f' || fileSequenceState == 's' ;
+  bool isBegin = pQA->fileSequenceState == 'l' || pQA->fileSequenceState == 's' ;
+  bool isEnd   = pQA->fileSequenceState == 'f' || pQA->fileSequenceState == 's' ;
 
   // period length per file as recommended?
   if( frequency == "3hr" || frequency == "6hr" )
@@ -5399,7 +4221,7 @@ QA::testPeriodCutRegular(std::vector<std::string> &sd,
       {
         if( s_hr0 != t_hr0 )
         {
-          text.push_back(" (instantaneous + begin): expected hr=") ;
+          text.push_back(" (instantaneous + 1st date): expected hr=") ;
           text.back() += t_hr0 + t_found + s_hr0 ;
         }
       }
@@ -5407,7 +4229,7 @@ QA::testPeriodCutRegular(std::vector<std::string> &sd,
       {
         if( sd[0].substr(8,2) != t_hr0 )
         {
-          text.push_back(" (average + begin): expected hr=");
+          text.push_back(" (average + 1st date): expected hr=");
           text.back() += t_hr0 + t_found + s_hr0 ;
         }
       }
@@ -5422,7 +4244,7 @@ QA::testPeriodCutRegular(std::vector<std::string> &sd,
       {
         if( s_hr1 != t_hr1 )
         {
-          text.push_back(" (instantaneous + end): expected hr=");
+          text.push_back(" (instantaneous + 2nd date): expected hr=");
           text.back() += t_hr1 + t_found + s_hr1 ;
         }
       }
@@ -5430,12 +4252,12 @@ QA::testPeriodCutRegular(std::vector<std::string> &sd,
       {
         if( isA && s_hr1 != "24" )
         {
-          text.push_back(" (averaged + begin): expected hr=");
+          text.push_back(" (averaged + 1st date): expected hr=");
           text.back() += t_hr1 + t_found + s_hr1 ;
         }
         else if( isB && s_hr1 != "00" )
         {
-          text.push_back(" (averaged + end): expected hr=");
+          text.push_back(" (averaged + 2nd date): expected hr=");
           text.back() += t_hr1 + t_found + s_hr1 ;
         }
       }
@@ -5522,7 +4344,7 @@ QA::testPeriodCutRegular(std::vector<std::string> &sd,
 }
 
 bool
-QA::testPeriodFormat(std::vector<std::string> &sd)
+QA_Exp::testPeriodFormat(std::vector<std::string> &sd)
 {
   // return: true means go on for testing the period cut
   std::string key("16_5");
@@ -5532,9 +4354,9 @@ QA::testPeriodFormat(std::vector<std::string> &sd)
   // partitioning of files
   if( sd.size() != 2 )
   {
-      if( pIn->nc.isDimUnlimited() )
+      if( pQA->pIn->nc.isDimUnlimited() )
       {
-        if( pIn->nc.getNumOfRecords() > 1 )
+        if( pQA->pIn->nc.getNumOfRecords() > 1 )
         {
           key = "16_10";
           capt = "a period is required in the filename";
@@ -5576,7 +4398,7 @@ QA::testPeriodFormat(std::vector<std::string> &sd)
 
   if( str.size() )
   {
-     if( notes->inq( key, fileStr) )
+     if( notes->inq( key, pQA->fileStr) )
      {
         capt = "period in filename of incorrect format";
         capt += ", found " + sd[0] + "-" +  sd[1];
@@ -5584,7 +4406,7 @@ QA::testPeriodFormat(std::vector<std::string> &sd)
 
         (void) notes->operate(capt) ;
 
-        notes->setCheckMetaStr( fail );
+        notes->setCheckMetaStr( pQA->fail );
      }
   }
 

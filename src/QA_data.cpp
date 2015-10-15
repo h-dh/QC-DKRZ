@@ -507,6 +507,41 @@ Outlier::test(QA_Data *pQAD)
     for( size_t j=0 ; j < recNum ; ++j )
        extr[j] = pQA->nc->getData(ma_d, names[i] , j );
 
+    // prevent spurious minima slightly above absolute minimum of zero.
+    double extrMin = extr[0];
+    double extrMax = extr[0];
+    for( size_t j=1 ; j < recNum ; ++j )
+    {
+       if( extr[j] > extrMax )
+          extrMax = extr[j];
+       if( extr[j] < extrMin )
+          extrMin = extr[j];
+    }
+
+    int extrMaxSign=1;
+    if( extrMax < 0. )
+      extrMaxSign=-1;
+
+    int extrMinSign=1;
+    if( extrMin < 0. )
+      extrMinSign=-1;
+
+    if( extrMaxSign == extrMinSign )
+    {
+      if( extrMaxSign == 1 )
+      {
+        if( extrMax > 1. && extrMin < 0.001)
+          continue;  // discard this minimum
+        else if( fabs(extrMax - extrMin) < 1.e-08 )
+          continue;
+      }
+      else
+      {
+        if( extrMin < -1. && extrMax > -0.001)
+          continue;  // discard this maximum
+      }
+    }
+
     // find number of extreme values exceeding N*sigma
     size_t n=0;
     size_t countConst=1;

@@ -598,7 +598,7 @@ QA_Time::initRelativeTime(std::string &units)
      else
      {
        // a) from time:units and :frequency
-       std::string freq( pQA->getFrequency() );
+       std::string freq( pQA->qaExp.getFrequency() );
        if( freq.size() && refDate.getUnits() == "day" )
        {
          if( freq == "3hr" )

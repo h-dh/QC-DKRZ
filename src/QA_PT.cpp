@@ -19,15 +19,18 @@ ProjectTable::check(void)
   for( size_t i=0 ; i < pIn->dataVarIndex.size() ; ++i )
   {
      Variable& var = pIn->variable[pIn->dataVarIndex[i]];
-     if( check(var) )
-       write(var);
+
+     std::string entryID( qa->qaExp.getTableEntryID(var.name) );
+
+     if( check(var, entryID) )
+       write(var, entryID);
   }
 
   return;
 }
 
 bool
-ProjectTable::check(Variable &dataVar)
+ProjectTable::check(Variable &dataVar, std::string entryID)
 {
   // return value is true, when there is not a project table, yet.
 
@@ -39,59 +42,33 @@ ProjectTable::check(Variable &dataVar)
 
   std::ifstream ifs(str0.c_str(), std::ios::in);
   if( !ifs.is_open() )  // file does not exist
-     return true;  // causes writing a new entry
+     return true;  // causes writing of a new entry
+
+  size_t sz_PV = entryID.size();
 
   std::string t_md;
 
-  std::string t0;
-  std::string t1;
-  std::string prjVarName(dataVar.name);
-  if( id_1st.size() )
-    prjVarName += id_1st ;
-
-  bool isNew=true;
   while( getline(ifs, str0) )
   {
-    if( !str0.size() )
-      continue;  // skip blank lines
-
-    size_t p1, p2;  // positions of ','
-    if( (p1=str0.find(',')) < std::string::npos )
-    {
-      t0 = str0.substr(0, p1);
-      if( t0 != prjVarName )
-        continue;  // did not match var-name
-
-      // looking for a second item
-      if( (p2=str0.find(',', ++p1)) == std::string::npos )
-        continue;  // corrupt line
-
-      t1 = str0.substr(p1, p2-p1);
-    }
-    // else  // would be a corrupt table
-
-    if( id_2nd.size() && t1 != id_2nd )
-       continue;
+    if( str0.substr(0,sz_PV) != entryID )
+      continue;
 
     // found a valid entry
     t_md = hdhC::stripSurrounding(str0) ;
 
-    isNew=false;
-
     // read aux-lines
     while( getline(ifs, str0) )
     {
-      t0 = hdhC::stripSurrounding(str0) ;
-      if( t0.substr(0,4) != "aux=" )
+      str0 = hdhC::stripSurrounding(str0) ;
+      if( str0.substr(0,4) != "aux=" )
         goto BREAK ;  // found the end of the entry
 
       t_md += '\n';
-      t_md += t0 ;
+      t_md += str0 ;
     }
   }
 
-  if( isNew )
-    return true;  // entry not found
+  return true;  // entry not found
 
 BREAK:
 
@@ -100,7 +77,7 @@ BREAK:
 
   // get meta data info from the file
   std::string f_md;
-  getMetaData(dataVar, f_md);
+  getMetaData(dataVar, entryID, f_md);
 
   // Comparison of meta-data from the project table and the file, respectively.
   // Note that the direct comparison fails because of different spaces.
@@ -301,7 +278,7 @@ BREAK:
               capt += xt_eq[0];
               capt += ": missing" ;
             }
-            
+
             if( qa->currQARec )
               capt += " across sub-temporal files";
             else
@@ -572,19 +549,13 @@ ProjectTable::getAtts(Variable &var, std::string &s)
 }
 
 void
-ProjectTable::getMetaData(Variable &dataVar, std::string &md)
+ProjectTable::getMetaData(Variable &dataVar,
+    std::string& entryID, std::string &md)
 {
   // Put all meta-data to string.
 
   // beginning of extraction of meta data
-  // varname and frequency
-  md = "\n" + dataVar.name;
-  if( id_1st.size() )
-     md += id_1st ;
-  md += "," ;
-
-  if( id_2nd.size() )
-    md += id_2nd + "," ;
+  md = "\n" + entryID;
 
   // dimensions
   md += "dims=";
@@ -751,12 +722,12 @@ ProjectTable::unlockFile(std::string &fName )
 }
 
 void
-ProjectTable::write(Variable &dataVar)
+ProjectTable::write(Variable &dataVar, std::string& entryID)
 {
   // store meta data info
   std::string md;
 
-  getMetaData(dataVar, md);
+  getMetaData(dataVar, entryID, md);
 
   std::string pFile =  projectTableFile.getFile();
 

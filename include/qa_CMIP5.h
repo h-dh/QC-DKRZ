@@ -1,9 +1,10 @@
-#ifndef _QA_H
-#define _QA_H
+#ifndef _QA_CMIP5_H
+#define _QA_CMIP5_H
 
 #include "hdhC.h"
 #include "date.h"
 #include "annotation.h"
+#include "qa.h"
 #include "qa_data.h"
 #include "qa_time.h"
 #include "qa_PT.h"
@@ -283,9 +284,6 @@ public:
   void   findVarReqTableSheetSub(std::string &str0,
             VariableMetaData &vMD, std::vector<std::string> &);
 
-  std::string
-         getCurrentTable(void){ return currTable ; }
-
   //! Store properties of a dimension in the struct.
   /*! Note: the name of the dimension is passed by the struct.*/
   void   getDimMetaData(InFile &in,
@@ -323,6 +321,9 @@ public:
 
   std::string
          getVarnameFromFilename(std::string str);
+
+  std::string
+         getVarnameInPrjTable(std::string vN="");
 
   //! Brief description of options
   static void
@@ -456,7 +457,6 @@ public:
   std::string maxDateRange;
 
   std::string cfStndNames;
-  std::string currTable;
   std::string MIP_tableName;
   std::string frequency;
   std::string totalPeriod;

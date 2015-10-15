@@ -27,6 +27,7 @@
 #include "Oper.cpp"
 #include "OutFile.cpp"
 #include "Parse.cpp"
+#include "QA.cpp"
 #include "QA_data.cpp"
 #include "QA_time.cpp"
 #include "QA_PT.cpp"
@@ -426,8 +427,8 @@ parseOptions(int argc, char *org_argv[], IObjContainer &ioc)
   bool isPrintTest=false;
 
   // getopt expects char*[].
-  char **pargv = new char* [argv.size()+1] ;
-  for( size_t i=0 ; i < argv.size() ; ++i )
+  char **pargv = new char* [sz+1] ;
+  for( int i=0 ; i < sz ; ++i )
     pargv[i] = const_cast<char*>(argv[i].c_str());
 
   while( (copt = opt.getopt(sz, pargv,

@@ -39,6 +39,7 @@
 #include "oper.h"
 #include "out_file.h"
 #include "parse.h"
+#include "qa.h"
 #include "qa_data.h"
 #include "qa_time.h"
 #include "qa_PT.h"

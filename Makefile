@@ -17,9 +17,9 @@ BASE_HEADER = annotation.h base.h brace_op.h data_statistics.h date.h \
    time_control.h variable.h
 
 QA_SOURCE = CF.cpp CellStatistics.cpp FD_interface.cpp Oper.cpp OutFile.cpp Parse.cpp \
-    QA_data.cpp QA_time.cpp QA_PT.cpp QA_main.cpp
+    QA.cpp QA_data.cpp QA_time.cpp QA_PT.cpp QA_main.cpp
 QA_HEADER = cell_statistics.h cf.h fd_interface.h oper.h out_file.h parse.h \
-    qa_data.h qa_PT.h qa_main.h qa_time.h
+    qa.h qa_data.h qa_PT.h qa_main.h qa_time.h
 
 #vpath %.c   $(QA_PATH)/src
 #vpath %.cpp $(QA_PATH)/src
