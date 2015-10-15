@@ -52,14 +52,12 @@ class DataOutputBuffer
 class Outlier
 {
   public:
-  Outlier( QA *p, size_t vmdIX, std::string name);
+  Outlier( QA*, size_t vmdIX, std::string name);
   ~Outlier(){;}
 
-  QA *pQA;
-
   static bool
-        isSelected( std::vector<std::string> &opts,
-                     std::string &vName, int effDims );
+        isSelected(Variable&, std::vector<std::string> &opts,
+            std::string& unlimName );
 
   //! Evaluate outlier test
   /*! When of checking sub-temp files or in post-processing mode.
@@ -76,6 +74,7 @@ class Outlier
   MtrxArr<double> ma_d;
 
   Annotation *notes;
+  QA *pQA;
 } ;
 
 class ReplicatedRecord
@@ -96,8 +95,8 @@ class ReplicatedRecord
             bool *arr_rep_bool, bool *arr_1st_bool,
             std::vector<std::string>& range) ;
   static bool
-         isSelected( std::vector<std::string> &options,
-            std::string &vName, int effDims );
+         isSelected(Variable&, std::vector<std::string> &options,
+           std::string& unlimName );
 
   void   parseOption( std::vector<std::string> &opts ) ;
   void   report( std::vector<std::string> &note, size_t bufCount,
@@ -170,7 +169,7 @@ class QA_Data
   //! Flush results to the qa-netCDF file.
   void   flush(void);
 
-  void   init(InFile*, QA*, std::string);
+  void   init(QA*, std::string);
 
   //! Change the flush counter; 1500 by default
   void   initBuffer(QA*, size_t next=0, size_t max=1500);
