@@ -315,9 +315,9 @@ class QA_Exp
   bool   testPeriodFormat(std::vector<std::string> &sd) ;
 
   //! Name of the netCDF file with results of the quality control
-  struct hdhC::FileSplit archiveDesignTable;
   struct hdhC::FileSplit GCM_ModelnameTable;
   struct hdhC::FileSplit RCM_ModelnameTable;
+  struct hdhC::FileSplit table_DRS_CV;
   struct hdhC::FileSplit varReqTable;
 
   std::vector<VariableMetaData> varMeDa;
