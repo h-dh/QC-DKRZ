@@ -2290,13 +2290,21 @@ set -f
 
 # selection on the command-line cancels any selection in config-files
 if [ ${sl_args} ] ; then
-  pathList=
-  varList=
-
   for(( i=0 ; i < ${#sl_args[*]} ; ++i )) ; do
     if [ ${sl_args[i]:0:1} = '/' ] ; then
       # rule: if absolute path on cmd-line, then cancel previous
       unsetKWL PROJECT_DATA
+
+      pathList=
+      varList=
+    else
+      if [ ${sl_args[i]/=/} = ${sl_args[i]} ] ; then
+        # only variables; no path components
+        for(( j=0 ; j < ${#pathList[*]} ; ++j )) ; do
+          varList[j]=${sl_args[i]}
+        done
+        continue
+      fi
     fi
 
     sel_lock S ${sl_args[i]}
@@ -2334,6 +2342,22 @@ for key in ${keyWordList[*]} ; do
   eval val=( \${${key}[*]} )
   test ${val} &&  array[${#array[*]}]=${key}=${val[*]}
 done
+
+# remove duplicates
+pathList=( ${pathList[*]//,/ } )
+varList=( ${varList[*]//,/ } )
+for(( i=0 ; i < ${#pathList[*]} -1 ; ++i )) ; do
+  for(( j=i+1 ; j < ${#pathList[*]} ; ++j )) ; do
+    if [ "${varList[i]} = "${varList[j]} ] ; then
+      if [ "${pathList[i]} = "${pathList[j]} ] ; then
+         unset pathList[$j]
+         unset varList[$j]
+      fi
+    fi
+  done
+done
+pathList=( ${pathList[*]} )
+varList=( ${varList[*]} )
 
 # special treatmeant to preserve regExp
 if [ ${pathList} ] ; then

@@ -11,8 +11,6 @@
 
 //! Quality Control Program Unit for CMIP5.
 /*! All the QA considerations are covered by this class.\n
-The QA_CMIP5.cpp and qa_CMIP5.h files have to be linked to
-QA.cpp and qa.h, respectively.\n
 Properties specified in standard_output.xlsx document
 from http://cmip-pcmdi.llnl.gov/cmip5/docs
 are checked as well as the Data Reference Syntax given in cmip5_data_reference_syntax.pdf.\n
@@ -21,19 +19,6 @@ instance. Results of the QA are written to a netCDF file
 (to the directory where the main program was started) with filename qa_<data-filename>.nc. Outlier test and such for replicated records
 are performed. Annotations are supplied via the Annotation class
 linked by a pointer.
-*/
-
-
-//! Main program unit of the Quality Control.
-/*! All the QA considerations are covered by this class. QA of CMIP5
-netCDF dimensions, variables and data are checked.
-Atomic datasets, chunks and even chunks in the process of 'under-construction'
-are taken into account by multi-session features. A resulting
-netCDF file is written
-(to the directory where the program was started) prefixing the data-filename by 'qa_'.
-Zero-D to 3D data are checked, the latter layer-wise in a way that
-there is a method 'entry' for the data and an eventual method 'closeEntry', which stores time series results in a file
-qa_<varname>.nc .
 */
 
 //! Struct containing dimensional properties to cross-check with table information.
@@ -83,10 +68,13 @@ class VariableMetaData
   // buffer results
   DataOutputBuffer dataOutputBuffer;
 
-  Annotation     *notes;
-  Variable *var;
-  QA             *pQA ;
-  QA_Data         qaData;
+  Annotation* notes;
+  Variable*   var;
+  QA*         pQA ;
+  QA_Data     qaData;
+
+  //! Verify units % or 1 by data range
+  void verifyPercent(void);
 
   int  finally(int errCode=0);
   void forkAnnotation(Annotation *p);
@@ -94,203 +82,171 @@ class VariableMetaData
   void setParent(QA *p){pQA=p;}
 };
 
-class QA : public IObj
+class QA_Exp
 {
 public:
   //! Default constructor.
-  QA();
-  ~QA();
+  QA_Exp();
 
-  //! coresponding to virtual methods in IObj
+  void   applyOptions(std::vector<std::string>&);
 
-  //! Check field properties of the variable.
-  /*! Designed for multiple usage for sub-layers of a data block.
-      Each multiple-set must be invoked by calling method 'clearStatistics'.*/
-  bool   entry(void);
-
-  //! Initialisation of the QA object.
-  /*! Open the qa-result.nc file, when available or create
-   it from scratch. Meta data checks are performed.
-   Initialise time testing, time boundary testing, and cycles
-   within a time step. At the end  entry() is called to test
-   the data of fields.*/
-  bool   init(void) ;
-  void   linkObject(IObj *);
-
-  void   setFilename(hdhC::FileSplit&);
-  void   setTablePath(std::string p){tablePath=p;}
-
-  void   applyOptions(bool isPost=false);
-
-  bool   checkDataBody(std::string vName="");
-
+  //! Only a single data variable is permitted
   void   checkDataVarNum(void);
 
   //! Check of dimensionless variables
   /*! These are represented by a single-value-dimension in the
       standard table and by a dimensionless variable in the file.*/
-  bool   checkDimlessVar(InFile &in, Split &splt_line,
-            VariableMetaData &var,
+  bool   checkDimlessVar(InFile& in, Split& splt_line,
+            VariableMetaData& var,
             struct DimensionMetaData *&p_dimFE,
-            struct DimensionMetaData &dimFE_altern,
-            struct DimensionMetaData &dimTE,
-            std::map<std::string, size_t> &col);
+            struct DimensionMetaData& dimFE_altern,
+            struct DimensionMetaData& dimTE,
+            std::map<std::string, size_t>& col);
 
-  bool   checkDimSpecialValue(InFile &in, VariableMetaData &vMD,
-            struct DimensionMetaData &, std::string &dimName) ;
+  bool   checkDimSpecialValue(InFile& in, VariableMetaData& vMD,
+            struct DimensionMetaData& , std::string& dimName) ;
 
   //! Comparison of dimensions between file and the var-requirements table
   /*! Cross-checks with the standard table are performed only once for
    each variable at first time encounter in the CMIP Project ensuring
    conformance.*/
-  void   checkDimVarReqTable(ReadLine &tbl, InFile &in,
-            VariableMetaData &var,
+  void   checkDimVarReqTable(ReadLine& tbl, InFile& in,
+            VariableMetaData& var,
             std::vector<struct DimensionMetaData>&,
-            std::map<std::string, size_t> &col,
+            std::map<std::string, size_t>& col,
             std::string dName, size_t colMax);
 
   //! Check dimensions
-  void   checkDimVarReqTableEntry(InFile &in,
-            VariableMetaData &var,
-            struct DimensionMetaData &nc,
-            struct DimensionMetaData &tbl) ;
+  void   checkDimVarReqTableEntry(InFile& in,
+            VariableMetaData& var,
+            struct DimensionMetaData& nc,
+            struct DimensionMetaData& tbl) ;
 
-  void   checkDimAxis(InFile &in,
-           VariableMetaData &vMD,
-           struct DimensionMetaData &nc_entry,
-           struct DimensionMetaData &tbl_entry);
+  void   checkDimAxis(InFile& in,
+           VariableMetaData& vMD,
+           struct DimensionMetaData& nc_entry,
+           struct DimensionMetaData& tbl_entry);
 
-  void   checkDimBndsName(InFile &in,
-           VariableMetaData &vMD,
-           struct DimensionMetaData &nc_entry,
-           struct DimensionMetaData &tbl_entry);
+  void   checkDimBndsName(InFile& in,
+           VariableMetaData& vMD,
+           struct DimensionMetaData& nc_entry,
+           struct DimensionMetaData& tbl_entry);
 
-  void   checkDimChecksum(InFile &in,
-           VariableMetaData &vMD,
-           struct DimensionMetaData &nc_entry,
-           struct DimensionMetaData &tbl_entry);
+  void   checkDimChecksum(InFile& in,
+           VariableMetaData& vMD,
+           struct DimensionMetaData& nc_entry,
+           struct DimensionMetaData& tbl_entry);
 
-  void   checkDimLongName(InFile &in,
-           VariableMetaData &vMD,
-           struct DimensionMetaData &nc_entry,
-           struct DimensionMetaData &tbl_entry);
+  void   checkDimLongName(InFile& in,
+           VariableMetaData& vMD,
+           struct DimensionMetaData& nc_entry,
+           struct DimensionMetaData& tbl_entry);
 
-  bool   checkLonLatParamRep(InFile &in,
-           VariableMetaData &vMD,
-           std::string &nc_entry_name,
-           std::string &tbl_entry_name);
+  bool   checkLonLatParamRep(InFile& in,
+           VariableMetaData& vMD,
+           std::string& nc_entry_name,
+           std::string& tbl_entry_name);
 
-  void   checkDimOutName(InFile &in,
-           VariableMetaData &vMD,
-           struct DimensionMetaData &nc_entry,
-           struct DimensionMetaData &tbl_entry);
+  void   checkDimOutName(InFile& in,
+           VariableMetaData& vMD,
+           struct DimensionMetaData& nc_entry,
+           struct DimensionMetaData& tbl_entry);
 
-  void   checkDimSize(InFile &in,
-           VariableMetaData &vMD,
-           struct DimensionMetaData &nc_entry,
-           struct DimensionMetaData &tbl_entry);
+  void   checkDimSize(InFile& in,
+           VariableMetaData& vMD,
+           struct DimensionMetaData& nc_entry,
+           struct DimensionMetaData& tbl_entry);
 
-  void   checkDimStndName(InFile &in,
-           VariableMetaData &vMD,
-           struct DimensionMetaData &nc_entry,
-           struct DimensionMetaData &tbl_entry);
+  void   checkDimStndName(InFile& in,
+           VariableMetaData& vMD,
+           struct DimensionMetaData& nc_entry,
+           struct DimensionMetaData& tbl_entry);
 
   //! Check the (transient) time dimension.
   void   checkDimULD(
-            VariableMetaData &var,
-            struct DimensionMetaData &nc,
-            struct DimensionMetaData &tbl);
+            VariableMetaData& var,
+            struct DimensionMetaData& nc,
+            struct DimensionMetaData& tbl);
 
   //! Check the units of a dimension's variable representation.
-  void   checkDimUnits(InFile &in,
-            VariableMetaData &var,
-            struct DimensionMetaData &nc,
-            struct DimensionMetaData &tbl);
+  void   checkDimUnits(InFile& in,
+            VariableMetaData& var,
+            struct DimensionMetaData& nc,
+            struct DimensionMetaData& tbl);
 
   //! Match filename components and global attributes of the file.
   void   checkFilename(std::vector<std::string>&,
-            std::string &stdSubTables_table);
+            std::string& stdSubTables_table);
 
   //! Checks meta-data
-  void   checkMetaData(InFile &) ;
+  void   checkMetaData(InFile& ) ;
 
   //! Is it NetCDF-4, is it compressed?
-  void   checkNetCDF(InFile &);
-
-  void   checkProjectTable(InFile &in);
+  void   checkNetCDF(InFile& );
 
   //! Starting function for all table cross-checks.
-  void   checkTables(InFile &in, VariableMetaData &v);
+  void   checkTables(InFile& in, VariableMetaData& v);
 
   //! Cross-check with standard table.
   /*! Prepare the check for dimensions and variable.*/
-  bool   checkVarReqTable(InFile &in,
-            VariableMetaData &var,
+  bool   checkVarReqTable(InFile& in,
+            VariableMetaData& var,
             std::vector<struct DimensionMetaData>& );
 
   //! Check dimensional bounds: layout and size
   /*! Number of values and checksum of the bounds*/
-  void   checkVarReqTableDimBounds(InFile &in, Split &splt_line,
-            VariableMetaData &var,
-            struct DimensionMetaData &dimFE,
-            struct DimensionMetaData &dimTE,
-            std::map<std::string, size_t> &col) ;
+  void   checkVarReqTableDimBounds(InFile& in, Split& splt_line,
+            VariableMetaData& var,
+            struct DimensionMetaData& dimFE,
+            struct DimensionMetaData& dimTE,
+            std::map<std::string, size_t>& col) ;
 
   //! Check dimensional values: layout and size
   /*! Number of values and checksum*/
-  void   checkVarReqTableDimValues(InFile &in, Split &splt_line,
-            VariableMetaData &var,
-            struct DimensionMetaData &file,
-            struct DimensionMetaData &table,
-            std::map<std::string, size_t> &col) ;
+  void   checkVarReqTableDimValues(InFile& in, Split& splt_line,
+            VariableMetaData& var,
+            struct DimensionMetaData& file,
+            struct DimensionMetaData& table,
+            std::map<std::string, size_t>& col) ;
 
   //! Apply the cross-check for the variable.
   void   checkVarReqTableEntry(
-             VariableMetaData &,
-             VariableMetaData &tbl_entry);
-
-  //! Check time properties.
-  /*! Close records for time and data.*/
-  void   closeEntry(void);
+             VariableMetaData& ,
+             VariableMetaData& tbl_entry);
 
   //! Variable objects for netcdf meta-data
   /*! Only the objects are created.*/
   void   createVarMetaData(void);
 
-  //! The final operations.
-  /*! An exit code is returned.*/
-  int    finally(int errCode=0);
-
-  //! The final qa data operations.
-  /*! Called from finall(). An exit code is returned.*/
-  int    finally_data(int errCode=0);
-
   //! Find occurrence of a heading line in string str0.
   /*! Returns true, if not found or the maximum number of columns needed.
       col maps required column titles to their index.*/
-  bool   findNextVariableHeadline(ReadLine &, std::string &str0,
-            VariableMetaData &var, std::vector<std::string> &);
+  bool   findNextVariableHeadline(ReadLine& , std::string& str0,
+            VariableMetaData& var, std::vector<std::string>& );
 
   //! Find entry of a requested variable in the standard table.
-  bool   findVarReqTableEntry(ReadLine &, std::string &,
-            VariableMetaData &var,
-            std::map<std::string, size_t> &col, size_t col_max,
-            std::vector<std::string> & );
+  bool   findVarReqTableEntry(ReadLine& , std::string& ,
+            VariableMetaData& var,
+            std::map<std::string, size_t>& col, size_t col_max,
+            std::vector<std::string>&  );
 
   //! Find the name of requested sub-table in string str0.
-  bool   findVarReqTableSheet(ReadLine &, std::string &str0,
-            VariableMetaData &var);
+  bool   findVarReqTableSheet(ReadLine& , std::string& str0,
+            VariableMetaData& var);
 
-  void   findVarReqTableSheetSub(std::string &str0,
-            VariableMetaData &vMD, std::vector<std::string> &);
+  void   findVarReqTableSheetSub(std::string& str0,
+            VariableMetaData& vMD, std::vector<std::string>& );
 
   //! Store properties of a dimension in the struct.
   /*! Note: the name of the dimension is passed by the struct.*/
-  void   getDimMetaData(InFile &in,
-             VariableMetaData &,
-             struct DimensionMetaData &, std::string dName);
+  void   getDimMetaData(InFile& in,
+             VariableMetaData& ,
+             struct DimensionMetaData& , std::string dName);
 
-  //! Get global attribute 'frequency'
+  std::string
+         getTableEntryID(std::string vN="");
+
+         //! Get global attribute 'frequency'
   std::string
          getFrequency(void);
 
@@ -300,18 +256,7 @@ public:
 
   //! get and check MIP table name
   void
-         getTableSheet(VariableMetaData &);
-
-  //! Return the name of the object.
-  std::string
-         getObjName(void) { return objName; }
-
-  //! Get path componenents.
-  /*! mode: "total": filename with total path, "file": filename,
-      "base": filename without extension, "ext": extension without '.',
-      "path": the path component without trailing '/'.*/
-  std::string
-         getPath(std::string& f, std::string mode="total");
+         getTableSheet(VariableMetaData& );
 
 //  std::string
 //         getVarReqTable(void){ return varReqTable.file ; }
@@ -319,18 +264,10 @@ public:
 //  std::string
 //         getTablePath(void){ return tablePath; }
 
-  std::string
-         getVarnameFromFilename(std::string str);
-
-  std::string
-         getVarnameInPrjTable(std::string vN="");
-
-  //! Brief description of options
-  static void
-         help(void);
+  void   init(QA*, std::vector<std::string>&);
 
   //! Check the path to the tables;
-  void   inqTables(void);
+  bool   inqTables(void);
 
   //! Initialisation of flushing gathered results to netCDF file.
   /*! Parameter indicates the number of variables. */
@@ -339,62 +276,23 @@ public:
   //! Set default values.
   void   initDefaults(void);
 
-  //! Global attributes of the qa-netCDF file.
-  /*! Partly reflecting global attributes from the sources. */
-  void   initGlobalAtts(InFile &);
-
   //! Initialisiation of a resumed session.
   /*! Happens for non-atomic data sets and those that are yet incomplete. */
-  void   initResumeSession(void);
-
-  bool   isProgress(void){ return ! isNoProgress ; }
-
-  //! Get coordinates of grid-cells where an error occurred
-  /*! Does not work for tripolar coordinates */
-//  bool   locate( GeoMetaT<float>*, double *lat, double *lon, const char* );
-
-  //! Open a qa_result file for creation or appending data.
-  /*! CopY time variable from input-nc file.
-   Collect some properties of the in-netcdf-file in
-   struct varMeDa. Also check properties against tables.
-  */
-  void   openQA_Nc(InFile&);
-
-//  //! Print results to a text file.
-//  /*! Not for CMIP5 or CORDEX */
-//  void   print(GeoMetaT<float>*, hdhC::FieldData &fA);
-
-  //! Perform only post-processing
-  bool   postProc(void);
-  bool   postProc_outlierTest(void);
+  void   initResumeSession(std::vector<std::string>& prevTargets);
 
   //! Read the headlines for dimensions and variable.
   /*! Read from the standard table; used to identify columns.*/
-  bool   readHeadline(ReadLine &,
-            VariableMetaData &,
-            std::map<std::string, size_t> &v_col,
-            std::map<std::string, size_t> &d_col,
-            size_t &v_colMax, size_t &d_colMax);
+  bool   readHeadline(ReadLine&,
+            VariableMetaData&,
+            std::map<std::string, size_t>& v_col,
+            std::map<std::string, size_t>& d_col,
+            size_t& v_colMax, size_t& d_colMax);
 
   //! Connect this with the object to be checked
-  void   setInFilePointer(InFile *p) { pIn = p; }
-
-  //! get access to the global exception and annotation handling
-  void   setNotes(Annotation *n) {notes = n; }
-
-  //! Unused.
-  /*! Needed to be conform to a specific Base class functionality */
-  void   setSrcStr(std::string s)
-             {srcStr.push_back(s); return;}
+//  void   setInFilePointer(InFile *p) { pIn = p; }
 
   //! Set properties of variable from netcdf file
-  void   setVarMetaData(VariableMetaData &);
-
-  //! Store results in the internal buffer
-  /*! The buffer is flushed to file from time to time.*/
-  void   store(std::vector<hdhC::FieldData> &fA);
-  void   storeData(std::vector<hdhC::FieldData> &fA);
-  void   storeTime(void);
+  void   setVarMetaData(VariableMetaData& );
 
   //! Test the time-stamp of the input file.
   /*! If the end-date in the filename and the last time value
@@ -402,97 +300,57 @@ public:
       the file is assumed to be completely qa-processed.
       Syntax of date ranges as given in CMIP% DRS Syntax.*/
   bool   testPeriod(void);
+  bool   testPeriodAlignment(std::vector<std::string>& sd, Date** pDates, bool b[])  ;
+  void   testPeriodCut(std::vector<std::string>& sd) ;
+  bool   testPeriodCut_CMOR_isGOD(std::vector<std::string>& sd, Date**);
+  void   testPeriodCutRegular(std::vector<std::string>& sd,
+              std::vector<std::string>& text);
+  bool   testPeriodFormat(std::vector<std::string>& sd) ;
 
   //! Name of the netCDF file with results of the quality control
-  std::string tablePath;
-  struct hdhC::FileSplit qaFile;
-  struct hdhC::FileSplit projectTableFile;
   struct hdhC::FileSplit varReqTable;
-
-  std::string qaNcfileFlags;
-
-  int exitCode;
-  bool isExit;
+  struct hdhC::FileSplit table_DRS_CV;
 
   std::vector<VariableMetaData> varMeDa;
 
-  NcAPI *nc;
-  QA_Time qaTime;
+  NcAPI* nc;
+  QA*    pQA;
 
-  size_t currQARec;
-  size_t importedRecFromPrevQA; // initial num of recs in the write-to-nc-file
   MtrxArr<double> tmp_mv;
 
   // the same buf-size for all buffer is required for testing replicated records
   size_t bufferSize;
 
   // init for test about times
-  bool enablePostProc;
+  bool enabledCompletenessCheck;
   bool isUseStrict;
-  bool enableVersionInHistory;
   bool isCaseInsensitiveVarName;
   bool isCheckParentExpID;
   bool isCheckParentExpRIP;
   bool isClearBits;
-  bool isFileComplete;
-  bool isForceStndTable;
-  bool isNoProgress;
-  bool isNotFirstRecord;
-  bool isResumeSession;
-
-  size_t nextRecords;
-
-  bool isCheckMeta;
-  bool isCheckTime;
-  bool isCheckData;
 
   std::vector<std::string> excludedAttribute;
   std::vector<std::string> overruleAllFlagsOption;
 
   std::vector<std::string> constValueOption;
   std::vector<std::string> fillValueOption;
-  std::vector<std::string> outlierOpts;
-  std::vector<std::string> replicationOpts;
-
-  std::string maxDateRange;
 
   std::string cfStndNames;
   std::string MIP_tableName;
   std::string frequency;
-  std::string totalPeriod;
-
   std::string parentExpID;
   std::string parentExpRIP;
 
   std::string experiment_id;
 
-  int identNum;
   std::string fVarname;
-  std::vector<std::string> srcStr;
-  std::string revision;
 
-  std::string fail;
-  std::string fileStr;
-  std::string notAvailable;
-  std::string blank;
-  std::string no_blank;
-  std::string s_colon;
-  std::string s_empty;
-  std::string s_mismatch;
-  std::string s_upper;
-  std::string s_lower;
-
-  void        appendToHistory(size_t);
-  std::string getCurrentTableSubst(void);
-  bool        getExit(void);
-  std::string getSubjectsIntroDim(VariableMetaData &vMD,
-                   struct DimensionMetaData &nc_entry,
-                   struct DimensionMetaData &tbl_entry);
+  std::string getSubjectsIntroDim(VariableMetaData& vMD,
+                   struct DimensionMetaData& nc_entry,
+                   struct DimensionMetaData& tbl_entry);
+  std::string getVarnameFromFilename(std::string str);
   bool        not_equal(double x1, double x2, double epsilon);
   void        pushBackVarMeDa(Variable*);
-  void        setCheckMode(std::string);
-  void        setExit(int);
-  void        setTable(std::string, std::string acronym="");
 };
 
 #endif

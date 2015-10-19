@@ -1414,8 +1414,13 @@ set_qa_par()
  fi
 
  # CORDEX
- test ${#TABLE_CAD} -gt 0 && \
-   par=${par}"${s}"tCAD="${TABLE_CAD}"
+ if [ ${#TABLE_DRS_CV} -gt 0 ] ; then
+   par=${par}"${s}"tCV="${TABLE_DRS_CV}"
+ elif [ ${#TABLE_CAD} -gt 0 ] ; then
+   # back-ward compatibility
+   par=${par}"${s}"tCV="${TABLE_CAD}"
+ fi
+
  test ${#TABLE_GCM_NAME} -gt 0 && \
    par=${par}"${s}"tGCM="${TABLE_GCM_NAME}"
  test ${#TABLE_RCM_NAME} -gt 0 && \

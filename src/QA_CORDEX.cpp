@@ -1,8 +1,5 @@
 //#include "qa.h"
 
-// Macro option to enable output of all messages.
-// Please compile with '-D RAISE_ERRORS'
-
 QA_Exp::QA_Exp()
 {
   initDefaults();
@@ -42,21 +39,21 @@ QA_Exp::applyOptions(std::vector<std::string>& optStr)
        continue;
      }
 
+     if( split[0] == "tCV"
+           || split[0] == "tableControlledVocabulary"
+                || split[0] == "table_controlled_vocabulary" )
+     {
+       if( split.size() == 2 )
+          table_DRS_CV.setFile(split[1]) ;
+
+       continue;
+     }
+
      if( split[0] == "tGCM"
            || split[0] == "table_GCM_NAME" )
      {
        if( split.size() == 2 )
           GCM_ModelnameTable.setFile(split[1]) ;
-
-       continue;
-     }
-
-     if( split[0] == "tCAD"
-           || split[0] == "tableArchiveDesign"
-                || split[0] == "table_archive_design" )
-     {
-       if( split.size() == 2 )
-          archiveDesignTable.setFile(split[1]) ;
 
        continue;
      }
@@ -90,8 +87,8 @@ QA_Exp::applyOptions(std::vector<std::string>& optStr)
    }
 
    // apply a general path which could have also been provided by setTablePath()
-   if( archiveDesignTable.path.size() == 0 )
-      archiveDesignTable.setPath(pQA->tablePath);
+   if( table_DRS_CV.path.size() == 0 )
+      table_DRS_CV.setPath(pQA->tablePath);
 
    if( GCM_ModelnameTable.path.size() == 0 )
       GCM_ModelnameTable.setPath(pQA->tablePath);
@@ -3746,7 +3743,7 @@ QA_Exp::requiredAttributes_readFile(
     std::vector<std::string> &reqVname,
     std::vector<std::vector<std::string> > &reqA)
 {
-   ReadLine ifs(archiveDesignTable.getFile());
+   ReadLine ifs(table_DRS_CV.getFile());
 
    if( ! ifs.isOpen() )
    {
@@ -3754,7 +3751,7 @@ QA_Exp::requiredAttributes_readFile(
       if( notes->inq( key, pQA->fileStr) )
       {
          std::string capt("could not open the CORDEX_archive_design table, tried") ;
-         capt += hdhC::tf_val(archiveDesignTable.filename) ;
+         capt += hdhC::tf_val(table_DRS_CV.filename) ;
 
          if( notes->operate(capt) )
          {
@@ -4062,26 +4059,28 @@ QA_Exp::testPeriod(void)
   }
 
   // the annotations
-  bool isCMOR_setting = testPeriodAlignment(sd, pDates, isFault);
+  if( testPeriodAlignment(sd, pDates, isFault) )
+  {
+    std::string key("16_12");
+    std::string capt("period in the filename: ") ;
+    capt +="note that StartTime-EndTime is compliant with CMOR peculiarity";
 
-  // format of period dates.
-  if( testPeriodFormat(sd) )
+    if( notes->inq( key, fVarname) )
+    {
+      (void) notes->operate(capt) ;
+
+      notes->setCheckMetaStr( pQA->fail );
+    }
+  }
+  else if( testPeriodFormat(sd) ) // format of period dates.
   {
     // period requires a cut specific to the various frequencies.
     std::vector<std::string> text ;
     testPeriodCutRegular(sd, text) ;
 
-    std::string key("16_6");
-
-    if( isCMOR_setting )
-    {
-        text.clear();
-        text.push_back(": note that StartTime-EndTime is compliant with CMOR peculiarity");
-        key = "16_12";
-    }
-
     if( text.size() )
     {
+      std::string key("16_6");
       std::string capt("period in the filename") ;
 
       for( size_t i=0 ; i < text.size() ; ++i )
@@ -4188,13 +4187,16 @@ QA_Exp::testPeriodCutRegular(std::vector<std::string> &sd,
     bool isB = sd[1].substr(4,4) == "0101" && sd[1].substr(8,2) == "00" ;
 
     // should be the same year
-    int yBeg=hdhC::string2Double( sd[0].substr(0,4) );
-    int yEnd=hdhC::string2Double( sd[1].substr(0,4) );
-    if( isB )  // begin of a next year
-      --yEnd;
+    if( isBegin && isEnd )
+    {
+      int yBeg=hdhC::string2Double( sd[0].substr(0,4) );
+      int yEnd=hdhC::string2Double( sd[1].substr(0,4) );
+      if( isB )  // begin of a next year
+        --yEnd;
 
-    if( (yEnd-yBeg) )
-      text.push_back(": time span of a full year is exceeded");
+      if( (yEnd-yBeg) )
+        text.push_back(": time span of a full year is exceeded");
+    }
 
     // cut of period
     std::string s_sd0( sd[0].substr(4,4) );
@@ -4267,10 +4269,13 @@ QA_Exp::testPeriodCutRegular(std::vector<std::string> &sd,
   else if( frequency == "day" )
   {
      // 5 years or less
-     int yBeg=hdhC::string2Double(sd[0].substr(0,4));
-     int yEnd=hdhC::string2Double(sd[1].substr(0,4));
-     if( (yEnd-yBeg) > 5 )
-       text.push_back(": time span of 5 years is exceeded");
+     if( isBegin && isEnd )
+     {
+      int yBeg=hdhC::string2Double(sd[0].substr(0,4));
+      int yEnd=hdhC::string2Double(sd[1].substr(0,4));
+      if( (yEnd-yBeg) > 5 )
+        text.push_back(": time span of 5 years is exceeded");
+     }
 
      if( isBegin )
      {
@@ -4292,11 +4297,14 @@ QA_Exp::testPeriodCutRegular(std::vector<std::string> &sd,
   }
   else if( frequency == "mon" )
   {
-     // 10 years or less
-     int yBeg=hdhC::string2Double(sd[0].substr(0,4));
-     int yEnd=hdhC::string2Double(sd[1].substr(0,4));
-     if( (yEnd-yBeg) > 10 )
-       text.push_back(": time span of 10 years is exceeded");
+     if( isBegin && isEnd )
+     {
+      // 10 years or less
+      int yBeg=hdhC::string2Double(sd[0].substr(0,4));
+      int yEnd=hdhC::string2Double(sd[1].substr(0,4));
+      if( (yEnd-yBeg) > 10 )
+        text.push_back(": time span of 10 years is exceeded");
+     }
 
      if( isBegin )
      {
@@ -4318,11 +4326,14 @@ QA_Exp::testPeriodCutRegular(std::vector<std::string> &sd,
   }
   else if( frequency == "sem" )
   {
-     // 10 years or less
-     int yBeg=hdhC::string2Double(sd[0].substr(0,4));
-     int yEnd=hdhC::string2Double(sd[1].substr(0,4));
-     if( (yEnd-yBeg) > 11 )  // because of winter across two year
-       text.push_back(": time span of 10 years is exceeded");
+     if( isBegin && isEnd )
+     {
+      // 10 years or less
+      int yBeg=hdhC::string2Double(sd[0].substr(0,4));
+      int yEnd=hdhC::string2Double(sd[1].substr(0,4));
+      if( (yEnd-yBeg) > 11 )  // because of winter across two year
+        text.push_back(": time span of 10 years is exceeded");
+     }
 
      if( frequency == "sem" )
      {
