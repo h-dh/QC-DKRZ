@@ -3622,12 +3622,7 @@ operatePipes()
     nF_TP[${j}]=$PROJECT_TABLE
     nF_SUBPATH[${j}]=${subPath}
     nF_name[${j}]=${fBase[ix]}
-
-    if [ -e ${QA_RESULTS}/data/${subPath}/qa_${fBase[ix]}.nc ] ; then
-      nF_SEQ[${j}]=s
-    else
-      nF_SEQ[${j}]=f
-    fi
+    nF_SEQ[${j}]=f
 
     countActivePipes=$(( countActivePipes + 1 ))
   fi
@@ -3661,7 +3656,7 @@ operatePipes()
       p_nF=(${!metaV})
       CURR_EXP_NAME=${nF_EXP[nFcurr]}
       PROJECT_TABLE=${nF_TP[nFcurr]}
-      FILE_SEQUENCE=${nF_SEQ[nFcurr]}
+      FILE_SEQUENCE=${nF_SEQ[nFcurr]:-f}
 
       subPath=${nF_SUBPATH[nFcurr]}
 
@@ -3699,7 +3694,7 @@ operatePipes()
 
       if [ ${FILE_SEQUENCE} = 'f' ] ; then
         if [ ${#p_nF[*]} -eq 1 ] ; then
-          FILE_SEQUENCE=s # there is only a single file
+          FILE_SEQUENCE=x # there is only a single file
         else
           nF_SEQ[${nFcurr}]=s
         fi
