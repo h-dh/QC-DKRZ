@@ -59,7 +59,6 @@ class QA_Time
   /*! Close records for time only.*/
   bool   closeEntry(void);
   bool   entry(void);
-  bool   init(void);
 
   bool isFormattedDate;
   bool isMaxDateRange;
@@ -105,8 +104,8 @@ class QA_Time
   std::string currDateStr;
   std::string dateFormat ; // only for absolute dates as time values
   std::string maxDateRange;
-  std::string timeTable;
-  std::string tablePath;
+
+  struct hdhC::FileSplit timeTable;
 
   std::string fail;
   std::string notAvailable;
@@ -124,7 +123,7 @@ class QA_Time
                    std::vector<std::string> &);
   void   getTimeBoundsValues(double *pair, size_t rec, double offset=0.);
 
-  bool   init(InFile*, Annotation*, QA*);
+  bool   init(std::vector<std::string>& optStr);
 
   /*! Absolute date encoded by a format given in time:units */
   bool   initAbsoluteTime(std::string &units);
@@ -145,13 +144,8 @@ class QA_Time
   //! Parse the time_table file
   bool   parseTimeTable(size_t rec);
 
-  void   setInFile(InFile *p){ pIn=p;}
-  void   setNotes(Annotation *p){ notes=p;}
   void   setNextFlushBeg(size_t);
-
-  //! Set the path to and the name of the time table.
-  /*! When the name is supplied by option, then use the default.*/
-  void   setTable(std::string &p, std::string t="");
+  void   setParent(QA*);
 
   //! Synchronise the in-file and the qa-netCDF file.
   /*! Return value==true for isNoProgress.*/
