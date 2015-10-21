@@ -41,7 +41,7 @@ public:
   ReadLine();  // use ReadLine.setFilename() to open ifstream
 
 //! Construct and open file.
-  ReadLine( std::string filename );
+  ReadLine( std::string filename, bool testExistence=true );
 
 //! Construct and connect to an in-stream.
   ReadLine( std::ifstream & );
@@ -78,6 +78,9 @@ public:
 //! Return eof state from stream.
   bool
     eof(void);
+
+  void
+    feedStream(void);
 
 //! Find a string in the line.
 /*! The file is sequentielly searched forward line by line.
@@ -135,7 +138,7 @@ public:
 
 //! Is stream open?
   bool
-    isOpen(void) { return opened; }
+    isOpen(void) { return is_fopen; }
 
 //! Open file or stream.
 /*! Only if a filename was set previously, the file is opened.*/
@@ -189,7 +192,7 @@ public:
 
 //! Set filename.
   bool
-    setFilename( std::string="" );
+    setFilename( std::string="", bool testExistence=true );
 
 //! Set a range of line numbers for reading.
 /*! The range may be time or wavenumber. All lines outside
@@ -256,7 +259,7 @@ private:
   double rangeLast ;      // Ende des Spektrums ...
   int    rangeCol ;       // Spalte fuer range Bestimmung
   bool   isRange ;        // true: range wird abgefragt
-  bool   opened;
+  bool   is_fopen;
 
   bool isBreakpoint;
   bool isClearSurroundingSpaces;

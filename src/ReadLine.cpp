@@ -3,30 +3,29 @@
 ReadLine::ReadLine()
    : isExternalStream(false)
 {
-  FStream = new std::ifstream ;
-
   init();
+
+  FStream = new std::ifstream ;
 }
 
-ReadLine::ReadLine( std::string file )
+ReadLine::ReadLine( std::string file, bool testExistence )
    : isExternalStream(false)
 {
-  if( setFilename(file) )
+  init();
+
+  if( setFilename(file, testExistence) )
   {
     FStream = new std::ifstream ;
-    FStream->open( file.c_str());
-    opened=true;
-
-    init();
+    FStream->open( inFile.c_str());
+    feedStream();
   }
 }
 
 ReadLine::ReadLine( std::ifstream &is )
    : isExternalStream(true)
 {
-  FStream = &is ;
-
   init();
+  FStream = &is ;
 }
 
 ReadLine::~ReadLine()
@@ -61,23 +60,21 @@ ReadLine::init()
   isSkipWhiteLine = false;
   isRange = false ;
   isReadFloat=false;
+  is_fopen=false;
+
   stream=0;
-
-  if( FStream->is_open() )
-  {
-    save_sbuf_fin = FStream->rdbuf();
-
-    stream = new std::istream( 0 );
-    save_sbuf_stream = stream->rdbuf();
-    stream->rdbuf( save_sbuf_fin );
-  }
 }
 
 void
 ReadLine::close()
 {
   if( FStream->is_open() )
+  {
     FStream->close();
+    is_fopen=false;
+  }
+
+  return;
 }
 
 void
@@ -113,6 +110,23 @@ ReadLine::eof()
     isEof = stream->eof() ;
 
   return isEof ;
+}
+
+void
+ReadLine::feedStream()
+{
+  if( FStream->is_open() )
+  {
+    save_sbuf_fin = FStream->rdbuf();
+
+    stream = new std::istream( 0 );
+    save_sbuf_stream = stream->rdbuf();
+    stream->rdbuf( save_sbuf_fin );
+
+    is_fopen=true;
+  }
+
+  return;
 }
 
 bool
@@ -239,7 +253,7 @@ ReadLine::getValue( size_t index, double &v )
 bool
 ReadLine::open( void )
 {
-  if( inFile.size() > 0 )
+  if( inFile.size() )
   {
     FStream = new std::ifstream(inFile.c_str()) ;
 
@@ -248,23 +262,26 @@ ReadLine::open( void )
       stream = new std::istream( FStream->rdbuf() );
       isReadFloat=false;
       val.clear();
+      return (is_fopen=true);
     }
   }
   else
     stream = new std::istream( std::cin.rdbuf() );
 
   //method open():  returns true for failure
-  return ! FStream->is_open() ;
+  return (is_fopen=false) ;
 }
 
 bool
 ReadLine::open( std::string f )
 {
-  // setFilename() calls open(). Returns true for failure
+  if(is_fopen)
+    return false;
+
   if( setFilename(f) )
     return open() ;
 
-  return (opened=false) ;
+  return (is_fopen=false) ;
 }
 
 int
@@ -431,16 +448,19 @@ ReadLine::rewind( void )
 }
 
 bool
-ReadLine::setFilename( std::string f )
+ReadLine::setFilename( std::string f, bool testExistence )
 {
   if( f.size() > 0 )
   {
-    std::string testFile("/bin/bash -c \'test -f " + f + "\'") ;
+    if( testExistence )
+    {
+      std::string testFile("/bin/bash -c \'test -f " + f + "\'") ;
 
-    // see 'man system' for the return value, here we expect 0,
-    // if the file exists.
-    if( system( testFile.c_str()) )
-       return false;
+      // see 'man system' for the return value, here we expect 0,
+      // if the file exists.
+      if( system( testFile.c_str()) )
+        return false;
+    }
 
     inFile=f;
   }

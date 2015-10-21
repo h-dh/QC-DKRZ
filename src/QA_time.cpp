@@ -64,25 +64,18 @@ QA_Time::applyOptions(std::vector<std::string> &optStr)
           continue;
      }
 
-     if( split[0] == "tP"
-          || split[0] == "tablePath" || split[0] == "table_path")
-     {
-       if( split.size() == 2 )
-       {
-          tablePath=split[1] + "/" ;
-          continue;
-       }
-     }
-
      if( split[0] == "tTR"
          || split[0] == "tableTimeRanges"
             || split[0] == "table_time_ranges" )
      {
-          timeTable=split[1] ;
+          timeTable.setFile(split[1]) ;
           timeTableMode=UNDEF;
           continue;
      }
    }
+
+   if( timeTable.path.size() == 0 )
+      timeTable.setPath(pQA->tablePath);
 
    return;
 }
@@ -319,12 +312,8 @@ QA_Time::initTimeBounds(double offset)
 }
 
 bool
-QA_Time::init(InFile *in, Annotation *n, QA *q)
+QA_Time::init(std::vector<std::string>& optStr)
 {
-   pIn = in;
-   pQA = q;
-   notes = n;
-
    if( pIn->cF && pIn->cF->time_ix > -1 )
    {
      name = pIn->cF->timeName;
@@ -391,6 +380,9 @@ QA_Time::init(InFile *in, Annotation *n, QA *q)
      if( initRelativeTime(str) )
        return false;  // could  not read any time value
    }
+
+   applyOptions(optStr);
+   initTimeTable( pQA->qaExp.getFrequency() );
 
    return true;
 }
@@ -717,19 +709,15 @@ QA_Time::initTimeTable(std::string id_1st, std::string id_2nd)
       tt_id += id_2nd ;
    }
 
-   // is called from QA::init()
-   std::string str(tablePath);  // includes trailing '/' or is empty
-   str += timeTable ;
-
    // default for no table found: "id_1st,,any(regular)"
-   if( timeTable.size() == 0 )
+   if( !timeTable.is )
    {
      timeTableMode = REGULAR ;
      return ;
    }
 
    // This class provides the feature of putting back an entire line
-   ReadLine ifs(str);
+   ReadLine ifs(timeTable.getFile());
 
    if( ! ifs.isOpen() )
    {
@@ -742,6 +730,8 @@ QA_Time::initTimeTable(std::string id_1st, std::string id_2nd)
    splt_line.setSeparator(',');
    splt_line.enableEmptyItems();
 
+   std::string str;
+   
    do
    {
      // the loop cycles over the sub-tables
@@ -1096,14 +1086,13 @@ QA_Time::setNextFlushBeg(size_t r)
 }
 
 void
-QA_Time::setTable(std::string &p, std::string t)
+QA_Time::setParent(QA* p)
 {
-  tablePath=p;
+   pQA = p;
+   notes = p->notes;
+   pIn = p->pIn;
 
-  if( t.size() )
-    timeTable=t;
-
-  return;
+   return;
 }
 
 bool
