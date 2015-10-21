@@ -1155,7 +1155,6 @@ EOF
 
 setParameter()
 {
-  # Note: ADD_PROG_ARG would add additional options.
   # path to the netCDF file
   par_str="-p ${PROJECT_DATA}/${SUB_PATH}"
 
@@ -1443,9 +1442,6 @@ set_qa_par()
 
  test ${TABLE_RELAXED_DIM_CONSTRAINT:-f} = t && \
    par=${par}"${s}"tRDC
-
- test ${#TOTAL_PERIOD} -gt 0 && \
-   par=${par}"${s}"totP=${TOTAL_PERIOD}
 
  test ${USE_STRICT:-f} = t && \
    par=${par}"${s}"uS
