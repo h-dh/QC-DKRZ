@@ -371,29 +371,22 @@ callQaExecutor()
 
   # key-words with assignment for the executor
   keyW=( ${keyW[*]} \
-          ADD_PROG_ARG \
           APPLY_MAXIMUM_DATE_RANGE \
           ARITHMETIC_MEAN \
           CASE_INSENSITIVE_VARIABLE_NAME \
           CF \
-          CF_AREA_TYPES \
-          CF_CHECK_LIST \
           CF_FOLLOW_RECOMMENDATIONS \
           CF_NOTE \
           CF_NOTE_ALWAYS \
           CF_NOTE_LEVEL_LIMIT \
-          CF_STANDARD_NAMES \
-          CF_STD_REGION_NAMES \
           CHECK_MODE \
           CHECKSUM \
           CS_STAND_ALONE \
           CS_TABLE \
           DATA_IN_PRODUCTION \
           DISABLE_INF_NAN \
-          DISABLE_SLEEP \
           DISABLE_TIME_BOUNDS_CHECK \
           EMAIL_TO \
-          EXLUDE_FLAG_FROM_EMAILING \
           EXCLUDE_ATTRIBUTE \
           EXCLUDE_VARIABLE \
           EXP_LOGDIR \
@@ -407,7 +400,6 @@ callQaExecutor()
           FREQ_DIST \
           FREQUENCY \
           FREQUENCY_POSITION \
-          IS_FIRST_SUB_TEMP \
           HLEVD \
           HLEVD_DELETE_FILE \
           HLEVD_DETREND \
@@ -427,12 +419,8 @@ callQaExecutor()
           NOTE_ALWAYS \
           NOTE_LEVEL_LIMIT \
           OUTLIER_TEST \
-          PARENT_CHILD_CHECK_ONLY \
           PARENT_EXP_ID \
           PARENT_EXP_RIP \
-          PARENT_PATH_PREFIX \
-          PARENT_ENSEMBLE_MEMBER \
-          PARENT_VERSION \
           PING_ENABLED \
           POST_PROC \
           PRINT_GREP_MARK \
@@ -442,20 +430,17 @@ callQaExecutor()
           PROJECT_DATA \
           PROJECT_TABLE \
           QA \
-          QA_CHECK_LIST \
           QA_HOST \
           QA_NCFILE_FLAGS \
           QA_RESULTS \
           QA_PATH \
           REATTEMPT_LIMIT \
           REPLICATED_RECORD \
-          REQUIREMENTS_TABLE \
           SESSION \
           SESSION_LOGDIR \
           SHOW_CALL \
           SLEEP_TIME \
           TIME_LIMIT \
-          TOTAL_PERIOD \
           TRACKING_ID_ONLY \
           USE_STRICT \
           WORK_AT_LOW_LOAD \
@@ -2891,6 +2876,7 @@ initTables()
   fi
 
   mkdir -p ${TABLE_PATH}
+  export TABLE_PATH
 
   # Precedence of path search for tables:
   #
@@ -2988,7 +2974,7 @@ initT()
      fi
 
      eval ${table}=${value}
-     setKWL ${table}  # note: no value
+     export ${table}  # note: no value
    fi
 
    return
@@ -3015,7 +3001,7 @@ initTcat()
 
    catFiles $TABLE_PATH/$target ${fs[*]}
 
-   setKWL ${table}=$target  # note: no value
+   export ${table}=$target  # note: no value
 
    test ${fs[0]:0:4} = /tmp && \rm -f ${fs[0]}
 

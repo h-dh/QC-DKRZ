@@ -498,6 +498,13 @@ stripSurrounding(std::string &str, std::string key="" );
 void
 lowerCase(char &c);
 
+//! concatenate strings; num==0 means full size of the vector
+std::string
+unsplit(std::vector<std::string>&, std::string sep="", size_t num=0);
+
+std::string
+unsplit(Split&, std::string sep="", size_t num=0);
+
 //! Convert char to upper case
 void
 upperCase(char &c);

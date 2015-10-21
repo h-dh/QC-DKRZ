@@ -7,7 +7,15 @@
 #include "qa_data.h"
 #include "qa_time.h"
 #include "qa_PT.h"
-#include "qa_CORDEX.h"
+
+#if defined CORDEX
+  #include "qa_CORDEX.h"
+#elif defined CMIP5
+  #include "qa_CMIP5.h"
+#else
+  #include "qa_NONE.h"
+#endif
+
 
 //! Quality Control Program Unit for CORDEX.
 /*! All the QA considerations are covered by this class.\n
