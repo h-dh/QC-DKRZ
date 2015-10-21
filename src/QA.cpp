@@ -507,6 +507,9 @@ QA::init(void)
 
    notes->init();  // safe
 
+   qaExp.setParent(this);
+   qaTime.setParent(this);
+
    // default for the qaFile
    setFilename( pIn->file );
 
@@ -516,8 +519,11 @@ QA::init(void)
    // exclude user-defined data variables from any checking
    pIn->excludeVars();
 
+   if(! (isCheckTime && qaTime.init(optStr)) )
+     isCheckTime=false;
+
    // experiment specific obj: set parent, pass over options
-   qaExp.init(this, optStr);
+   qaExp.init(optStr);
 
    // check existance of any data at all
    if( (isCheckTime || isCheckData )
@@ -540,29 +546,6 @@ QA::init(void)
         }
       }
    }
-
-   if(qaTime.init(pIn, notes, this))
-   {
-     // init the time obj.
-     // note that freq is compared to the first column of the time table
-     qaTime.applyOptions(optStr);
-     qaTime.initTimeTable( qaExp.getFrequency() );
-
-     // note that this test is not part of the QA_Time class, because
-     // coding depends on projects
-     if( qaExp.testPeriod() )
-     {
-        std::string key("9_2");
-        if( notes->inq( key, qaTime.name) )
-        {
-          std::string capt("status is apparently in progress");
-
-          (void) notes->operate(capt) ;
-       }
-     }
-   }
-   else
-     isCheckTime=false;
 
    notes->setConstraintFreq( qaExp.getFrequency() );
 
@@ -725,9 +708,11 @@ QA::initGlobalAtts(InFile &in)
   nc->setGlobalAtt( "QA revision", revision);
   nc->setGlobalAtt( "contact", "hollweg@dkrz.de");
 
+#ifndef NONE
   std::string t("csv formatted ");
-  t += qaExp.varReqTable.basename + "xlsx" ;
+  t += qaExp.varReqTable.basename ;
   nc->setGlobalAtt( "standard_table", t);
+#endif
 
   nc->setGlobalAtt( "creation_date", today);
 
