@@ -62,24 +62,6 @@ QA_Exp::getFrequency()
   // get frequency from attribute (it is required)
   frequency = pQA->pIn->nc.getAttString("frequency") ;
 
-  if( frequency.size() )
-    return frequency;
-  else if( frequency_pos > -1 )
-  {
-    // try the frequency posdition within the filename
-    std::string f( pQA->pIn->file.basename );
-    Split splt;
-    splt.enableEmptyItems();
-    splt.setSeparator("_");
-
-    splt = f ;
-
-    // test the last two items for time type. If both are,
-    // then this would mean that they are separated by '_'.
-    if( static_cast<int>(splt.size()) > frequency_pos )
-      frequency = splt[ frequency_pos ] ;
-  }
-
   return frequency ;
 }
 
@@ -93,11 +75,8 @@ QA_Exp::getTableEntryID(std::string vName)
 }
 
 void
-QA_Exp::init(QA* p, std::vector<std::string>& optStr)
+QA_Exp::init(std::vector<std::string>& optStr)
 {
-   pQA = p;
-   notes = p->notes;
-
    // apply parsed command-line args
    applyOptions(optStr);
 
@@ -120,6 +99,7 @@ void
 QA_Exp::initDefaults(void)
 {
   isCaseInsensitiveVarName=false;
+  isUseStrict=false;
 
   bufferSize=1500;
 
@@ -198,6 +178,14 @@ QA_Exp::pushBackVarMeDa(Variable *var)
      vMD.qaData.init(pQA, var->name);
    }
 
+   return;
+}
+
+void
+QA_Exp::setParent(QA* p)
+{
+   pQA = p;
+   notes = p->notes;
    return;
 }
 

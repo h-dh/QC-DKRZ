@@ -1,5 +1,5 @@
-#ifndef _QA_H
-#define _QA_H
+#ifndef _QA_NONE_H
+#define _QA_NONE_H
 
 #include "hdhC.h"
 #include "date.h"
@@ -77,6 +77,9 @@ class VariableMetaData
   void forkAnnotation(Annotation *p);
   void setAnnotation(Annotation *p);
   void setParent(QA *p){pQA=p;}
+
+  //! Verify units % or 1 by data range
+  void verifyPercent(void);
 };
 
 class QA_Exp
@@ -100,7 +103,7 @@ class QA_Exp
   std::string
          getTableEntryID(std::string vName);
 
-  void   init(QA*, std::vector<std::string>&);
+  void   init(std::vector<std::string>&);
 
   //! Initialisation of flushing gathered results to netCDF file.
   /*! Parameter indicates the number of variables. */
@@ -116,6 +119,8 @@ class QA_Exp
   //! Check the path to the tables;
   void   inqTables(void){return;}
 
+  void   setParent(QA*);
+
   bool   testPeriod(void); //{return false;}
 
   std::vector<VariableMetaData> varMeDa;
@@ -129,7 +134,8 @@ class QA_Exp
   // init for test about times
   bool isCaseInsensitiveVarName;
   bool isClearBits;
-
+  bool isUseStrict;  // dummy
+  
   std::vector<std::string> excludedAttribute;
   std::vector<std::string> overruleAllFlagsOption;
 
@@ -141,7 +147,7 @@ class QA_Exp
   std::string frequency;
   std::string fVarname;
 
-  void        pushBackVarMeDa(Variable*);
+  void  pushBackVarMeDa(Variable*);
 };
 
 #endif
