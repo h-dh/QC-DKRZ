@@ -2286,6 +2286,40 @@ std::string stripSurrounding(std::string &str, std::string mode )
   return str.substr(p0, p1 - p0 +1 ) ;
 }
 
+std::string
+unsplit(std::vector<std::string>& vs, std::string sep, size_t num)
+{
+  std::string s;
+  if( ! num )
+    num = vs.size();
+
+  if( num )
+  {
+    s = vs[0];
+    for(size_t i=1 ; i < num; ++i )
+      s += sep + vs[i];
+  }
+
+  return s;
+}
+
+std::string
+unsplit(Split& x_s, std::string sep, size_t num)
+{
+  std::string s;
+  if( ! num )
+    num = x_s.size();
+
+  if( num )
+  {
+    s = x_s[0];
+    for(size_t i=1 ; i < num; ++i )
+      s += sep + x_s[i];
+  }
+
+  return s;
+}
+
 // ----------------------------------------------------
 
 void upperCase(char &c)
