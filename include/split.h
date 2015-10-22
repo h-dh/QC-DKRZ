@@ -117,7 +117,11 @@ class Split
   std::string
          getLine(void);
 
-  //! Is the i-th substring a number?
+  //! Get the originally input-string
+  std::string
+         getStr(void){ return str;}
+
+         //! Is the i-th substring a number?
   bool   isNumber( size_t i );
 
   bool   isValid(void){ return is_valid;}
@@ -199,7 +203,7 @@ private:
   std::string str;
   std::string empty;
   bool is_valid;
-  
+
   std::vector<std::string> sep;
   std::vector<std::string> ignore;
   std::vector<std::string> items;
