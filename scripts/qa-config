@@ -2239,6 +2239,9 @@ do
             setKWL PROGRESS_BAR=${OPTARG#*=}  # file to write to
           fi
 
+        elif [ "${UOPTARG%=*}" = SET_DEFAULT_PROJECT ] ; then
+          installArgs="${installArgs}--set_default_project=${OPTARG#*=},"
+
         elif [ "${UOPTARG:0:9}" = WORKSPACE ] ; then
           installArgs="${installArgs}QA_WORK=${OPTARG#*=},"
           setKWL QA_WORK=${OPTARG##*=}

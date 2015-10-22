@@ -497,6 +497,9 @@ do
           QA_WORK=${OPTARG##*=}
         elif [ "${UOPTARG}" = SRC ] ; then
           :  # for backward compatibilty
+        elif [ "${UOPTARG%=*}" = SET_DEFAULT_PROJECT ] ; then
+          DEF_PRJ=${OPTARG#*=}
+          continue
         elif [ "${UOPTARG:0:2}" = UP ] ; then
           isUpdateQA=t
         elif [ "${UOPTARG:0:9}" = WORKSPACE ] ; then
@@ -538,6 +541,12 @@ getSrcPath $zeroArg  # sets also CONDA_ENV
 getCurrPaths
 update
 
+test ${DEF_PRJ} && editConfigFile DEFAULT_PROJECT=${DEF_PRJ}
+
+if defPrj=$( grep DEFAULT_PROJECT ${CONFIG_FILE} 2> /dev/null ) ; then
+  defPrj=--set_default_project=${defPrj#*=}
+fi
+
 test ${CONDA_ENV} && exit  # miniconda built executables
 
 pcks="--zlib=$zlib --hdf5=$hdf5 --netcdf=$netcdf --udunits=$udunits"
@@ -552,5 +561,5 @@ else
 fi
 
 exec $QA_PATH/scripts/install.sh ${debug} --pack=${package} \
-${isContinueLog:+--continue_log} ${pcks} \
+${isContinueLog:+--continue_log} ${pcks} ${defPrj} \
 ${coll[*]}
