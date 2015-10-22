@@ -21,6 +21,39 @@ are performed. Annotations are supplied via the Annotation class
 linked by a pointer.
 */
 
+struct DRS_Filename
+{
+  DRS_Filename(QA*, std::vector<std::string>&);
+
+  void   applyOptions(std::vector<std::string>&);
+  void   checkFilename(void);
+  void   checkFilenameEncoding(void);
+  void   checkMIP_tableName(Split& fileName);
+
+  std::string
+         getEnsembleMember(void);
+
+  void   run(void);
+
+    //! Test the time-period of the input file.
+  /*! If the end-date in the filename and the last time value
+      match within the uncertainty of 0.75% of the time-step, then
+      the file is assumed to be completely qa-processed.
+      Syntax of date ranges as given in CORDEX  DRS Syntax.*/
+  bool   testPeriod(void);
+  bool   testPeriodAlignment(std::vector<std::string> &sd, Date** pDates, bool b[])  ;
+  void   testPeriodCut(std::vector<std::string> &sd) ;
+  bool   testPeriodCut_CMOR_isGOD(std::vector<std::string> &sd, Date**);
+  void   testPeriodCutRegular(std::vector<std::string> &sd,
+              std::vector<std::string>& text);
+  bool   testPeriodFormat(std::vector<std::string> &sd) ;
+
+  bool enabledCompletenessCheck;
+
+  Annotation* notes;
+  QA*         pQA;
+};
+
 //! Struct containing dimensional properties to cross-check with table information.
 struct DimensionMetaData
 {
@@ -73,13 +106,14 @@ class VariableMetaData
   QA*         pQA ;
   QA_Data     qaData;
 
-  //! Verify units % or 1 by data range
-  void verifyPercent(void);
-
   int  finally(int errCode=0);
   void forkAnnotation(Annotation *p);
   void setAnnotation(Annotation *p);
-  void setParent(QA *p){pQA=p;}
+  void setParent(QA* p){pQA=p;}
+
+  //! Verify units % or 1 by data range
+  void verifyPercent(void);
+
 };
 
 class QA_Exp
@@ -174,10 +208,6 @@ public:
             struct DimensionMetaData& nc,
             struct DimensionMetaData& tbl);
 
-  //! Match filename components and global attributes of the file.
-  void   checkFilename(std::vector<std::string>&,
-            std::string& stdSubTables_table);
-
   //! Checks meta-data
   void   checkMetaData(InFile& ) ;
 
@@ -252,11 +282,11 @@ public:
 
   //! Get the MIP table name from the global attributes
   std::string
-         getTableSheet(std::vector<std::string>&);
+         getTableSheet(void);
 
-  //! get and check MIP table name
-  void
-         getTableSheet(VariableMetaData& );
+  //! get and check MIP table name; s would indicate a name to be tried
+  std::string
+         getMIP_tableName(std::string s="");
 
 //  std::string
 //         getVarReqTable(void){ return varReqTable.file ; }
@@ -264,7 +294,7 @@ public:
 //  std::string
 //         getTablePath(void){ return tablePath; }
 
-  void   init(QA*, std::vector<std::string>&);
+  void   init(std::vector<std::string>&);
 
   //! Check the path to the tables;
   bool   inqTables(void);
@@ -291,21 +321,10 @@ public:
   //! Connect this with the object to be checked
 //  void   setInFilePointer(InFile *p) { pIn = p; }
 
+  void setParent(QA*);
+
   //! Set properties of variable from netcdf file
   void   setVarMetaData(VariableMetaData& );
-
-  //! Test the time-stamp of the input file.
-  /*! If the end-date in the filename and the last time value
-      match within the uncertainty of 0.75% of the time-step, then
-      the file is assumed to be completely qa-processed.
-      Syntax of date ranges as given in CMIP% DRS Syntax.*/
-  bool   testPeriod(void);
-  bool   testPeriodAlignment(std::vector<std::string>& sd, Date** pDates, bool b[])  ;
-  void   testPeriodCut(std::vector<std::string>& sd) ;
-  bool   testPeriodCut_CMOR_isGOD(std::vector<std::string>& sd, Date**);
-  void   testPeriodCutRegular(std::vector<std::string>& sd,
-              std::vector<std::string>& text);
-  bool   testPeriodFormat(std::vector<std::string>& sd) ;
 
   //! Name of the netCDF file with results of the quality control
   struct hdhC::FileSplit varReqTable;
@@ -322,7 +341,6 @@ public:
   size_t bufferSize;
 
   // init for test about times
-  bool enabledCompletenessCheck;
   bool isUseStrict;
   bool isCaseInsensitiveVarName;
   bool isCheckParentExpID;
@@ -336,10 +354,11 @@ public:
   std::vector<std::string> fillValueOption;
 
   std::string cfStndNames;
-  std::string MIP_tableName;
+  std::string currMIP_tableName;
   std::string frequency;
   std::string parentExpID;
   std::string parentExpRIP;
+  static std::vector<std::string> MIP_tableNames;
 
   std::string experiment_id;
 
@@ -348,9 +367,19 @@ public:
   std::string getSubjectsIntroDim(VariableMetaData& vMD,
                    struct DimensionMetaData& nc_entry,
                    struct DimensionMetaData& tbl_entry);
+  std::string getVarnameFromFilename(void);
   std::string getVarnameFromFilename(std::string str);
   bool        not_equal(double x1, double x2, double epsilon);
   void        pushBackVarMeDa(Variable*);
 };
 
+const char* CMIP5_MIPS[] = {
+  "fx",       "Oyr",      "Oclim",    "Amon",      "Omon",     "Lmon",
+  "LImon",    "OImon",    "aero",     "day",       "6hrLev",    "6hrPlev",
+  "3hr",      "cfMon",    "cfDay",    "cf3hr",  "cfSites"
+};
+
+std::vector<std::string> QA_Exp::MIP_tableNames(CMIP5_MIPS, CMIP5_MIPS + 17);
+
 #endif
+
