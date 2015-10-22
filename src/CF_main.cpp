@@ -13,7 +13,6 @@
 
 #include "BraceOP.cpp"
 #include "Date.cpp"
-#include "FreqDist.cpp"
 #include "GetOpt_hdh.cpp"
 #include "NcAPI.cpp"
 #include "ReadLine.cpp"
@@ -22,19 +21,10 @@
 
 #include "Variable.cpp"
 #include "Base.cpp"
-#include "CellStatistics.cpp"
 #include "CF.cpp"
-#include "FD_interface.cpp"
 #include "Annotation.cpp"
 #include "InFile.cpp"
-#include "Oper.cpp"
-#include "OutFile.cpp"
 #include "Parse.cpp"
-#include "QA_data.cpp"
-#include "QA_time.cpp"
-#include "QA_PT.cpp"
-#include "QA_NONE.cpp"
-#include "TimeControl.cpp"
 
 // ------------------
 

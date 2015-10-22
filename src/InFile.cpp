@@ -687,6 +687,8 @@ InFile::linkObject(IObj *p)
     notes = dynamic_cast<Annotation*>(p) ;
   else if( className ==  "CF" )
     cF = dynamic_cast<CF*>(p) ;
+
+#ifndef CF_MACRO
   else if( className == "FD_interface" )
     fDI = dynamic_cast<FD_interface*>(p) ;
   else if( className ==  "IN" )
@@ -699,6 +701,7 @@ InFile::linkObject(IObj *p)
     qA = dynamic_cast<QA*>(p) ;
   else if( className == "TC" )
     tC = dynamic_cast<TimeControl*>(p) ;
+#endif
 
   return;
 }

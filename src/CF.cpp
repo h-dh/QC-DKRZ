@@ -2428,18 +2428,8 @@ CF::linkObject(IObj *p)
     notes = dynamic_cast<Annotation*>(p) ;
   else if( className ==  "CF" )
     cF = dynamic_cast<CF*>(p) ;
-  else if( className == "FD_interface" )
-    fDI = dynamic_cast<FD_interface*>(p) ;
   else if( className ==  "IN" )
     pIn = dynamic_cast<InFile*>(p) ;
-  else if( className == "Oper" )
-    pOper = dynamic_cast<Oper*>(p) ;
-  else if( className == "Out" )
-    pOut = dynamic_cast<OutFile*>(p) ;
-  else if( className == "QA" )
-    qA = dynamic_cast<QA*>(p) ;
-  else if( className == "TC" )
-    tC = dynamic_cast<TimeControl*>(p) ;
 
   return;
 }
