@@ -843,6 +843,8 @@ do
            isLink=t
         elif [ "${UOPTARG%%=*}" = PACKAGE ] ; then
            package=${OPTARG#=*}
+        elif [ "${UOPTARG%=*}" = SET_DEFAULT_PROJECT ] ; then
+           defaultProject=${OPTARG#*=}
         elif [ "${UOPTARG%=*}" = SHOW-INST ] ; then
            isShowInst=t
            test "${UOPTARG#*=}" = FULL && isShowInstFull

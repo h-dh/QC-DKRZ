@@ -1,5 +1,829 @@
 //#include "qa.h"
 
+DRS_Filename::DRS_Filename(QA* p, std::vector<std::string>& optStr)
+{
+  pQA = p;
+  notes = pQA->notes;
+
+  enabledCompletenessCheck=true;
+
+  applyOptions(optStr);
+}
+
+void
+DRS_Filename::applyOptions(std::vector<std::string>& optStr)
+{
+  for( size_t i=0 ; i < optStr.size() ; ++i)
+  {
+     Split split(optStr[i], "=");
+
+     if( split[0] == "dIP"
+          || split[0] == "dataInProduction"
+              || split[0] == "data_in_production" )
+     {
+        // effects completeness test in testPeriod()
+        enabledCompletenessCheck=false;
+        continue;
+     }
+   }
+
+   return;
+}
+
+void
+DRS_Filename::checkFilename(void)
+{
+  checkFilenameEncoding();
+
+  if( testPeriod() && pQA->qaExp.getFrequency() != "fx" )
+  {
+    // no period in the filename
+     std::string key("1_13");
+
+     if( notes->inq( key, pQA->fileStr) )
+     {
+       std::string capt("filename requires a period") ;
+
+       (void) notes->operate(capt) ;
+       notes->setCheckMetaStr(pQA->fail);
+     }
+  }
+
+  return;
+}
+
+void
+DRS_Filename::checkFilenameEncoding(void)
+{
+  // The items of the filename must match corresponding global attributes.
+  // A filename is constructed by global attributes.
+
+  bool isGridSpec = false;
+  if( pQA->pIn->file.basename.substr(0,9) == "gridspec_" )
+    isGridSpec=true;
+
+  Split x_filename;
+  x_filename.setSeparator("_");
+  x_filename.enableEmptyItems();
+  x_filename = pQA->pIn->file.basename ;
+
+  std::vector<std::string> vs_gaFilename ;
+  vs_gaFilename.push_back(x_filename[0]);  // first item
+
+  size_t g_ix = pQA->pIn->varSz ;  // index to the global atts
+  int ix;
+
+  if( isGridSpec )
+  {
+    if( (ix=pQA->pIn->variable[g_ix].getAttIndex("modeling_realm")) == -1 )
+      vs_gaFilename.push_back("");
+    else
+      vs_gaFilename.push_back(pQA->pIn->variable[g_ix].attValue[ix][0]);
+  }
+  else
+  {
+    checkMIP_tableName(x_filename) ;
+    vs_gaFilename.push_back(pQA->qaExp.currMIP_tableName) ;  // could be empty or from filename
+
+    vs_gaFilename.push_back( pQA->qaExp.getFrequency() );
+    if( pQA->qaExp.getFrequency() != "fx" )
+    {
+      std::string key("1_5b");
+      if( notes->inq( key, pQA->fileStr) )
+      {
+        std::string capt("a gridspec file must have frequency fx, found ");
+        capt += pQA->qaExp.getFrequency() ;
+
+        (void) notes->operate(capt) ;
+        notes->setCheckMetaStr(pQA->fail);
+      }
+    }
+  }
+
+  if( (ix=pQA->pIn->variable[g_ix].getAttIndex("model_id")) == -1 )
+    vs_gaFilename.push_back("");
+  else
+    vs_gaFilename.push_back(pQA->pIn->variable[g_ix].attValue[ix][0]);
+
+  if( (ix=pQA->pIn->variable[g_ix].getAttIndex("experiment_id")) == -1 )
+    vs_gaFilename.push_back("");
+  else
+  {
+    // needed later
+    pQA->qaExp.experiment_id = pQA->pIn->variable[g_ix].attValue[ix][0];
+    vs_gaFilename.push_back(pQA->qaExp.experiment_id);
+  }
+
+  vs_gaFilename.push_back( getEnsembleMember() );
+
+  if( isGridSpec && vs_gaFilename.back() != "r0i0p0" )
+  {
+    std::string key("1_5a");
+    if( notes->inq( key, pQA->fileStr) )
+    {
+      std::string capt("a gridspec file must have ensemble member r0i0p9, found ");
+      capt += vs_gaFilename.back() ;
+
+      (void) notes->operate(capt) ;
+      notes->setCheckMetaStr(pQA->fail);
+    }
+  }
+
+  // CMIP5 filename encoding
+  // <variable_name>_<varReqTableSheetSubs>_<model>_<experiment>_<ensemble_member>
+  bool isFault=false;
+  bool isSwapped=false;
+  bool isSyntax=false;
+
+  size_t i;
+  for(i=0 ; i < vs_gaFilename.size() ; ++i )
+  {
+    if( ! (i < x_filename.size()) )
+    {
+      isSyntax=true ;
+      break;
+    }
+
+    // check for the same position in the filename
+    if( vs_gaFilename[i] == x_filename[i] )
+      continue;
+
+    // no further checks possible because of a missing attribute
+    if( vs_gaFilename[i].size() == 0 )
+      break;
+
+    // swapped items?
+    for( size_t j=0 ; j < x_filename.size() ; ++j )
+    {
+      if( x_filename[j] == vs_gaFilename[i] )
+      {
+        isSwapped=true;
+        break;
+      }
+    }
+
+    if( isSwapped )
+      break;
+
+    isFault=true;
+    break;
+  }
+
+  if( isSyntax )
+  {
+    std::string key("1_4a");
+    if( notes->inq( key, pQA->fileStr) )
+    {
+      std::string capt;
+      if( isGridSpec )
+        capt = "gridspec ";
+      capt += "filename structure with a syntax fault, found" ;
+      capt += hdhC::unsplit(x_filename, "_", i) ;
+      capt += "expected " + hdhC::unsplit(vs_gaFilename, "_", i) ;
+
+      (void) notes->operate(capt) ;
+      notes->setCheckMetaStr(pQA->fail);
+    }
+  }
+
+  if( isSwapped )
+  {
+    std::string key("1_4c");
+    if( notes->inq( key, pQA->fileStr) )
+    {
+      std::string capt;
+      if( isGridSpec )
+        capt = "gridspec ";
+      capt += "filename with swapped items, found ";
+      capt += hdhC::unsplit(x_filename, "_", i) ;
+      capt += "expected " + hdhC::unsplit(vs_gaFilename, "_", i) ;
+
+      (void) notes->operate(capt) ;
+      notes->setCheckMetaStr(pQA->fail);
+    }
+  }
+
+  if( isFault )
+  {
+    std::string key("1_4b");
+    if( notes->inq( key, pQA->fileStr))
+    {
+      std::string capt;
+      if( isGridSpec )
+        capt = "gridspec ";
+      capt += "filename does not match file attributes, found" ;
+      capt += hdhC::unsplit(x_filename, "_", i) ;
+      capt += "expected " + hdhC::unsplit(vs_gaFilename, "_", i) ;
+
+      (void) notes->operate(capt) ;
+      notes->setCheckMetaStr(pQA->fail);
+    }
+  }
+
+  return;
+}
+
+void
+DRS_Filename::checkMIP_tableName(Split& x_filename)
+{
+  // Note: filename:= name_CMOR-MIP-table_... .nc
+  if( x_filename.size() < 2 )
+    return ;  //corrupt filename
+
+  // table sheet name from global attributes has been checked
+
+  // compare file entry to the one in global header attribute table_id
+  if( x_filename[1] != pQA->qaExp.currMIP_tableName )
+  {
+    std::string key("46_9");
+
+    if( notes->inq( key, "MIP") )
+    {
+      std::string capt("Ambiguous MIP table names, found ") ;
+      capt += hdhC::tf_val("MIP-table(file)", x_filename[1]) ;
+      capt += "vs. global " + hdhC::tf_att("table_id",pQA->qaExp.currMIP_tableName);
+
+      (void) notes->operate(capt) ;
+      pQA->setExit( notes->getExitValue() ) ;
+    }
+
+    // try the filename's MIP table name
+    if( pQA->qaExp.currMIP_tableName.size() == 0 )
+      pQA->qaExp.currMIP_tableName = pQA->qaExp.getMIP_tableName(x_filename[1]) ;
+  }
+
+  return ;
+}
+
+std::string
+DRS_Filename::getEnsembleMember(void)
+{
+  // ensemble member
+  int ix;
+  size_t g_ix = pQA->pIn->varSz ;  // index to the global atts
+
+  std::string ga_ensmb("r");
+  if( (ix = pQA->pIn->variable[g_ix].getAttIndex("realization")) == -1 )
+    ga_ensmb += pQA->pIn->variable[g_ix].attValue[ix][0] ;
+
+  ga_ensmb += 'i' ;
+  if( (ix = pQA->pIn->variable[g_ix].getAttIndex("initialization_method")) == -1 )
+    ga_ensmb += pQA->pIn->variable[g_ix].attValue[ix][0] ;
+
+  ga_ensmb += 'p' ;
+  if( (ix = pQA->pIn->variable[g_ix].getAttIndex("physics_version")) == -1 )
+    ga_ensmb += pQA->pIn->variable[g_ix].attValue[ix][0] ;
+
+  return ga_ensmb;
+}
+
+void
+DRS_Filename::run(void)
+{
+   // compare filename to netCDF global attributes
+   checkFilename();
+
+   return;
+}
+
+bool
+DRS_Filename::testPeriod(void)
+{
+  // return true, if a file is supposed to be not complete.
+  // return false, a) if there is no period in the filename
+  //               b) if an error was found
+  //               c) times of period and file match
+
+  // The time value given in the first/last record is assumed to be
+  // in the range of the period of the file, if there is any.
+
+  // If the first/last date in the filename period and the
+  // first/last time value match within the uncertainty of the
+  // time-step, then the file is complete.
+  // If the end of the period exceeds the time data figure,
+  // then the nc-file is considered to be not completely processed.
+
+  // Does the filename has a trailing date range?
+  // Strip off the extension.
+  Split x_f( pQA->pIn->file.getBasename(), "_" );
+
+  std::vector<std::string> sd;
+  sd.push_back( "" );
+  sd.push_back( "" );
+
+  std::string f;
+
+  // any geographic subset?
+  int f_sz=x_f.size();
+  if( x_f[f_sz -1].substr(0,2) == "g-" )
+    f = hdhC::unsplit(x_f, "_", f_sz-1) ;
+
+  // if designator '-clim' is appended, then remove it
+  f_sz = static_cast<int>(f.size()) -5 ;
+  if( f_sz > 5 && f.substr(f_sz) == "-clim" )
+    f=f.substr(0, f_sz);
+  else if( f_sz > 5 && f.substr(f_sz) == "-ave" )
+    f=f.substr(0, f_sz);
+
+  size_t p0, p1;
+  if( (p0=f.rfind('_')) == std::string::npos )
+    return false ;  // the filename is composed totally wrong
+
+  if( (p1=f.find('-', p0)) == std::string::npos )
+    return true ;  // no period in the filename
+
+  sd[1]=f.substr(p1+1) ;
+  if( ! hdhC::isDigit(sd[1]) )
+    return true ;  // no pure digits behind '-'
+
+  sd[0]=f.substr(p0+1, p1-p0-1) ;
+  if( ! hdhC::isDigit(sd[0]) )
+    return true ;  // no pure 1st date found
+
+  // now we have found two candidates for a date
+  // compose ISO-8601 strings
+  std::vector<Date> period;
+  pQA->qaTime.getDRSformattedDateRange(period, sd);
+
+  // necessary for validity (not sufficient)
+  if( period[0] > period[1] )
+  {
+     std::string key("42_4");
+     if( notes->inq( key, pQA->fileStr) )
+     {
+       std::string capt("invalid range for period in the filename, found ");
+       capt += hdhC::tf_val(sd[0] + "-" + sd[1]);
+
+       (void) notes->operate(capt) ;
+       notes->setCheckMetaStr( pQA->fail );
+     }
+
+     return false;
+  }
+
+  Date* pDates[6];
+  pDates[0] = &period[0];  // StartTime in the filename
+  pDates[1] = &period[1];  // EndTime in the filename
+
+  // index 2: date of first time value
+  // index 3: date of last  time value
+  // index 4: date of first time-bound value, if available; else 0
+  // index 5: date of last  time-bound value, if available; else 0
+
+  for( size_t i=2 ; i < 6 ; ++i )
+    pDates[i] = 0 ;
+
+  if( pQA->qaTime.isTimeBounds)
+  {
+    pDates[4] = new Date(pQA->qaTime.refDate);
+    if( pQA->qaTime.firstTimeBoundsValue[0] != 0 )
+      pDates[4]->addTime(pQA->qaTime.firstTimeBoundsValue[0]);
+
+    pDates[5] = new Date(pQA->qaTime.refDate);
+    if( pQA->qaTime.lastTimeBoundsValue[1] != 0 )
+      pDates[5]->addTime(pQA->qaTime.lastTimeBoundsValue[1]);
+
+    double db_centre=(pQA->qaTime.firstTimeBoundsValue[0]
+                        + pQA->qaTime.firstTimeBoundsValue[1])/2. ;
+    if( ! hdhC::compare(db_centre, '=', pQA->qaTime.firstTimeValue) )
+    {
+      std::string key("16_11");
+      if( notes->inq( key, pQA->qaExp.getVarnameFromFilename()) )
+      {
+        std::string capt("Range of variable time_bnds is not centred around variable time.");
+
+        (void) notes->operate(capt) ;
+        notes->setCheckMetaStr( pQA->fail );
+      }
+    }
+  }
+  else
+  {
+    if( pQA->qaTime.time_ix > -1 &&
+        ! pQA->pIn->variable[pQA->qaTime.time_ix].isInstant )
+    {
+      std::string key("16_12");
+      if( notes->inq( key, pQA->qaExp.getVarnameFromFilename()) )
+      {
+        std::string capt("Variable time_bnds is missing");
+
+        (void) notes->operate(capt) ;
+        notes->setCheckMetaStr(pQA->fail);
+      }
+    }
+  }
+
+  pDates[2] = new Date(pQA->qaTime.refDate);
+  if( pQA->qaTime.firstTimeValue != 0. )
+    pDates[2]->addTime(pQA->qaTime.firstTimeValue);
+
+  pDates[3] = new Date(pQA->qaTime.refDate);
+  if( pQA->qaTime.lastTimeValue != 0. )
+    pDates[3]->addTime(pQA->qaTime.lastTimeValue);
+
+  // alignment of of contained dates and those in the filename
+  // the booleanx indicate faults
+//  bool is_t_beg = is_t_end = is_tb_beg = is_tb_end = false;
+  bool isFault[4];
+  for(size_t i=0 ; i < 4 ; ++i )
+    isFault[i]=false;
+
+  // time value: left-side
+  Date myDate( *pDates[2] );
+  myDate.addTime(-pQA->qaTime.refTimeStep);
+  isFault[0] = myDate == *pDates[0] ;
+
+  // time value: right-side
+  myDate = *pDates[3] ;
+  myDate.addTime(pQA->qaTime.refTimeStep);
+  isFault[1] = myDate ==*pDates[1] ;
+
+  if(pQA->qaTime.isTimeBounds)
+  {
+    // time_bounds: left-side
+    myDate = *pDates[4] ;
+    myDate.addTime(pQA->qaTime.refTimeStep);
+    isFault[2] = myDate == *pDates[0] ;
+
+    // time_bounds: right-side
+    myDate = *pDates[5] ;
+    myDate.addTime(-pQA->qaTime.refTimeStep);
+    isFault[3] = myDate == *pDates[1] ;
+  }
+
+  // the annotations
+  if( testPeriodAlignment(sd, pDates, isFault) )
+  {
+    std::string key("16_12");
+    std::string capt("period in the filename: ") ;
+    capt +="note that StartTime-EndTime is compliant with CMOR peculiarity";
+
+    if( notes->inq( key, pQA->qaExp.getVarnameFromFilename()) )
+    {
+      (void) notes->operate(capt) ;
+
+      notes->setCheckMetaStr( pQA->fail );
+    }
+  }
+  else if( testPeriodFormat(sd) ) // format of period dates.
+  {
+    // period requires a cut specific to the various frequencies.
+    std::vector<std::string> text ;
+    testPeriodCutRegular(sd, text) ;
+
+    if( text.size() )
+    {
+      std::string key("16_6");
+      std::string capt("period in the filename") ;
+
+      for( size_t i=0 ; i < text.size() ; ++i )
+      {
+        if( notes->inq( key, pQA->qaExp.getVarnameFromFilename()) )
+        {
+          (void) notes->operate(capt + text[i]) ;
+
+          notes->setCheckMetaStr( pQA->fail );
+        }
+      }
+    }
+  }
+
+  // note that indices 0 and 1 belong to a vector
+  for(size_t i=2 ; i < 6 ; ++i )
+    if( pDates[i] )
+      delete pDates[i];
+
+  // complete
+  return false;
+}
+
+bool
+DRS_Filename::testPeriodAlignment(std::vector<std::string>& sd, Date** pDates, bool b[])
+{
+  // some pecularities of CMOR, which will probably not be modified
+  // for a behaviour as expected.
+  // The CORDEX Archive Design doc states in Appendix C:
+  // "..., for using CMOR, the StartTime-EndTime element [in the filename]
+  //  is based on the first and last time value included in the file ..."
+
+  // if a test for a CMOR setting fails, testing goes on
+  if( *pDates[0] == *pDates[2] && *pDates[1] == *pDates[3] )
+      return true;
+
+  for(size_t i=0 ; i < 2 ; ++i)
+  {
+    // i == 0: left; 1: right
+
+    // skip for the mode of checking during production
+    if( i && !pQA->isFileComplete )
+       continue;
+
+    if( !( !b[0+i] || !b[2+i] ) )
+    {
+      std::string key("16_2");
+      if( notes->inq( key, pQA->fileStr) )
+      {
+        std::string token;
+
+        std::string capt("Misaligned ");
+        if( i == 0 )
+          capt += "begin" ;
+        else
+          capt += "end" ;
+        capt += " of periods in filename and ";
+
+        size_t ix;
+
+        if( pQA->qaTime.isTimeBounds )
+        {
+          capt="time bounds: ";
+          ix = 4 + i ;
+        }
+        else
+        {
+          capt="time values: ";
+          ix = 2 + i ;
+        }
+
+        capt += sd[i] ;
+        capt += " vs. " ;
+        capt += pDates[ix]->str();
+
+        (void) notes->operate(capt) ;
+        notes->setCheckMetaStr( pQA->fail );
+      }
+    }
+  }
+
+  return false;
+}
+
+void
+DRS_Filename::testPeriodCutRegular(std::vector<std::string>& sd,
+                  std::vector<std::string>& text)
+{
+  // Partitioning of files check are equivalent.
+  // Note that the format was tested before.
+  // Note that desplaced start/end points, e.g. '02' for monthly data, would
+  // lead to a wrong cut.
+
+  bool isInstant = ! pQA->qaTime.isTimeBounds ;
+
+  bool isBegin = pQA->fileSequenceState == 'l' || pQA->fileSequenceState == 's' ;
+  bool isEnd   = pQA->fileSequenceState == 'f' || pQA->fileSequenceState == 's' ;
+
+  std::string frequency(pQA->qaExp.getFrequency());
+
+  // period length per file as recommended?
+  if( frequency == "3hr" || frequency == "6hr" )
+  {
+    // same year.
+    bool isA = sd[1].substr(4,4) == "1231";
+    bool isB = sd[1].substr(4,4) == "0101" && sd[1].substr(8,2) == "00" ;
+
+    if( isBegin && isEnd )
+    {
+      // should be the same year
+      int yBeg=hdhC::string2Double( sd[0].substr(0,4) );
+      int yEnd=hdhC::string2Double( sd[1].substr(0,4) );
+      if( isB )  // begin of a next year
+        --yEnd;
+
+      if( (yEnd-yBeg) )
+        text.push_back(": time span of a full year is exceeded");
+    }
+
+    // cut of period
+    std::string s_sd0( sd[0].substr(4,4) );
+    std::string s_sd1( sd[1].substr(4,4) );
+
+    std::string s_hr0( sd[0].substr(8,2) );
+    std::string s_hr1( sd[1].substr(8,2) );
+
+    std::string t_found(", found ");
+    std::string t_hr0("00");
+    std::string t_hr1;
+
+    if( frequency == "3hr" )
+      t_hr1 = "21";
+    else
+      t_hr1 = "18";
+
+    if( isBegin )
+    {
+      if( s_sd0 != "0101" )
+        text.push_back( ": not the begin of the year, found " + s_sd0);
+
+      if( isInstant )
+      {
+        if( s_hr0 != t_hr0 )
+        {
+          text.push_back(" (instantaneous + 1st date): expected hr=") ;
+          text.back() += t_hr0 + t_found + s_hr0 ;
+        }
+      }
+      else
+      {
+        if( sd[0].substr(8,2) != t_hr0 )
+        {
+          text.push_back(" (average + 1st date): expected hr=");
+          text.back() += t_hr0 + t_found + s_hr0 ;
+        }
+      }
+    }
+
+    if( isEnd )
+    {
+      if( !(isA || isB)  )
+        text.push_back( ": not the end of the year, found " + s_sd1);
+
+      if( isInstant )
+      {
+        if( s_hr1 != t_hr1 )
+        {
+          text.push_back(" (instantaneous + 2nd date): expected hr=");
+          text.back() += t_hr1 + t_found + s_hr1 ;
+        }
+      }
+      else
+      {
+        if( isA && s_hr1 != "24" )
+        {
+          text.push_back(" (averaged + 1st date): expected hr=");
+          text.back() += t_hr1 + t_found + s_hr1 ;
+        }
+        else if( isB && s_hr1 != "00" )
+        {
+          text.push_back(" (averaged + 2nd date): expected hr=");
+          text.back() += t_hr1 + t_found + s_hr1 ;
+        }
+      }
+    }
+  }
+
+  else if( frequency == "day" )
+  {
+     if( isBegin && isEnd )
+     {
+      // 5 years or less
+      int yBeg=hdhC::string2Double(sd[0].substr(0,4));
+      int yEnd=hdhC::string2Double(sd[1].substr(0,4));
+      if( (yEnd-yBeg) > 5 )
+        text.push_back(": time span of 5 years is exceeded");
+     }
+
+     if( isBegin )
+     {
+       if( ! (sd[0][3] == '1' || sd[0][3] == '6') )
+         text.push_back(": StartTime should begin with YYY1 or YYY6");
+
+       if( sd[0].substr(4,4) != "0101" )
+         text.push_back(": StartTime should be YYYY0101");
+     }
+
+     if( isEnd )
+     {
+       if( ! (sd[1][3] == '0' || sd[1][3] == '5') )
+         text.push_back(": EndTime should begin with YYY0 or YYY5");
+
+       if( sd[1].substr(4,4) != "1231" )
+         text.push_back(": EndTime should be YYYY1231");
+     }
+  }
+  else if( frequency == "mon" )
+  {
+     if( isBegin && isEnd )
+     {
+      // 10 years or less
+      int yBeg=hdhC::string2Double(sd[0].substr(0,4));
+      int yEnd=hdhC::string2Double(sd[1].substr(0,4));
+      if( (yEnd-yBeg) > 10 )
+        text.push_back(": time span of 10 years is exceeded");
+     }
+
+     if( isBegin )
+     {
+       if( sd[0][3] != '1')
+         text.push_back(": StartTime should begin with YYY1");
+
+       if( sd[0].substr(4,4) != "01" )
+         text.push_back(": StartTime should be YYYY01");
+     }
+
+     if( isEnd )
+     {
+       if( ! (sd[1][3] == '0' || sd[1][3] == '5') )
+         text.push_back(": EndTime should begin with YYY0");
+
+       if( sd[1].substr(4,4) != "12" )
+         text.push_back(": EndTime should be YYYY1231");
+     }
+  }
+  else if( frequency == "sem" )
+  {
+     if( isBegin && isEnd )
+     {
+      // 10 years or less
+      int yBeg=hdhC::string2Double(sd[0].substr(0,4));
+      int yEnd=hdhC::string2Double(sd[1].substr(0,4));
+      if( (yEnd-yBeg) > 11 )  // because of winter across two year
+        text.push_back(": time span of 10 years is exceeded");
+     }
+
+     if( frequency == "sem" )
+     {
+       if( isBegin )
+       {
+          if( sd[0].substr(4,2) != "12" )
+            text.push_back(": StartTime should be YYYY12");
+       }
+
+       if( isEnd )
+       {
+          if( sd[1].substr(4,2) != "11" )
+            text.push_back(": EndTime should be YYYY11");
+       }
+     }
+  }
+
+  return;
+}
+
+bool
+DRS_Filename::testPeriodFormat(std::vector<std::string>& sd)
+{
+  // return: true means go on for testing the period cut
+  std::string key("16_5");
+  std::string capt;
+  std::string str;
+
+  std::string frequency(pQA->qaExp.getFrequency());
+
+  // partitioning of files
+  if( sd.size() != 2 )
+  {
+      if( pQA->pIn->nc.isDimUnlimited() )
+      {
+        if( pQA->pIn->nc.getNumOfRecords() > 1 )
+        {
+          key = "16_10";
+          capt = "a period is required in the filename";
+          str.clear();
+        }
+      }
+
+      return false;  // no period; is variable time invariant?
+  }
+  else if( frequency == "3hr" || frequency == "6hr" )
+  {
+      if( sd[0].size() != 10 || sd[1].size() != 10 )
+      {
+        str += "YYYYMMDDhh for ";
+        if( frequency == "3hr" )
+          str += "3";
+        else
+          str += "6";
+        str += "-hourly time step";
+      }
+  }
+  else if( frequency == "day" )
+  {
+      if( sd[0].size() != 8 || sd[1].size() != 8 )
+        str += "YYYYMMDD for daily time step";
+  }
+  else if( frequency == "mon" || frequency == "sem" )
+  {
+     if( sd[0].size() != 6 || sd[1].size() != 6 )
+     {
+        str += "YYYYMM for ";
+        if( frequency == "mon" )
+          str += "monthly";
+        else
+          str += "seasonal";
+        str += " data";
+     }
+  }
+
+  if( str.size() )
+  {
+     if( notes->inq( key, pQA->fileStr) )
+     {
+        capt = "period in filename of incorrect format";
+        capt += ", found " + sd[0] + "-" +  sd[1];
+        capt += " expected " + str ;
+
+        (void) notes->operate(capt) ;
+
+        notes->setCheckMetaStr( pQA->fail );
+     }
+  }
+
+  return true;
+}
+
+
+
+// Class with project specific purpose
 QA_Exp::QA_Exp()
 {
   initDefaults();
@@ -18,15 +842,6 @@ QA_Exp::applyOptions(std::vector<std::string>& optStr)
      {
           isCaseInsensitiveVarName=true;
           continue;
-     }
-
-     if( split[0] == "dIP"
-          || split[0] == "dataInProduction"
-              || split[0] == "data_in_production" )
-     {
-        // effects completeness test in testPeriod()
-        enabledCompletenessCheck=false;
-        continue;
      }
 
      if( split[0] == "eA" || split[0] == "excludedAttribute"
@@ -1247,116 +2062,9 @@ QA_Exp::checkDimUnits(InFile& in,
 }
 
 void
-QA_Exp::checkFilename(std::vector<std::string>& sTable,
-  std::string& gaTableSheet)
-{
-  // The items of the filename must match corresponding global attributes.
-  // Existence of the global attributes was checked elsewhere.
-  // A comparison is not possible if at least one of the global atts
-  // doesn't exist.
-
-  size_t g_ix = pQA->pIn->varSz ;  // index to the global atts
-
-  int table_id_ix;
-  if( (table_id_ix=pQA->pIn->variable[g_ix].getAttIndex("table_id")) == -1 )
-    return;
-
-  int model_id_ix;
-  if( (model_id_ix=pQA->pIn->variable[g_ix].getAttIndex("model_id")) == -1 )
-    return;
-
-  int experiment_id_ix;
-  if( (experiment_id_ix=pQA->pIn->variable[g_ix].getAttIndex("experiment_id")) == -1 )
-    return;
-
-  int ix[3];
-  if( (ix[0] = pQA->pIn->variable[g_ix].getAttIndex("realization")) == -1 )
-    return;
-
-  if( (ix[1] = pQA->pIn->variable[g_ix].getAttIndex("initialization_method")) == -1 )
-    return;
-
-  if( (ix[2] = pQA->pIn->variable[g_ix].getAttIndex("physics_version")) == -1 )
-    return;
-
-  std::string ga_ensmb("r");
-  ga_ensmb += pQA->pIn->variable[g_ix].attValue[ix[0]][0] ;
-  ga_ensmb += 'i' ;
-  ga_ensmb += pQA->pIn->variable[g_ix].attValue[ix[1]][0] ;
-  ga_ensmb += 'p' ;
-  ga_ensmb += pQA->pIn->variable[g_ix].attValue[ix[2]][0] ;
-
-
-  // CMIP5 filename encoding
-  // <variable_name>_<varReqTableSheetSubs>_<model>_<experiment>_<ensemble_member>
-
-  // assemble a filename-like string from global attributes.
-  std::string a("<variable>_");
-  a += pQA->pIn->variable[g_ix].attValue[table_id_ix][0] + "_" ;
-  a += pQA->pIn->variable[g_ix].attValue[model_id_ix][0] + "_" ;
-  a += pQA->pIn->variable[g_ix].attValue[experiment_id_ix][0] + "_" ;
-  a += ga_ensmb;
-
-  if( getFrequency() != "fx" )
-    a += "[_<temporal subset>].nc" ;
-
-  // comparable format of the real filename
-  std::string f( pQA->pIn->file.basename);
-  Split splt(f, "_");
-
-  if( splt.size() > 4 )
-  {
-    // changed context for f
-    f = ("<variable>_");
-    f += splt[1] + "_" ;  // table sheet
-    f += splt[2] + "_" ;  // model_id
-    f += splt[3] + "_" ;  // experiment_id
-
-    // needed later
-    experiment_id = splt[3] ;
-
-    if( splt[1] != "fx" )
-      f += splt[4] + "[_<temporal subset>].nc" ;  // ensemble member
-  }
-  else
-  {
-     std::string key("1_4");
-     if( notes->inq( key, pQA->fileStr) )
-     {
-       std::string capt("filename structure with syntax error.");
-
-       (void) notes->operate(capt) ;
-       {
-         notes->setCheckMetaStr(pQA->fail);
-         pQA->setExit( notes->getExitValue() ) ;
-       }
-    }
-  }
-
-  if( a != f )
-  {
-    std::string key("1_5");
-    if( notes->inq( key, pQA->fileStr))
-    {
-       std::string capt("filename does not match file attributes.") ;
-
-       (void) notes->operate(capt) ;
-       {
-         notes->setCheckMetaStr(pQA->fail);
-         pQA->setExit( notes->getExitValue() ) ;
-       }
-    }
-  }
-
-  return;
-}
-
-void
 QA_Exp::checkMetaData(InFile& in)
 {
   notes->setCheckMetaStr("PASS");
-
-  getFrequency();
 
   // is filename compliant to DRS and CV?
 //  checkFilename(in);
@@ -1373,8 +2081,6 @@ QA_Exp::checkMetaData(InFile& in)
   {
     if( varMeDa[i].var->isDATA )
     {
-      getTableSheet(varMeDa[i]) ;
-
       checkTables(in, varMeDa[i] );
     }
   }
@@ -2890,41 +3596,39 @@ QA_Exp::getFrequency(void)
 }
 
 std::string
-QA_Exp::getTableEntryID(std::string vName)
+QA_Exp::getMIP_tableName(std::string tName)
 {
-  vName += "," ;
-  vName += getFrequency() ;
+  if( currMIP_tableName.size() )
+    return currMIP_tableName;
 
-  return vName + ",";
-}
-
-std::string
-QA_Exp::getTableSheet(std::vector<std::string>& sTable)
-{
   // the counter-parts in the attributes
-  std::string gaTableSheet( pQA->pIn->nc.getAttString("table_id") );
+  std::string tableID;
+  if( tName.size() )
+    tableID = tName ;
+  else
+    tableID = pQA->pIn->nc.getAttString("table_id") ;
 
-  if( gaTableSheet.size() == 0 )
-    return gaTableSheet;
+  if( tableID.size() == 0 )
+    return tableID;
 
-  Split spltMT(gaTableSheet);
+  Split x_tableID(tableID);
 
   // The table sheet name from the global attributes.
   // Ignore specific variations
-  if( spltMT.size() > 1 )
+  if( x_tableID.size() > 1 )
   {
-    if(  spltMT[0].substr(1,4) == "able"
-        || spltMT[0].substr(1,4) == "ABLE" )
-    gaTableSheet = spltMT[1] ;
+    if(  x_tableID[0].substr(1,4) == "able"
+        || x_tableID[0].substr(1,4) == "ABLE" )
+    tableID = x_tableID[1] ;
   }
-  else if( spltMT.size() > 0 )
-    gaTableSheet = spltMT[0] ;
+  else if( x_tableID.size() )
+    tableID = x_tableID[0] ;
 
   //check for valid names
   bool is=true;
-  for( size_t i=0 ; i < sTable.size() ; ++i )
+  for( size_t i=0 ; i < MIP_tableNames.size() ; ++i )
   {
-    if( sTable[i] == gaTableSheet )
+    if( MIP_tableNames[i] == tableID )
     {
       is=false ;
       break;
@@ -2933,91 +3637,33 @@ QA_Exp::getTableSheet(std::vector<std::string>& sTable)
 
   if( is )
   {
-     std::string key("46_8");
+    if( tName.size() == 0)
+    {
+      std::string key("46_8");
 
-     if( notes->inq( key, varMeDa[0].var->name) )
-     {
-       std::string capt("invalid table sheet name in CMIP5 attributes.") ;
+      if( notes->inq( key, "global") )
+      {
+        std::string capt("invalid MIP table name in global attribute, found ") ;
+        capt += hdhC::tf_att(pQA->s_empty, "table_id", x_tableID.getStr()) ;
 
-       std::string text("MIP Table (Filename): ") ;
-       text +=  gaTableSheet;
+        (void) notes->operate(capt) ;
+        pQA->setExit( notes->getExitValue() ) ;
+      }
+    }
 
-       gaTableSheet.clear();
-
-       (void) notes->operate(capt, text) ;
-       {
-         pQA->setExit( notes->getExitValue() ) ;
-       }
-     }
+    tableID.clear();
   }
 
-  return gaTableSheet;
+  return tableID;
 }
 
-void
-QA_Exp::getTableSheet(VariableMetaData& vMD)
+std::string
+QA_Exp::getTableEntryID(std::string vName)
 {
-  // This is CMIP5 specific;
-  // taken directly from the standard table.
-  std::vector<std::string> sTable;
-  sTable.push_back("fx");
-  sTable.push_back("Oyr");
-  sTable.push_back("Oclim");
-  sTable.push_back("Amon");
-  sTable.push_back("Omon");
-  sTable.push_back("Lmon");
-  sTable.push_back("LImon");
-  sTable.push_back("OImon");
-  sTable.push_back("aero");
-  sTable.push_back("day");
-  sTable.push_back("6hrLev");
-  sTable.push_back("6hrPlev");
-  sTable.push_back("3hr");
-  sTable.push_back("cfMon");
-  sTable.push_back("cfDay");
-  sTable.push_back("cf3hr");
-  sTable.push_back("cfSites");
+  vName += "," ;
+  vName += getFrequency() ;
 
-  std::string tTable( getTableSheet(sTable) ) ;
-
-  // compare filename to netCDF global attributes
-  checkFilename( sTable, tTable );
-
-  // Note: filename:= name_CMOR-MIP table_... .nc
-  Split splt(pQA->pIn->file.basename, "_");
-
-  std::string fTable;
-  if( splt.size() > 1 )
-    fTable = splt[1] ;
-
-  // table sheet name from global attributes has been checked
-
-  // finalise the table sheet check
-  if( fTable != tTable )
-  {
-    if( tTable.size() )
-      vMD.varReqTableSheet = tTable; // precedence: global attribute
-    else if( ! fTable.size() )
-      // no valid table sheet found
-      vMD.varReqTableSheet ="Any";  // table sheet name in the project table
-
-    std::string key("46_9");
-
-    if( notes->inq( key, varMeDa[0].var->name) )
-    {
-       std::string capt("Diverging table sheet name in attribute and filename.") ;
-
-       std::string text("MIP Table  (filename): ") ;
-       text += fTable ;
-       text += "\nMIP Table (attribute): " ;
-       text += tTable;
-
-       (void) notes->operate(capt, text) ;
-         pQA->setExit( notes->getExitValue() ) ;
-    }
-  }
-
-  return;
+  return vName + ",";
 }
 
 std::string
@@ -3042,36 +3688,51 @@ QA_Exp::getSubjectsIntroDim(VariableMetaData& vMD,
 }
 
 std::string
+QA_Exp::getVarnameFromFilename(void)
+{
+  if( fVarname.size() )
+    return fVarname;
+
+  return getVarnameFromFilename(pQA->pIn->file.getFilename()) ;
+}
+
+std::string
 QA_Exp::getVarnameFromFilename(std::string fName)
 {
   size_t pos;
   if( (pos = fName.find("_")) < std::string::npos )
     fName = fName.substr(0,pos) ;
-  else
-    fName.clear();
 
   return fName;
 }
 
 void
-QA_Exp::init(QA* p, std::vector<std::string>& optStr)
+QA_Exp::init(std::vector<std::string>& optStr)
 {
-   pQA = p;
-   notes = p->notes;
+  // apply parsed command-line args
+  applyOptions(optStr);
 
-   // apply parsed command-line args
-   applyOptions(optStr);
+  fVarname = getVarnameFromFilename(pQA->pIn->file.filename);
+  getFrequency();
 
-   fVarname = getVarnameFromFilename(pQA->pIn->file.filename);
-   getFrequency();
+  // Create and set VarMetaData objects.
+  createVarMetaData() ;
 
-   if( inqTables() )
-      return;
+  if( inqTables() )
+  {
+    currMIP_tableName = getMIP_tableName() ;
 
-   // Create and set VarMetaData objects.
-   createVarMetaData() ;
+    if( table_DRS_CV.is )
+    {
+      DRS_Filename drsFN(pQA, optStr);
+      drsFN.run();
+    }
 
-   return ;
+    // get meta data from file and compare with tables
+    checkMetaData(*(pQA->pIn));
+  }
+
+  return ;
 }
 
 void
@@ -3086,8 +3747,6 @@ QA_Exp::initDataOutputBuffer(void)
 void
 QA_Exp::initDefaults(void)
 {
-  enabledCompletenessCheck=true;
-
   isCaseInsensitiveVarName=false;
   isCheckParentExpID=true;
   isCheckParentExpRIP=true;
@@ -3173,10 +3832,10 @@ QA_Exp::inqTables(void)
         }
      }
 
-     return true;
+     return false;
   }
 
-  return false;
+  return true;
 }
 
 /*
@@ -3403,526 +4062,12 @@ QA_Exp::readHeadline(ReadLine& ifs,
    return true;
 }
 
-bool
-QA_Exp::testPeriod(void)
-{
-  // return true, if a file is supposed to be not complete.
-  // return false, a) if there is no period in the filename
-  //               b) if an error was found
-  //               c) times of period and file match
-
-  // The time value given in the first/last record is assumed to be
-  // in the range of the period of the file, if there is any.
-
-  // If the first/last date in the filename period and the
-  // first/last time value match within the uncertainty of the
-  // time-step, then the file is complete.
-  // If the end of the period exceeds the time data figure,
-  // then the nc-file is considered to be not completely processed.
-
-  // Does the filename has a trailing date range?
-  // Strip off the extension.
-  std::string f( pQA->pIn->file.getBasename() );
-
-  std::vector<std::string> sd;
-  sd.push_back( "" );
-  sd.push_back( "" );
-
-  // if designator '-clim' is appended, then remove it
-  size_t f_sz = static_cast<int>(f.size()) -5 ;
-  if( f_sz > 5 && f.substr(f_sz) == "-clim" )
-    f=f.substr(0, f_sz);
-
-  size_t p0, p1;
-  if( (p0=f.rfind('_')) == std::string::npos )
-    return false ;  // the filename is composed totally wrong
-
-  if( (p1=f.find('-', p0)) == std::string::npos )
-    return false ;  // no period in the filename
-
-  sd[1]=f.substr(p1+1) ;
-  if( ! hdhC::isDigit(sd[1]) )
-    return false ;  // no pure digits behind '-'
-
-  sd[0]=f.substr(p0+1, p1-p0-1) ;
-  if( ! hdhC::isDigit(sd[0]) )
-    return false ;  // no pure 1st date found
-
-  // now we have found two candidates for a date
-  // compose ISO-8601 strings
-  std::vector<Date> period;
-  pQA->qaTime.getDRSformattedDateRange(period, sd);
-
-  // necessary for validity (not sufficient)
-  if( period[0] > period[1] )
-  {
-     std::string key("42_4");
-     if( notes->inq( key, pQA->fileStr) )
-     {
-       std::string capt("invalid range for period in the filename, found ");
-       capt += hdhC::tf_val(sd[0] + "-" + sd[1]);
-
-       (void) notes->operate(capt) ;
-       notes->setCheckMetaStr( pQA->fail );
-     }
-
-     return false;
-  }
-
-  Date* pDates[6];
-  pDates[0] = &period[0];  // StartTime in the filename
-  pDates[1] = &period[1];  // EndTime in the filename
-
-  // index 2: date of first time value
-  // index 3: date of last  time value
-  // index 4: date of first time-bound value, if available; else 0
-  // index 5: date of last  time-bound value, if available; else 0
-
-  for( size_t i=2 ; i < 6 ; ++i )
-    pDates[i] = 0 ;
-
-  if( pQA->qaTime.isTimeBounds)
-  {
-    pDates[4] = new Date(pQA->qaTime.refDate);
-    if( pQA->qaTime.firstTimeBoundsValue[0] != 0 )
-      pDates[4]->addTime(pQA->qaTime.firstTimeBoundsValue[0]);
-
-    pDates[5] = new Date(pQA->qaTime.refDate);
-    if( pQA->qaTime.lastTimeBoundsValue[1] != 0 )
-      pDates[5]->addTime(pQA->qaTime.lastTimeBoundsValue[1]);
-
-    double db_centre=(pQA->qaTime.firstTimeBoundsValue[0]
-                        + pQA->qaTime.firstTimeBoundsValue[1])/2. ;
-    if( ! hdhC::compare(db_centre, '=', pQA->qaTime.firstTimeValue) )
-    {
-      std::string key("16_11");
-      if( notes->inq( key, fVarname) )
-      {
-        std::string capt("Range of variable time_bnds is not centred around variable time.");
-
-        (void) notes->operate(capt) ;
-        notes->setCheckMetaStr( pQA->fail );
-      }
-    }
-  }
-  else
-  {
-    if( pQA->qaTime.time_ix > -1 &&
-        ! pQA->pIn->variable[pQA->qaTime.time_ix].isInstant )
-    {
-      std::string key("16_12");
-      if( notes->inq( key, fVarname) )
-      {
-        std::string capt("Variable time_bnds is missing");
-
-        (void) notes->operate(capt) ;
-        notes->setCheckMetaStr(pQA->fail);
-      }
-    }
-  }
-
-  pDates[2] = new Date(pQA->qaTime.refDate);
-  if( pQA->qaTime.firstTimeValue != 0. )
-    pDates[2]->addTime(pQA->qaTime.firstTimeValue);
-
-  pDates[3] = new Date(pQA->qaTime.refDate);
-  if( pQA->qaTime.lastTimeValue != 0. )
-    pDates[3]->addTime(pQA->qaTime.lastTimeValue);
-
-  // alignment of of contained dates and those in the filename
-  // the booleanx indicate faults
-//  bool is_t_beg = is_t_end = is_tb_beg = is_tb_end = false;
-  bool isFault[4];
-  for(size_t i=0 ; i < 4 ; ++i )
-    isFault[i]=false;
-
-  // time value: left-side
-  Date myDate( *pDates[2] );
-  myDate.addTime(-pQA->qaTime.refTimeStep);
-  isFault[0] = myDate == *pDates[0] ;
-
-  // time value: right-side
-  myDate = *pDates[3] ;
-  myDate.addTime(pQA->qaTime.refTimeStep);
-  isFault[1] = myDate ==*pDates[1] ;
-
-  if(pQA->qaTime.isTimeBounds)
-  {
-    // time_bounds: left-side
-    myDate = *pDates[4] ;
-    myDate.addTime(pQA->qaTime.refTimeStep);
-    isFault[2] = myDate == *pDates[0] ;
-
-    // time_bounds: right-side
-    myDate = *pDates[5] ;
-    myDate.addTime(-pQA->qaTime.refTimeStep);
-    isFault[3] = myDate == *pDates[1] ;
-  }
-
-  // the annotations
-  if( testPeriodAlignment(sd, pDates, isFault) )
-  {
-    std::string key("16_12");
-    std::string capt("period in the filename: ") ;
-    capt +="note that StartTime-EndTime is compliant with CMOR peculiarity";
-
-    if( notes->inq( key, fVarname) )
-    {
-      (void) notes->operate(capt) ;
-
-      notes->setCheckMetaStr( pQA->fail );
-    }
-  }
-  else if( testPeriodFormat(sd) ) // format of period dates.
-  {
-    // period requires a cut specific to the various frequencies.
-    std::vector<std::string> text ;
-    testPeriodCutRegular(sd, text) ;
-
-    if( text.size() )
-    {
-      std::string key("16_6");
-      std::string capt("period in the filename") ;
-
-      for( size_t i=0 ; i < text.size() ; ++i )
-      {
-        if( notes->inq( key, fVarname) )
-        {
-          (void) notes->operate(capt + text[i]) ;
-
-          notes->setCheckMetaStr( pQA->fail );
-        }
-      }
-    }
-  }
-
-  // note that indices 0 and 1 belong to a vector
-  for(size_t i=2 ; i < 6 ; ++i )
-    if( pDates[i] )
-      delete pDates[i];
-
-  // complete
-  return false;
-}
-
-bool
-QA_Exp::testPeriodAlignment(std::vector<std::string>& sd, Date** pDates, bool b[])
-{
-  // some pecularities of CMOR, which will probably not be modified
-  // for a behaviour as expected.
-  // The CORDEX Archive Design doc states in Appendix C:
-  // "..., for using CMOR, the StartTime-EndTime element [in the filename]
-  //  is based on the first and last time value included in the file ..."
-
-  // if a test for a CMOR setting fails, testing goes on
-  if( *pDates[0] == *pDates[2] && *pDates[1] == *pDates[3] )
-      return true;
-
-  for(size_t i=0 ; i < 2 ; ++i)
-  {
-    // i == 0: left; 1: right
-
-    // skip for the mode of checking during production
-    if( i && !pQA->isFileComplete )
-       continue;
-
-    if( !( !b[0+i] || !b[2+i] ) )
-    {
-      std::string key("16_2");
-      if( notes->inq( key, pQA->fileStr) )
-      {
-        std::string token;
-
-        std::string capt("Misaligned ");
-        if( i == 0 )
-          capt += "begin" ;
-        else
-          capt += "end" ;
-        capt += " of periods in filename and ";
-
-        size_t ix;
-
-        if( pQA->qaTime.isTimeBounds )
-        {
-          capt="time bounds: ";
-          ix = 4 + i ;
-        }
-        else
-        {
-          capt="time values: ";
-          ix = 2 + i ;
-        }
-
-        capt += sd[i] ;
-        capt += " vs. " ;
-        capt += pDates[ix]->str();
-
-        (void) notes->operate(capt) ;
-        notes->setCheckMetaStr( pQA->fail );
-      }
-    }
-  }
-
-  return false;
-}
-
 void
-QA_Exp::testPeriodCutRegular(std::vector<std::string>& sd,
-                  std::vector<std::string>& text)
+QA_Exp::setParent(QA* p)
 {
-  // Partitioning of files check are equivalent.
-  // Note that the format was tested before.
-  // Note that desplaced start/end points, e.g. '02' for monthly data, would
-  // lead to a wrong cut.
-
-  bool isInstant = ! pQA->qaTime.isTimeBounds ;
-
-  bool isBegin = pQA->fileSequenceState == 'l' || pQA->fileSequenceState == 's' ;
-  bool isEnd   = pQA->fileSequenceState == 'f' || pQA->fileSequenceState == 's' ;
-
-  // period length per file as recommended?
-  if( frequency == "3hr" || frequency == "6hr" )
-  {
-    // same year.
-    bool isA = sd[1].substr(4,4) == "1231";
-    bool isB = sd[1].substr(4,4) == "0101" && sd[1].substr(8,2) == "00" ;
-
-    if( isBegin && isEnd )
-    {
-      // should be the same year
-      int yBeg=hdhC::string2Double( sd[0].substr(0,4) );
-      int yEnd=hdhC::string2Double( sd[1].substr(0,4) );
-      if( isB )  // begin of a next year
-        --yEnd;
-
-      if( (yEnd-yBeg) )
-        text.push_back(": time span of a full year is exceeded");
-    }
-
-    // cut of period
-    std::string s_sd0( sd[0].substr(4,4) );
-    std::string s_sd1( sd[1].substr(4,4) );
-
-    std::string s_hr0( sd[0].substr(8,2) );
-    std::string s_hr1( sd[1].substr(8,2) );
-
-    std::string t_found(", found ");
-    std::string t_hr0("00");
-    std::string t_hr1;
-
-    if( frequency == "3hr" )
-      t_hr1 = "21";
-    else
-      t_hr1 = "18";
-
-    if( isBegin )
-    {
-      if( s_sd0 != "0101" )
-        text.push_back( ": not the begin of the year, found " + s_sd0);
-
-      if( isInstant )
-      {
-        if( s_hr0 != t_hr0 )
-        {
-          text.push_back(" (instantaneous + 1st date): expected hr=") ;
-          text.back() += t_hr0 + t_found + s_hr0 ;
-        }
-      }
-      else
-      {
-        if( sd[0].substr(8,2) != t_hr0 )
-        {
-          text.push_back(" (average + 1st date): expected hr=");
-          text.back() += t_hr0 + t_found + s_hr0 ;
-        }
-      }
-    }
-
-    if( isEnd )
-    {
-      if( !(isA || isB)  )
-        text.push_back( ": not the end of the year, found " + s_sd1);
-
-      if( isInstant )
-      {
-        if( s_hr1 != t_hr1 )
-        {
-          text.push_back(" (instantaneous + 2nd date): expected hr=");
-          text.back() += t_hr1 + t_found + s_hr1 ;
-        }
-      }
-      else
-      {
-        if( isA && s_hr1 != "24" )
-        {
-          text.push_back(" (averaged + 1st date): expected hr=");
-          text.back() += t_hr1 + t_found + s_hr1 ;
-        }
-        else if( isB && s_hr1 != "00" )
-        {
-          text.push_back(" (averaged + 2nd date): expected hr=");
-          text.back() += t_hr1 + t_found + s_hr1 ;
-        }
-      }
-    }
-  }
-
-  else if( frequency == "day" )
-  {
-     if( isBegin && isEnd )
-     {
-      // 5 years or less
-      int yBeg=hdhC::string2Double(sd[0].substr(0,4));
-      int yEnd=hdhC::string2Double(sd[1].substr(0,4));
-      if( (yEnd-yBeg) > 5 )
-        text.push_back(": time span of 5 years is exceeded");
-     }
-
-     if( isBegin )
-     {
-       if( ! (sd[0][3] == '1' || sd[0][3] == '6') )
-         text.push_back(": StartTime should begin with YYY1 or YYY6");
-
-       if( sd[0].substr(4,4) != "0101" )
-         text.push_back(": StartTime should be YYYY0101");
-     }
-
-     if( isEnd )
-     {
-       if( ! (sd[1][3] == '0' || sd[1][3] == '5') )
-         text.push_back(": EndTime should begin with YYY0 or YYY5");
-
-       if( sd[1].substr(4,4) != "1231" )
-         text.push_back(": EndTime should be YYYY1231");
-     }
-  }
-  else if( frequency == "mon" )
-  {
-     if( isBegin && isEnd )
-     {
-      // 10 years or less
-      int yBeg=hdhC::string2Double(sd[0].substr(0,4));
-      int yEnd=hdhC::string2Double(sd[1].substr(0,4));
-      if( (yEnd-yBeg) > 10 )
-        text.push_back(": time span of 10 years is exceeded");
-     }
-
-     if( isBegin )
-     {
-       if( sd[0][3] != '1')
-         text.push_back(": StartTime should begin with YYY1");
-
-       if( sd[0].substr(4,4) != "01" )
-         text.push_back(": StartTime should be YYYY01");
-     }
-
-     if( isEnd )
-     {
-       if( ! (sd[1][3] == '0' || sd[1][3] == '5') )
-         text.push_back(": EndTime should begin with YYY0");
-
-       if( sd[1].substr(4,4) != "12" )
-         text.push_back(": EndTime should be YYYY1231");
-     }
-  }
-  else if( frequency == "sem" )
-  {
-     if( isBegin && isEnd )
-     {
-      // 10 years or less
-      int yBeg=hdhC::string2Double(sd[0].substr(0,4));
-      int yEnd=hdhC::string2Double(sd[1].substr(0,4));
-      if( (yEnd-yBeg) > 11 )  // because of winter across two year
-        text.push_back(": time span of 10 years is exceeded");
-     }
-
-     if( frequency == "sem" )
-     {
-       if( isBegin )
-       {
-          if( sd[0].substr(4,2) != "12" )
-            text.push_back(": StartTime should be YYYY12");
-       }
-
-       if( isEnd )
-       {
-          if( sd[1].substr(4,2) != "11" )
-            text.push_back(": EndTime should be YYYY11");
-       }
-     }
-  }
-
-  return;
-}
-
-bool
-QA_Exp::testPeriodFormat(std::vector<std::string>& sd)
-{
-  // return: true means go on for testing the period cut
-  std::string key("16_5");
-  std::string capt;
-  std::string str;
-
-  // partitioning of files
-  if( sd.size() != 2 )
-  {
-      if( pQA->pIn->nc.isDimUnlimited() )
-      {
-        if( pQA->pIn->nc.getNumOfRecords() > 1 )
-        {
-          key = "16_10";
-          capt = "a period is required in the filename";
-          str.clear();
-        }
-      }
-
-      return false;  // no period; is variable time invariant?
-  }
-  else if( frequency == "3hr" || frequency == "6hr" )
-  {
-      if( sd[0].size() != 10 || sd[1].size() != 10 )
-      {
-        str += "YYYYMMDDhh for ";
-        if( frequency == "3hr" )
-          str += "3";
-        else
-          str += "6";
-        str += "-hourly time step";
-      }
-  }
-  else if( frequency == "day" )
-  {
-      if( sd[0].size() != 8 || sd[1].size() != 8 )
-        str += "YYYYMMDD for daily time step";
-  }
-  else if( frequency == "mon" || frequency == "sem" )
-  {
-     if( sd[0].size() != 6 || sd[1].size() != 6 )
-     {
-        str += "YYYYMM for ";
-        if( frequency == "mon" )
-          str += "monthly";
-        else
-          str += "seasonal";
-        str += " data";
-     }
-  }
-
-  if( str.size() )
-  {
-     if( notes->inq( key, pQA->fileStr) )
-     {
-        capt = "period in filename of incorrect format";
-        capt += ", found " + sd[0] + "-" +  sd[1];
-        capt += " expected " + str ;
-
-        (void) notes->operate(capt) ;
-
-        notes->setCheckMetaStr( pQA->fail );
-     }
-  }
-
-  return true;
+   pQA = p;
+   notes = p->notes;
+   return;
 }
 
 VariableMetaData::VariableMetaData(QA *p, Variable *v)
