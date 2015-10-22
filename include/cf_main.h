@@ -18,7 +18,7 @@
 #include "split.h"
 #include "data_statistics.h"
 #include "date.h"
-#include "freqDist.h"
+//#include "freqDist.h"
 #include "geo_meta.h"
 #include "getopt_hdh.h"
 #include "hdhC.h"
@@ -31,19 +31,10 @@
 #include "variable.h"
 #include "base.h"
 #include "brace_op.h"
-#include "fd_interface.h"
-#include "cell_statistics.h"
 #include "cf.h"
 #include "annotation.h"
 #include "in_file.h"
-#include "oper.h"
-#include "out_file.h"
 #include "parse.h"
-#include "qa_data.h"
-#include "qa_time.h"
-#include "qa_PT.h"
-#include "qa_NONE.h"
-#include "time_control.h"
 
 /*! Command-line options are gathered from ordinary command-line arguments,
 from file (prefixed by '--file'), and input-redirection (must be indicated by
