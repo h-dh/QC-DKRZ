@@ -199,8 +199,6 @@ VariableMetaData::VariableMetaData(QA *p, Variable *v)
 {
    pQA = p;
    var = v;
-
-   isForkedAnnotation=false;
 }
 
 VariableMetaData::~VariableMetaData()
@@ -272,12 +270,7 @@ VariableMetaData::finally(int xCode)
 void
 VariableMetaData::forkAnnotation(Annotation *n)
 {
-//   if( isForkedAnnotation )
-//      delete notes;
-
    notes = new Annotation(n);
-
-//   isForkedAnnotation=true;
 
    // this is not a mistaken
    qaData.setAnnotation(n);
@@ -288,12 +281,7 @@ VariableMetaData::forkAnnotation(Annotation *n)
 void
 VariableMetaData::setAnnotation(Annotation *n)
 {
-//   if( isForkedAnnotation )
-//      delete notes;
-
    notes = n;
-
-//   isForkedAnnotation=false;
 
    qaData.setAnnotation(n);
 

@@ -1358,8 +1358,8 @@ QA_Exp::applyOptions(std::vector<std::string>& optStr)
 void
 QA_Exp::checkDimTableEntry(InFile &in,
     VariableMetaData &vMD,
-    struct DimensionMetaData &nc_entry,
-    struct DimensionMetaData &tbl_entry)
+    struct DimensionMetaData &f_DMD_entry,
+    struct DimensionMetaData &t_DMD_entry)
 {
   // Do the dimensional meta-data found in the netCDF file
   // match those in the table (standard or project)?
@@ -1369,23 +1369,24 @@ QA_Exp::checkDimTableEntry(InFile &in,
 
   std::string text;
   std::string t0;
+  std::string& t_DMD_outname = t_DMD_entry.attMap[n_outname] ;
 
-  if( tbl_entry.outname != nc_entry.outname )
-     checkDimOutName(in, vMD, nc_entry, tbl_entry);
+  if( t_DMD_outname != f_DMD_entry.attMap[n_outname] )
+     checkDimOutName(in, vMD, f_DMD_entry, t_DMD_entry);
 
-  if( tbl_entry.stndname != nc_entry.stndname )
-     checkDimStndName(in, vMD, nc_entry, tbl_entry);
+  if( t_DMD_entry.attMap[n_standard_name] != f_DMD_entry.attMap[n_standard_name] )
+     checkDimStndName(in, vMD, f_DMD_entry, t_DMD_entry);
 
-  if( tbl_entry.longname != nc_entry.longname )
-     checkDimLongName(in, vMD, nc_entry, tbl_entry);
+  if( t_DMD_entry.attMap[n_long_name] != f_DMD_entry.attMap[n_long_name] )
+     checkDimLongName(in, vMD, f_DMD_entry, t_DMD_entry);
 
-  if( tbl_entry.axis != nc_entry.axis )
-     checkDimAxis(in, vMD, nc_entry, tbl_entry);
+  if( t_DMD_entry.attMap[n_axis] != f_DMD_entry.attMap[n_axis] )
+     checkDimAxis(in, vMD, f_DMD_entry, t_DMD_entry);
 
   // special for the unlimited dimension
-  if( tbl_entry.outname == "time" )
+  if( t_DMD_outname == "time" )
   {
-    checkDimULD(vMD, nc_entry, tbl_entry) ;
+    checkDimULD(vMD, f_DMD_entry, t_DMD_entry) ;
   }
   else
   {
@@ -1395,15 +1396,15 @@ QA_Exp::checkDimTableEntry(InFile &in,
     // special: 'plevs' check only for the 17 mandatory levels.
     //          This in ensured by the calling method.
 
-    if( tbl_entry.size != nc_entry.size )
-      checkDimSize(in, vMD, nc_entry, tbl_entry);
+    if( t_DMD_entry.size != f_DMD_entry.size )
+      checkDimSize(in, vMD, f_DMD_entry, t_DMD_entry);
 
     // note: an error in size skips this test
-    else if( tbl_entry.checksum != nc_entry.checksum)
-      checkDimChecksum(in, vMD, nc_entry, tbl_entry);
+    else if( t_DMD_entry.checksum != f_DMD_entry.checksum)
+      checkDimChecksum(in, vMD, f_DMD_entry, t_DMD_entry);
 
     // special: units
-    checkDimUnits(in, vMD, nc_entry, tbl_entry);
+    checkDimUnits(in, vMD, f_DMD_entry, t_DMD_entry);
   }
 
   return ;
@@ -1412,30 +1413,33 @@ QA_Exp::checkDimTableEntry(InFile &in,
 void
 QA_Exp::checkDimAxis(InFile &in,
     VariableMetaData &vMD,
-    struct DimensionMetaData &nc_entry,
-    struct DimensionMetaData &tbl_entry)
+    struct DimensionMetaData &f_DMD_entry,
+    struct DimensionMetaData &t_DMD_entry)
 {
   std::string key("47_4");
+  std::string& t_DMD_axis = t_DMD_entry.attMap[n_axis] ;
+  std::string& f_DMD_axis = f_DMD_entry.attMap[n_axis] ;
+
   if( notes->inq( key, vMD.var->name) )
   {
-    std::string capt( getCaptIntroDim(vMD, nc_entry, tbl_entry) );
+    std::string capt( getCaptIntroDim(vMD, f_DMD_entry, t_DMD_entry) );
 
-    if( tbl_entry.axis.size() && nc_entry.axis.size() )
+    if( t_DMD_axis.size() && f_DMD_axis.size() )
       capt += pQA->s_mismatch ;
-    else if( tbl_entry.axis.size() )
+    else if( t_DMD_axis.size() )
       capt+= "not available in the file" ;
     else
       capt += "not available in the table" ;
 
     std::string text("axis (table)=") ;
-    if( tbl_entry.axis.size() )
-      text += tbl_entry.axis ;
+    if( t_DMD_axis.size() )
+      text += t_DMD_axis ;
     else
       text += pQA->notAvailable ;
 
     text += "\naxis (file)=" ;
-    if( nc_entry.axis.size() )
-      text += nc_entry.axis ;
+    if( f_DMD_axis.size() )
+      text += f_DMD_axis ;
     else
       text += pQA->notAvailable ;
 
@@ -1449,11 +1453,11 @@ QA_Exp::checkDimAxis(InFile &in,
 void
 QA_Exp::checkDimChecksum(InFile &in,
     VariableMetaData &vMD,
-    struct DimensionMetaData &nc_entry,
-    struct DimensionMetaData &tbl_entry)
+    struct DimensionMetaData &f_DMD_entry,
+    struct DimensionMetaData &t_DMD_entry)
 {
   // cf...: dim is variable across files
-  if( nc_entry.outname == "loc" )
+  if( f_DMD_entry.attMap[n_outname] == "loc" )
     return;
 
   std::string t0;
@@ -1461,13 +1465,13 @@ QA_Exp::checkDimChecksum(InFile &in,
   std::string key("47_5");
   if( notes->inq( key, vMD.var->name) )
   {
-    std::string capt( getCaptIntroDim(vMD, nc_entry, tbl_entry) ) ;
+    std::string capt( getCaptIntroDim(vMD, f_DMD_entry, t_DMD_entry) ) ;
     capt += "checksum of values changed" ;
 
     std::string text("checksum (table)=") ;
-    text += hdhC::double2String(tbl_entry.checksum) ;
+    text += hdhC::double2String(t_DMD_entry.checksum) ;
     text += "\nchecksum (file)=" ;
-    text += hdhC::double2String(nc_entry.checksum) ;
+    text += hdhC::double2String(f_DMD_entry.checksum) ;
 
     (void) notes->operate(capt, text) ;
     notes->setCheckMetaStr(pQA->fail);
@@ -1479,31 +1483,33 @@ QA_Exp::checkDimChecksum(InFile &in,
 void
 QA_Exp::checkDimLongName(InFile &in,
     VariableMetaData &vMD,
-    struct DimensionMetaData &nc_entry,
-    struct DimensionMetaData &tbl_entry)
+    struct DimensionMetaData &f_DMD_entry,
+    struct DimensionMetaData &t_DMD_entry)
 {
+  std::string& t_DMD_long_name = t_DMD_entry.attMap[n_long_name] ;
+  std::string& f_DMD_long_name = f_DMD_entry.attMap[n_long_name] ;
 
   std::string key("40_3");
   if( notes->inq( key, vMD.var->name) )
   {
-    std::string capt(getCaptIntroDim(vMD, nc_entry, tbl_entry, pQA->n_long_name) ) ;
+    std::string capt(getCaptIntroDim(vMD, f_DMD_entry, t_DMD_entry, pQA->n_long_name) ) ;
 
-    if( tbl_entry.longname.size() && nc_entry.longname.size() )
+    if( t_DMD_long_name.size() && f_DMD_long_name.size() )
       capt += pQA->s_mismatch ;
-    else if( tbl_entry.longname.size() )
+    else if( t_DMD_long_name.size() )
       capt += "not available in the file" ;
     else
       capt += "not available in the table" ;
 
     std::string text("long name (table)=") ;
-    if( tbl_entry.longname.size() )
-      text += tbl_entry.longname ;
+    if( t_DMD_long_name.size() )
+      text += t_DMD_long_name ;
     else
       text += pQA->notAvailable ;
 
     text += "\nlong name (file)=" ;
-    if( nc_entry.longname.size() )
-      text += nc_entry.longname ;
+    if( f_DMD_long_name.size() )
+      text += f_DMD_long_name ;
     else
       text += pQA->notAvailable ;
 
@@ -1517,33 +1523,36 @@ QA_Exp::checkDimLongName(InFile &in,
 void
 QA_Exp::checkDimOutName(InFile &in,
     VariableMetaData &vMD,
-    struct DimensionMetaData &nc_entry,
-    struct DimensionMetaData &tbl_entry)
+    struct DimensionMetaData &f_DMD_entry,
+    struct DimensionMetaData &t_DMD_entry)
 {
   std::string key("40_1");
+  std::string& t_DMD_outname = t_DMD_entry.attMap[n_outname] ;
+  std::string& f_DMD_outname = f_DMD_entry.attMap[n_outname] ;
+
   if( notes->inq( key, vMD.var->name) )
   {
-    std::string capt( getCaptIntroDim(vMD, nc_entry, tbl_entry) );
+    std::string capt( getCaptIntroDim(vMD, f_DMD_entry, t_DMD_entry) );
 
-    if( tbl_entry.outname.size() && nc_entry.outname.size() )
+    if( t_DMD_outname.size() && f_DMD_outname.size() )
     {
       capt += "output name with " ;
       capt += pQA->s_mismatch ;
     }
-    else if( tbl_entry.outname.size() )
+    else if( t_DMD_outname.size() )
       capt += "output name not available in the file" ;
     else
       capt += "output name not available in the table" ;
 
     std::string text("output name (table)=") ;
-    if( tbl_entry.outname.size() )
-      text += tbl_entry.outname ;
+    if( t_DMD_outname.size() )
+      text += t_DMD_outname ;
     else
       text += pQA->notAvailable ;
 
     text += "\noutput name (file)=" ;
-    if( nc_entry.outname.size() )
-      text += nc_entry.outname ;
+    if( f_DMD_outname.size() )
+      text += f_DMD_outname ;
     else
       text += pQA->notAvailable ;
 
@@ -1557,23 +1566,23 @@ QA_Exp::checkDimOutName(InFile &in,
 void
 QA_Exp::checkDimSize(InFile &in,
     VariableMetaData &vMD,
-    struct DimensionMetaData &nc_entry,
-    struct DimensionMetaData &tbl_entry)
+    struct DimensionMetaData &f_DMD_entry,
+    struct DimensionMetaData &t_DMD_entry)
 {
   // cf...: dim is variable across files
-  if( nc_entry.outname == "loc" )
+  if( f_DMD_entry.attMap[n_outname] == "loc" )
     return;
 
   std::string key("40_5");
   if( notes->inq( key, vMD.var->name) )
   {
-    std::string capt( getCaptIntroDim(vMD, nc_entry, tbl_entry) ) ;
+    std::string capt( getCaptIntroDim(vMD, f_DMD_entry, t_DMD_entry) ) ;
     capt += "different size";
 
     std::string text("dim-size (table)=") ;
-    text += hdhC::double2String(tbl_entry.size) ;
+    text += hdhC::double2String(t_DMD_entry.size) ;
     text += "\ndim-size (file)=" ;
-    text += hdhC::double2String(nc_entry.size) ;
+    text += hdhC::double2String(f_DMD_entry.size) ;
 
     (void) notes->operate(capt, text) ;
     notes->setCheckMetaStr(pQA->fail);
@@ -1585,17 +1594,20 @@ QA_Exp::checkDimSize(InFile &in,
 void
 QA_Exp::checkDimStndName(InFile &in,
     VariableMetaData &vMD,
-    struct DimensionMetaData &nc_entry,
-    struct DimensionMetaData &tbl_entry)
+    struct DimensionMetaData &f_DMD_entry,
+    struct DimensionMetaData &t_DMD_entry)
 {
   std::string key("40_2");
+  std::string& t_DMD_standard_name = t_DMD_entry.attMap[n_standard_name] ;
+  std::string& f_DMD_standard_name = f_DMD_entry.attMap[n_standard_name] ;
+
   if( notes->inq( key, vMD.var->name) )
   {
-    std::string capt( getCaptIntroDim(vMD, nc_entry, tbl_entry, pQA->n_standard_name) ) ;
+    std::string capt( getCaptIntroDim(vMD, f_DMD_entry, t_DMD_entry, pQA->n_standard_name) ) ;
 
-    if( tbl_entry.stndname.size() && nc_entry.stndname.size() )
+    if( t_DMD_standard_name.size() && f_DMD_standard_name.size() )
       capt += pQA->s_mismatch ;
-    else if( tbl_entry.stndname.size() )
+    else if( t_DMD_standard_name.size() )
       capt += "not available in the file" ;
     else
       capt += "not available in the table" ;
@@ -1604,15 +1616,15 @@ QA_Exp::checkDimStndName(InFile &in,
     text += varReqTable.filename + ", frequency=";
     text += getFrequency() + ", variable=";
     text += vMD.var->name + ", dimension=";
-    text += nc_entry.outname + "\nstandard_name (table)=" ;
-    if( tbl_entry.stndname.size() )
-      text += tbl_entry.stndname ;
+    text += f_DMD_entry.attMap[n_outname] + "\nstandard_name (table)=" ;
+    if( t_DMD_standard_name.size() )
+      text += t_DMD_standard_name ;
     else
       text += pQA->notAvailable ;
 
     text += "\nstandard_name (file)=" ;
-    if( nc_entry.stndname.size() )
-      text += nc_entry.stndname ;
+    if( f_DMD_standard_name.size() )
+      text += f_DMD_standard_name ;
     else
       text += pQA->notAvailable ;
 
@@ -1626,47 +1638,49 @@ QA_Exp::checkDimStndName(InFile &in,
 void
 QA_Exp::checkDimULD(
      VariableMetaData &vMD,
-     struct DimensionMetaData &nc_entry,
-     struct DimensionMetaData &tbl_entry)
+     struct DimensionMetaData &f_DMD_entry,
+     struct DimensionMetaData &t_DMD_entry)
 {
   // Special for the unlimited dimension
 
   // Do the dimensional meta-data found in the netCDF file
   // match those in the standard table?
   // Checking ranges is senseless, thus discarded.
+  std::string& t_DMD_units = t_DMD_entry.attMap[n_units] ;
+  std::string& f_DMD_units = f_DMD_entry.attMap[n_units] ;
 
-  if( tbl_entry.units != nc_entry.units )
+  if( t_DMD_units != f_DMD_units )
   {
     // Note: a different date between the two might not be a fault.
     // If keywords match, but the dates do not, then emit
     // only a warning.
-    if( ( tbl_entry.units.find("days") < std::string::npos
-          && tbl_entry.units.find("since") < std::string::npos )
+    if( ( t_DMD_units.find("days") < std::string::npos
+          && t_DMD_units.find("since") < std::string::npos )
                         !=
-        (  nc_entry.units.find("days") < std::string::npos
-          &&  nc_entry.units.find("since") < std::string::npos ) )
+        (  f_DMD_units.find("days") < std::string::npos
+          &&  f_DMD_units.find("since") < std::string::npos ) )
     {
       std::string key("36_1");
       if( notes->inq( key, vMD.var->name) )
       {
-        std::string capt( getCaptIntroDim(vMD, nc_entry, tbl_entry, pQA->n_units) ) ;
+        std::string capt( getCaptIntroDim(vMD, f_DMD_entry, t_DMD_entry, pQA->n_units) ) ;
 
-        if( tbl_entry.units.size() && nc_entry.units.size() )
+        if( t_DMD_units.size() && f_DMD_units.size() )
           capt += "different periods" ;
-        else if( tbl_entry.units.size() )
+        else if( t_DMD_units.size() )
           capt += "missing period string (file)" ;
         else
           capt += "missing period string (table)" ;
 
         std::string text("units (table)=") ;
-        if( tbl_entry.units.size() )
-          text += tbl_entry.units ;
+        if( t_DMD_units.size() )
+          text += t_DMD_units ;
         else
           text += "missing key string=days since" ;
 
         text += "\nunits (file): " ;
-        if( nc_entry.units.size() )
-          text += nc_entry.units ;
+        if( f_DMD_units.size() )
+          text += f_DMD_units ;
         else
           text += "missing key string=days since" ;
 
@@ -1685,17 +1699,17 @@ QA_Exp::checkDimULD(
                && pQA->currQARec == 0 )
         return ;
 
-      Date tbl_ref( tbl_entry.units, pQA->qaTime.calendar );
-      Date nc_ref( nc_entry.units, pQA->qaTime.calendar );
+      Date tbl_ref( t_DMD_units, pQA->qaTime.calendar );
+      Date nc_ref( f_DMD_units, pQA->qaTime.calendar );
 
       std::string key("36_2");
       if( notes->inq( key, vMD.var->name) )
       {
-        std::string capt( getCaptIntroDim(vMD, nc_entry, tbl_entry, pQA->n_units) ) ;
+        std::string capt( getCaptIntroDim(vMD, f_DMD_entry, t_DMD_entry, pQA->n_units) ) ;
 
-        if( tbl_entry.units.size() && nc_entry.units.size() )
+        if( t_DMD_units.size() && f_DMD_units.size() )
           capt += "different reference dates" ;
-        else if( tbl_entry.units.size() )
+        else if( t_DMD_units.size() )
           capt += "missing reference date in the file" ;
         else
           capt += "missing reference date in the table" ;
@@ -1704,14 +1718,14 @@ QA_Exp::checkDimULD(
         if( tbl_ref != nc_ref )
         {
           text += "units (table)=" ;
-          if( tbl_entry.units.size() )
-            text += tbl_entry.units ;
+          if( t_DMD_units.size() )
+            text += t_DMD_units ;
           else
             text += pQA->notAvailable ;
 
           text += "\nunits (file)=" ;
-          if( nc_entry.units.size() )
-            text += nc_entry.units ;
+          if( f_DMD_units.size() )
+            text += f_DMD_units ;
           else
             text += pQA->notAvailable ;
         }
@@ -1728,19 +1742,21 @@ QA_Exp::checkDimULD(
 void
 QA_Exp::checkDimUnits(InFile &in,
      VariableMetaData &vMD,
-     struct DimensionMetaData &nc_entry,
-     struct DimensionMetaData &tbl_entry)
+     struct DimensionMetaData &f_DMD_entry,
+     struct DimensionMetaData &t_DMD_entry)
 {
   // Special: units related to any dimension but 'time'
 
   // Do the dimensional meta-data found in the netCDF file
   // match those in the table (standard or project)?
+  std::string& t_DMD_units = t_DMD_entry.attMap[n_units] ;
+  std::string& f_DMD_units = f_DMD_entry.attMap[n_units] ;
 
   // index axis has no units
-  if( tbl_entry.index_axis == "ok")
+  if( t_DMD_entry.attMap[n_index_axis] == "ok")
     return;
 
-  if( tbl_entry.units == nc_entry.units )
+  if( t_DMD_units == f_DMD_units )
     return;
 
   //dimension's var-rep without units in the standard table
@@ -1748,25 +1764,25 @@ QA_Exp::checkDimUnits(InFile &in,
 
   if( notes->inq( key, vMD.var->name) )
   {
-    std::string capt( getCaptIntroDim(vMD, nc_entry, tbl_entry, pQA->n_units) ) ;
+    std::string capt( getCaptIntroDim(vMD, f_DMD_entry, t_DMD_entry, pQA->n_units) ) ;
 
-    if( tbl_entry.units.size() && nc_entry.units.size() )
+    if( t_DMD_units.size() && f_DMD_units.size() )
       capt += pQA->s_mismatch ;
-    else if( tbl_entry.isUnitsDefined )
+    else if( t_DMD_entry.isUnitsDefined )
       capt += "not available in the file" ;
     else
       capt += "not defined in the table" ;
 
     std::string text("units (table)=") ;
-    if( tbl_entry.units.size() )
-      text += tbl_entry.units ;
+    if( t_DMD_units.size() )
+      text += t_DMD_units ;
     else
       text += "not defined" ;
 
     text += "\nunits (file)=" ;
-    if( nc_entry.units.size() )
-      text += nc_entry.units ;
-    else if( nc_entry.isUnitsDefined )
+    if( f_DMD_units.size() )
+      text += f_DMD_units ;
+    else if( f_DMD_entry.isUnitsDefined )
       text += pQA->notAvailable ;
     else
       text += "not defined" ;
@@ -2779,20 +2795,20 @@ QA_Exp::checkMetaData(InFile &in)
 void
 QA_Exp::checkVarTableEntry(
     VariableMetaData &vMD,
-    VariableMetaData &tbl_entry)
+    VariableMetaData &t_DMD_entry)
 {
   // Do the variable properties found in the netCDF file
   // match those in the table (standard or project)?
   // Exceptions: priority is not defined in the netCDF file.
 
   // This has already been tested in the calling method
-  // if( tbl_entry.name != varMeDa.name )
+  // if( t_DMD_entry.name != varMeDa.name )
 
-  checkVarTableEntry_standardName(vMD, tbl_entry);
-  checkVarTableEntry_longName(vMD, tbl_entry);
-  checkVarTableEntry_units(vMD, tbl_entry);
-  checkVarTableEntry_cell_methods(vMD, tbl_entry);
-  checkVarTableEntry_name(vMD, tbl_entry);
+  checkVarTableEntry_standardName(vMD, t_DMD_entry);
+  checkVarTableEntry_longName(vMD, t_DMD_entry);
+  checkVarTableEntry_units(vMD, t_DMD_entry);
+  checkVarTableEntry_cell_methods(vMD, t_DMD_entry);
+  checkVarTableEntry_name(vMD, t_DMD_entry);
 
   return;
 }
@@ -2800,7 +2816,7 @@ QA_Exp::checkVarTableEntry(
 void
 QA_Exp::checkVarTableEntry_cell_methods(
     VariableMetaData &vMD,
-    VariableMetaData &tbl_entry)
+    VariableMetaData &t_DMD_entry)
 {
   // many CORDEX data are derived on the basis of cell_methods, given in a former
   // version of CORDEX_variables_requirements_table, which does not comply to CMIP5.
@@ -2820,8 +2836,8 @@ QA_Exp::checkVarTableEntry_cell_methods(
   bool isOld=false;
 
   // disjoint into words; this method ingnores spaces
-  Split x_t_cm(tbl_entry.cellMethods);
-  Split x_t_cmo(tbl_entry.cellMethodsOpt);
+  Split x_t_cm(t_DMD_entry.attMap[n_cell_methods]);
+  Split x_t_cmo(t_DMD_entry.attMap[n_cell_methods_opt]);
   Split x_f_cm;
 
   int cm_ix = vMD.var->getAttIndex(pQA->n_cell_methods) ;
@@ -2871,9 +2887,9 @@ QA_Exp::checkVarTableEntry_cell_methods(
         capt = hdhC::tf_att(vMD.var->name, cm_name, cm_val) ;
         capt += "does not match " ;
         if( isOld )
-          capt += hdhC::tf_val(tbl_entry.cellMethods) ;
+          capt += hdhC::tf_val(t_DMD_entry.attMap[n_cell_methods]) ;
         else
-          capt += hdhC::tf_val(tbl_entry.cellMethodsOpt) ;
+          capt += hdhC::tf_val(t_DMD_entry.attMap[n_cell_methods_opt]) ;
       }
       else
       {
@@ -2892,14 +2908,17 @@ QA_Exp::checkVarTableEntry_cell_methods(
 void
 QA_Exp::checkVarTableEntry_longName(
     VariableMetaData &vMD,
-    VariableMetaData &tbl_entry)
+    VariableMetaData &t_VMD_entry)
 {
-  if( tbl_entry.longName == vMD.longName )
+  std::string& t_VMD_longName = t_VMD_entry.attMap[n_long_name] ;
+  std::string& f_VMD_longName = vMD.attMap[n_long_name] ;
+
+  if( t_VMD_longName == f_VMD_longName )
     return;
 
   // tolerate case differences
-  std::string f( hdhC::Lower()(vMD.longName) );
-  std::string t( hdhC::Lower()(tbl_entry.longName) );
+  std::string f( hdhC::Lower()(f_VMD_longName) );
+  std::string t( hdhC::Lower()(t_VMD_longName) );
 
   // case independence is accepted
   if( f == t )
@@ -3005,17 +3024,17 @@ QA_Exp::checkVarTableEntry_longName(
   {
     std::string capt;
 
-    if( vMD.longName.size() )
+    if( f_VMD_longName.size() )
     {
-      capt = hdhC::tf_att(vMD.var->name, pQA->n_long_name, vMD.longName) ;
+      capt = hdhC::tf_att(vMD.var->name, pQA->n_long_name, f_VMD_longName) ;
       capt += "does not match required value" ;
-      capt += hdhC::tf_val(tbl_entry.longName);
+      capt += hdhC::tf_val(t_VMD_longName);
     }
     else
     {
       capt = hdhC::tf_att(vMD.var->name, pQA->n_long_name) ;
       capt += "is missing required value" ;
-      capt += hdhC::tf_val(tbl_entry.longName);
+      capt += hdhC::tf_val(t_VMD_longName);
     }
 
     (void) notes->operate(capt) ;
@@ -3028,9 +3047,9 @@ QA_Exp::checkVarTableEntry_longName(
 void
 QA_Exp::checkVarTableEntry_name(
     VariableMetaData &vMD,
-    VariableMetaData &tbl_entry)
+    VariableMetaData &t_DMD_entry)
 {
-  if( tbl_entry.name != vMD.var->name )
+  if( t_DMD_entry.name != vMD.var->name )
   {
     // This will happen only if case-insensitivity occurred
     std::string key("32_7");
@@ -3050,9 +3069,11 @@ QA_Exp::checkVarTableEntry_name(
 void
 QA_Exp::checkVarTableEntry_standardName(
     VariableMetaData &vMD,
-    VariableMetaData &tbl_entry)
+    VariableMetaData &t_VMD_entry)
 {
-  if( tbl_entry.standardName != vMD.var->std_name
+  std::string& t_VMD_stdName = t_VMD_entry.attMap[n_standard_name] ;
+
+  if( t_VMD_stdName != vMD.var->std_name
         && vMD.var->name != "evspsblpot" )
   {  // note that evspsblpot is not a standard_name definded by CF conventions
      // CORDEX_variables_requirement table
@@ -3064,7 +3085,7 @@ QA_Exp::checkVarTableEntry_standardName(
       if( vMD.var->std_name.size() )
       {
         capt += hdhC::tf_att(vMD.var->name, pQA->n_standard_name, vMD.var->std_name) ;
-        capt += "does not match required " + hdhC::tf_val(tbl_entry.standardName);
+        capt += "does not match required " + hdhC::tf_val(t_VMD_stdName);
       }
       else
       {
@@ -3084,9 +3105,11 @@ QA_Exp::checkVarTableEntry_standardName(
 void
 QA_Exp::checkVarTableEntry_units(
     VariableMetaData &vMD,
-    VariableMetaData &tbl_entry)
+    VariableMetaData &t_VMD_entry)
 {
-  if( tbl_entry.units != vMD.var->units )
+  std::string& t_VMD_units = t_VMD_entry.attMap[n_units] ;
+
+  if( t_VMD_units != vMD.var->units )
   {
       std::string key("32_5");
       if( notes->inq( key, vMD.var->name) )
@@ -3094,7 +3117,7 @@ QA_Exp::checkVarTableEntry_units(
         std::string capt( hdhC::tf_att(vMD.var->name,
                pQA->n_units, vMD.var->units, pQA->no_blank) ) ;
         capt += ", but required is " ;
-        capt += hdhC::tf_val(tbl_entry.units);
+        capt += hdhC::tf_val(t_VMD_units);
 
         (void) notes->operate(capt) ;
         notes->setCheckMetaStr( pQA->fail );
@@ -3157,8 +3180,8 @@ QA_Exp::createVarMetaData(void)
 //      varMeDa.back().isInStandardTable.push_back( false ) ;
 
     // some more properties
-    vMD.longName     = var.getAttValue(pQA->n_long_name) ;
-    vMD.positive     = var.getAttValue(pQA->n_positive) ;
+    vMD.attMap[n_long_name]     = var.getAttValue(pQA->n_long_name) ;
+    vMD.attMap[n_positive]      = var.getAttValue(pQA->n_positive) ;
   }
 
   // Check varname from filename with those in the file.
@@ -3217,7 +3240,7 @@ QA_Exp::findTableEntry(ReadLine &ifs, std::string &name_f,
 
 bool
 QA_Exp::findTableEntry(ReadLine &ifs, std::string &name_f,
-   VariableMetaData &tbl_entry)
+   VariableMetaData &t_VMD_entry)
 {
    // return true: entry is not the one we look for.
 
@@ -3269,46 +3292,46 @@ QA_Exp::findTableEntry(ReadLine &ifs, std::string &name_f,
 
          splt_line = str1;
          // found an entry and the shape matched.
-         if( tbl_entry.name.size() == 0 &&
+         if( t_VMD_entry.name.size() == 0 &&
                 col.find("outVarName") != col.end() )
-             tbl_entry.name = splt_line[ col["outVarName"] ];
+             t_VMD_entry.name = splt_line[ col["outVarName"] ];
 
-         if( tbl_entry.standardName.size() == 0 &&
-                col.find(pQA->n_standard_name) != col.end() )
-             tbl_entry.standardName = splt_line[ col[pQA->n_standard_name] ];
+         if( t_VMD_entry.attMap.count(n_standard_name) == 0
+                && col.find(pQA->n_standard_name) != col.end() )
+             t_VMD_entry.attMap[n_standard_name] = splt_line[ col[pQA->n_standard_name] ];
 
-         if( tbl_entry.longName.size() == 0 &&
-                col.find(pQA->n_long_name) != col.end() )
+         if( t_VMD_entry.attMap.count(n_long_name) == 0
+                && col.find(pQA->n_long_name) != col.end() )
          {
-             tbl_entry.longName = splt_line[ col[pQA->n_long_name] ];
-             tbl_entry.longName
-                = hdhC::clearInternalMultipleSpaces(tbl_entry.longName);
+             t_VMD_entry.attMap[n_long_name] = splt_line[ col[pQA->n_long_name] ];
+             t_VMD_entry.attMap[n_long_name]
+                = hdhC::clearInternalMultipleSpaces(t_VMD_entry.attMap[n_long_name]);
          }
 
-         if( tbl_entry.units.size() == 0 &&
+         if( t_VMD_entry.attMap.count(n_units) == 0 &&
                 col.find(pQA->n_units) != col.end() )
          {
-             tbl_entry.units = splt_line[ col[pQA->n_units] ];
-             tbl_entry.units
-                = hdhC::clearInternalMultipleSpaces(tbl_entry.units);
+             t_VMD_entry.attMap[n_units] = splt_line[ col[pQA->n_units] ];
+             t_VMD_entry.attMap[n_units]
+                = hdhC::clearInternalMultipleSpaces(t_VMD_entry.attMap[n_units]);
 
-             if( tbl_entry.units.size() )
-               tbl_entry.isUnitsDefined=true;
+             if( t_VMD_entry.attMap[n_units].size() )
+               t_VMD_entry.isUnitsDefined=true;
              else
-               tbl_entry.isUnitsDefined=false;
+               t_VMD_entry.isUnitsDefined=false;
          }
 
-         if( tbl_entry.positive.size() == 0 &&
+         if( t_VMD_entry.attMap.count(n_positive) == 0 &&
                 col.find(pQA->n_positive) != col.end() )
-                   tbl_entry.positive = splt_line[ col[pQA->n_positive] ];
+                   t_VMD_entry.attMap[n_positive] = splt_line[ col[pQA->n_positive] ];
 
-         if( tbl_entry.cellMethods.size() == 0 &&
+         if( t_VMD_entry.attMap.count(n_cell_methods) == 0 &&
                 col.find(pQA->n_cell_methods) != col.end() )
-                   tbl_entry.cellMethods = splt_line[ col[pQA->n_cell_methods] ];
+                   t_VMD_entry.attMap[n_cell_methods] = splt_line[ col[pQA->n_cell_methods] ];
 
-         if( tbl_entry.cellMethodsOpt.size() == 0 &&
+         if( t_VMD_entry.attMap.count(n_cell_methods_opt) == 0 &&
                 col.find("cell_methods_opt") != col.end() )
-                   tbl_entry.cellMethodsOpt = splt_line[ col["cell_methods_opt"] ];
+                   t_VMD_entry.attMap[n_cell_methods_opt] = splt_line[ col["cell_methods_opt"] ];
        }
        else
          return isFound ; //== false
@@ -3331,19 +3354,21 @@ QA_Exp::findTableEntry(ReadLine &ifs, std::string &name_f,
 
 std::string
 QA_Exp::getCaptIntroDim(VariableMetaData &vMD,
-                   struct DimensionMetaData &nc_entry,
-                   struct DimensionMetaData &tbl_entry,
+                   struct DimensionMetaData &f_DMD_entry,
+                   struct DimensionMetaData &t_DMD_entry,
                    std::string att )
 {
+  std::string& t_DMD_outname = t_DMD_entry.attMap[n_outname] ;
+
   std::string intro("var=");
   intro += vMD.var->name + ", dim=";
-  intro += nc_entry.outname ;
+  intro += f_DMD_entry.attMap[n_outname] ;
 
-  if( tbl_entry.outname == "basin" )
+  if( t_DMD_outname == "basin" )
     intro += ", var-rep=region";
-  if( tbl_entry.outname == "line" )
+  if( t_DMD_outname == "line" )
     intro += ", var-rep=passage";
-  if( tbl_entry.outname == "type" )
+  if( t_DMD_outname == "type" )
     intro += ", var-rep=type_description";
 
   if( att.size() )
@@ -3358,7 +3383,7 @@ QA_Exp::getCaptIntroDim(VariableMetaData &vMD,
 bool
 QA_Exp::getDimMetaData(InFile &in,
       VariableMetaData &vMD,
-      struct DimensionMetaData &dimMeDa,
+      struct DimensionMetaData &t_DMD_entry,
       std::string &dName)
 {
   // return 0:
@@ -3368,15 +3393,15 @@ QA_Exp::getDimMetaData(InFile &in,
   // a standard table check and for project purposes.
 
   // pre-set
-  dimMeDa.checksum=0;
-  dimMeDa.outname=dName;
+  t_DMD_entry.checksum=0;
+  t_DMD_entry.attMap[n_outname]=dName;
 
   // dName is a dimension name from the table. Is it also
   // a dimension in the ncFile? A size of -1 indicates: no
   int sz = in.nc.getDimSize(dName);
   if( sz == -1 )
      return true;
-  dimMeDa.size = static_cast<size_t>(sz);
+  t_DMD_entry.size = static_cast<size_t>(sz);
 
   // regular: variable representation of the dim
   // except.: variable specified in coords_attr and not a regular case
@@ -3399,25 +3424,25 @@ QA_Exp::getDimMetaData(InFile &in,
       std::string &aV = var.attValue[j][0] ;
 
       if( aN == "bounds" )
-          dimMeDa.bounds = aV ;
+          t_DMD_entry.attMap[n_bnds_name] = aV ;
       else if( aN == "climatology" && aN == "time" )
-          dimMeDa.bounds = aV ;
+          t_DMD_entry.attMap[n_bnds_name] = aV ;
       else if( aN == pQA->n_units )
       {
           if( var.isUnitsDefined )
           {
-            dimMeDa.units = aV ;
-            dimMeDa.isUnitsDefined=true;
+            t_DMD_entry.attMap[n_units] = aV ;
+            t_DMD_entry.isUnitsDefined=true;
           }
           else
-            dimMeDa.isUnitsDefined=false;
+            t_DMD_entry.isUnitsDefined=false;
       }
       else if( aN == pQA->n_long_name )
-          dimMeDa.longname = aV ;
+          t_DMD_entry.attMap[n_long_name] = aV ;
       else if( aN == pQA->n_standard_name )
-          dimMeDa.stndname = aV ;
+          t_DMD_entry.attMap[n_standard_name] = aV ;
       else if( aN == pQA->n_axis )
-          dimMeDa.axis = aV ;
+          t_DMD_entry.attMap[n_axis] = aV ;
     }
   }
 
@@ -3434,7 +3459,7 @@ QA_Exp::getDimMetaData(InFile &in,
       for(size_t i=0 ; i < vs.size() ; ++i)
       {
         vs[i] = hdhC::stripSurrounding(vs[i]);
-        dimMeDa.checksum = hdhC::fletcher32_cmip5(vs[i], &reset) ;
+        t_DMD_entry.checksum = hdhC::fletcher32_cmip5(vs[i], &reset) ;
       }
     }
     else
@@ -3444,14 +3469,14 @@ QA_Exp::getDimMetaData(InFile &in,
 
       bool reset=true;
       for( size_t i=0 ; i < mv.size() ; ++i )
-        dimMeDa.checksum = hdhC::fletcher32_cmip5(mv[i], &reset) ;
+        t_DMD_entry.checksum = hdhC::fletcher32_cmip5(mv[i], &reset) ;
     }
   }
 
   if( dName == pQA->qaTime.name )
   {
     // exclude time from size
-    dimMeDa.size = 0;
+    t_DMD_entry.size = 0;
 
   }
 
@@ -3622,6 +3647,19 @@ QA_Exp::initDefaults(void)
   isCheckParentExpRIP=true;
   isRotated=true;
   isUseStrict=false;
+
+  n_axis="axis";
+  n_bnds_name="bnds_name";
+  n_coordinates="coordinates";
+  n_index_axis="index_axis";
+  n_long_name="long_name";
+  n_outname="outname";
+  n_standard_name="standard_name";
+  n_type="type";
+  n_units="units";
+
+  n_cell_methods="cell_methods";
+  n_cell_measures="cell_measures";
 
   bufferSize=1500;
 
@@ -4434,7 +4472,7 @@ QA_Exp::varReqTableCheck(InFile &in, VariableMetaData &vMD,
    // remove all " from input
    ifs.skipCharacter('"');
 
-   VariableMetaData tbl_entry(pQA);
+   VariableMetaData t_DMD_entry(pQA);
 
    // find the sub table, corresponding to the frequency column
    // try to identify the name of the sub table in str0,
@@ -4443,11 +4481,11 @@ QA_Exp::varReqTableCheck(InFile &in, VariableMetaData &vMD,
 //     return false;
 
    // find entry for the required variable
-   if( findTableEntry(ifs, vMD.var->name, tbl_entry) )
+   if( findTableEntry(ifs, vMD.var->name, t_DMD_entry) )
    {
      // netCDF properties are compared to those in the table.
      // Exit in case of any difference.
-     checkVarTableEntry(vMD, tbl_entry);
+     checkVarTableEntry(vMD, t_DMD_entry);
 
      // a specifi check for the value of height if available
      checkHeightValue(in);
@@ -4495,8 +4533,6 @@ VariableMetaData::VariableMetaData(QA *p, Variable *v)
 {
    pQA = p;
    var = v;
-
-   isForkedAnnotation=false;
 }
 
 VariableMetaData::~VariableMetaData()
@@ -4568,12 +4604,7 @@ VariableMetaData::finally(int xCode)
 void
 VariableMetaData::forkAnnotation(Annotation *n)
 {
-//   if( isForkedAnnotation )
-//      delete notes;
-
    notes = new Annotation(n);
-
-//   isForkedAnnotation=true;
 
    // this is not a mistaken
    qaData.setAnnotation(n);
@@ -4584,12 +4615,7 @@ VariableMetaData::forkAnnotation(Annotation *n)
 void
 VariableMetaData::setAnnotation(Annotation *n)
 {
-//   if( isForkedAnnotation )
-//      delete notes;
-
    notes = n;
-
-//   isForkedAnnotation=false;
 
    qaData.setAnnotation(n);
 

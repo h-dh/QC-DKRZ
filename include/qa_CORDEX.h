@@ -66,18 +66,9 @@ struct DRS_Filename
 //! Struct containing dimensional properties to cross-check with table information.
 struct DimensionMetaData
 {
-  // first item is set by 'time'
-  std::string  cmor_name;
-  std::string  outname;
-  std::string  stndname;
-  std::string  longname;
-  std::string  type;
-  std::string  units;
+  std::map<std::string, std::string> attMap;
+
   bool         isUnitsDefined;
-  std::string  index_axis;
-  std::string  axis;
-  std::string  coordsAtt;
-  std::string  bounds;
   uint32_t     checksum;  //fletcher32
   size_t       size;
 };
@@ -89,16 +80,9 @@ class VariableMetaData
   VariableMetaData(QA*, Variable *var=0);
   ~VariableMetaData();
 
-  // only used for reading tables
-  std::string cellMethods;
-  std::string cellMethodsOpt;
-  std::string standardName;
-  std::string longName;
-  std::string positive;
-  std::string units;
+  std::map<std::string, std::string> attMap;
 
   bool        isUnitsDefined;
-  bool        isForkedAnnotation;
 
   std::string name;
 
@@ -371,6 +355,24 @@ class QA_Exp
   std::string subTable ;
 
   std::string fVarname;
+
+  std::string n_axis;
+  std::string n_bnds_name;
+  std::string n_cmor_name;
+  std::string n_coordinates;
+  std::string n_index_axis;
+  std::string n_long_name;
+  std::string n_outname;
+  std::string n_requested;
+  std::string n_standard_name;
+  std::string n_type;
+  std::string n_units;
+  std::string n_value;
+
+  std::string n_cell_measures;
+  std::string n_cell_methods;
+  std::string n_cell_methods_opt;
+  std::string n_positive;
 
   std::string getCaptIntroDim(VariableMetaData &vMD,
                    struct DimensionMetaData &nc_entry,

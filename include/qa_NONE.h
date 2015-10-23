@@ -58,7 +58,6 @@ class VariableMetaData
   std::string positive;
 
   bool        isUnitsDefined;
-  bool        isForkedAnnotation;
 
   std::string name;
   std::string stdTableFreq;
