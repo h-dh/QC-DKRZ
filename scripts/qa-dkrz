@@ -984,6 +984,8 @@ copyPreamble()
 {
   local i zsTxt
 
+  test ${isShow:-f} = t && return
+
   if [ -e $EXP_LOGDIR/${CURR_EXP_NAME}.log ] ; then
 :
 #    # a new qa svn revision number?

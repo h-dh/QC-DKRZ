@@ -273,8 +273,6 @@ class QA_Exp
   std::string
          getTableEntryID(std::string vN="");
 
-  void   init(std::vector<std::string>&);
-
   //! Initialisation of flushing gathered results to netCDF file.
   /*! Parameter indicates the number of variables. */
   void   initDataOutputBuffer(void);
@@ -304,6 +302,8 @@ class QA_Exp
   void   requiredAttributes_readFile(
            std::vector<std::string> &,
            std::vector<std::vector<std::string> > &);
+
+  void   run(std::vector<std::string>&);
 
   void   setParent(QA*);
 

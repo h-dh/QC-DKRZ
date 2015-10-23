@@ -3606,36 +3606,6 @@ QA_Exp::getVarnameFromFilename(std::string fName)
 }
 
 void
-QA_Exp::init(std::vector<std::string>& optStr)
-{
-   // apply parsed command-line args
-   applyOptions(optStr);
-
-   fVarname = getVarnameFromFilename();
-   getFrequency();
-   getSubTable() ;
-
-   bool isNoTable = inqTables() ;
-
-   if( table_DRS_CV.is )
-   {
-     DRS_Filename drsFN(pQA, optStr);
-     drsFN.run();
-   }
-
-   // Create and set VarMetaData objects.
-   createVarMetaData() ;
-
-   if( !isNoTable )
-   {
-      // get meta data from file and compare with tables
-      checkMetaData(*(pQA->pIn));
-   }
-
-   return ;
-}
-
-void
 QA_Exp::initDataOutputBuffer(void)
 {
     for( size_t i=0 ; i < varMeDa.size() ; ++i)
@@ -4394,6 +4364,36 @@ QA_Exp::requiredAttributes_readFile(
    }
 
    return;
+}
+
+void
+QA_Exp::run(std::vector<std::string>& optStr)
+{
+   // apply parsed command-line args
+   applyOptions(optStr);
+
+   fVarname = getVarnameFromFilename();
+   getFrequency();
+   getSubTable() ;
+
+   bool isNoTable = inqTables() ;
+
+   if( table_DRS_CV.is )
+   {
+     DRS_Filename drsFN(pQA, optStr);
+     drsFN.run();
+   }
+
+   // Create and set VarMetaData objects.
+   createVarMetaData() ;
+
+   if( !isNoTable )
+   {
+      // get meta data from file and compare with tables
+      checkMetaData(*(pQA->pIn));
+   }
+
+   return ;
 }
 
 void

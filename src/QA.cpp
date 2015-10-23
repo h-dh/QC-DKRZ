@@ -523,7 +523,7 @@ QA::init(void)
      isCheckTime=false;
 
    // experiment specific obj: set parent, pass over options
-   qaExp.init(optStr);
+   qaExp.run(optStr);
 
    // check existance of any data at all
    if( (isCheckTime || isCheckData )

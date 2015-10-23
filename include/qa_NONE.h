@@ -103,8 +103,6 @@ class QA_Exp
   std::string
          getTableEntryID(std::string vName);
 
-  void   init(std::vector<std::string>&);
-
   //! Initialisation of flushing gathered results to netCDF file.
   /*! Parameter indicates the number of variables. */
   void   initDataOutputBuffer(void);
@@ -118,6 +116,8 @@ class QA_Exp
 
   //! Check the path to the tables;
   void   inqTables(void){return;}
+
+  void   run(std::vector<std::string>&);
 
   void   setParent(QA*);
 
@@ -135,7 +135,7 @@ class QA_Exp
   bool isCaseInsensitiveVarName;
   bool isClearBits;
   bool isUseStrict;  // dummy
-  
+
   std::vector<std::string> excludedAttribute;
   std::vector<std::string> overruleAllFlagsOption;
 

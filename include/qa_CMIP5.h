@@ -27,8 +27,9 @@ struct DRS_Filename
 
   void   applyOptions(std::vector<std::string>&);
   void   checkFilename(void);
-  void   checkFilenameEncoding(void);
-  void   checkMIP_tableName(Split& fileName);
+  void   checkFilenameEncoding(Split&);
+  void   checkFilenameGeographic(Split&);
+  void   checkMIP_tableName(Split&);
 
   std::string
          getEnsembleMember(void);
@@ -40,11 +41,9 @@ struct DRS_Filename
       match within the uncertainty of 0.75% of the time-step, then
       the file is assumed to be completely qa-processed.
       Syntax of date ranges as given in CORDEX  DRS Syntax.*/
-  bool   testPeriod(void);
+  bool   testPeriod(Split&);
   bool   testPeriodAlignment(std::vector<std::string> &sd, Date** pDates, bool b[])  ;
-  void   testPeriodCut(std::vector<std::string> &sd) ;
-  bool   testPeriodCut_CMOR_isGOD(std::vector<std::string> &sd, Date**);
-  void   testPeriodCutRegular(std::vector<std::string> &sd,
+  void   testPeriodPrecision(std::vector<std::string> &sd,
               std::vector<std::string>& text);
   bool   testPeriodFormat(std::vector<std::string> &sd) ;
 
@@ -57,22 +56,11 @@ struct DRS_Filename
 //! Struct containing dimensional properties to cross-check with table information.
 struct DimensionMetaData
 {
-  // first item is set by 'time'
-  std::string  cmor_name;
-  std::string  outname;
-  std::string  stndname;
-  std::string  longname;
-  std::string  type;
-  std::string  units;
+  std::map<std::string, std::string> attMap;
+
   bool         isUnitsDefined;
-  std::string  index_axis;
-  std::string  axis;
-  std::string  coordsAtt;
-  std::string  bnds_name;
   uint32_t     checksum;  //fletcher32
   size_t       size;
-  std::string  value;
-  std::string  requested ;
 };
 
 //! Properties of the variable to cross-check with table information.
@@ -86,15 +74,7 @@ class VariableMetaData
   std::string varReqTableSheetAlt;  // special case, cf. Omon, cf3hr, and cfSites
   std::string varReqTableSheetSub;
 
-  bool isOwnVar;
-  bool isForkedAnnotation;
-
-  // these have no instance in the Variable class
-  std::string name_alt;  // Table column: output variable name
-  std::string longName;
-  std::string cellMethods;
-  std::string cellMeasures;
-  std::string typeStr;
+  std::map<std::string, std::string> attMap;
 
   size_t priority;
 
@@ -294,7 +274,6 @@ public:
 //  std::string
 //         getTablePath(void){ return tablePath; }
 
-  void   init(std::vector<std::string>&);
 
   //! Check the path to the tables;
   bool   inqTables(void);
@@ -320,6 +299,8 @@ public:
 
   //! Connect this with the object to be checked
 //  void   setInFilePointer(InFile *p) { pIn = p; }
+
+  void   run(std::vector<std::string>&);
 
   void setParent(QA*);
 
@@ -361,8 +342,24 @@ public:
   static std::vector<std::string> MIP_tableNames;
 
   std::string experiment_id;
-
   std::string fVarname;
+
+  std::string n_axis;
+  std::string n_bnds_name;
+  std::string n_cmor_name;
+  std::string n_coordinates;
+  std::string n_index_axis;
+  std::string n_long_name;
+  std::string n_outname;
+  std::string n_requested;
+  std::string n_standard_name;
+  std::string n_type;
+  std::string n_units;
+  std::string n_value;
+
+  std::string n_name_alt;
+  std::string n_cell_methods;
+  std::string n_cell_measures;
 
   std::string getSubjectsIntroDim(VariableMetaData& vMD,
                    struct DimensionMetaData& nc_entry,
@@ -375,11 +372,11 @@ public:
 
 const char* CMIP5_MIPS[] = {
   "fx",       "Oyr",      "Oclim",    "Amon",      "Omon",     "Lmon",
-  "LImon",    "OImon",    "aero",     "day",       "6hrLev",    "6hrPlev",
-  "3hr",      "cfMon",    "cfDay",    "cf3hr",  "cfSites"
+  "LImon",    "OImon",    "aero",     "day",       "6hrLev",   "6hrPlev",
+  "3hr",      "cfMon",    "cfDay",    "cf3hr",     "cfSites",  "cfOff"
 };
 
-std::vector<std::string> QA_Exp::MIP_tableNames(CMIP5_MIPS, CMIP5_MIPS + 17);
+std::vector<std::string> QA_Exp::MIP_tableNames(CMIP5_MIPS, CMIP5_MIPS + 18);
 
 #endif
 
