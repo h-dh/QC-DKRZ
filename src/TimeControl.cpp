@@ -84,7 +84,7 @@ TimeControl::applyOptions(void)
           split.erase(0,0); // first char of first item
         }
 
-        Split splitS(split[0],sep);
+        Split splitS(split[0], ",");
         setBeginDate(splitS[0]);
 
         if( splitS.size() == 3 )

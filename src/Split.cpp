@@ -21,10 +21,11 @@ Split::Split(const char* s) : str(s)
   sep.push_back(std::string("\t"));  // by default
 }
 
-Split::Split(std::string s, std::string sp, bool isStr) : str(s)
+Split::Split(std::string s, std::string sp, bool isContainer) : str(s)
 {
   init();
-  addSeparator(sp, isStr);
+
+  addSeparator(sp, isContainer);
 }
 
 Split::Split(std::string s, char sp) : str(s)
@@ -112,11 +113,14 @@ Split::addIgnore( std::string s, bool isStr)
 }
 
 void
-Split::addSeparator( std::string s, bool isStr)
+Split::addSeparator( std::string s, bool isContainer)
 {
-  if( isStr )
-    sep.push_back(s);
-  else
+  if( s == ":alnum:" )
+  {
+    isAlNum=true;
+    return;
+  }
+  else if(isContainer)
   {
     std::string t;
     for( size_t i=0 ; i < s.size() ; ++i)
@@ -125,48 +129,10 @@ Split::addSeparator( std::string s, bool isStr)
       sep.push_back(t);
     }
   }
+  else
+    sep.push_back(s);
 
   return ;
-}
-
-void
-Split::alternateSplitting(std::string s)
-{
-  items.clear();
-  itemPos.clear();
-
-  size_t pos0=0;  // where a number begins
-  size_t pos1=0;    // one index behind the end
-
-  while ( toDouble( s, pos0, pos1) < MAXDOUBLE )
-  {
-     if( pos0 > 0 )
-     {
-       // string begins with a substring
-       items.push_back( s.substr(0, pos0) );
-       itemPos.push_back(0);
-     }
-
-     // string begins with a number
-     items.push_back( s.substr(pos0, pos1 - pos0) );
-     itemPos.push_back(pos0);
-
-     s = s.substr(pos1);
-     pos0=pos1=0;
-  }
-
-  // Is the last part of the string a sub-string?
-  // Remember: pos0 is advancing until it points to the begin
-  //           of the next number
-  if( pos0 == s.size() )
-  {
-    items.push_back( s );
-    itemPos.push_back(pos0);
-  }
-
-  isDecomposed=true;
-
-  return;
 }
 
 void
@@ -215,50 +181,136 @@ Split::decompose(void)
   if( ignore.size() )
     doIgnore( str ) ;  // will perhaps change object wide 'str'
 
+  if( isAlNum )
+  {
+    decomposeAlNum();
+    return;
+  }
+
+  std::vector<size_t> items_beg;
+  std::vector<size_t> items_len;
+  std::vector<int> sep_ix;
+  int sepIndex;
+
   if( isFixedWidth )
      getFixedFormat();
   else
   {
-    std::string tmp;
-
-    std::string::size_type pos, pos0, pos1  ;
-    int sepIndex=-1;
+    std::string::size_type pos, pos0  ;
     pos0=0;
+
+    size_t sz = str.size();
+    size_t len=0;
 
     do
     {
-      pos1 = std::string::npos ; // starting value
+      sepIndex=-1;
 
       // Works for multiple separators.
-      // Find the lowest next pos1 out of all separators
-      for( std::string::size_type i=0 ; i < sep.size() ; ++i)
+      // Find position of a next separator
+      size_t pos=std::string::npos;
+      for( size_t i=0 ; i < sep.size() ; ++i)
       {
-        if( ( pos = str.find(sep[i], pos0)) < pos1)
+        size_t p;
+        if( ( p = str.find(sep[i], pos0)) < std::string::npos )
         {
-          pos1 = pos ;
-          sepIndex= static_cast<int>(i);
+          if( pos > p )
+          {
+            pos=p;
+            sepIndex= static_cast<int>(i);
+          }
         }
       }
 
-      if( pos1 < std::string::npos)
+      if( sepIndex == -1 )
       {
-        tmp = str.substr( pos0, pos1-pos0) ;
-        if( isEmptyItemsEnabled || tmp.size() > 0 )
+        // last regular item or no separator at all
+        items_beg.push_back(pos0);
+        sep_ix.push_back(-1);
+        items_len.push_back( sz - pos0 );
+        break;
+      }
+      else
+      {
+        len = sep[sepIndex].size() ;
+
+        if( pos > pos0 )
         {
-          items.push_back( tmp );
-          itemPos.push_back(pos0);
+          // a regular item
+          items_beg.push_back(pos0);
+          sep_ix.push_back(-1);
+          items_len.push_back( pos-pos0 );
         }
 
-        pos0 = pos1 + sep[sepIndex].size() ;
+        items_beg.push_back(pos);
+        sep_ix.push_back(sepIndex);
+        items_len.push_back(len);
       }
-    } while( pos1 < std::string::npos ) ;
 
-    // the last token remained
-    tmp = str.substr( pos0) ;
-    if( isEmptyItemsEnabled || tmp.size() > 0 )
+      pos0 = pos + len ;
+    } while ( pos0 < sz ) ;
+
+    // context change
+    sz = items_beg.size();
+
+    // regular case: avoid trailing separators
+    if( ! (isItemsWithSep || isEmptyItemsEnabled) )
     {
-      items.push_back( tmp );
-      itemPos.push_back(pos0);
+      for( int j=sz-1 ; j >= 0 ; --j)
+      {
+        if( sep_ix[j] > -1 )
+          --sz;
+        else
+          break;
+      }
+    }
+
+    for( size_t i=0 ; i < sz ; ++i )
+    {
+      if( sep_ix[i] == -1 || isItemsWithSep )
+      {
+        items.push_back( str.substr(items_beg[i], items_len[i]) );
+        itemPos.push_back(items_beg[i]);
+      }
+      else if( isEmptyItemsEnabled && sep_ix.size() && sep_ix[i-1] > -1 )
+      {
+        items.push_back( empty );
+        itemPos.push_back(items_beg[i]);
+      }
+    }
+  }
+
+  isDecomposed=true;
+
+  return ;
+}
+
+void
+Split::decomposeAlNum(void)
+{
+  bool isA=false;
+  bool isN=false;
+
+  for( size_t i=0 ; i < str.size() ; ++i)
+  {
+    if( isA && ! hdhC::isDigit(str[i], true) )
+      items.back() += str[i];
+    else if( isN && hdhC::isDigit(str[i], true) )
+      items.back() += str[i];
+
+    else if( hdhC::isDigit(str[i], true) )
+    {
+      isN=true;
+      items.push_back("");
+      items.back() += str[i] ;
+      isA=false;
+    }
+    else
+    {
+      isA=true;
+      items.push_back("");
+      items.back() += str[i] ;
+      isN=false;
     }
   }
 
@@ -359,9 +411,11 @@ Split::init(void)
 {
   xcptn.ofsError=0;
 
+  isAlNum=false;
   isDecomposed=false;
-  isFixedWidth=false;
   isEmptyItemsEnabled=false;
+  isFixedWidth=false;
+  isItemsWithSep=false;
   is_valid=false;
 
   return;
@@ -435,12 +489,12 @@ Split::setIgnore( std::string s, bool isStr)
 }
 
 void
-Split::setSeparator( std::string s, bool isStr)
+Split::setSeparator( std::string s, bool isContainer)
 {
   isDecomposed=false;
   sep.clear();
 
-  addSeparator(s, isStr);
+  addSeparator(s, isContainer);
 
   return ;
 }

@@ -2711,7 +2711,7 @@ QA_Exp::checkHeightValue(InFile &in)
    // try for a variable height and a variable with pattern nearXsurface
    // in lon_name where X means space, - or _
    Split x_longName;
-   x_longName.setSeparator(" -_");
+   x_longName.setSeparator(" -_", true);
    x_longName = hdhC::Lower()(longName) ;
 
    bool is=false;
@@ -2936,8 +2936,8 @@ QA_Exp::checkVarTableEntry_longName(
   Split t_splt;
 
   // split in a way that '-' is equivalent to a space
-  f_splt.setSeparator(" -");
-  t_splt.setSeparator(" -");
+  f_splt.setSeparator(" -", true);
+  t_splt.setSeparator(" -", true);
 
   t_splt = t ;
   f_splt = f ;

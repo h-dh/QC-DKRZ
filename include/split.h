@@ -43,9 +43,9 @@ class Split
 
   //! Construct and split a string at string sep.
   /*! By default, each character in the string is set as individual
-   separator. If the entire string is a separator, set 'isStr' true.
+   separator. If each char in string is a separator, set 'isContain' true.
    Note: no white-spaces by default with this constructor.*/
-  Split(std::string s, std::string sep, bool isStr=false);
+  Split(std::string s, std::string sep, bool isContainer=false);
 
   //! Construct and split a string at char sep.
   Split(std::string s, char sep);
@@ -76,10 +76,7 @@ class Split
   void   addSeparator( char s){addSeparator(std::string(1,s));}
 
   //! Add another separator to those already set.
-  void   addSeparator( std::string s, bool isStr=false);
-
-  //! Split string at positions where digits and characters alternate.
-  void alternateSplitting(std::string);
+  void   addSeparator( std::string s, bool isContainer=false);
 
   //! Clear previous assignment, but leaving the setting alone.
   void clear(void);
@@ -141,12 +138,16 @@ class Split
   void
     setFixedFormat( size_t w ){fixedWidth=w; isFixedWidth=true;}
 
+  //! Each separator is contained in the separated items.
+  void
+    setItemsWithSeparator(void){ isItemsWithSep=true;}
+
   //! Discard specific character; replace former setting.
   void   setIgnore(char s){setIgnore(std::string(1,s));}
 
   //! Discard specific characters/strings.
   /*! By default, each character in the string is set as individual
-   sepaerator. If the entire string is a separator, isStr=true.*/
+   separator. If the entire string is a separator, isStr=true.*/
   void   setIgnore( std::string s, bool isStr=false);
 
   //! Set a new separator; replace former setting.
@@ -154,8 +155,9 @@ class Split
 
   //! Set a new separator; discard old ones.
   /*! By default, each character in the string is set as individual
-   sepaerator. If the entire string is a separator, isStr=true.*/
-  void   setSeparator( std::string s, bool isStr=false);
+   sepaerator. If the entire string is a separator, isStr=true.
+   If additionally s==:alnum:, the str and nums are separated.*/
+  void   setSeparator( std::string s, bool isContainer=false);
 
   //! Get number of split sub-strings.
   size_t size(void);
@@ -181,6 +183,7 @@ class Split
 
 private:
   void   decompose(void);
+  void   decomposeAlNum(void);
   void   doIgnore(std::string);
   void   getFixedFormat(void);
   void   init(void);
@@ -194,9 +197,11 @@ private:
   // messaging in case of exceptions.
   struct ExceptionStruct xcptn;
 
+  bool   isAlNum;
+  bool   isDecomposed;
   bool   isEmptyItemsEnabled;
   bool   isFixedWidth ;
-  bool   isDecomposed;
+  bool   isItemsWithSep;
 
   size_t fixedWidth;
 

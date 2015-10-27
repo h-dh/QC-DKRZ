@@ -1677,7 +1677,7 @@ NcAPI::generate(std::string rFile)
     }
 
      // Now go through the sections.
-     Split splitA(rC.getLine(), " \t=");
+     Split splitA(rC.getLine(), " \t=", true);
 
      if( isDims )
      {
@@ -1817,7 +1817,7 @@ NcAPI::generateParseAtt(ReadLine &rC, std::string vName)
     {
       // analyse the part of the line beyond the '='
       // May be a comma-separated list, may-be appending blanks.
-      Split splitC( rC.subLine(pos+1), " ," ) ;
+      Split splitC( rC.subLine(pos+1), " ,", true ) ;
 
       // clear and then assign
       for( size_t j=0 ; j < splitC.size() ; ++j )
@@ -1939,7 +1939,7 @@ NcAPI::generateParseVar(ReadLine &rC,
 
   // separate var and dimensions
   Split splitD;
-  splitD.addSeparator("(,)");
+  splitD.addSeparator("(,)", true);
   splitD=splitV[1];
 
   // varname
@@ -1996,7 +1996,7 @@ NcAPI::generateWriteLimited( std::string line, std::string &vName,
    double range[2];
    double  numVals;
 
-   Split splt(line," ,");
+   Split splt(line," ,", true);
    std::string str;
    size_t pos;
 

@@ -470,7 +470,7 @@ Annotation::inq( std::string key, std::string name, std::string mode)
 
   if( mode.size() )
   {
-    Split splt(mode," |");
+    Split splt(mode," |", true);  // string is a container of separators
     for( size_t i=0 ; i < splt.size() ; ++i )
     {
        if( splt[i] == "INQ_ONLY" )

@@ -24,22 +24,22 @@ int main(int argc, const char* argv[])
   double expected, checkTime, usedStorage, totalStorage;
   double elapsedTime;
 
-  if( hdhC::isNonDigit(argv[1]) )
+  if( ! hdhC::isDigit(argv[1]) )
     return 1;
   else
     checkTime=hdhC::string2Double(argv[1]);
 
-  if( hdhC::isNonDigit(argv[2]) )
+  if( ! hdhC::isDigit(argv[2]) )
     return 1;
   else
     usedStorage=hdhC::string2Double(argv[2]);
 
-  if( hdhC::isNonDigit(argv[3]) )
+  if( ! hdhC::isDigit(argv[3]) )
     return 1;
   else
     totalStorage=hdhC::string2Double(argv[3]);
 
-  if( hdhC::isNonDigit(argv[4]) )
+  if( ! hdhC::isDigit(argv[4]) )
     return 1;
   else
     elapsedTime=hdhC::string2Double(argv[4]);

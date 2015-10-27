@@ -155,14 +155,15 @@ Date::addTime(std::string time, std::string unit)
   time += unit;
 
   // Split string at positions where digits and characters alternate.
-  splt.alternateSplitting( time );
+  splt.setSeparator(":alnum:");
+  splt = time ;
 
   // If there is a mix of digits and non-digits, splt.size() >= 2:
   // isNonDigit && size == 1 is an error.
   // size == 0 is an error.
   // But, for !isNonDigit && size == 1 we got the default
 
-  bool isNon = hdhC::isNonDigit(time);
+  bool isNon = ! hdhC::isDigit(time);
 
   if( (splt.size() == 1 && isNon) || (splt.size() == 0) )
   {
@@ -1187,9 +1188,9 @@ Date::parseISO_8601(std::string str0)
   day = 1.;
   hour=0.;
 
-  Split x_str0(str0, " T");
+  Split x_str0(str0, " T", true);
 
-  Split x_d(x_str0[0],'-');
+  Split x_d(x_str0[0],"-");
 
   if( x_d.size() > 2 )
   {

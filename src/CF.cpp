@@ -2814,7 +2814,7 @@ CF::scanStdNameTable(ReadLine& ifs, Variable& var, std::string testName)
   std::string canonical_units("canonical_units");
 
   Split x_line;
-  x_line.setSeparator("<>\"");
+  x_line.setSeparator("<>\"", true);
 
   std::string line;
   int countRewinds=0;
@@ -7798,7 +7798,7 @@ CF::chap7_3_cellMethods_Comment(std::string &par, Variable& var)
   // Additional information may be specified within parenthesis.
   // a) matching () was checked previously
   // b) check the only standardised one, syntax: (interval: value unit)
-  Split x_par(par, " ()");
+  Split x_par(par, " ()", true);  // container of chars
 
   if( x_par.size() )
   {
@@ -7954,7 +7954,7 @@ CF::chap7_3_cellMethods_Name(std::string &name, Variable& var)
   // valid names:  dimension of the variable, a scalar coordinate variable,
   //               , a standard name indicating the axis, or area.
 
-  Split x_name(name, " :");
+  Split x_name(name, " :", true);
 
   for( size_t x=0 ; x < x_name.size() ; ++x )
   {
@@ -8015,7 +8015,7 @@ CF::chap7_3_inqBounds(Variable& var,
 
   for( size_t l=0 ; l < cm_name.size() ; ++l )
   {
-    Split x_cm_name(cm_name[l], ": ");  // the dimensions in cell_methods
+    Split x_cm_name(cm_name[l], ": ", true);  // the dimensions in cell_methods
     for( size_t x=0 ; x < x_cm_name.size() ; ++x )
     {
       if( cm_method[l].find("point") == std::string::npos )
@@ -8162,7 +8162,7 @@ CF::chap7_3b_reco(Variable& var, std::vector<std::string> &cm_name )
     bool is=true;
     for( size_t l=0 ; l < cm_name.size() ; ++l )
     {
-      Split x_cm_name(cm_name[l], ": ");
+      Split x_cm_name(cm_name[l], ": ", true);
 
       for( size_t x=0 ; x < x_cm_name.size() ; ++x )
       {
@@ -8530,7 +8530,7 @@ CF::chap7_3_4b(Variable& var,
 
     std::vector<std::string> vs( pIn->nc.getDimName());
 
-    Split x_cm_name(cm_name[l], ": ");  // the dimensions in cell_methods
+    Split x_cm_name(cm_name[l], ": ", true);  // the dimensions in cell_methods
 
     for( size_t x=0 ; x < x_cm_name.size() ; ++x )
     {
@@ -9620,7 +9620,7 @@ CF::chap9_featureType(
      // 2) CF-v1.6: multiple featureTypes
      // 3) misspelled
      Split x_str;
-     x_str.setSeparator(" ,");
+     x_str.setSeparator(" ,", true);
 
      for(size_t i=0 ; i < glob.attValue[att_ix].size() ; ++i )
      {

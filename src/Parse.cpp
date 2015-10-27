@@ -276,7 +276,7 @@ Parse::nextFreeObjID(std::string oStr)
      int id;
 
      // take into account formally linked objects.
-     Split split( argv[i],"<-", true);
+     Split split( argv[i],"<-");
      for( size_t i=0 ; i < split.size() ; ++i )
      {
        (void) parseObj(split[i], name, id, param) ;
