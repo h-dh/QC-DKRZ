@@ -230,6 +230,216 @@ DRS_Filename::checkFilenameEncoding(Split& x_filename)
 void
 DRS_Filename::checkFilenameGeographic(Split& x_filename)
 {
+  // the geographical indicator should be the last item
+  int i;
+  int last = x_filename.size()-1 ;
+
+  for( i=last ; i >= 0 ; --i )
+  {
+    if( x_filename[i].size() > 1 )
+    {
+      if( x_filename[i][0] == 'g' && x_filename[i][1] == '-' )
+        break;
+    }
+  }
+
+  if( i == -1 )
+    return;  // no geo-indicator
+
+  Split x_geo(x_filename[i], "-");
+
+  std::vector<std::string> key;
+  std::vector<std::string> capt;
+  std::string cName("geographical indicator");
+  if( i != last )
+  {
+    // the geographical indicator should be the last item
+    std::string bkey("1_8a");
+    if( notes->inq( key[i], pQA->fileStr))
+    {
+      std::string ccapt(cName + " should appear last in the filename");
+
+      (void) notes->operate(ccapt) ;
+      notes->setCheckMetaStr(pQA->fail);
+    }
+  }
+
+  if( x_geo.size() < 2 )
+  {
+    // the geographical indicator should be the last item
+    std::string bkey("1_8b");
+
+    if( notes->inq( key[i], pQA->fileStr))
+    {
+      std::string ccapt(cName + " g-XXXX[-YYYY]: syntax fault");
+
+      (void) notes->operate(ccapt) ;
+      notes->setCheckMetaStr(pQA->fail);
+    }
+
+    return ;
+  }
+
+  // valid stand-alone '-' separated words
+  std::vector<std::string> kw;
+  kw.push_back("global");
+  kw.push_back("lnd");
+  kw.push_back("ocn");
+  kw.push_back("zonalavg");
+  kw.push_back("areaavg");
+
+  size_t kw_pos_zzz=3;
+
+  // entries (1st char): (b)ounding-box, (r)egion, (t)ype, (f)ault
+  std::vector<char> seq ;
+
+  for( size_t ix=1 ; ix < x_geo.size() ; ++ix )
+  {
+    if( ix == 1 )
+    {
+      // a) bounding box?
+      Split x_box;
+      x_box.setSeparator("lat");
+      x_box.addSeparator("lon");
+      x_box.setItemsWithSeparator();
+      x_box = x_geo[ix];
+
+      for(size_t n=0 ; n < x_box.size() ; ++n )
+      {
+        bool isLat, isLon ;
+        double val;
+        if( x_box[n] == "lat" )
+        {
+          isLat = true ;
+          isLon = false ;
+          val=90.;
+          if( seq.size() == 0 )
+            seq.push_back('b');
+          continue;
+        }
+        else if( x_box[n] == "lon" )
+        {
+          isLon = true ;
+          isLat = false ;
+          val=180.;
+          if( seq.size() == 0 )
+            seq.push_back('b');
+          continue;
+        }
+
+        Split x_term;
+        x_term.setSeparator(":alnum:");
+        x_term = x_box[n];
+
+        for( size_t jx=0; jx < x_term.size() ; ++jx )
+        {
+          // a number is expected
+          if( hdhC::isDigit(x_term[jx]) )
+          {
+            if( x_term[jx].find('.') < std::string::npos )
+            {
+              key.push_back("1_8c");
+              capt.push_back(cName + ": numbers should be rounded to the nearest integer");
+            }
+
+            if( hdhC::string2Double(x_term[jx]) > val )
+            {
+              key.push_back("1_8d");
+              capt.push_back(cName);
+              if(isLat)
+                capt.back() += ": latitude value should not exceed 90 degr";
+              else if(isLon)
+                capt.back() += ": longitude value should not exceed 180 degr";
+            }
+          }
+
+          // range indicator
+          ++jx;
+          bool is_SNWE_fault=false;
+
+          if( isLat && ! (x_term[jx] == "S" || x_term[jx] == "N") )
+            is_SNWE_fault=true;
+          else if( isLon && ! (x_term[jx] == "E" || x_term[jx] == "W") )
+            is_SNWE_fault=true;
+
+          if( is_SNWE_fault )
+          {
+            key.push_back("1_8e");
+            capt.push_back(cName + ": invalid bounding-box ");
+          }
+        }
+      }
+    }  // ix==1
+
+    if( ix ==1 && seq.size() )
+      continue;
+
+    size_t k;
+    for(k=0 ; k < kw.size() ; ++k )
+      if( kw[k] == x_geo[ix] )
+        break;
+
+    if( k < kw_pos_zzz )
+      seq.push_back('r') ;
+    else if( k < kw.size() )
+      seq.push_back('t') ;
+    else
+      seq.push_back('f') ;
+
+  } // geo_ix
+
+  // a type requires a preceding BB or region
+  for( size_t i=0 ; i < seq.size() ; ++i )
+  {
+    if( seq[i] == 't')
+    {
+      bool isA = !( i && (seq[i-1] == 'b' || seq[i-1] == 'r') ) ;
+      bool isB = !( i && (seq[i-1] == 'f'  ) ) ;
+      if( isA && isB )
+      {
+        key.push_back("1_8g");
+        capt.push_back(cName + ": invalid specifier ");
+        capt.back() += "g-XXXX[-yyy][-zzz]: given zzz, but missing XXXX";
+      }
+    }
+  }
+
+  if( hdhC::isAmong('f', seq) )
+  {
+    // 1st index for 'g'
+    for( size_t i=1 ; i < x_geo.size() ; ++i )
+    {
+      size_t j;
+      for( j=0 ; j < kw.size() ; ++j )
+      {
+        if( kw[j] == x_geo[i] )
+          break;
+
+        std::string t(x_geo[i].substr(0,3));
+        if( t == "lat" || t == "lon" )
+          break;
+      }
+
+      if( j == kw.size() )
+      {
+        key.push_back("1_8f");
+        capt.push_back(cName + ": invalid specifier");
+        capt.back() += hdhC::tf_val(x_geo[i], hdhC::no_blank) + ", valid are";
+        capt.back() += hdhC::tf_val( hdhC::getComposedVector(kw) );
+      }
+    }
+  }
+
+
+  for( size_t ii=0 ; ii < key.size() ; ++ii )
+  {
+    if( notes->inq( key[ii], pQA->fileStr))
+    {
+      (void) notes->operate(capt[ii]) ;
+      notes->setCheckMetaStr(pQA->fail);
+    }
+  }
+
   return;
 }
 
