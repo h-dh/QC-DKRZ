@@ -307,18 +307,19 @@ double convertTime(std::string targetUnit, std::string time,
   // ... denotes the target unit.
 
   // If there is a mix of digits and non-digits, size is >= 2:
-  // If isNonDigit && size == 1, then there is an error.
+  // If !isDigit && size == 1, then there is an error.
   // If size == 0, error
-  // But, for !isNonDigit && size == 1 we got the default
+  // But, for isDigit && size == 1 we got the default
 
   // It is save to append units (even if empty) to time
   // Note: time-unit overrules parameter unit.
   time += unit;
 
   Split splt;
-  splt.alternateSplitting( time );
+  splt.setSeparator(":alnum:");
+  splt = time;
 
-  bool isNon = isNonDigit(time);
+  bool isNon = ! isDigit(time);
   if( (splt.size() == 1 && isNon) || (splt.size() == 0) )
   {
      std::cerr << "convertTime(): error in 2nd parameter (time="
@@ -798,6 +799,28 @@ bool equal(T x1, T x2, double epsilon)
     return false;
 }
 
+//! Find position of a value in a vector
+int
+findPos(std::string& item, std::vector<std::string>& set)
+{
+  for(size_t i=0 ; i < set.size() ; ++i )
+    if( item == set[i] )
+      return static_cast<int>(i) ;
+
+  return -1;
+}
+
+template <typename T>
+int
+findPos(T item, std::vector<T>& set)
+{
+  for(size_t i=0 ; i < set.size() ; ++i )
+    if( item == set[i] )
+      return static_cast<int>(i) ;
+
+  return -1;
+}
+
 // ----------------------------------------------------
 // Note: *_cmip5 versions do not calculate the Fletcher32
 // checksum as expected for data arrays that are
@@ -1265,6 +1288,29 @@ uint32_t fletcher32_LE_clear( T *data, size_t len, bool *reset, size_t nShift )
 
 // ----------------------------------------------------
 
+std::string
+getComposedVector(std::vector<std::string>& vs, bool isSpace, char sep)
+{
+  std::string s;
+
+  if( vs.size() )
+  {
+    s = vs[0] ;
+
+    for( size_t i=1 ; i < vs.size() ; ++i )
+    {
+      s += sep;
+      if(isSpace)
+        s += ' ';
+
+      s += vs[i] ;
+    }
+  }
+
+  return s;
+}
+
+
 template <typename T>
 T invertBits ( T val )
 {
@@ -1492,9 +1538,8 @@ bool isAlphaNum(unsigned char c)
   return is;
 }
 
-template <typename T>
 bool
-isAmong(T& item, std::vector<T>& set)
+isAmong(std::string& item, std::vector<std::string>& set)
 {
   for(size_t i=0 ; i < set.size() ; ++i )
     if( item == set[i] )
@@ -1503,6 +1548,16 @@ isAmong(T& item, std::vector<T>& set)
   return false;
 }
 
+template <typename T>
+bool
+isAmong(T item, std::vector<T>& set)
+{
+  for(size_t i=0 ; i < set.size() ; ++i )
+    if( item == set[i] )
+      return true ;
+
+  return false;
+}
 
 template <typename T>
 bool
@@ -1569,6 +1624,8 @@ bool isDigit(std::string s, bool isContains)
     for(size_t k=0; k < s.size(); ++k)
       if( isdigit(s[k]) )
         return true;
+
+    return false;
   }
   else
   {
@@ -1578,15 +1635,6 @@ bool isDigit(std::string s, bool isContains)
   }
 
   return true;
-}
-
-bool isNonDigit(std::string s)
-{
-  for(size_t k=0; k < s.size(); ++k)
-    if( !isdigit(s[k]) )
-      return true;
-
-  return false;
 }
 
 bool isNumber( std::string &str )

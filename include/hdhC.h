@@ -315,6 +315,20 @@ T invertBits ( T );
 template <typename T>
 void printBits ( T val );
 
+//! Find position of a value in a vector
+/*! Return -1 if not found*/
+int
+findPos(std::string&, std::vector<std::string>&);
+
+template <typename T>
+int
+findPos(T, std::vector<T>&);
+
+//! return vector composed to a char-separated string
+/*! A space follows 'sep', if isSpace=true*/
+std::string
+getComposedVector(std::vector<std::string>& vs, bool isSpace=false, char sep=',');
+
 //! Get non-alpha characters.
 /*! Return empty if no one was found.*/
 std::string
@@ -349,9 +363,12 @@ isAlpha(std::string, bool isContains=false);
 bool
 isAlphaNum(unsigned char);
 
+bool
+isAmong(std::string&, std::vector<std::string>& set);
+
 template <typename T>
 bool
-isAmong(T&, std::vector<T>& set);
+isAmong(T, std::vector<T>& set);
 
 template <typename T>
 bool
@@ -371,10 +388,6 @@ isDigit(unsigned char, bool isNumber=false);
 /*! If 'isContains' is true, then a single digit is sufficient.*/
 bool
 isDigit(std::string, bool isContains=false);
-
-//! Does string contain any non-digit?
-bool
-isNonDigit(std::string);
 
 //! Is string a number?
 /*! The string may be e- or E-format*/
