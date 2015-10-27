@@ -119,7 +119,7 @@ class Ensemble
    int    getTimes(std::string &);
    void   print(void);
    void   printDateSpan(void);
-   void   setAnnotation( Annotation *n ) { notes = n ;}
+//   void   setAnnotation( Annotation *n ) { notes = n ;}
    void   setPath( std::string &p){path=p;}
    void   sortDate(void);
    int    testAmbiguity(std::string &,
@@ -139,7 +139,7 @@ class Ensemble
 
    std::string           path;
    std::vector<Member*>  member ;
-   Annotation           *notes;
+//   Annotation           *notes;
 } ;
 
 class SyncFiles
@@ -154,7 +154,6 @@ class SyncFiles
    void enablePrintTotalTimeRange(void) {isPeriod=true;}
 
    void description(void);
-   void initAnnotation(std::string &opts);
    void print(void);
    int  printTimelessFile(std::string &);
    void readInput(void);
@@ -181,7 +180,7 @@ class SyncFiles
    int  returnValue;
 
    Ensemble   *ensemble;
-   Annotation *notes;
+//   Annotation *notes;
 } ;
 
 int main(int argc, char *argv[])
@@ -192,7 +191,7 @@ int main(int argc, char *argv[])
   SyncFiles syncFiles(ensemble);
 
   std::string noteOpts;
-  Annotation *notes=0;
+//  Annotation *notes=0;
 
   std::string annotText;
   std::string outputText;
@@ -1167,7 +1166,7 @@ Member::setFile( std::string &f)
 SyncFiles::SyncFiles( Ensemble &e)
 {
   ensemble = &e;
-  notes=0;
+//  notes=0;
 
   isAddTimes         = false;
   isInvalid          = false;
@@ -1218,22 +1217,6 @@ SyncFiles::description(void)
   std::cout << std::endl;
 
   return;
-}
-
-void
-SyncFiles::initAnnotation(std::string &opts)
-{
-  notes = new Annotation ;
-
-  Split splt(opts, opts[0]) ;
-
-  for( size_t i=0 ; i < splt.size() ; ++i)
-    notes->setOptions( splt[i] );
-
-  notes->applyOptions();
-  notes->config();
-
-  return ;
 }
 
 void
