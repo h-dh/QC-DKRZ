@@ -54,32 +54,33 @@ Split::~Split()
     delete xcptn.ofsError ;
 }
 
-Split&
+void
 Split::operator=(  const char *s )
 {
   std::string sstr(s);
   isDecomposed=false;
   items.clear();
   itemPos.clear();
-  return *this=sstr;
+  *this=sstr ;
+  return ;
 }
 
-Split&
+void
 Split::operator=( std::string s )
 {
   str=s;
   isDecomposed=false;
   items.clear();
   itemPos.clear();
-  return *this;
+  return ;// *this;
 }
 
-Split&
+void
 Split::operator+=( std::string s )
 {
   str+=s;
   isDecomposed=false;
-  return *this;
+  return ;
 }
 
 std::string&
@@ -269,8 +270,16 @@ Split::decompose(void)
     {
       if( sep_ix[i] == -1 || isItemsWithSep )
       {
-        items.push_back( str.substr(items_beg[i], items_len[i]) );
-        itemPos.push_back(items_beg[i]);
+        std::string t0(str.substr(items_beg[i], items_len[i]));
+
+        if( stripSides.size() )
+          t0 = hdhC::stripSides(t0, stripSides) ;
+
+        if( t0.size() )  // empty item if !(sz == 1 && t0 == stripSides[0])
+        {
+          items.push_back(t0);
+          itemPos.push_back(items_beg[i]);
+        }
       }
       else if( isEmptyItemsEnabled && sep_ix.size() && sep_ix[i-1] > -1 )
       {
@@ -318,6 +327,12 @@ Split::decomposeAlNum(void)
   {
     items.push_back("");
     itemPos.push_back(0);
+  }
+
+  if( stripSides.size() )
+  {
+    for( size_t l=0 ; l < items.size() ; ++l )
+      items.back() = hdhC::stripSides(items.back(), stripSides) ;
   }
 
   isDecomposed=true;

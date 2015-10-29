@@ -497,6 +497,17 @@ ReadLine::setRange( std::string & s )
    return true ;
 }
 
+void
+ReadLine::skipCharacter(std::string s)
+{
+  for( size_t i=0 ; i < s.size() ; ++i )
+    vSkipChars.push_back(s[i]);
+
+  isSkipCharacter=true;
+
+  return;
+}
+
 bool
 ReadLine::skipLines( int count )
 {

@@ -55,13 +55,13 @@ class Split
 
 //  ~Split() { ;}
   //! Assignment operator of a string to be split.
-  Split& operator=( std::string s );
+  void operator=( std::string s );
 
   //! Assignment operator of a const char* to be split.
-  Split& operator=(  const char *s );
+  void operator=(  const char *s );
 
   //! Incremental assignment operator of a string to be split.
-  Split& operator+=( std::string s );
+  void operator+=( std::string s );
 
   //! Subscription operator. Returns i-th sub-string.
   std::string&  operator[](size_t i);
@@ -77,6 +77,10 @@ class Split
 
   //! Add another separator to those already set.
   void   addSeparator( std::string s, bool isContainer=false);
+
+  //! Strip leading and trailing characters
+  /*! Ignored, when identical to a separation character */
+  void   addStripSides(std::string s){ stripSides.push_back(s); }
 
   //! Clear previous assignment, but leaving the setting alone.
   void clear(void);
@@ -159,6 +163,8 @@ class Split
    If additionally s==:alnum:, the str and nums are separated.*/
   void   setSeparator( std::string s, bool isContainer=false);
 
+  void   setStripSides(std::string s){stripSides.clear(); addStripSides(s);}
+
   //! Get number of split sub-strings.
   size_t size(void);
 
@@ -204,15 +210,16 @@ private:
   bool   isItemsWithSep;
 
   size_t fixedWidth;
+  bool is_valid;
 
   std::string str;
   std::string empty;
-  bool is_valid;
 
   std::vector<std::string> sep;
   std::vector<std::string> ignore;
   std::vector<std::string> items;
   std::vector<size_t> itemPos;
+  std::vector<std::string> stripSides;
 };
 
 #endif

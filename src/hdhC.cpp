@@ -2260,6 +2260,106 @@ std::string sAssign(std::string left, std::string right)
     return left + "=<" + right + ">" ;
 }
 
+std::string
+stripSides(std::string str, std::string strip, std::string mode )
+{
+   std::vector<std::string> vs;
+
+   if( strip.size() )
+     vs.push_back(strip);
+   else
+   {
+     vs.push_back(" ");
+     vs.push_back("\t");
+   }
+
+   return stripSides(str, vs, mode) ;
+}
+
+std::string
+stripSides(std::string str, std::vector<std::string>& strip, std::string mode )
+{
+  // strip off leading and trailing blanks and tabs
+  size_t p0=0;
+  size_t p1=str.size()-1;
+  bool isEmpty=true;
+
+  std::string side;
+
+  for( size_t i=0 ; i < mode.size() ; ++i )
+  {
+    if( mode[i] == 'r' )
+    {
+      if( mode.substr(i, 5) == "right" )
+      {
+        side = "right";
+        i += 4;
+      }
+    }
+    else if( mode.substr(i, 4) == "left" )
+    {
+      side = "left";
+      i += 3;
+    }
+  }
+
+  if( side != "right" )
+  {
+    for( size_t p=0 ; p < str.size() ; ++p )
+    {
+      bool isCont=false;
+      for( size_t i=0 ; i < strip.size() ; ++i )
+      {
+        size_t sz = strip[i].size() ;
+        if( str.substr(p, sz) == strip[i] )
+        {
+          p += (sz -1) ; // because of ++p
+          p0=p+1;  // applies only to an item equal to strip[i]
+          isCont=true ;
+        }
+      }
+
+      if( isCont )
+        continue;
+
+      p0=p;
+      isEmpty=false;
+
+      break;
+    }
+  }
+
+  if( side != "left" )
+  {
+    for( int p=str.size()-1 ; p > -1 ; --p )
+    {
+      bool isCont=false;
+      for( size_t i=0 ; i < strip.size() ; ++i )
+      {
+        int sz = strip[i].size() ;
+        if( p >= sz && str.substr(p-sz+1, sz) == strip[i] )
+        {
+          p -= (sz - 1) ;  // becaus of --p
+          p1=p-1;  // applies only to an item equal to strip[i]
+          isCont=true ;
+        }
+      }
+
+      if( isCont )
+        continue;
+
+      p1=p;
+      isEmpty=false;
+      break;
+    }
+  }
+
+  if( isEmpty )
+    return "" ;
+
+  return str.substr(p0, p1 - p0 +1 ) ;
+}
+
 std::string stripSurrounding(std::string &str, std::string mode )
 {
   // strip off leading and trailing blanks and tabs
@@ -2287,8 +2387,6 @@ std::string stripSurrounding(std::string &str, std::string mode )
       side = "left";
       i += 3;
     }
-    else
-      token.push_back(mode[i]);
   }
 
   if( side != "right" )

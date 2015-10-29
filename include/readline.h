@@ -221,6 +221,10 @@ public:
     void
     skipCharacter( char c){ vSkipChars.push_back(c); isSkipCharacter=true; }
 
+/*! Note that each character is discrded, not just the string */
+    void
+    skipCharacter(std::string);
+
 //! Skip the first int lines.
   bool
     skipLines( int );  // skip the first int lines
