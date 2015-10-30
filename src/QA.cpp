@@ -1236,3 +1236,127 @@ QA::storeTime(void)
    return ;
 }
 
+void
+DRS_CV_Table::read(hdhC::FileSplit& fs)
+{
+  ReadLine ifs(fs.getFile());
+
+  if( ! ifs.isOpen() )
+  {
+     std::string key("7_1");
+     if( pQA->notes->inq( key, pQA->fileStr) )
+     {
+        std::string capt("no path to a table, tried " + fs.getFile()) ;
+
+        if( notes->operate(capt) )
+        {
+          pQA->notes->setCheckMetaStr( pQA->fail );
+          pQA->setExit( notes->getExitValue() ) ;
+        }
+     }
+
+     return;
+  }
+
+   std::string s0;
+   std::vector<std::string> vs;
+
+   // parse table; trailing ':' indicates variable or 'global'
+   ifs.skipWhiteLines();
+   ifs.skipBashComment();
+   ifs.skipCharacter("<>");
+   ifs.clearSurroundingSpaces();
+
+   Split x_item;
+   x_item.setSeparator("=");
+   x_item.setStripSides(" ");
+
+   while( ! ifs.getLine(s0) )
+   {
+     if( s0.size() == 0 )
+       continue;
+
+     if( s0 == "BEGIN: DRS" )
+     {
+       while( ! ifs.getLine(s0) )
+       {
+          size_t pos;
+          if( (pos=s0.find(':')) < std::string::npos )
+          {
+            if( s0.substr(pos-3, 4) == "-DS:" )
+            {
+              pathEncodingName.push_back(s0.substr(0, pos-3));
+              pathEncoding.push_back(
+                hdhC::stripSides( s0.substr(++pos)) );
+            }
+            else if( s0.substr(pos-3, 4) == "-FE:" )
+            {
+              fileEncodingName.push_back(s0.substr(0, pos-3));
+              fileEncoding.push_back(
+                hdhC::stripSides( s0.substr(++pos)) );
+            }
+          }
+          else
+          {
+            x_item = s0;
+
+            if( x_item.size() > 1 )
+              cvMap[x_item[0]] = x_item[1];
+            else if( x_item.size() )
+              cvMap[x_item[0]] = "*";
+          }
+
+          if( s0 == "END: DRS" )
+            break;
+       }
+
+       continue;
+     }
+
+     // variable section
+     size_t last = s0.size() - 1;
+     if( s0[last] == ':' )
+     {
+       // new variable
+       // special ':' is equivalent to 'global:'
+       if( s0[0] == ':' )
+         s0 = "global:";
+
+        varName.push_back(s0.substr(0, last));
+        attName.push_back( std::vector<std::string>() );
+        attValue.push_back( std::vector<std::string>() );
+        continue;
+     }
+
+     // attributes
+     if( attName.size() == 0 )
+     {
+        std::string key("7_2");
+        if( notes->inq( key, pQA->fileStr) )
+        {
+          std::string capt("Syntax fault in the DRS_CV table: orphaned attribute, found ");
+          capt += s0 ;
+
+          (void) notes->operate(capt) ;
+          notes->setCheckMetaStr(pQA->fail);
+        }
+
+        return;
+     }
+
+     x_item = s0;
+     size_t sz = x_item.size() ;
+
+     if( sz )
+     {
+        attName.back().push_back(x_item[0]);
+
+        if( sz > 1 )
+          attValue.back().push_back(x_item[1]);
+        else
+          attValue.back().push_back(hdhC::s_empty);
+     }
+   }
+
+  return;
+}

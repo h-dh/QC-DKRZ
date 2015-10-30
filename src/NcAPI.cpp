@@ -2517,6 +2517,22 @@ NcAPI::getAttValues(std::vector<std::string> &v, std::string attName, std::strin
            t += arr[j] ;
          v.push_back( t );
        }
+
+       // Some values are composed like: abcd\0\0\0...\0
+       // Trailing \0, which do not terminate anything, are considered
+       // spurious and removed until a real string is found;
+       // exception: the first item in the vector may be empty.
+       if( (sz=v.size()) > 1 )
+       {
+         do
+         {
+           if( v[--sz].size() )
+             break;
+
+           v.erase( v.begin() + sz );
+         } while ( sz > 1 );
+       }
+
        delete [] arr;
     }
     break;

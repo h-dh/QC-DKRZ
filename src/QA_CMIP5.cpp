@@ -1,6 +1,7 @@
 //#include "qa.h"
 
-DRS_Filename::DRS_Filename(QA* p, std::vector<std::string>& optStr)
+
+DRS_CV::DRS_CV(QA* p, std::vector<std::string>& optStr)
 {
   pQA = p;
   notes = pQA->notes;
@@ -11,7 +12,7 @@ DRS_Filename::DRS_Filename(QA* p, std::vector<std::string>& optStr)
 }
 
 void
-DRS_Filename::applyOptions(std::vector<std::string>& optStr)
+DRS_CV::applyOptions(std::vector<std::string>& optStr)
 {
   for( size_t i=0 ; i < optStr.size() ; ++i)
   {
@@ -31,14 +32,14 @@ DRS_Filename::applyOptions(std::vector<std::string>& optStr)
 }
 
 void
-DRS_Filename::checkFilename(void)
+DRS_CV::checkFilename(std::string& fName, struct DRS_CV_Table& drs_cv_table)
 {
   Split x_filename;
   x_filename.setSeparator("_");
   x_filename.enableEmptyItems();
-  x_filename = pQA->pIn->file.basename ;
+  x_filename = fName ;
 
-  checkFilenameEncoding(x_filename);
+  checkFilenameEncoding(x_filename, drs_cv_table);
 
   checkFilenameGeographic(x_filename);
 
@@ -60,166 +61,221 @@ DRS_Filename::checkFilename(void)
 }
 
 void
-DRS_Filename::checkFilenameEncoding(Split& x_filename)
+DRS_CV::checkFilenameEncoding(Split& x_filename, struct DRS_CV_Table& drs_cv_table)
 {
-  // The items of the filename must match corresponding global attributes.
-  // A filename is constructed by global attributes.
+  // fileEncodingName: name of the encoding type
+  // fileEncoding:     sequence of DRS path components
+  // encodingMap:      name in encoding vs. name of global attribute (or *)
 
-  bool isGridSpec = false;
-  if( pQA->pIn->file.basename.substr(0,9) == "gridspec_" )
-    isGridSpec=true;
+  // note that in contrast to pathEncoding, the parsing starts from the beginning
+  // of the encoding string and there are optional trailing items
 
-  std::vector<std::string> vs_gaFilename ;
-  vs_gaFilename.push_back(x_filename[0]);  // first item
+  if( x_filename.size() == 0 )
+    return;
 
-  size_t g_ix = pQA->pIn->varSz ;  // index to the global atts
-  int ix;
+  // components of the current path, these are given in the reverse order.
+  Split& drs = x_filename;
 
-  if( isGridSpec )
+  Variable& globalVar = pQA->pIn->variable[ pQA->pIn->varSz ] ;
+  std::string n_ast="*";
+  std::string t;
+
+  size_t enc_sz = drs_cv_table.fileEncoding.size() ;
+
+  Split x_enc[enc_sz];
+  std::vector<size_t> countCI(enc_sz, 0);
+  std::map<std::string, std::string> globMap[enc_sz] ;
+  std::vector<std::vector<size_t> > specialFaultIx ;
+
+  for( size_t ds=0 ; ds < enc_sz ; ++ds)
   {
-    if( (ix=pQA->pIn->variable[g_ix].getAttIndex("modeling_realm")) == -1 )
-      vs_gaFilename.push_back("");
-    else
-      vs_gaFilename.push_back(pQA->pIn->variable[g_ix].attValue[ix][0]);
+    Split& x_e = x_enc[ds] ;
+    std::map<std::string, std::string>& gM = globMap[ds] ;
+    specialFaultIx.push_back( std::vector<size_t>() );
 
-    vs_gaFilename.push_back( pQA->qaExp.getFrequency() );
-    if( pQA->qaExp.getFrequency() != "fx" )
+    x_e.setSeparator("_");
+
+    std::map<std::string, std::string>& cvMap = drs_cv_table.cvMap ;
+
+    // could have a trailing ".nc" item; if yes, then remove this beforehand
+    if( drs_cv_table.fileEncoding[ds].rfind(".nc") < std::string::npos )
     {
-      std::string key("1_5b");
-      if( notes->inq( key, pQA->fileStr) )
-      {
-        std::string capt("a gridspec file must have frequency fx, found ");
-        capt += pQA->qaExp.getFrequency() ;
+      std::string& t = drs_cv_table.fileEncoding[ds];
+      // is it trailing?
+      if( t.substr(t.size()-3) == ".nc" )
+        x_e = t.substr(0, t.size()-3) ;
+    }
+    else
+      x_e = drs_cv_table.fileEncoding[ds] ;
 
-        (void) notes->operate(capt) ;
-        notes->setCheckMetaStr(pQA->fail);
+    for(size_t x=0 ; x < x_e.size() ; ++x )
+    {
+      if( cvMap.count(x_e[x]) == 0 )
+      {
+        std::string key("7_3");
+        std::string capt("Fault in table " + pQA->qaExp.table_DRS_CV.getFile());
+        capt += ": encoding " + hdhC::tf_val("item", x_e[x]) + " not found in CV";
+        if( notes->inq( key, "DRS") )
+        {
+          (void) notes->operate(capt) ;
+          notes->setCheckMetaStr(pQA->fail);
+        }
+      }
+
+      if( cvMap[x_e[x]] == n_ast )
+      {
+        if( x_e[x] == "variable name" )
+          gM[x_e[x]] = pQA->qaExp.fVarname ;
+
+        else if( x_e[x] == "ensemble member" )
+          gM[x_e[x]] = getEnsembleMember() ;
+
+        else if( x_e[x] == "gridspec" )
+          gM[x_e[x]] = "gridspec" ;
+
+        else if( x_e[x] == "temporal subset" )
+          gM[x_e[x]] = n_ast ;
+
+        else if( x_e[x] == "geographical info" )
+          gM[x_e[x]] = n_ast ;
+
+        else if( x_e[x] == "version" )
+          gM[x_e[x]] = n_ast ;
+      }
+      else if( x_e[x] == "MIP table" )
+        gM[x_e[x]] = pQA->qaExp.getMIP_tableName() ;
+      else
+        gM[x_e[x]] = globalVar.getAttValue(cvMap[x_e[x]]) ;
+    }
+
+    // special for gridspec filenames
+    if( drs_cv_table.fileEncodingName[ds] == "GRIDSPEC" )
+    {
+      for( size_t i=0 ; i < drs.size() ; ++i)
+      {
+        // frequency
+        if( x_e[i] == "frequency" )
+        {
+          t = gM[ x_e[i] ];
+          if( t != "fx" || drs[i] != "fx" )
+            specialFaultIx[ds].push_back(i);
+        }
+
+        // ensemble member
+        if( x_e[i] == "ensemble member" )
+        {
+          t = gM[ x_e[i] ];
+          if( t != "r0i0p0" )
+            specialFaultIx[ds].push_back(i);
+        }
       }
     }
-  }
-  else
-  {
-    checkMIP_tableName(x_filename) ;
-    vs_gaFilename.push_back(pQA->qaExp.currMIP_tableName) ;  // could be empty or from filename
-  }
 
-  if( (ix=pQA->pIn->variable[g_ix].getAttIndex("model_id")) == -1 )
-    vs_gaFilename.push_back("");
-  else
-    vs_gaFilename.push_back(pQA->pIn->variable[g_ix].attValue[ix][0]);
-
-  if( (ix=pQA->pIn->variable[g_ix].getAttIndex("experiment_id")) == -1 )
-    vs_gaFilename.push_back("");
-  else
-  {
-    // needed later
-    pQA->qaExp.experiment_id = pQA->pIn->variable[g_ix].attValue[ix][0];
-    vs_gaFilename.push_back(pQA->qaExp.experiment_id);
-  }
-
-  vs_gaFilename.push_back( getEnsembleMember() );
-
-  if( isGridSpec && vs_gaFilename.back() != "r0i0p0" )
-  {
-    std::string key("1_5a");
-    if( notes->inq( key, pQA->fileStr) )
+    //count coincidences between path components and the DRS
+    for( size_t i=0 ; i < drs.size() ; ++i)
     {
-      std::string capt("a gridspec file must have ensemble member r0i0p9, found ");
-      capt += vs_gaFilename.back() ;
-
-      (void) notes->operate(capt) ;
-      notes->setCheckMetaStr(pQA->fail);
-    }
-  }
-
-  // CMIP5 filename encoding
-  // <variable_name>_<varReqTableSheetSubs>_<model>_<experiment>_<ensemble_member>
-  bool isFault=false;
-  bool isSwapped=false;
-  bool isSyntax=false;
-
-  size_t i;
-  for(i=1 ; i < vs_gaFilename.size() ; ++i )
-  {
-    // the first items are always identical
-    if( ! (i < x_filename.size()) )
-    {
-      isSyntax=true ;
-      break;
-    }
-
-    // check for the same position in the filename
-    if( vs_gaFilename[i] == x_filename[i] )
-      continue;
-
-    // no further checks possible because either everything is fine
-    // or of a missing attribute
-    if( vs_gaFilename[i].size() == 0 )
-      break;
-
-    // swapped items?
-    for( size_t j=0 ; j < x_filename.size() ; ++j )
-    {
-      if( x_filename[j] == vs_gaFilename[i] )
+      if( i < x_e.size() )
       {
-        isSwapped=true;
+        std::string& tt = gM[ x_e[i] ] ;
+        if( drs[i] == tt || tt == n_ast )
+          ++countCI[ds];
+      }
+    }
+
+    if( ! specialFaultIx[ds].size() )
+      if( x_e.size() > 2 && countCI[ds] > (x_e.size()-2) )
+        return;  // check passed; take into account two optional items
+  }
+
+  // find the encoding with maximum number of coincidences, which
+  // is assumed to correspond to the current encoding type.
+  size_t m=0;
+  size_t mx=countCI[0];
+  for( size_t ds=1 ; ds < countCI.size() ; ++ds )
+  {
+    if( countCI[ds] > mx )
+    {
+      mx = countCI[ds] ;
+      m=ds;
+    }
+  }
+
+  // find details of the faults
+  Split& x_e = x_enc[m] ;
+  std::map<std::string, std::string>& gM = globMap[m] ;
+
+  std::vector<std::string> text;
+  std::vector<std::string> keys;
+
+  std::vector<size_t> excludeSwapIx;
+
+  for( size_t i=0 ; i < drs.size() ; ++i)
+  {
+    t = gM[ x_e[i] ];
+
+    if( hdhC::isAmong(i, specialFaultIx[m]) )
+    {
+      if( x_e[i] == "frequency" )
+      {
+        keys.push_back("1_5b");
+        text.push_back( "A gridspec file must have frequency fx" );
+        continue;
+      }
+
+      if( x_e[i] == "ensemble member" )
+      {
+        keys.push_back("1_5a");
+        text.push_back( "A gridspec file must have ensemble member r0i0p0" );
+        continue;
+      }
+    }
+
+    if( drs[i] == t || t == n_ast )
+        continue;
+
+    // look for swapped items
+    bool Cont2=false;
+    for( size_t j=0 ; j < x_e.size() ; ++j)
+    {
+      if( hdhC::isAmong( j, excludeSwapIx) )
+      {
+        Cont2=true;
         break;
       }
+
+      if( i != j )
+      {
+        t = gM[ x_e[j] ];
+        if( drs[i] == t )
+        {
+          keys.push_back("1_4b");
+          text.push_back( ": swapped filename components, found [" );
+          text.back() += hdhC::sAssign( hdhC::itoa(i) + "]", x_e[i]) ;
+          text.back() += " and [";
+          text.back() += hdhC::sAssign(hdhC::itoa(j) + "]", x_e[j]);
+
+          excludeSwapIx.push_back(i);
+          Cont2=true;
+          break;
+        }
+      }
     }
 
-    if( isSwapped )
-      break;
-
-    isFault=true;
-    break;
-  }
-
-  if( isSyntax )
-  {
-    std::string key("1_4a");
-    if( notes->inq( key, pQA->fileStr) )
+    if( ! Cont2 )
     {
-      std::string capt;
-      if( isGridSpec )
-        capt = "gridspec ";
-      capt += "filename structure with a syntax fault, found" ;
-      capt += hdhC::unsplit(x_filename, "_", i) ;
-      capt += "expected " + hdhC::unsplit(vs_gaFilename, "_", i) ;
-
-      (void) notes->operate(capt) ;
-      notes->setCheckMetaStr(pQA->fail);
-    }
-  }
-
-  if( isSwapped )
-  {
-    std::string key("1_4c");
-    if( notes->inq( key, pQA->fileStr) )
-    {
-      std::string capt;
-      if( isGridSpec )
-        capt = "gridspec ";
-      capt += "filename with swapped items, found ";
-      capt += hdhC::unsplit(x_filename, "_", i) ;
-      capt += "expected " + hdhC::unsplit(vs_gaFilename, "_", i) ;
-
-      (void) notes->operate(capt) ;
-      notes->setCheckMetaStr(pQA->fail);
+      // failed coincidences between path components and the DRS
+      keys.push_back("1_4a");
+      text.push_back( x_e[i] + ": found" + hdhC::tf_val(drs[i], hdhC::no_blank)
+            + ", expected" + hdhC::tf_val(gM[x_e[i]]) );
     }
   }
 
-  if( isFault )
+  std::string capt("Filename encoding " + drs_cv_table.fileEncodingName[m] + ":");
+  for(size_t i=0 ; i < text.size() ; ++i )
   {
-    std::string key("1_4b");
-    if( notes->inq( key, pQA->fileStr))
+    if( notes->inq( keys[i], "DRS") )
     {
-      std::string capt;
-      if( isGridSpec )
-        capt = "gridspec ";
-      capt += "filename does not match file attributes, found" ;
-      capt += hdhC::unsplit(x_filename, "_", i) ;
-      capt += "expected " + hdhC::unsplit(vs_gaFilename, "_", i) ;
-
-      (void) notes->operate(capt) ;
+      (void) notes->operate(capt+text[i]) ;
       notes->setCheckMetaStr(pQA->fail);
     }
   }
@@ -228,7 +284,7 @@ DRS_Filename::checkFilenameEncoding(Split& x_filename)
 }
 
 void
-DRS_Filename::checkFilenameGeographic(Split& x_filename)
+DRS_CV::checkFilenameGeographic(Split& x_filename)
 {
   // the geographical indicator should be the last item
   int i;
@@ -444,7 +500,7 @@ DRS_Filename::checkFilenameGeographic(Split& x_filename)
 }
 
 void
-DRS_Filename::checkMIP_tableName(Split& x_filename)
+DRS_CV::checkMIP_tableName(Split& x_filename)
 {
   // Note: filename:= name_CMOR-MIP-table_... .nc
   if( x_filename.size() < 2 )
@@ -475,39 +531,208 @@ DRS_Filename::checkMIP_tableName(Split& x_filename)
   return ;
 }
 
-std::string
-DRS_Filename::getEnsembleMember(void)
+void
+DRS_CV::checkPath(std::string& path, struct DRS_CV_Table& drs_cv_table)
 {
+  // pathEncodingName: name of the encoding type
+  // pathEncoding:     sequence of DRS path components
+  // encodingMap:      name in encoding vs. name of global attribute (or *)
+
+  if( path.size() == 0 )
+    return;
+
+  // components of the current path, these are given in the reverse order.
+//  path= "/hdh/data/CMIP5/CMIP5/output/MPI-M/MPI-ESM-LR/hysterical/day/artmos/r1i1p1/tas/";
+  Split drs(path, "/");
+
+  Variable& globalVar = pQA->pIn->variable[ pQA->pIn->varSz ] ;
+  std::string n_ast="*";
+
+  size_t enc_sz = drs_cv_table.pathEncoding.size() ;
+
+  Split x_enc[enc_sz];
+  std::vector<size_t> countCI(enc_sz, 0);
+  std::map<std::string, std::string> globMap[enc_sz] ;
+
+  for( size_t ds=0 ; ds < enc_sz ; ++ds)
+  {
+    Split& x_e = x_enc[ds] ;
+    std::map<std::string, std::string>& gM = globMap[ds] ;
+
+    x_e.setSeparator("/");
+
+    std::map<std::string, std::string>& cvMap = drs_cv_table.cvMap ;
+
+    x_e = drs_cv_table.pathEncoding[ds] ;
+
+    for(size_t x=0 ; x < x_e.size() ; ++x )
+    {
+      if( cvMap.count(x_e[x]) == 0 )
+      {
+        std::string key("7_3");
+        std::string capt("Fault in table " + pQA->qaExp.table_DRS_CV.getFile());
+        capt += ": encoding " + hdhC::tf_val("item", x_e[x]) + " not found in CV";
+        if( notes->inq( key, "DRS") )
+        {
+          (void) notes->operate(capt) ;
+          notes->setCheckMetaStr(pQA->fail);
+        }
+      }
+
+      if( cvMap[x_e[x]] == n_ast )
+      {
+        if( x_e[x] == "variable name" )
+          gM[x_e[x]] = pQA->qaExp.fVarname ;
+
+        else if( x_e[x] == "ensemble member" )
+          gM[x_e[x]] = getEnsembleMember() ;
+
+        else if( x_e[x] == "MIP table" )
+          gM[x_e[x]] = pQA->qaExp.getMIP_tableName() ;
+
+        else if( x_e[x] == "gridspec" )
+          gM[x_e[x]] = "gridspec" ;
+      }
+      else
+        gM[x_e[x]] = globalVar.getAttValue(cvMap[x_e[x]]) ;
+    }
+
+
+    int i, ix, jx;
+    std::string t;
+
+    for( i=drs.size()-1, ix=0 ; i > -1 ; --i)
+    {
+      //count coincidences between path components and the DRS
+      if( (jx = x_e.size()-ix-1) > -1 )
+      {
+        t = gM[ x_e[jx] ];
+        if( drs[i] == t || t == n_ast )
+          ++countCI[ds];
+        else if( x_e[jx] == "version number" || hdhC::isDigit(drs[i].substr(1)) )
+          ++countCI[ds];
+      }
+      else
+        break;
+
+      ++ix;
+    }
+
+    if( countCI[ds] == x_e.size() )
+      return;  // check passed
+  }
+
+  // find the encoding with maximum number of coincidences
+  size_t m=0;
+  size_t mx=countCI[0];
+  for( size_t ds=1 ; ds < countCI.size() ; ++ds )
+  {
+    if( countCI[ds] > mx )
+    {
+      mx = countCI[ds] ;
+      m=ds;
+    }
+  }
+
+  std::vector<std::string> text;
+
+  Split& x_e = x_enc[m] ;
+  std::map<std::string, std::string>& gM = globMap[m] ;
+
+  std::string t;
+  int i, ix, jx;
+
+  for( i=drs.size()-1, ix=0 ; i > -1 ; --i)
+  {
+    //failed coincidences between path components and the DRS
+    if( (jx = x_e.size()-ix-1) > -1 )
+    {
+      t = gM[ x_e[jx] ];
+      if( ! (drs[i] == t || t == n_ast )  )
+        text.push_back( x_e[jx] + ": " + hdhC::sAssign("encoding",gM[x_e[jx]])
+              + " vs. " + hdhC::sAssign("path",drs[i]) );
+    }
+    else
+      break;
+
+    ++ix;
+  }
+
+  std::string key("1_2");
+  std::string capt("Directory structure: failed DRS-CV check, found ");
+  if( notes->inq( key, pQA->fileStr) )
+  {
+    for(size_t i=0 ; i < text.size() ; ++i )
+      (void) notes->operate(capt+text[i]) ;
+
+    notes->setCheckMetaStr(pQA->fail);
+  }
+
+  return;
+}
+
+void
+DRS_CV::checkVariableName(std::string& f_vName)
+{
+  if( f_vName.find('-') < std::string::npos )
+  {
+    std::string key("1_4d");
+
+    if( notes->inq( key, pQA->fileStr) )
+    {
+      std::string capt(hdhC::tf_var(f_vName));
+      capt += "in the filename should not contain a hyphen" ;
+
+      (void) notes->operate(capt) ;
+      pQA->setExit( notes->getExitValue() ) ;
+    }
+  }
+
+  return;
+}
+
+std::string
+DRS_CV::getEnsembleMember(void)
+{
+  if( ensembleMember.size() )
+    return ensembleMember;
+
   // ensemble member
   int ix;
   size_t g_ix = pQA->pIn->varSz ;  // index to the global atts
 
-  std::string ga_ensmb("r");
+  ensembleMember = "r" ;
   if( (ix = pQA->pIn->variable[g_ix].getAttIndex("realization")) > -1 )
-    ga_ensmb += pQA->pIn->variable[g_ix].attValue[ix][0] ;
+    ensembleMember += pQA->pIn->variable[g_ix].attValue[ix][0] ;
 
-  ga_ensmb += 'i' ;
+  ensembleMember += 'i' ;
   if( (ix = pQA->pIn->variable[g_ix].getAttIndex("initialization_method")) > -1 )
-    ga_ensmb += pQA->pIn->variable[g_ix].attValue[ix][0] ;
+    ensembleMember += pQA->pIn->variable[g_ix].attValue[ix][0] ;
 
-  ga_ensmb += 'p' ;
+  ensembleMember += 'p' ;
   if( (ix = pQA->pIn->variable[g_ix].getAttIndex("physics_version")) > -1 )
-    ga_ensmb += pQA->pIn->variable[g_ix].attValue[ix][0] ;
+    ensembleMember += pQA->pIn->variable[g_ix].attValue[ix][0] ;
 
-  return ga_ensmb;
+  return ensembleMember ;
 }
 
 void
-DRS_Filename::run(void)
+DRS_CV::run(void)
 {
-   // compare filename to netCDF global attributes
-   checkFilename();
+  DRS_CV_Table drs_cv_table(pQA);
+  drs_cv_table.read(pQA->qaExp.table_DRS_CV);
 
-   return;
+  // check the path
+  checkPath(pQA->pIn->file.path, drs_cv_table) ;
+
+  // compare filename to netCDF global attributes
+  checkFilename(pQA->pIn->file.basename, drs_cv_table);
+
+  return;
 }
 
 bool
-DRS_Filename::testPeriod(Split& x_f)
+DRS_CV::testPeriod(Split& x_f)
 {
   // return true, if a file is supposed to be not complete.
   // return false, a) if there is no period in the filename
@@ -714,7 +939,7 @@ DRS_Filename::testPeriod(Split& x_f)
 }
 
 bool
-DRS_Filename::testPeriodAlignment(std::vector<std::string>& sd, Date** pDates, bool b[])
+DRS_CV::testPeriodAlignment(std::vector<std::string>& sd, Date** pDates, bool b[])
 {
   // some pecularities of CMOR, which will probably not be modified
   // for a behaviour as expected.
@@ -775,7 +1000,7 @@ DRS_Filename::testPeriodAlignment(std::vector<std::string>& sd, Date** pDates, b
 }
 
 void
-DRS_Filename::testPeriodPrecision(std::vector<std::string>& sd,
+DRS_CV::testPeriodPrecision(std::vector<std::string>& sd,
                   std::vector<std::string>& text)
 {
   // Partitioning of files check are equivalent.
@@ -862,7 +1087,7 @@ DRS_Filename::testPeriodPrecision(std::vector<std::string>& sd,
 }
 
 bool
-DRS_Filename::testPeriodFormat(std::vector<std::string>& sd)
+DRS_CV::testPeriodFormat(std::vector<std::string>& sd)
 {
   // return: true means go on for testing the period cut
   std::string key("16_5");
@@ -2230,17 +2455,17 @@ QA_Exp::checkMetaData(InFile& in)
   }
 
   // eventually
-  bool isNotInFName=true;
+  bool is=true;
   for( size_t i=0 ; i < in.variable.size() ; ++i )
   {
      if( in.variable[i].name == fVarname )
      {
-        isNotInFName=false;
+        is=false;
         break;
      }
   }
 
-  if( isNotInFName )
+  if( is )
   {
      std::string key("1_3");
 
@@ -3959,7 +4184,7 @@ QA_Exp::inqTables(void)
 
      if( notes->inq( key, pQA->fileStr) )
      {
-        std::string capt("no path to the tables, tried ") ;
+        std::string capt("no path to a table, tried ") ;
         capt += varReqTable.path;
 
         (void) notes->operate(capt) ;
@@ -4217,7 +4442,7 @@ QA_Exp::run(std::vector<std::string>& optStr)
 
     if( table_DRS_CV.is )
     {
-      DRS_Filename drsFN(pQA, optStr);
+      DRS_CV drsFN(pQA, optStr);
       drsFN.run();
     }
 

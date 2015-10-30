@@ -21,15 +21,17 @@ are performed. Annotations are supplied via the Annotation class
 linked by a pointer.
 */
 
-struct DRS_Filename
+struct DRS_CV
 {
-  DRS_Filename(QA*, std::vector<std::string>&);
+  DRS_CV(QA*, std::vector<std::string>&);
 
   void   applyOptions(std::vector<std::string>&);
-  void   checkFilename(void);
-  void   checkFilenameEncoding(Split&);
+  void   checkFilename(std::string& fName, struct DRS_CV_Table&);
+  void   checkFilenameEncoding(Split&, struct DRS_CV_Table& );
   void   checkFilenameGeographic(Split&);
   void   checkMIP_tableName(Split&);
+  void   checkPath(std::string&, struct DRS_CV_Table&);
+  void   checkVariableName(std::string& f_vName);
 
   std::string
          getEnsembleMember(void);
@@ -48,6 +50,8 @@ struct DRS_Filename
   bool   testPeriodFormat(std::vector<std::string> &sd) ;
 
   bool enabledCompletenessCheck;
+
+  std::string ensembleMember;
 
   Annotation* notes;
   QA*         pQA;

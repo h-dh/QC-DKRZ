@@ -775,7 +775,7 @@ InFile::openNc(bool isNew)
   // get and analyse all variables and create Variable objects
   std::vector<std::string> var( nc.getVarName() );
 
-  // effective num of variables without any trqailing NC_GLOBAL
+  // effective num of variables without any trailing NC_GLOBAL
   varSz = var.size();
   for(size_t j=0 ; j < varSz; ++j)
   {
