@@ -82,9 +82,6 @@ class Split
   /*! Ignored, when identical to a separation character */
   void   addStripSides(std::string s){ stripSides.push_back(s); isStripSides=true;}
 
-  //! Change i-th item by string
-  void changeItem(size_t, std::string);
-
   //! Clear previous assignment, but leaving the setting alone.
   void clear(void);
 
@@ -138,7 +135,7 @@ class Split
     range(size_t i0, size_t i1=-1);
 
   //! Replace i-th sub-string by string 's'.
-  void   replace(size_t i, std::string s){items[i]=s;}
+  void replace(size_t, std::string);
 
   //! Set a fixed field width for items.
   /*! Purpose: read formatted tables without explicit separator.*/
