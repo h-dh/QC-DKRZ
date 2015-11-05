@@ -169,6 +169,9 @@ class Split
   //! Get number of split sub-strings.
   size_t size(void);
 
+  //! swap items by using zero-based indeces
+  void   swap(size_t, size_t);
+
   //! Get i-th sub-string converted to int.
   /*! Set i-th sub-string converted to int to reference 'retVal'.
    Success or failure is returned. The number 'nr' counting from 1

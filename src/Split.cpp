@@ -525,6 +525,22 @@ Split::size(void)
   return items.size();
 }
 
+void
+Split::swap(size_t i0, size_t i1)
+{
+  if( ! isDecomposed )
+    decompose();
+
+  if( i0 < items.size() && i1 < items.size() )
+  {
+    std::string t(items[i0]);
+    items[i0] = items[i1] ;
+    items[i1] = t;
+  }
+
+  return;
+}
+
 bool
 Split::toDouble( size_t i, double &retVal, size_t nr)
 {
