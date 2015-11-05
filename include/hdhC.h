@@ -36,12 +36,14 @@ namespace hdhC
 
 //! Obsolete.
 const double EQUALITY_TOLERANCE=1.e-12 ;
-static std::string s_blank(" ");
+
+static std::string blank(" ");
 static std::string no_blank("no_blank");
-static std::string s_colon(":");
+static std::string colon(":");
 static std::string no_colon("no_colon");
-static std::string s_upper("upper");
-static std::string s_empty("");
+static std::string upper("upper");
+static std::string lower("lower");
+static std::string empty("");
 static std::string s_void("void_bool");
 
 //! Epsilon tolerance in comparisons.
@@ -121,7 +123,7 @@ struct FileSplit
    std::string
         getPath(void){ return path ; }
 
-   bool isExisting(std::string f=s_empty);
+   bool isExisting(std::string f=empty);
    void setExtension(std::string);
    void setFile(std::string f );
    void setFile(struct FileSplit& );
@@ -175,7 +177,7 @@ compare(double x, char op, double y, int DECS=10);
  Use in these cases the class-method Date.addTime().*/
 double
 convertTime(std::string targetUnit, std::string time,
-            std::string unit=s_empty);
+            std::string unit=empty);
 
 //! Convert a floating number into a string.
 /*!Format: ?[w=int?][p=int[|][adj]?][f=char?][s[ci]|float]?\n
@@ -201,7 +203,7 @@ double2String( double z, std::string flag);
  elimination of trailing zeros and a trailing decimal point.
 */
 std::string
-double2String( double z, int d=-5, std::string flag=s_empty);
+double2String( double z, int d=-5, std::string flag=empty);
 
 //! Convert decimal degree to degree-minute-second.
 /*! Decimal degrees are converted to traditional coordinates
@@ -462,7 +464,7 @@ std::string
 tf_att(std::vector<std::string*>& vs,  bool colon, bool blank, bool isUpper);
 
 std::string
-tf_val(std::string v, std::string blnk=s_empty);
+tf_val(std::string v, std::string blnk=empty);
 
 std::string
 tf_var(std::string v,
@@ -475,7 +477,7 @@ tf_var(std::string& v,  bool colon, bool blank, bool isUpper);
 /*! By default, each character in 's' is removed. If isStr==true, then only
     every occurrence of the string 's'.*/
 std::string
-clearChars(std::string &str, std::string s=s_empty, bool isStr=false );
+clearChars(std::string &str, std::string s=empty, bool isStr=false );
 
 //! replace multiple characters by a single one
 std::string
@@ -503,14 +505,14 @@ sAssign(std::string rvalue) ;
    in 'key'. Additionally, keyword 'left' and 'right' may be given
    causing stripping only from the left or right, respectively. */
 std::string
-stripSurrounding(std::string &str, std::string key=s_empty );
+stripSurrounding(std::string &str, std::string key=empty );
 
 //! enhanced function: strip (vector of) string(s); default whitespaces
 std::string
-stripSides(std::string, std::string strip=s_empty, std::string key=s_empty );
+stripSides(std::string, std::string strip=empty, std::string key=empty );
 
 std::string
-stripSides(std::string, std::vector<std::string>& strip, std::string key=s_empty );
+stripSides(std::string, std::vector<std::string>& strip, std::string key=empty );
 
 //! Convert char to lower case
 void
@@ -518,10 +520,10 @@ lowerCase(char &c);
 
 //! concatenate strings; num==0 means full size of the vector
 std::string
-unsplit(std::vector<std::string>&, std::string sep=s_empty, size_t num=0);
+unsplit(std::vector<std::string>&, std::string sep=empty, size_t num=0);
 
 std::string
-unsplit(Split&, std::string sep=s_empty, size_t num=0);
+unsplit(Split&, std::string sep=empty, size_t num=0);
 
 //! Convert char to upper case
 void

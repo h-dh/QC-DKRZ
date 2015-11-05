@@ -80,7 +80,7 @@ class Split
 
   //! Strip leading and trailing characters
   /*! Ignored, when identical to a separation character */
-  void   addStripSides(std::string s){ stripSides.push_back(s); }
+  void   addStripSides(std::string s){ stripSides.push_back(s); isStripSides=true;}
 
   //! Clear previous assignment, but leaving the setting alone.
   void clear(void);
@@ -164,6 +164,7 @@ class Split
   void   setSeparator( std::string s, bool isContainer=false);
 
   void   setStripSides(std::string s){stripSides.clear(); addStripSides(s);}
+  void   setStripSides(void)         {stripSides.clear(); isStripSides=true;}
 
   //! Get number of split sub-strings.
   size_t size(void);
@@ -211,6 +212,7 @@ private:
 
   size_t fixedWidth;
   bool is_valid;
+  bool isStripSides;
 
   std::string str;
   std::string empty;

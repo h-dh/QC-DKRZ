@@ -46,6 +46,7 @@ Split::Split(const Split &t)
   items = t.items ;
   itemPos = t.itemPos ;
   is_valid=t.is_valid;
+  isStripSides=t.isStripSides;
 }
 
 Split::~Split()
@@ -272,7 +273,7 @@ Split::decompose(void)
       {
         std::string t0(str.substr(items_beg[i], items_len[i]));
 
-        if( stripSides.size() )
+        if( isStripSides )
           t0 = hdhC::stripSides(t0, stripSides) ;
 
         if( t0.size() )  // empty item if !(sz == 1 && t0 == stripSides[0])
@@ -329,7 +330,7 @@ Split::decomposeAlNum(void)
     itemPos.push_back(0);
   }
 
-  if( stripSides.size() )
+  if( isStripSides )
   {
     for( size_t l=0 ; l < items.size() ; ++l )
       items.back() = hdhC::stripSides(items.back(), stripSides) ;
@@ -432,6 +433,7 @@ Split::init(void)
   isFixedWidth=false;
   isItemsWithSep=false;
   is_valid=false;
+  isStripSides=false;
 
   return;
 }
