@@ -634,7 +634,10 @@ std::string double2String( double z, std::string flag)
 
   if( !isFloat && (isSci || z_abs > 100000.
                    || (z_abs > 0.0 && z_abs < 0.000001)) )
+  {
     ostr.setf(std::ios::scientific, std::ios::floatfield);
+    isSci=true;
+  }
   else
     ostr.setf(std::ios::fixed, std::ios::floatfield);
 
@@ -1684,11 +1687,11 @@ tf_att(std::string p1, std::string p2, std::string p3,
 
   for( size_t i=0 ; i < ps.size() ; ++i )
   {
-    if( *ps[i] == s_colon )
+    if( *ps[i] == colon )
       isColon=true;
     else if( *ps[i] == no_blank )
       isBlank=false;
-    else if( *ps[i] == s_upper )
+    else if( *ps[i] == upper )
       isUpper=true;
     else if( *ps[i] != s_void )
       vs_str.push_back(ps[i]) ;
@@ -1725,10 +1728,10 @@ tf_att(std::vector<std::string*>& p,
     s[0] = 'A' ;
 
   if(isColon)
-    s += s_colon;
+    s += colon;
 
   if(isBlank)
-    s += s_blank;
+    s += blank;
 
   return s ;
 }
@@ -1757,11 +1760,11 @@ tf_var(std::string p1, std::string p2, std::string p3, std::string p4)
 
   for( size_t i=0 ; i < ps.size() ; ++i )
   {
-    if( *ps[i] == s_colon || *ps[i] == ":" )
+    if( *ps[i] == colon || *ps[i] == ":" )
       isColon=true;
     else if( *ps[i] == no_blank || *ps[i] == "" )
       isBlank=false;
-    else if( *ps[i] == s_upper )
+    else if( *ps[i] == upper )
       isUpper=true;
   }
 
@@ -1783,10 +1786,10 @@ tf_var(std::string& v,
     s[0] = 'A' ;
 
   if(isColon)
-    s += s_colon;
+    s += colon;
 
   if(isBlank)
-    s += s_blank;
+    s += blank;
 
   return s ;
 }
@@ -2267,17 +2270,12 @@ stripSides(std::string str, std::string strip, std::string mode )
 
    if( strip.size() )
      vs.push_back(strip);
-   else
-   {
-     vs.push_back(" ");
-     vs.push_back("\t");
-   }
 
    return stripSides(str, vs, mode) ;
 }
 
 std::string
-stripSides(std::string str, std::vector<std::string>& strip, std::string mode )
+stripSides(std::string str, std::vector<std::string>& strp, std::string mode )
 {
   // strip off leading and trailing blanks and tabs
   size_t p0=0;
@@ -2285,6 +2283,16 @@ stripSides(std::string str, std::vector<std::string>& strip, std::string mode )
   bool isEmpty=true;
 
   std::string side;
+
+  std::vector<std::string> strip;
+
+  if( strp.size() )
+    strip = strp ;
+  else
+  {
+    strip.push_back(" ");
+    strip.push_back("\t");
+  }
 
   for( size_t i=0 ; i < mode.size() ; ++i )
   {
