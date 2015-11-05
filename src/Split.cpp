@@ -138,6 +138,18 @@ Split::addSeparator( std::string s, bool isContainer)
 }
 
 void
+Split::changeItem(size_t i0, std::string t)
+{
+  if( ! isDecomposed )
+    decompose();
+
+  if( i0 < items.size() )
+    items[i0] = t;
+
+  return;
+}
+
+void
 Split::clear(void)
 {
   str = "";
