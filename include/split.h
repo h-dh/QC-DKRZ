@@ -122,6 +122,8 @@ class Split
   std::string
          getStr(void){ return str;}
 
+  void   insert(size_t i, std::string);
+
          //! Is the i-th substring a number?
   bool   isNumber( size_t i );
 

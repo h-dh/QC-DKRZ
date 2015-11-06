@@ -40,13 +40,17 @@ Split::Split(const Split &t)
   xcptn.ofsError=0;
   str = t.str ;
   sep=t.sep;
+
+  isAlNum = t.isAlNum;
   isDecomposed = t.isDecomposed;
   isFixedWidth=t.isFixedWidth;
   isEmptyItemsEnabled=t.isEmptyItemsEnabled;
+  isItemsWithSep = t.isItemsWithSep;
+  isStripSides=t.isStripSides;
+  is_valid=t.is_valid;
+
   items = t.items ;
   itemPos = t.itemPos ;
-  is_valid=t.is_valid;
-  isStripSides=t.isStripSides;
 }
 
 Split::~Split()
@@ -434,6 +438,18 @@ Split::init(void)
   isItemsWithSep=false;
   is_valid=false;
   isStripSides=false;
+
+  return;
+}
+
+void
+Split::insert(size_t i0, std::string t)
+{
+  if( ! isDecomposed )
+    decompose();
+
+  if( i0 < items.size() )
+    items.insert(items.begin()+i0, t);
 
   return;
 }
