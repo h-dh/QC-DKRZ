@@ -619,6 +619,9 @@ findStr()
 
 getMultiLists()
 {
+  # note that a CF_check-list.conf file may be given in every project.
+  # The rules given within would overwrite default CF ones.
+
   local pDir  # index 0 -> 3 provides precedence
 
   pDir[0]=$(pwd)  # local path
@@ -634,13 +637,12 @@ getMultiLists()
 
   local p
   for p in ${pDir[*]} ; do
+    test -f $p/${fs[0]} && cfList[${#cfList[*]}]=$p/${fs[0]}
     test -f $p/${fs[1]} && prjList[${#prjList[*]}]=$p/${fs[1]}
   done
 
-  pDir[3]=${QA_WORK}/tables/projects/CF
-  for p in ${pDir[*]} ; do
-    test -f $p/${fs[0]} && cfList[${#cfList[*]}]=$p/${fs[0]}
-  done
+  p=${QA_WORK}/tables/projects/CF
+  test -f $p/${fs[0]} && cfList[${#cfList[*]}]=$p/${fs[0]}
 
   if [ $# -gt 0 ] ; then
     # notes provided on the command-line;

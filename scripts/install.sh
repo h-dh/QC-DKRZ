@@ -71,7 +71,7 @@ compilerSetting()
     log "create install_configure" DONE
   fi
 
-  if diff -q install_configure .install_configure ; then
+  if diff -q install_configure .install_configure &> /dev/null ; then
     if [ ${isBuild:-f} = f -a ${isLink:-f} = f ] ; then
       echo "Please, edit file install_configure."
       exit
