@@ -23,7 +23,7 @@ linked by a pointer.
 
 struct DRS_CV
 {
-  DRS_CV(QA*, std::vector<std::string>&);
+  DRS_CV(QA*);
 
   void   applyOptions(std::vector<std::string>&);
   void   checkFilename(std::string& fName, struct DRS_CV_Table&);
@@ -31,6 +31,9 @@ struct DRS_CV
   void   checkFilenameGeographic(Split&);
   void   checkMIP_tableName(Split&);
   void   checkPath(std::string&, struct DRS_CV_Table&);
+  void   findDRS_faults(Split&, Split&,
+                   std::map<std::string, std::string>&,
+                   std::string& text);
   void   checkVariableName(std::string& f_vName);
 
   std::string
@@ -313,7 +316,6 @@ public:
 
   //! Name of the netCDF file with results of the quality control
   struct hdhC::FileSplit varReqTable;
-  struct hdhC::FileSplit table_DRS_CV;
 
   std::vector<VariableMetaData> varMeDa;
 

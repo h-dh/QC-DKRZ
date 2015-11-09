@@ -215,6 +215,16 @@ QA::applyOptions(bool isPost)
        }
      }
 
+     if( split[0] == "tCV"
+           || split[0] == "tableControlledVocabulary"
+                || split[0] == "table_controlled_vocabulary" )
+     {
+       if( split.size() == 2 )
+          table_DRS_CV.setFile(split[1]) ;
+
+       continue;
+     }
+
      if( split[0] == "tP"
           || split[0] == "tablePath" || split[0] == "table_path")
      {
@@ -234,6 +244,9 @@ QA::applyOptions(bool isPost)
 
    if( projectTableFile.path.size() == 0 )
       projectTableFile.setPath(tablePath);
+
+   if( table_DRS_CV.path.size() == 0 )
+      table_DRS_CV.setPath(tablePath);
 
    return;
 }
@@ -522,6 +535,9 @@ QA::init(void)
    if(! (isCheckTime && qaTime.init(optStr)) )
      isCheckTime=false;
 
+   // DRS and CV specifications
+   drs_cv_table.read(table_DRS_CV);
+
    // experiment specific obj: set parent, pass over options
    qaExp.run(optStr);
 
@@ -643,14 +659,11 @@ QA::initDefaults(void)
   // time steps are regular. Unsharp logic (i.e. month
   // Jan=31, Feb=2? days is ok, but also numerical noise).
 
-  blank=" ";
   fail="FAIL";
   fileStr="file";
-  no_blank="no_blank";
   notAvailable="not available";
-  s_colon=":";
+  s_global="global";
   s_mismatch="mismatch";
-  s_upper="upper";
 
   n_axis="axis";
   n_cell_methods="cell_methods";
@@ -1258,105 +1271,142 @@ DRS_CV_Table::read(hdhC::FileSplit& fs)
      return;
   }
 
-   std::string s0;
-   std::vector<std::string> vs;
+  std::string s0;
+  std::vector<std::string> vs;
 
-   // parse table; trailing ':' indicates variable or 'global'
-   ifs.skipWhiteLines();
-   ifs.skipBashComment();
-   ifs.skipCharacter("<>");
-   ifs.clearSurroundingSpaces();
+  // parse table; trailing ':' indicates variable or 'global'
+  ifs.skipWhiteLines();
+  ifs.skipBashComment();
+  ifs.skipCharacter("<>");
+  ifs.clearSurroundingSpaces();
 
-   Split x_item;
-   x_item.setSeparator("=");
-   x_item.setStripSides(" ");
+  Split x_item;
+  x_item.setSeparator("=");
+  x_item.setStripSides(" ");
 
-   while( ! ifs.getLine(s0) )
-   {
-     if( s0.size() == 0 )
-       continue;
+  bool isDS=false;
+  bool isFE=false;
 
-     if( s0 == "BEGIN: DRS" )
-     {
-       while( ! ifs.getLine(s0) )
-       {
-          size_t pos;
-          if( (pos=s0.find(':')) < std::string::npos )
-          {
-            if( s0.substr(pos-3, 4) == "-DS:" )
-            {
-              pathEncodingName.push_back(s0.substr(0, pos-3));
-              pathEncoding.push_back(
-                hdhC::stripSides( s0.substr(++pos)) );
-            }
-            else if( s0.substr(pos-3, 4) == "-FE:" )
-            {
-              fileEncodingName.push_back(s0.substr(0, pos-3));
-              fileEncoding.push_back(
-                hdhC::stripSides( s0.substr(++pos)) );
-            }
-          }
-          else
-          {
-            x_item = s0;
+  while( ! ifs.getLine(s0) )
+  {
+    if( s0.size() == 0 )
+      continue;
 
-            if( x_item.size() > 1 )
-              cvMap[x_item[0]] = x_item[1];
-            else if( x_item.size() )
-              cvMap[x_item[0]] = "*";
-          }
-
-          if( s0 == "END: DRS" )
-            break;
-       }
-
-       continue;
-     }
-
-     // variable section
-     size_t last = s0.size() - 1;
-     if( s0[last] == ':' )
-     {
-       // new variable
-       // special ':' is equivalent to 'global:'
-       if( s0[0] == ':' )
-         s0 = "global:";
-
-        varName.push_back(s0.substr(0, last));
-        attName.push_back( std::vector<std::string>() );
-        attValue.push_back( std::vector<std::string>() );
-        continue;
-     }
-
-     // attributes
-     if( attName.size() == 0 )
-     {
-        std::string key("7_2");
-        if( notes->inq( key, pQA->fileStr) )
+    if( s0 == "BEGIN: DRS" )
+    {
+      while( ! ifs.getLine(s0) )
+      {
+        size_t pos;
+        if( s0 == "END: DRS" )
         {
-          std::string capt("Syntax fault in the DRS_CV table: orphaned attribute, found ");
-          capt += s0 ;
-
-          (void) notes->operate(capt) ;
-          notes->setCheckMetaStr(pQA->fail);
+          isDS=false;
+          isFE=false;
+          break;
         }
-
-        return;
-     }
-
-     x_item = s0;
-     size_t sz = x_item.size() ;
-
-     if( sz )
-     {
-        attName.back().push_back(x_item[0]);
-
-        if( sz > 1 )
-          attValue.back().push_back(x_item[1]);
+        else if( (pos=s0.find(':')) < std::string::npos )
+        {
+          if( s0.substr(pos-3, 4) == "-DS:" )
+          {
+            isDS=true;
+            isFE=false;
+            pathEncodingName.push_back(s0.substr(0, pos-3));
+            pathEncoding.push_back(
+              hdhC::stripSides( s0.substr(++pos)) );
+          }
+          else if( s0.substr(pos-3, 4) == "-FE:" )
+          {
+            isDS=false;
+            isFE=true;
+            fileEncodingName.push_back(s0.substr(0, pos-3));
+            fileEncoding.push_back(
+              hdhC::stripSides( s0.substr(++pos)) );
+          }
+        }
+        else if( s0[0] == '!' )
+        {
+          if(isDS)
+            pathEncoding.back() += hdhC::stripSides( s0.substr(1)) ;
+          else if(isFE)
+            fileEncoding.back() += hdhC::stripSides( s0.substr(1)) ;
+        }
         else
-          attValue.back().push_back(hdhC::s_empty);
-     }
-   }
+        {
+          x_item = s0;
+
+          if( x_item.size() > 1 )
+            cvMap[x_item[0]] = x_item[1];
+          else if( x_item.size() )
+            cvMap[x_item[0]] = "*";
+        }
+      }
+
+      continue;
+    }
+
+    if( s0.substr(0,11) == "BEGIN_LINE:" )
+    {
+      section.push_back( hdhC::stripSides( s0.substr(11) ) ) ;
+      line.push_back(std::vector<std::string>());
+
+      while( ! ifs.getLine(s0) )
+      {
+        if( s0.substr(0,9) == "END_LINE:" )
+          break;
+        else if( s0[0] == '!' )
+          line.back().back() += s0.substr(1) ;
+        else
+          line.back().push_back(s0);
+      }
+
+      continue;
+    }
+
+    // variable section
+    size_t last = s0.size() - 1;
+    if( s0[last] == ':' )
+    {
+      // new variable
+      // special ':' is equivalent to 'global:'
+      if( s0[0] == ':' )
+        s0 = "global:";
+
+      varName.push_back(s0.substr(0, last));
+      attName.push_back( std::vector<std::string>() );
+      attValue.push_back( std::vector<std::string>() );
+      continue;
+    }
+
+    // attributes
+    if( attName.size() == 0 )
+    {
+      std::string key("7_2");
+      if( notes->inq( key, pQA->fileStr) )
+      {
+        std::string capt("Syntax fault in the DRS_CV table: orphaned attribute, found ");
+        capt += s0 ;
+
+        (void) notes->operate(capt) ;
+        notes->setCheckMetaStr(pQA->fail);
+      }
+
+      break;
+    }
+
+    x_item = s0;
+    size_t sz = x_item.size() ;
+
+    if( sz )
+    {
+      attName.back().push_back(x_item[0]);
+
+      if( sz > 1 )
+        attValue.back().push_back(x_item[1]);
+      else
+        attValue.back().push_back(hdhC::empty);
+    }
+  }
+
+  ifs.close();
 
   return;
 }

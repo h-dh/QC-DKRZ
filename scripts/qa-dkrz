@@ -255,6 +255,7 @@ callQaConfig()
   fi
 
   #enable settings for the qa
+  set -f
   for(( i=0 ; i < ${#items[*]} ; ++i )) ; do
     key="${items[i]%%=*}"
 
@@ -275,6 +276,7 @@ callQaConfig()
 
     setKWL ${key}
   done
+  set +f
 
 # invoked by option -E_DEBUG_MANAGER
   if [ ${#DEBUG_MANAGER} -gt 1 ] ; then
@@ -2486,7 +2488,7 @@ has()
     c=','
   fi
 
-  t=$*
+  t="$*"
 
   for(( j=0 ; j < ${#c[*]} ; ++j )) ; do
     for(( i=0 ; i < ${#t} ; ++i )) ; do
@@ -3226,13 +3228,13 @@ logConfiguration()
   # save living configuration options
   echo -e ' options: '      >> $preamble
 
-  local item z
-  for item in ${keyWordList[*]} ; do
-     eval w="\${${item}[*]}"
+  local i z
+  for(( i=0 ; i < ${#keyWordList[*]} ; ++i )) ; do
+     eval w="\${${keyWordList[i]}[*]}"
      test -z "$w" && w=t
 
-     echo -n "  ${item}: " >> $preamble
-     if has --char=, ${w} ; then
+     echo -n "  ${keyWordList[i]}: " >> $preamble
+     if has --char=, "${w}" ; then
        echo "[${w//,/, }]"   >> $preamble
      else
        echo "${w}"           >> $preamble

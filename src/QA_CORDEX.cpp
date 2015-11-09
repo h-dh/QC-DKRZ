@@ -1,17 +1,17 @@
 //#include "qa.h"
 
-DRS_Filename::DRS_Filename(QA* p, std::vector<std::string>& optStr)
+DRS_CV::DRS_CV(QA* p)
 {
   pQA = p;
   notes = pQA->notes;
 
   enabledCompletenessCheck=true;
 
-  applyOptions(optStr);
+  applyOptions(pQA->optStr);
 }
 
 void
-DRS_Filename::applyOptions(std::vector<std::string>& optStr)
+DRS_CV::applyOptions(std::vector<std::string>& optStr)
 {
   for( size_t i=0 ; i < optStr.size() ; ++i)
   {
@@ -56,533 +56,9 @@ DRS_Filename::applyOptions(std::vector<std::string>& optStr)
 }
 
 void
-DRS_Filename::check(InFile &in)
+DRS_CV::checkDrivingExperiment(void)
 {
-  // names of the global attributes in a sequence corresponding to
-  // the path components from right to left.
-  std::vector<std::string> a_name;
-//  a_name.push_back("project_id");
-//  a_name.push_back("product");
-  a_name.push_back("CORDEX_domain");
-  a_name.push_back("institute_id");
-  a_name.push_back("driving_model_id");
-  a_name.push_back("driving_experiment_name");
-  a_name.push_back("driving_model_ensemble_member");
-  a_name.push_back("model_id");
-  a_name.push_back("rcm_version_id");
-  a_name.push_back("frequency");
-  a_name.push_back("VariableName");
-
-  // Get global att values. Note that vName is not an attribute.
-  // Note that the existance was tested elsewhere.
-
-  // Complication: attribute driving_experiment could contain
-  // three attributes; it is not clear whether these have to be
-  // stated also on their own. Thus, they are substituted when missing.
-  std::string dr_exp( in.nc.getAttString("driving_experiment") );
-  Split x_dr_exp(dr_exp, ",");
-
-  std::vector<std::string> a_value;
-
-  for( size_t i=0 ; i < a_name.size()-1 ; ++i )
-  {
-    a_value.push_back( in.nc.getAttString( a_name[i] ) );
-
-    if( a_value[i].size() == 0 )
-    {
-      if( a_name[i] == "driving_model_ensemble_member"
-             && x_dr_exp.size() > 2 )
-        a_value[i] = x_dr_exp[2] ;
-      else if( a_name[i] == "driving_experiment_name"
-             && x_dr_exp.size() > 1 )
-        a_value[i] = x_dr_exp[1] ;
-      else if( a_name[i] == "driving_model_id" && x_dr_exp.size() )
-        a_value[i] = x_dr_exp[0] ;
-    }
-  }
-  a_value.push_back(pQA->qaExp.getVarnameFromFilename());
-
-  // names of the path components
-  std::vector<std::string> p_name;
-
-//  p_name.push_back("activity") ;
-//  p_name.push_back("product") ;
-  p_name.push_back("Domain") ;
-  p_name.push_back("Institute") ;
-  p_name.push_back("GCMModelName") ;
-  p_name.push_back("CMIP5ExperimentName") ;
-  p_name.push_back("CMIP5EnsembleMember") ;
-  p_name.push_back("RCMModelName") ;
-  p_name.push_back("RCMVersionID");
-  p_name.push_back("Frequency");
-  p_name.push_back("VariableName");
-
-  // preset vector
-  std::vector<std::string> p_value;
-  for( size_t i=0 ; i < p_name.size() ; ++i)
-    p_value.push_back("");
-
-  // check validity of particular components
-  if( a_value[2].size() )
-    checkModelName(in, a_name[2], a_value[2], 'G') ;
-  if( a_value[5].size() )
-    checkModelName(in, a_name[5], a_value[5], 'R', a_name[1], a_value[1]) ;
-
-  // components of the path
-  Split p_items(in.file.path,"/");
-
-  // check for identical sequences
-  std::string text;
-
-  // the very first thing on the right side of the path components
-  // might be a kind of version-item not defined in the Cordex Archive Design,
-  // thus the variable name is found in the last or the one before.
-  // The algorithm below works around this.
-  int p_ix=p_items.size()-1;
-  while( p_ix && p_items[p_ix] != pQA->qaExp.getVarnameFromFilename() )
-    --p_ix ;
-
-  int a_ix=p_name.size()-1;
-  int i,j;
-
-  for( i=p_ix, j=a_ix ; j > -1 && i > -1 ; --i, --j )
-  {
-     bool is = a_value[j] != p_items[i];
-
-     // space for exceptions
-     if( is )
-     {
-       if( p_name[j] == "CMIP5EnsembleMember" )
-       {
-          // not considered in the documents
-          if( a_value[j] == "r0i0p0" || p_items[i] == "r0i0p0")
-            is=false;
-       }
-     }
-
-     if( is )
-     {
-        text += "Expected ";
-        text += p_name[j] + "=";
-        text += a_value[j];
-        text += ", found ";
-        text += p_items[i];
-
-        text  += "\nDRS(found)=...";
-        for( i=p_ix-a_ix ; i <= p_ix ; ++i )
-        {
-           text += "/";
-           text += p_items[i] ;
-        }
-
-        text  += "\nDRS(by global atts)=...";
-        for( j=0 ; j <= a_ix ; ++j )
-        {
-           text += "/";
-           text += a_value[j] ;
-        }
-
-        break;
-     }
-  }
-
-  if( text.size() )
-  {
-    std::string key("10_1");
-    if( notes->inq( key, pQA->fileStr ) )
-    {
-      std::string capt( "directory structure does not match global attributes");
-
-      (void) notes->operate(capt, text) ;
-      notes->setCheckMetaStr( pQA->fail );
-    }
-  }
-  else
-    return ;  // passed the test
-
-  // Any missing component?
-  // Check only existance of global att as path component.
-  // Note: p_items in the actual sequence of the path,
-  //       p_name/p_value corresponde to a_name/a_value
-  text.clear();
-  for( size_t i=0 ; i < a_name.size() ; ++i )
-  {
-    bool is=true;
-
-    // Search the path components.
-    // Are the global atts available in the path? Reverse counting.
-    for(int j=p_items.size()-1 ; j > -1 ; --j )
-    {
-       if( a_value[i] == p_items[j] )
-       {
-          is=false;
-          break;
-       }
-    }
-
-    if( is )
-    {
-       if( text.size() )
-         text += ", ";
-
-       text += a_name[i] + "=";
-       text += a_value[i] ;
-    }
-  }
-
-  if( text.size() )
-  {
-    std::string key("10_2");
-    if( notes->inq( key, pQA->fileStr ) )
-    {
-      std::string capt( "directory structure expects global attribute ");
-
-      (void) notes->operate(capt + text) ;
-      notes->setCheckMetaStr( pQA->fail );
-    }
-  }
-
-  return;
-}
-
-void
-DRS_Filename::checkModelName(InFile &in, std::string &aName, std::string &aValue,
-   char des, std::string instName, std::string instValue )
-{
-   hdhC::FileSplit* tbl;
-
-   if( des == 'G' )
-     tbl = &GCM_ModelnameTable ;
-   else
-     tbl = &RCM_ModelnameTable ;
-
-   ReadLine ifs(tbl->getFile(), false);  // no test of existence
-
-   if( ! ifs.isOpen() )
-   {
-      std::string key("70_") ;
-
-      if( des == 'G' )
-        key += "3" ;
-      else
-        key += "4" ;
-
-      if( notes->inq(key) )
-      {
-         std::string capt("could not open " + tbl->getBasename()) ;
-
-         if( notes->operate(capt) )
-         {
-           notes->setCheckMetaStr( pQA->fail );
-           pQA->setExit( notes->getExitValue() ) ;
-         }
-      }
-
-      return;
-   }
-
-   std::string line;
-   Split x_line;
-
-   // parse table; trailing ':' indicates variable or 'global'
-   ifs.skipWhiteLines();
-   ifs.skipBashComment();
-
-   bool isModel=false;
-   bool isInst=false;
-   bool isModelInst=false;
-
-   bool isRCM = (des == 'R') ? true : false ;
-
-   while( ! ifs.getLine(line) )
-   {
-     x_line = line ;
-
-     if( aValue == x_line[0] )
-       isModel=true;
-
-     if( isRCM )
-     {
-       if( x_line.size() > 1 && instValue == x_line[1] )
-       {
-         isInst=true;
-         if( isModel )
-         {
-            isModelInst=true;
-            break;
-         }
-       }
-     }
-     else if( isModel )
-        break;
-   }
-
-   ifs.close();
-
-   if( !isModel )
-   {
-     std::string key;
-     if( des == 'G' )
-       key = "10_3" ;
-     else
-       key = "10_4" ;
-
-     if( notes->inq( key, pQA->fileStr) )
-     {
-       std::string capt("global " + hdhC::tf_att(pQA->s_empty, aName, aValue));
-       capt += "is not registered in table " ;
-       capt += tbl->getBasename();
-
-       if( notes->operate(capt) )
-       {
-         notes->setCheckMetaStr( pQA->fail );
-         pQA->setExit( notes->getExitValue() ) ;
-       }
-     }
-   }
-
-   if( isRCM && !isInst )
-   {
-     std::string key("10_5");
-
-     if( notes->inq( key, pQA->fileStr) )
-     {
-       std::string capt("global " + hdhC::tf_att(pQA->s_empty, instName, instValue));
-       capt += "is not registered in table " ;
-       capt += tbl->getBasename();
-
-       if( notes->operate(capt) )
-       {
-         notes->setCheckMetaStr( pQA->fail );
-         pQA->setExit( notes->getExitValue() ) ;
-       }
-     }
-   }
-
-   if( isRCM && isModel && isInst && !isModelInst )
-   {
-     std::string key("10_6");
-
-     if( notes->inq( key, pQA->fileStr) )
-     {
-       std::string capt("combination of global") ;
-       capt += hdhC::tf_att(pQA->s_empty, aName, aValue);
-       capt += "and " + hdhC::tf_val(instName, instValue);
-       capt += "is unregistered in table ";
-       capt += tbl->getBasename();
-
-       if( notes->operate(capt) )
-       {
-         notes->setCheckMetaStr( pQA->fail );
-         pQA->setExit( notes->getExitValue() ) ;
-       }
-     }
-   }
-
-   return;
-}
-
-void
-DRS_Filename::checkFilename(InFile &in )
-{
-  // The global attributes in the section for global attributes
-  // must satisfy the filename.
-
-  // get global attributes required in terms of the filename
-  std::vector<std::string> a_glob_att ;
-  std::map<std::string, std::string> a_glob_value ;
-
-  std::string str;
-  std::string frequency;
-
-  a_glob_att.push_back("CORDEX_domain");
-  a_glob_att.push_back("driving_model_id");
-  a_glob_att.push_back("driving_experiment_name");
-  a_glob_att.push_back("driving_model_ensemble_member");
-  a_glob_att.push_back("model_id");
-  a_glob_att.push_back("frequency");
-  a_glob_att.push_back("rcm_version_id");  // optionally !!!
-  a_glob_att.push_back("institute_id");
-
-  // missing global atts is checked elsewhere
-  if( pQA->pIn->varSz == pQA->pIn->varSz )
-     return;
-
-  Variable &glob = pQA->pIn->variable[ pQA->pIn->varSz ];
-
-  for( size_t i=0 ; i < a_glob_att.size() ; ++i )
-  {
-     str = glob.getAttValue(a_glob_att[i]) ;
-
-     a_glob_value[a_glob_att[i]] = hdhC::stripSurrounding( str ) ;
-  }
-
-  // test filename for corrext syntax and decompose filename
-  bool isMiss=false;
-
-  // CORDEX filename encoding in the order of below;
-  // variable_name is not an attribute
-  std::string f( in.file.getFilename());
-
-  if( f.rfind(".nc" ) )
-    f = f.substr( 0, f.size()-3 );  // strip ".nc"
-
-  Split splt(f, "_");
-
-  // file name components
-  std::map<std::string, std::string> a_file_value;
-
-  // test the last two items of time type. If both are,
-  // then this would mean that they are separated by '_'.
-  // This would be a fault for CORDEX.
-  size_t off=0;  // takes into account a period separator '_'
-  if( splt.size() > 2 &&
-         hdhC::isDigit( splt[ splt.size() -1 ])
-             && hdhC::isDigit( splt[ splt.size() -2 ]) )
-  {
-    isMiss=true;
-    off=1;
-
-    std::string key("16_1");
-    if( notes->inq( key, pQA->fileStr ) )
-    {
-      std::string capt("wrong separator in the period in the filename") ;
-
-      (void) notes->operate( capt) ;
-      notes->setCheckMetaStr(pQA->fail);
-    }
-  }
-
-  if( splt.size() > 7 )
-  {
-    a_file_value["Domain"] = splt[1] ;
-    a_file_value["GCMModelName"] = splt[2] ;
-    a_file_value["CMIP5ExperimentName"] = splt[3] ;
-    a_file_value["CMIP5Ensemble_member"] = splt[4] ;
-    a_file_value["RCMModelName"] = splt[5] ;
-
-    if( splt.size() == (9+off) )
-    {
-      a_file_value["RCMVersionID"] = splt[6] ;
-      a_file_value["Frequency"] = splt[7] ;
-      frequency = splt[7] ;
-    }
-    else if( splt.size() == (8+off) )
-    {
-       if( hdhC::isDigit( splt[7][0] ) )
-       {  // with period; no RCMVersionID
-         a_file_value["RCMVersionID"] = "" ;
-         a_file_value["Frequency"] = splt[6] ;
-         frequency = splt[6] ;
-       }
-       else
-       {  // no period; with RCMVersionID
-         a_file_value["RCMVersionID"] = splt[6] ;
-         a_file_value["Frequency"] =  splt[7] ;
-         frequency = splt[7] ;
-       }
-    }
-    else if( splt.size() == (7+off) )
-    {
-       // no period; no RCMVersionID
-       a_file_value["RCMVersionID"] = "" ;
-       a_file_value["Frequency"] = splt[6] ;
-       frequency = splt[6] ;
-    }
-  }
-  else
-  {
-     std::string key("15_1");
-     if( notes->inq( key, pQA->fileStr ) )
-     {
-       std::string capt("filename not compliant to CORDEX encoding");
-
-       (void) notes->operate(capt) ;
-       notes->setCheckMetaStr(pQA->fail);
-
-       isMiss = true;
-    }
-  }
-
-  if( isMiss )  // comparison not feasable
-    return;
-
-  // compare filename components to global attributes
-  std::string f_name;
-  std::string a_name;
-  std::string f_val;
-  std::string a_val;
-
-  // do filename components match global attributes?
-  std::vector<std::string> f_vs;
-  std::vector<std::string> a_vs;
-
-  f_vs.push_back("Domain");
-  a_vs.push_back("CORDEX_domain");
-
-  f_vs.push_back("GCMModelName");
-  a_vs.push_back("driving_model_id");
-
-  f_vs.push_back("CMIP5ExperimentName");
-  a_vs.push_back("driving_experiment_name");
-
-  f_vs.push_back("CMIP5Ensemble_member");
-  a_vs.push_back("driving_model_ensemble_member");
-
-  f_vs.push_back("RCMModelName");
-  a_vs.push_back("model_id");
-
-  f_vs.push_back("Frequency");
-  a_vs.push_back("frequency");
-
-  // optionally !!!
-  f_name="RCMVersionID";
-  a_name="rcm_version_id";
-  if( a_file_value[f_name].size() &&
-             a_file_value[f_name] != a_glob_value[a_name] )
-  {
-    f_vs.push_back(f_name);
-    a_vs.push_back(a_name);
-  }
-
-  for( size_t i=0 ; i < f_vs.size() ; ++i )
-  {
-    f_name=f_vs[i];
-    a_name=a_vs[i];
-
-    if( a_file_value[f_name] != a_glob_value[a_name] )
-    {
-      if( a_file_value[f_name] == "r0i0p0"
-                && a_glob_value[a_name] == "N/A" )
-        ;
-      else if( a_file_value[f_name] == "r0i0p0"
-                && a_glob_value[a_name] == "r1i1p1" )
-        ;
-      else
-      {
-        f_val=a_file_value[f_name];
-        a_val=a_glob_value[a_name];
-
-        std::string key("15_2");
-        if( notes->inq( key, pQA->fileStr))
-        {
-           std::string capt("filename does not match global ");
-           capt += hdhC::tf_att(pQA->s_empty, a_name, a_val);
-           capt += ", found " + hdhC::sAssign(f_name, f_val) ;
-
-           (void) notes->operate(capt) ;
-           notes->setCheckMetaStr( pQA->fail );
-        }
-      }
-    }
-  }
-
-  return;
-}
-
-void
-DRS_Filename::checkDrivingExperiment(InFile &in)
-{
+  InFile& in = *(pQA->pIn);
   std::string str;
 
   // special: optional driving_experiment could contain
@@ -622,11 +98,10 @@ DRS_Filename::checkDrivingExperiment(InFile &in)
   }
 
   // index of the pseudo-variable 'NC_GLOBAL'
-  size_t ix;
-  if( (ix=in.varSz) == in.varSz )
+  if( in.variable.size() == in.varSz )
      return; // no global attributes; checked and notified elsewhere
 
-  Variable &glob = in.variable[ix];
+  Variable &glob = in.variable[in.varSz];
 
   // att-names corresponding to the three items in drinving_experiment
   std::vector<std::string> rvs;
@@ -685,7 +160,321 @@ DRS_Filename::checkDrivingExperiment(InFile &in)
 }
 
 void
-DRS_Filename::checkNetCDF(InFile &in)
+DRS_CV::checkFilename(std::string& fName, struct DRS_CV_Table& drs_cv_table)
+{
+  Split x_filename;
+  x_filename.setSeparator("_");
+  x_filename.enableEmptyItems();
+  x_filename = fName ;
+
+  checkFilenameEncoding(x_filename, drs_cv_table);
+
+  // note that this test is not part of the QA_Time class, because
+  // coding depends on projects
+  if( pQA->isCheckTime && pQA->qaExp.getFrequency() != "fx" )
+  {
+    if( testPeriod(x_filename) )
+    {
+      std::string key("1_7e");
+      if( notes->inq( key, pQA->qaTime.name) )
+      {
+        std::string capt("filename requires a period");
+
+        (void) notes->operate(capt) ;
+      }
+    }
+  }
+
+  return ;
+}
+
+void
+DRS_CV::checkFilenameEncoding(Split& x_filename, struct DRS_CV_Table& drs_cv_table)
+{
+  // fileEncodingName: name of the encoding type
+  // fileEncoding:     sequence of DRS path components
+  // encodingMap:      name in encoding vs. name of global attribute (or *)
+
+  // note that in contrast to pathEncoding, the parsing starts from the beginning
+  // of the encoding string and there are optional trailing items
+
+  if( x_filename.size() == 0 )
+    return;
+
+  // components of the current path, these are given in the reverse order.
+  Split& drs = x_filename;
+
+  Variable& globalVar = pQA->pIn->variable[ pQA->pIn->varSz ] ;
+  std::string n_ast="*";
+  std::string t;
+
+  size_t enc_sz = drs_cv_table.fileEncoding.size() ;
+
+  Split x_enc[enc_sz];
+  std::vector<size_t> countCI(enc_sz, 0);
+  std::map<std::string, std::string> globMap[enc_sz] ;
+  std::vector<std::vector<size_t> > specialFaultIx ;
+
+  for( size_t ds=0 ; ds < enc_sz ; ++ds)
+  {
+    Split& x_e = x_enc[ds] ;
+    std::map<std::string, std::string>& gM = globMap[ds] ;
+
+    x_e.setSeparator("_");
+
+    std::map<std::string, std::string>& cvMap = drs_cv_table.cvMap ;
+
+    // could have a trailing ".nc" item; if yes, then remove this beforehand
+    if( drs_cv_table.fileEncoding[ds].rfind(".nc") < std::string::npos )
+    {
+      std::string& t = drs_cv_table.fileEncoding[ds];
+      // is it trailing?
+      if( t.substr(t.size()-3) == ".nc" )
+        x_e = t.substr(0, t.size()-3) ;
+    }
+    else
+      x_e = drs_cv_table.fileEncoding[ds] ;
+
+    for(size_t x=0 ; x < x_e.size() ; ++x )
+    {
+      if( cvMap.count(x_e[x]) == 0 )
+      {
+        std::string key("7_3");
+        std::string capt("Fault in table " + pQA->table_DRS_CV.getFile());
+        capt += ": encoding " + hdhC::tf_val("item", x_e[x]) + " not found in CV";
+        if( notes->inq( key, "DRS") )
+        {
+          (void) notes->operate(capt) ;
+          notes->setCheckMetaStr(pQA->fail);
+        }
+      }
+
+      if( cvMap[x_e[x]] == n_ast )
+      {
+        if( x_e[x] == "VariableName" )
+          gM[x_e[x]] = pQA->qaExp.fVarname ;
+
+        else if( x_e[x] == "StartTime-EndTime" )
+          gM[x_e[x]] = n_ast ;
+      }
+      else
+        gM[x_e[x]] = globalVar.getAttValue(cvMap[x_e[x]]) ;
+    }
+
+    // special: add a StartTime-EndTime to drs when missing, e.g. because of fixed
+    Split x_spcl(drs[drs.size()-1], '-');
+    if( !(x_spcl.size() == 2
+          && hdhC::isDigit(x_spcl[0]) && hdhC::isDigit(x_spcl[1])) )
+      drs.append("*");
+
+    //count coincidences between filename components and the DRS
+    std::string t;
+    int ix, jx;
+    int x_eSz = x_e.size();
+    int drsSz = drs.size() ;
+    int drsBeg = drsSz - x_eSz ;
+
+    for( jx=0 ; jx < x_eSz ; ++jx)
+    {
+      t = gM[ x_e[jx] ];
+
+      if( (ix = drsBeg+jx) > -1 )
+      {
+        if( drs[ix] == t || t == n_ast )
+          ++countCI[ds];
+
+        // special
+        else if( drs[ix] == "r0i0p0" && pQA->qaExp.getFrequency() == "fx" )
+        {
+          drs.replace(ix, globalVar.getAttValue("driving_model_ensemble_member") );
+          ++countCI[ds];
+        }
+      }
+    }
+
+    if( x_e.size() > 2 && countCI[ds] > (x_e.size()-1) )
+      return;  // check passed; take into account one optional item
+  }
+
+  size_t m=0 ; // because there is only a single DRS-FS item
+
+  // find details of the faults
+  Split& x_e = x_enc[m] ;
+  std::map<std::string, std::string>& gM = globMap[m] ;
+
+  std::vector<std::string> text;
+  std::vector<std::string> keys;
+
+  std::string txt;
+  findDRS_faults(drs, x_e, gM, txt) ;
+  if( txt.size() )
+  {
+    keys.push_back("1_2");
+    text.push_back(txt);
+  }
+
+  if( text.size() )
+  {
+    std::string capt("DRS CV filename:");
+
+    for(size_t i=0 ; i < text.size() ; ++i )
+    {
+      if( notes->inq( keys[i], "DRS") )
+      {
+        (void) notes->operate(capt+text[i]) ;
+        notes->setCheckMetaStr(pQA->fail);
+      }
+    }
+  }
+
+  return;
+}
+
+void
+DRS_CV::checkModelName(std::string &aName, std::string &aValue,
+   char des, std::string instName, std::string instValue )
+{
+   hdhC::FileSplit* tbl;
+
+   if( des == 'G' )
+     tbl = &GCM_ModelnameTable ;
+   else
+     tbl = &RCM_ModelnameTable ;
+
+   ReadLine ifs(tbl->getFile(), false);  // no test of existence
+
+   if( ! ifs.isOpen() )
+   {
+      std::string key("7_4") ;
+
+      if( des == 'G' )
+        key += "a" ;
+      else
+        key += "b" ;
+
+      if( notes->inq(key) )
+      {
+         std::string capt("could not open " + tbl->getBasename()) ;
+
+         if( notes->operate(capt) )
+         {
+           notes->setCheckMetaStr( pQA->fail );
+           pQA->setExit( notes->getExitValue() ) ;
+         }
+      }
+
+      return;
+   }
+
+   std::string line;
+   Split x_line;
+
+   // parse table; trailing ':' indicates variable or 'global'
+   ifs.skipWhiteLines();
+   ifs.skipBashComment();
+
+   bool isModel=false;
+   bool isInst=false;
+   bool isModelInst=false;
+
+   bool isRCM = (des == 'R') ? true : false ;
+
+   while( ! ifs.getLine(line) )
+   {
+     x_line = line ;
+
+     if( aValue == x_line[0] )
+       isModel=true;
+
+     if( isRCM )
+     {
+       if( x_line.size() > 1 && instValue == x_line[1] )
+       {
+         isInst=true;
+         if( isModel )
+         {
+            isModelInst=true;
+            break;
+         }
+       }
+     }
+     else if( isModel )
+        break;
+   }
+
+   ifs.close();
+
+   if( !isModel )
+   {
+     std::string key;
+     if( des == 'G' )
+       key = "1_3" ;
+     else
+       key = "1_4" ;
+
+     if( notes->inq( key, pQA->fileStr) )
+     {
+       std::string capt(pQA->s_global);
+       capt += hdhC::blank;
+       capt += hdhC::tf_att(hdhC::empty, aName, aValue);
+       capt += "is not registered in table " ;
+       capt += tbl->getBasename();
+
+       if( notes->operate(capt) )
+       {
+         notes->setCheckMetaStr( pQA->fail );
+         pQA->setExit( notes->getExitValue() ) ;
+       }
+     }
+   }
+
+   if( isRCM && !isInst )
+   {
+     std::string key("1_5");
+
+     if( notes->inq( key, pQA->fileStr) )
+     {
+       std::string capt(pQA->s_global);
+       capt += hdhC::blank;
+       capt += hdhC::tf_att(hdhC::empty, instName, instValue);
+       capt += "is not registered in table " ;
+       capt += tbl->getBasename();
+
+       if( notes->operate(capt) )
+       {
+         notes->setCheckMetaStr( pQA->fail );
+         pQA->setExit( notes->getExitValue() ) ;
+       }
+     }
+   }
+
+   if( isRCM && isModel && isInst && !isModelInst )
+   {
+     std::string key("1_6");
+
+     if( notes->inq( key, pQA->fileStr) )
+     {
+       std::string capt("combination of ");
+       capt += pQA->s_global ;
+       capt += hdhC::blank;
+       capt += hdhC::tf_att(hdhC::empty, aName, aValue);
+       capt += "and " + hdhC::tf_val(instName, instValue);
+       capt += "is unregistered in table ";
+       capt += tbl->getBasename();
+
+       if( notes->operate(capt) )
+       {
+         notes->setCheckMetaStr( pQA->fail );
+         pQA->setExit( notes->getExitValue() ) ;
+       }
+     }
+   }
+
+   return;
+}
+
+void
+DRS_CV::checkNetCDF(void)
 {
   // NC_FORMAT_CLASSIC (1)
   // NC_FORMAT_64BIT   (2)
@@ -727,40 +516,219 @@ DRS_Filename::checkNetCDF(InFile &in)
 }
 
 void
-DRS_Filename::run(void)
+DRS_CV::checkPath(std::string& path, struct DRS_CV_Table& drs_cv_table)
 {
-  InFile& in = *(pQA->pIn);
+  // pathEncodingName: name of the encoding type
+  // pathEncoding:     sequence of DRS path components
+  // encodingMap:      name in encoding vs. name of global attribute (or *)
 
-  // check for the required dir structure
-  check(in);
+  size_t enc_sz = drs_cv_table.pathEncoding.size() ;
 
-  // compare filename to netCDF global attributes
-  checkFilename(in);
+  if( path.size() == 0 || enc_sz == 0 )
+    return;
 
-  // is it NetCDF-4, is it compressed?
-  checkNetCDF(in);
+  // components of the current path, these are given in the reverse order.
+//  path= "/hdh/data/CMIP5/CMIP5/output/MPI-M/MPI-ESM-LR/hysterical/day/artmos/r1i1p1/tas/";
+//  path="/hdh/data/cordex/output/EUR-44/SMHI/ECMWF-ERAINT/evaluation/r1i1p1/SMHI-RCA4/v1/mon/pr";
+//  path="/hdh/data/cordex/input/EUR-44/ECMWF-ERAINT/r1i1p1/evaluation/SMHI-RCA4/v1/mon/pr";
 
-  // optional, but if, then with three prescribed members
-  checkDrivingExperiment(in);
+  Split drs(path, "/");
 
-  // note that this test is not part of the QA_Time class, because
-  // coding depends on projects
-  if( pQA->isCheckTime && testPeriod() )
+  Variable& globalVar = pQA->pIn->variable[ pQA->pIn->varSz ] ;
+  std::string n_ast="*";
+
+  Split x_enc[enc_sz];
+  std::vector<size_t> countCI(enc_sz, 0);
+  std::map<std::string, std::string> globMap[enc_sz] ;
+
+  for( size_t ds=0 ; ds < enc_sz ; ++ds)
   {
-    std::string key("9_2");
-    if( notes->inq( key, pQA->qaTime.name) )
-    {
-      std::string capt("status is apparently in progress");
+    Split& x_e = x_enc[ds] ;
+    std::map<std::string, std::string>& gM = globMap[ds] ;
 
-      (void) notes->operate(capt) ;
+    x_e.setSeparator("/");
+
+    std::map<std::string, std::string>& cvMap = drs_cv_table.cvMap ;
+
+    x_e = drs_cv_table.pathEncoding[ds] ;
+
+    for(size_t x=0 ; x < x_e.size() ; ++x )
+    {
+      if( cvMap.count(x_e[x]) == 0 )
+      {
+        std::string key("7_3");
+        std::string capt("Fault in table " + pQA->table_DRS_CV.getFile());
+        capt += ": encoding " + hdhC::tf_val("item", x_e[x]) + " not found in CV";
+        if( notes->inq( key, "DRS") )
+        {
+          (void) notes->operate(capt) ;
+          notes->setCheckMetaStr(pQA->fail);
+        }
+      }
+
+      if( cvMap[x_e[x]] == n_ast )
+      {
+        if( x_e[x] == "VariableName" )
+          gM[x_e[x]] = pQA->qaExp.fVarname ;
+      }
+      else
+        gM[x_e[x]] = globalVar.getAttValue(cvMap[x_e[x]]) ;
+    }
+
+
+    // special: at least for the HH ESGF node, which has an additional trailing
+    // item for a versioning, e.g. 'v20121231'. This is ignored.
+    size_t last = drs.size()-1 ;
+    if( drs[last][0] == 'v' && hdhC::isDigit(drs[last].substr(1)) )
+        drs.erase(last);
+
+    //special: customisation
+    for( size_t i=0 ; i < drs.size() ; ++i )
+    {
+      if( drs[i] == "cordex" )
+        // ESGF uses lower case
+        drs.replace(i, "CORDEX");
+
+      else if( drs[i] == "r0i0p0" && pQA->qaExp.getFrequency() == "fx" )
+        // never thought the CORDEX community about this; at least in the beginning
+        drs.replace(i, globalVar.getAttValue("driving_model_ensemble_member") );
+    }
+
+    std::string t;
+    int ix, jx;
+    int x_eSz = x_e.size();
+    int drsSz = drs.size() ;
+    int drsBeg = drsSz - x_eSz;
+
+    for( jx=0 ; jx < x_eSz ; ++jx)
+    {
+      t = gM[ x_e[jx] ];
+
+      if( (ix = drsBeg+jx) > -1 )
+      {
+        //count coincidences between path components and the DRS
+        if( drs[ix] == t || t == n_ast )
+          ++countCI[ds];
+
+        // another type of check
+        else if( x_e[jx] == "RCMModelName" )
+        {
+          std::string inst("Institution");
+          checkModelName(x_e[jx], t, 'R', inst, gM[inst]) ;
+        }
+        else if( x_e[jx] == "GCMModelName" )
+          checkModelName(x_e[jx], t, 'G') ;
+      }
+    }
+
+    if( countCI[ds] == x_e.size() )
+      return;  // check passed
+  }
+
+  // find the encoding with maximum number of coincidences
+  size_t m=0;
+
+/* // necessary if more than a single DRS structure is available
+  size_t mx=countCI[0];
+  for( size_t ds=1 ; ds < countCI.size() ; ++ds )
+  {
+    if( countCI[ds] > mx )
+    {
+      mx = countCI[ds] ;
+      m=ds;
+    }
+  }
+*/
+
+
+  Split& x_e = x_enc[m] ;
+  std::map<std::string, std::string>& gM = globMap[m] ;
+
+  std::vector<std::string> text;
+  std::vector<std::string> keys;
+
+  std::string txt;
+  findDRS_faults(drs, x_e, gM, txt) ;
+  if( txt.size() )
+  {
+    keys.push_back("1_1");
+    text.push_back(txt);
+  }
+
+  if( text.size() )
+  {
+    std::string capt("DRS CV path:");
+
+    for( size_t i=0 ; i < text.size() ; ++i )
+    {
+      if( notes->inq( keys[i], pQA->fileStr) )
+      {
+        (void) notes->operate(capt+text[i]) ;
+        notes->setCheckMetaStr(pQA->fail);
+      }
     }
   }
 
   return;
 }
 
+void
+DRS_CV::findDRS_faults(Split& drs, Split& x_e,
+                   std::map<std::string,std::string>& gM,
+                   std::string& text)
+{
+  std::string t;
+  std::string n_ast="*";
+  int x_eSz = x_e.size();
+  int drsSz = drs.size() ;
+  int drsBeg = drsSz - x_eSz ;
+
+  if( drsBeg < 0)
+  {
+    text = " check failed" ;
+    return; // fewer path items than expected
+  }
+
+  for( int j=0 ; j < x_eSz ; ++j)
+  {
+    t = gM[ x_e[j] ];
+
+    if( !(drs[drsBeg+j] == t || t == n_ast) )
+    {
+      text = " check failed, expected " ;
+      text += hdhC::sAssign(x_e[j],t) ;
+      text += " found" ;
+      text += hdhC::tf_val( drs[drsBeg+j]) ;
+
+      return;
+    }
+  }
+
+  return ;
+}
+
+void
+DRS_CV::run(void)
+{
+  DRS_CV_Table& drs_cv_table = pQA->drs_cv_table ;
+
+  // check for the required dir structure
+  checkPath(pQA->pIn->file.path, drs_cv_table) ;
+
+  // compare filename to netCDF global attributes
+  checkFilename(pQA->pIn->file.basename, drs_cv_table);
+
+  // is it NetCDF-4, is it compressed?
+  checkNetCDF();
+
+  // optional, but if, then with three prescribed members
+  checkDrivingExperiment();
+
+  return;
+}
+
 bool
-DRS_Filename::testPeriod(void)
+DRS_CV::testPeriod(Split& x_f)
 {
   // return true, if a file is supposed to be not complete.
   // return false, a) if there is no period in the filename
@@ -778,11 +746,14 @@ DRS_Filename::testPeriod(void)
 
   // Does the filename has a trailing date range?
   // Strip off the extension.
-  std::string f( pQA->pIn->file.getBasename() );
-
   std::vector<std::string> sd;
   sd.push_back( "" );
   sd.push_back( "" );
+
+  if( x_f.size() == 0 )
+     return false;
+
+  std::string f(x_f[x_f.size()-1]);
 
   // if designator '-clim' is appended, then remove it
   size_t f_sz = static_cast<int>(f.size()) -5 ;
@@ -962,7 +933,7 @@ DRS_Filename::testPeriod(void)
 }
 
 bool
-DRS_Filename::testPeriodAlignment(std::vector<std::string> &sd, Date** pDates, bool b[])
+DRS_CV::testPeriodAlignment(std::vector<std::string> &sd, Date** pDates, bool b[])
 {
   // some pecularities of CMOR, which will probably not be modified
   // for a behaviour as expected.
@@ -1023,7 +994,7 @@ DRS_Filename::testPeriodAlignment(std::vector<std::string> &sd, Date** pDates, b
 }
 
 void
-DRS_Filename::testPeriodCutRegular(std::vector<std::string> &sd,
+DRS_CV::testPeriodCutRegular(std::vector<std::string> &sd,
                   std::vector<std::string>& text)
 {
   // Partitioning of files check are equivalent.
@@ -1214,7 +1185,7 @@ DRS_Filename::testPeriodCutRegular(std::vector<std::string> &sd,
 }
 
 bool
-DRS_Filename::testPeriodFormat(std::vector<std::string> &sd)
+DRS_CV::testPeriodFormat(std::vector<std::string> &sd)
 {
   // return: true means go on for testing the period cut
   std::string key("16_5");
@@ -1317,16 +1288,6 @@ QA_Exp::applyOptions(std::vector<std::string>& optStr)
        continue;
      }
 
-     if( split[0] == "tCV"
-           || split[0] == "tableControlledVocabulary"
-                || split[0] == "table_controlled_vocabulary" )
-     {
-       if( split.size() == 2 )
-          table_DRS_CV.setFile(split[1]) ;
-
-       continue;
-     }
-
      if( split[0] == "tVR"
           || split[0] == "tableVariableRequirement" )
      {
@@ -1346,9 +1307,6 @@ QA_Exp::applyOptions(std::vector<std::string>& optStr)
    }
 
    // apply a general path which could have also been provided by setTablePath()
-   if( table_DRS_CV.path.size() == 0 )
-      table_DRS_CV.setPath(pQA->tablePath);
-
    if( varReqTable.path.size() == 0 )
       varReqTable.setPath(pQA->tablePath);
 
@@ -1489,7 +1447,7 @@ QA_Exp::checkDimLongName(InFile &in,
   std::string& t_DMD_long_name = t_DMD_entry.attMap[n_long_name] ;
   std::string& f_DMD_long_name = f_DMD_entry.attMap[n_long_name] ;
 
-  std::string key("40_3");
+  std::string key("4_3");
   if( notes->inq( key, vMD.var->name) )
   {
     std::string capt(getCaptIntroDim(vMD, f_DMD_entry, t_DMD_entry, pQA->n_long_name) ) ;
@@ -1526,7 +1484,7 @@ QA_Exp::checkDimOutName(InFile &in,
     struct DimensionMetaData &f_DMD_entry,
     struct DimensionMetaData &t_DMD_entry)
 {
-  std::string key("40_1");
+  std::string key("4_1");
   std::string& t_DMD_outname = t_DMD_entry.attMap[n_outname] ;
   std::string& f_DMD_outname = f_DMD_entry.attMap[n_outname] ;
 
@@ -1573,7 +1531,7 @@ QA_Exp::checkDimSize(InFile &in,
   if( f_DMD_entry.attMap[n_outname] == "loc" )
     return;
 
-  std::string key("40_5");
+  std::string key("4_5");
   if( notes->inq( key, vMD.var->name) )
   {
     std::string capt( getCaptIntroDim(vMD, f_DMD_entry, t_DMD_entry) ) ;
@@ -1597,7 +1555,7 @@ QA_Exp::checkDimStndName(InFile &in,
     struct DimensionMetaData &f_DMD_entry,
     struct DimensionMetaData &t_DMD_entry)
 {
-  std::string key("40_2");
+  std::string key("4_2");
   std::string& t_DMD_standard_name = t_DMD_entry.attMap[n_standard_name] ;
   std::string& f_DMD_standard_name = f_DMD_entry.attMap[n_standard_name] ;
 
@@ -1660,7 +1618,7 @@ QA_Exp::checkDimULD(
         (  f_DMD_units.find("days") < std::string::npos
           &&  f_DMD_units.find("since") < std::string::npos ) )
     {
-      std::string key("36_1");
+      std::string key("3_13");
       if( notes->inq( key, vMD.var->name) )
       {
         std::string capt( getCaptIntroDim(vMD, f_DMD_entry, t_DMD_entry, pQA->n_units) ) ;
@@ -1702,7 +1660,7 @@ QA_Exp::checkDimULD(
       Date tbl_ref( t_DMD_units, pQA->qaTime.calendar );
       Date nc_ref( f_DMD_units, pQA->qaTime.calendar );
 
-      std::string key("36_2");
+      std::string key("3_14");
       if( notes->inq( key, vMD.var->name) )
       {
         std::string capt( getCaptIntroDim(vMD, f_DMD_entry, t_DMD_entry, pQA->n_units) ) ;
@@ -1760,7 +1718,7 @@ QA_Exp::checkDimUnits(InFile &in,
     return;
 
   //dimension's var-rep without units in the standard table
-  std::string key("40_4");
+  std::string key("4_4");
 
   if( notes->inq( key, vMD.var->name) )
   {
@@ -1881,7 +1839,7 @@ QA_Exp::checkPressureCoord(InFile &in)
    // is there a difference between filename and variable name?
    if( pFile.size() && pFile != pVarname )
    {
-     std::string key("37_1");
+     std::string key("3_15");
      if( notes->inq( key ) )
      {
        std::string capt("p-level in the filename and the variable name do not match") ;
@@ -1928,7 +1886,7 @@ QA_Exp::checkPressureCoord(InFile &in)
        std::string key("5_4");
        if( notes->inq( key, in.variable[ix].name ) )
        {
-         std::string capt(hdhC::tf_var("plev", pQA->s_colon));
+         std::string capt(hdhC::tf_var("plev", hdhC::colon));
          capt += "Data value does not match Pa units." ;
          capt += ", found: " + hdhC::sAssign("p", pData);
          capt += ", expected" + hdhC::sAssign("p", pVarname);
@@ -1943,57 +1901,38 @@ QA_Exp::checkPressureCoord(InFile &in)
 }
 
 void
-QA_Exp::domainCheck(ReadLine &ifs)
+QA_Exp::domainCheck(void)
 {
-   std::string line;
-   ifs.getLine(line);
-
    std::vector<std::vector<std::string> > table1;
    std::vector<std::vector<std::string> > table2;
 
-   Split csv;
-   csv.setSeparator(',') ;
-   bool isFirst=true;
+   size_t sz = pQA->drs_cv_table.section.size() ;
+   std::string t1("Table1");
+   std::string t2("Table2");
 
-   while( ! ifs.getLine(line) )
+   Split x_line;
+   x_line.setSeparator(',') ;
+   x_line.setStripSides();
+
+   for( size_t i=0 ; i < sz ; ++i )
    {
-     line = hdhC::stripSurrounding( line );
-
-     if( line.size() == 0)
-       continue;
-     if( line[0] == '#')
-       continue;
-
-     if( line == "End: Table1" )
+     if( pQA->drs_cv_table.section[i] == t1 )
      {
-        isFirst=false;
-        continue;
+        for( size_t j=0 ; j < pQA->drs_cv_table.line[i].size() ; ++j )
+        {
+          x_line = pQA->drs_cv_table.line[i][j] ;
+          table1.push_back( x_line.getItems() ) ;
+        }
      }
 
-     if( line == "Begin: Table2" )
-        continue;
-
-     if( line == "End: Table2" )
-        break;
-
-     // find corresponding table entry
-     csv = line;
-     std::vector<std::string> row;
-     row.clear();
-
-     for( size_t i=0 ; i < csv.size() ; ++i )
+     if( pQA->drs_cv_table.section[i] == t2 )
      {
-       // make reading of a table independent on a leading index
-       if( i == 0 && hdhC::isDigit(csv[0][0]) )
-          continue;
-
-       row.push_back( hdhC::stripSurrounding( csv[i] ) ) ;
+        for( size_t j=0 ; j < pQA->drs_cv_table.line[i].size() ; ++j )
+        {
+          x_line = pQA->drs_cv_table.line[i][j] ;
+          table2.push_back( x_line.getItems() ) ;
+        }
      }
-
-     if( isFirst )
-        table1.push_back( row ) ;
-     else
-        table2.push_back( row ) ;
    }
 
    std::string s0;
@@ -2043,22 +1982,34 @@ QA_Exp::domainCheck(ReadLine &ifs)
    {
      // Note: if the data file is produced by a model not using rotated
      // coordinates, then the checks will be discarded.
+     // The algo below works in case of faults.
      bool is=true;
-     std::string v;
+
      for( size_t i=0 ; i < pQA->pIn->varSz ; ++i )
      {
-       v = hdhC::Lower()(pQA->pIn->variable[i].name);
+       Variable& var = pQA->pIn->variable[i] ;
 
-       // check attributes for key-word 'rotated' and 'pole'
-       for( size_t j=0 ; j < pQA->pIn->variable[i].attName.size() ; ++j )
+       // check variable name for key-word 'rotated' and 'pole'
+       if( var.name.find("rotated") < std::string::npos
+              &&  var.name.find("pole") < std::string::npos )
        {
-         if( pQA->pIn->variable[i].attName[j].find("rotated") < std::string::npos
-              &&  pQA->pIn->variable[i].attName[j].find("pole") < std::string::npos )
+          is=false;
+          break;
+       }
+
+//        // check attribute values for key-word 'rotated' and 'pole'
+       for( size_t j=0 ; j < var.attValue.size() ; ++j )
+       {
+         if( var.attValue[j][0].find("rotated") < std::string::npos
+              &&  var.attValue[j][0].find("pole") < std::string::npos )
          {
             is=false;
             break;
          }
        }
+
+       if( !is )
+         break;
      }
 
      // assumption that the model is non-rotational
@@ -2081,7 +2032,7 @@ QA_Exp::domainCheck(ReadLine &ifs)
      domainCheckData(f_lonName, f_latName, table1[irow], "Table 1");
 
      return ;
-  }
+   }
 
    if( isTbl_2nd )
    {
@@ -2105,7 +2056,7 @@ QA_Exp::domainCheck(ReadLine &ifs)
   std::string key = "7_6";
   if( notes->inq(key, pQA->fileStr) )
   {
-    std::string capt("Domain not specified neither in Table 1 or 2.") ;
+    std::string capt("CORDEX_domain does not match Table <1|2>") ;
 
     (void) notes->operate(capt) ;
     notes->setCheckMetaStr(pQA->fail);
@@ -2255,21 +2206,17 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
       {
         capt += hdhC::tf_var(var_lon) ;
         capt += "and " + hdhC::tf_var(var_lat);
-
-        return;
       }
       else if( mv_lon.size() < 2 )
-      {
         capt += hdhC::tf_var(var_lon) ;
-      }
       else
-      {
         capt += hdhC::tf_var(var_lat) ;
-      }
 
       (void) notes->operate(capt) ;
       notes->setCheckMetaStr(pQA->fail);
     }
+
+    return;
   }
 
   // check resolution (with rounding)
@@ -2314,7 +2261,6 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
         capt += hdhC::sAssign("resol("+var_lon+")", f_resol_lon) ;
         capt += " and ";
         capt += hdhC::sAssign("resol("+var_lat+")", f_resol_lat) ;
-        return;
       }
       else if( is_lon )
       {
@@ -2322,15 +2268,15 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
         capt += f_resol_lon ;
       }
       else
-      {
         capt += hdhC::sAssign("resol("+var_lat+")", f_resol_lat) ;
-      }
 
-      capt += "; required is "  + t_resol;
+      capt += ", required is "  + t_resol;
 
       (void) notes->operate(capt) ;
       notes->setCheckMetaStr(pQA->fail);
     }
+
+    return;
   }
 
   // check edges of the domain for grid-cell centres
@@ -2528,8 +2474,7 @@ QA_Exp::domainCheckPole(std::string item,
   // corresponding values in the NetCF file.
 
   if( item == "N.Pole lon" && t_num == "N/A" )
-    return;  // any lon value would do for the identity of rotated and
-             // unrotated North pole.
+    return;  // any lon value would do for the North pole in rotated coord.
 
   // remove trailing zeros and a decimal point
   t_num = hdhC::double2String( hdhC::string2Double(t_num), -5) ;
@@ -2545,39 +2490,38 @@ QA_Exp::domainCheckPole(std::string item,
 
     if( item == "N.Pole lon" )
     {
-       std::string s(var.getAttValue("grid_north_pole_longitude")) ;
+      std::string s(var.getAttValue("grid_north_pole_longitude")) ;
 
-       if( s.size() )
-       {
-         // found the attribute
-         f_num = hdhC::double2String( hdhC::string2Double(s, -5) ) ;
-         if( f_num == t_num )
-           return;
-       }
-       else
-       {
-         s = var.getAttValue("grid_north_pole_latitude") ;
-         if( s.size() )
-         {
-           // found the attribute
-           f_num = hdhC::double2String( hdhC::string2Double(s, -5) ) ;
-           if( f_num == t_num )
-             return;
-         }
-       }
+      if( s.size() )
+      {
+        // found the attribute
+        f_num = hdhC::double2String( hdhC::string2Double(s), -5) ;
+        if( f_num == t_num )
+          return;
+      }
+    }
+    else
+    {
+      std::string s(var.getAttValue("grid_north_pole_latitude")) ;
+
+      if( s.size() )
+      {
+        // found the attribute
+        f_num = hdhC::double2String( hdhC::string2Double(s), -5) ;
+        if( f_num == t_num )
+          return;
+      }
     }
   }
 
-  // may-be the names didn't match. Try again more generally.
+  // may-be the names didn't match.
   if( ix > -1 )
   {
-    std::string key = "7_8 (";
-    key += item ;
-    key += ")";
+    std::string key = "7_8";
     if( notes->inq(key, pQA->fileStr) )
     {
       std::string capt("rotated N.Pole of CORDEX domain Table 1 does not match");
-      capt += ", found " + hdhC::tf_val(f_num);
+      capt += ", found " + hdhC::sAssign(item, f_num);
       capt += ", required " + hdhC::tf_val(t_num);
 
       (void) notes->operate(capt) ;
@@ -2586,13 +2530,11 @@ QA_Exp::domainCheckPole(std::string item,
   }
   else
   {
-    std::string key = "50_1 (";
-    key += item ;
-    key += ")";
+    std::string key = "5_5";
     if( notes->inq(key, pQA->fileStr) )
     {
       std::string capt("auxiliary " + hdhC::tf_var("rotated_pole") );
-      capt += "is missing in sub-temporal file" ;
+      capt += "is missing" ;
 
       (void) notes->operate(capt) ;
       notes->setCheckMetaStr(pQA->fail);
@@ -2638,6 +2580,14 @@ QA_Exp::domainFindTableType(
 
    for( size_t i=0 ; i < 2 ; ++i )
    {
+     if( i==1 && candidate[0] == candidate[1] )
+     {
+       it_1[1] = it_1[0] ;
+       it_2[1] = it_2[0] ;
+       break;
+     }
+
+     // looking for a valid index in table1
      for( it_1[i]=0 ; it_1[i] < sz[0] ; ++it_1[i] )
         if( candidate[i] == tbl1[it_1[i]][1] )
           break;
@@ -2762,8 +2712,10 @@ QA_Exp::checkMetaData(InFile &in)
 {
   notes->setCheckMetaStr("PASS");
 
+  domainCheck();
+
   // check attributes required in the meta data section of the file
-  requiredAttributes_check(in) ;
+  reqAttCheck() ;
 
   // check existance (and data) of the pressure coordinate for those
   // variables defined on a level indicated by a trailing number
@@ -2877,7 +2829,7 @@ QA_Exp::checkVarTableEntry_cell_methods(
     }
 
     // found a difference
-    std::string key("32_6");
+    std::string key("3_7");
     if( notes->inq( key, vMD.var->name) )
     {
       std::string capt;
@@ -3019,7 +2971,7 @@ QA_Exp::checkVarTableEntry_longName(
   if( count_t > 3 && (count_t - count_f) < 2  )
      return;
 
-  std::string key("32_3");
+  std::string key("3_4");
   if( notes->inq( key, vMD.var->name) )
   {
     std::string capt;
@@ -3052,10 +3004,10 @@ QA_Exp::checkVarTableEntry_name(
   if( t_DMD_entry.name != vMD.var->name )
   {
     // This will happen only if case-insensitivity occurred
-    std::string key("32_7");
+    std::string key("3_8");
     if( notes->inq( key, vMD.var->name) )
     {
-      std::string capt(hdhC::tf_var(vMD.var->name, pQA->s_colon) ) ;
+      std::string capt(hdhC::tf_var(vMD.var->name, hdhC::colon) ) ;
       capt += "output variable name matches only for case-insensitivity" ;
 
       (void) notes->operate(capt) ;
@@ -3077,7 +3029,7 @@ QA_Exp::checkVarTableEntry_standardName(
         && vMD.var->name != "evspsblpot" )
   {  // note that evspsblpot is not a standard_name definded by CF conventions
      // CORDEX_variables_requirement table
-    std::string key("32_2");
+    std::string key("3_3");
     if( notes->inq( key, vMD.var->name) )
     {
       std::string capt;
@@ -3111,11 +3063,11 @@ QA_Exp::checkVarTableEntry_units(
 
   if( t_VMD_units != vMD.var->units )
   {
-      std::string key("32_5");
+      std::string key("3_6");
       if( notes->inq( key, vMD.var->name) )
       {
         std::string capt( hdhC::tf_att(vMD.var->name,
-               pQA->n_units, vMD.var->units, pQA->no_blank) ) ;
+               pQA->n_units, vMD.var->units, hdhC::no_blank) ) ;
         capt += ", but required is " ;
         capt += hdhC::tf_val(t_VMD_units);
 
@@ -3152,10 +3104,10 @@ QA_Exp::createVarMetaData(void)
       int sz;
       if( (sz=pQA->pIn->nc.getDimSize( var.dimName[k] )) == 1 )
       {
-        std::string key("41");
+        std::string key("4_7");
         if( notes->inq( key, var.name) )
         {
-          std::string capt(hdhC::tf_var(var.getDimNameStr(true), pQA->s_colon));
+          std::string capt(hdhC::tf_var(var.getDimNameStr(true), hdhC::colon));
           capt += "CORDEX favours a scalar variable for dimension " ;
 
           for( size_t l=0 ; l < var.dimName.size() ; ++l )
@@ -3679,7 +3631,7 @@ QA_Exp::initResumeSession(std::vector<std::string>& prevTargets)
 
     if( j == varMeDa.size() )
     {
-       std::string key("33a");
+       std::string key("3_9");
        if( notes->inq( key, prevTargets[i]) )
        {
          std::string capt(hdhC::tf_var(prevTargets[i]));
@@ -3704,7 +3656,7 @@ QA_Exp::initResumeSession(std::vector<std::string>& prevTargets)
 
     if( i == prevTargets.size() )
     {
-       std::string key("33b");
+       std::string key("3_10");
        if( notes->inq( key, varMeDa[j].var->name) )
        {
          std::string capt(hdhC::tf_var(varMeDa[j].var->name));
@@ -3732,9 +3684,6 @@ QA_Exp::inqTables(void)
     ret=true;
   else
     pQA->setTable( varReqTable.filename, "ST" );
-
-  if( ! ifs_DRS_CV.open(table_DRS_CV.getFile()) )
-    table_DRS_CV.is=false;
 
   for( size_t i=0 ; i <  pPath.size() ; ++i)
   {
@@ -3880,32 +3829,26 @@ BREAK2:
 }
 
 void
-QA_Exp::requiredAttributes_check(InFile &in)
+QA_Exp::reqAttCheck(void)
 {
-  std::vector<std::vector<std::string> > reqA ;
-  std::vector<std::string> reqVname ;
-
-  requiredAttributes_readFile( reqVname, reqA );
-
-  // check required attributes of variables, which could
-  // be given or not
-  for(size_t i=0 ; i < reqVname.size() ; ++i)
+  // check required attributes of specific variables
+  for(size_t i=0 ; i < pQA->drs_cv_table.varName.size() ; ++i)
   {
-    for( size_t j=0 ; j < in.varSz ; ++j )
+    // global attributes
+    if( pQA->drs_cv_table.varName[i] == pQA->s_global
+            && pQA->pIn->variable[pQA->pIn->varSz].name == "NC_GLOBAL" )
+      reqAttCheckGlobal(pQA->pIn->variable[pQA->pIn->varSz]);
+    else
     {
-      // global attributes
-      if( reqVname[i] == "global"
-             && in.variable[j].name == "NC_GLOBAL" )
+      for( size_t j=0 ; j < pQA->pIn->varSz ; ++j )
       {
-         requiredAttributes_checkGlobal(in, reqA[i]);
-         break;
-      }
-
-      //check for required attributes of an existing variable
-      if( reqVname[i] == in.variable[j].name )
-      {
-         requiredAttributes_checkVariable(in, in.variable[j], reqA[i]);
-         break;
+        // check for required attributes of variables (whether coordinates var
+        // or data var doesn't matter).
+        if( pQA->drs_cv_table.varName[i] == pQA->pIn->variable[j].name )
+        {
+          reqAttCheckVariable(pQA->pIn->variable[j]);
+          break;
+        }
       }
     }
   }
@@ -3918,9 +3861,9 @@ QA_Exp::requiredAttributes_check(InFile &in)
   fVmv.push_back(fV);
   fVmv.push_back(mV);
 
-  for( size_t j=0 ; j < in.varSz ; ++j )
+  for( size_t j=0 ; j < pQA->pIn->varSz ; ++j )
   {
-    Variable& var = in.variable[j] ;
+    Variable& var = pQA->pIn->variable[j] ;
 
     for( size_t l=0 ; l < 2 ; ++l )
     {
@@ -3928,12 +3871,12 @@ QA_Exp::requiredAttributes_check(InFile &in)
       if( (k=var.getAttIndex(fVmv[l])) > -1 )
       {
         std::vector<float> aV;
-        in.nc.getAttValues(aV, fVmv[l], var.name ) ;
+        pQA->pIn->nc.getAttValues(aV, fVmv[l], var.name ) ;
         float rV = 1.E20 ;
 
         if( aV.size() == 0 || aV[0] != rV )
         {
-          std::string key("34");
+          std::string key("3_11");
 
           if( notes->inq( key, var.name) )
           {
@@ -3949,7 +3892,8 @@ QA_Exp::requiredAttributes_check(InFile &in)
     }
   }
 
-  // both _FillValue and missing_value must be defined in CORDEX
+  // for data variables,both _FillValue and missing_value
+  // should be defined in CORDEX
   for( size_t i=0 ; i < pQA->pIn->dataVarIndex.size() ; ++i)
   {
     Variable &var = pQA->pIn->variable[pQA->pIn->dataVarIndex[i]];
@@ -3959,14 +3903,14 @@ QA_Exp::requiredAttributes_check(InFile &in)
 
     if( (is_fV || is_mV) && (is_fV != is_mV) )
     {
-      std::string key("34b");
+      std::string key("3_12");
 
       if( notes->inq( key, var.name) )
       {
-        std::string capt(hdhC::tf_var(var.name, pQA->s_colon)) ;
+        std::string capt(hdhC::tf_var(var.name, hdhC::colon)) ;
         capt += "if " + hdhC::tf_att(fV);
         capt += "or " + mV ;
-        capt += ", then both must be defined";
+        capt += ", then both should be defined";
 
         (void) notes->operate(capt) ;
         notes->setCheckMetaStr( pQA->fail );
@@ -3978,7 +3922,7 @@ QA_Exp::requiredAttributes_check(InFile &in)
 }
 
 void
-QA_Exp::requiredAttributes_checkCloudVariableValues(InFile &in,
+QA_Exp::reqAttCheckCloudValues(
       std::string &auxName, std::string &reqA)
 {
   // reqA  := vector of required: att_name=att_value
@@ -4006,7 +3950,7 @@ QA_Exp::requiredAttributes_checkCloudVariableValues(InFile &in,
 
   if( auxName == "plev" )
   {
-    in.nc.getData(fValues, "plev" );
+    pQA->pIn->nc.getData(fValues, "plev" );
     int iV = static_cast<int>( fValues[0] );
     iReqValues.push_back( iV );
 
@@ -4016,7 +3960,7 @@ QA_Exp::requiredAttributes_checkCloudVariableValues(InFile &in,
 
   if( auxName == "plev_bnds" )
   {
-    in.nc.getData(fValues, "plev_bnds" );
+    pQA->pIn->nc.getData(fValues, "plev_bnds" );
     int iV0, iV1;
 
     if( fValues.size() == 2 )
@@ -4084,31 +4028,35 @@ QA_Exp::requiredAttributes_checkCloudVariableValues(InFile &in,
 }
 
 void
-QA_Exp::requiredAttributes_checkGlobal(InFile &in,
-     std::vector<std::string> &reqA)
+QA_Exp::reqAttCheckGlobal(Variable& glob)
 {
-  // reqA  := vector of required: att_name=att_value
-
-  Split x_reqA;
-  x_reqA.setSeparator('=');
-
-  // it is clear that global attributes exist
-  Variable &glob = pQA->pIn->variable[pQA->pIn->varSz];
-
   // check required attributes
-  // note: first item is the variable name itself
-  for( size_t k=0 ; k < reqA.size() ; ++k )
+  DRS_CV_Table& drs = pQA->drs_cv_table;
+
+  size_t ix;
+  for( ix=0 ; ix < drs.varName.size() ; ++ix )
+    if( drs.varName[ix] == pQA->s_global )
+      break;
+
+  if( ix == drs.varName.size() )
+    return;
+
+  for( size_t k=0 ; k < drs.attName[ix].size(); ++k )
   {
-    x_reqA=reqA[k] ;  // split name and value of attribute
+    std::string& rqName  = drs.attName[ix][k] ;
+    std::string& rqValue = drs.attValue[ix][k] ;
 
     // missing required global attribute
-    if( ! glob.isValidAtt(x_reqA[0]) )
+    if( ! glob.isValidAtt(rqName) )
     {
        std::string key("2_6");
 
        if( notes->inq( key, pQA->fileStr) )
        {
-         std::string capt("required global " + hdhC::tf_att(x_reqA[0]));
+         std::string capt("required ");
+         capt += pQA->s_global;
+         capt += hdhC::blank;
+         capt += hdhC::tf_att(rqName);
          capt += "is missing" ;
 
          (void) notes->operate(capt) ;
@@ -4119,19 +4067,20 @@ QA_Exp::requiredAttributes_checkGlobal(InFile &in,
     }
 
     // required attribute expects a required value
-    if( x_reqA.size() == 2 )  // a value is required
+    if( rqValue.size() )  // a value is required
     {
-      std::string aV = glob.getAttValue(x_reqA[0]) ;
+      std::string aV = glob.getAttValue(rqName) ;
 
       if( aV.size() == 0 )
       {
         std::string key("2_7");
-        if( notes->inq( key, pQA->fileStr) )
+        if( notes->inq( key, pQA->s_global) )
         {
-           std::string capt("global attribute=");
-           capt += x_reqA[0];
+           std::string capt(pQA->s_global);
+           capt += hdhC::blank;
+           capt += hdhC::tf_att(rqName, hdhC::no_blank);
            capt=" missing required value=";
-           capt += x_reqA[1];
+           capt += rqValue;
 
            (void) notes->operate(capt) ;
            notes->setCheckMetaStr( pQA->fail );
@@ -4140,14 +4089,78 @@ QA_Exp::requiredAttributes_checkGlobal(InFile &in,
          }
        }
 
-       // there is a value. is it the required one?
-       else if( aV != x_reqA[1] )
+       else if( rqValue == "YYYY-MM-DDTHH:MM:SSZ" )
        {
-         std::string key("2_8");
-         if( notes->inq( key, pQA->fileStr) )
+         // a valid date format may have T substituted by a blank
+         // and Z omitted or the latter be lower case.
+         bool is=false;
+         if( aV.size() > 18 )
          {
-           std::string capt("global " + hdhC::tf_att(pQA->s_empty, x_reqA[0], aV));
-           capt="does not match required value=" + x_reqA[1] ;
+           if( aV[4] == '-' && aV[7] == '-' )
+           {
+              if( aV[10] == 'T' || aV[10] == ' ' )
+              {
+                if( aV[13] == ':' && aV[16] == ':' )
+                {
+                  if( aV.size() == 20 )
+                  {
+                    if( !(aV[19] == 'Z' || aV[19] == 'z' ) )
+                      is=true;
+                  }
+
+                  if( ! hdhC::isDigit( aV.substr(0, 4) ) )
+                    is=true ;
+                  else if( ! hdhC::isDigit( aV.substr(5, 2) ) )
+                    is=true ;
+                  else if( ! hdhC::isDigit( aV.substr(8, 2) ) )
+                    is=true ;
+                  else if( ! hdhC::isDigit( aV.substr(11, 2) ) )
+                    is=true ;
+                  else if( ! hdhC::isDigit( aV.substr(14, 2) ) )
+                    is=true ;
+                  else if( ! hdhC::isDigit( aV.substr(17, 2) ) )
+                    is=true ;
+                }
+                else
+                  is=true;
+              }
+              else
+                is=true;
+           }
+           else
+             is=true;
+         }
+         else
+           is=true;
+
+         if( is )
+         {
+           std::string key("7_12");
+           if( notes->inq( key, pQA->s_global) )
+           {
+             std::string capt(pQA->s_global);
+             capt += hdhC::blank;
+             capt += hdhC::tf_att(rqName);
+             capt += "does not comply with YYYY-MM-DDThh:mm:ssZ, found: " ;
+             capt += aV ;
+
+             (void) notes->operate(capt) ;
+             notes->setCheckMetaStr( pQA->fail );
+           }
+         }
+       }
+
+       else if( aV != rqValue )
+       {
+        // there is a value. is it the required one?
+         std::string key("2_8");
+         if( notes->inq( key, pQA->s_global ) )
+         {
+           std::string capt(pQA->s_global);
+           capt += hdhC::blank;
+           capt += hdhC::tf_att(hdhC::empty, rqName, aV);
+           capt += "does not match required value ";
+           capt += hdhC::tf_val(rqValue) ;
 
            (void) notes->operate(capt) ;
            notes->setCheckMetaStr( pQA->fail );
@@ -4155,53 +4168,54 @@ QA_Exp::requiredAttributes_checkGlobal(InFile &in,
            continue;
          }
        }
-       break;
     }
-
   } // end of for-loop
 
   return;
 }
 
 void
-QA_Exp::requiredAttributes_checkVariable(InFile &in,
-     Variable &var, std::vector<std::string> &reqA)
+QA_Exp::reqAttCheckVariable(Variable &var)
 {
-  // reqA  := vector of required: att_name=att_value
   // vName := name of an existing variable (already tested)
   // ix    := index of in.variable[ix]
 
+  DRS_CV_Table& drs = pQA->drs_cv_table;
+
   std::string &vName = var.name;
 
-  Split x_reqA;
-  x_reqA.setSeparator('=');
+  // check required attributes
+  size_t ix;
+  for( ix=0 ; ix < drs.varName.size() ; ++ix )
+    if( drs.varName[ix] == vName )
+      break;
 
   // special: is the variable == plev_bnds; i.e. for cloud amounts?
   bool isCloudAmount=false;
-  if( in.getVarIndex("cll") > -1
-        || in.getVarIndex("clm") > -1
-           || in.getVarIndex("clh") > -1 )
+  if( pQA->pIn->getVarIndex("cll") > -1
+        || pQA->pIn->getVarIndex("clm") > -1
+           || pQA->pIn->getVarIndex("clh") > -1 )
     isCloudAmount=true;
 
   // find required attributes missing in the file
-  // note: first item is the variable name itself
-  for( size_t k=0 ; k < reqA.size() ; ++k )
+  for( size_t k=0 ; k < drs.attName[ix].size(); ++k )
   {
-    x_reqA=reqA[k] ;  // split name and value of attribute
+    std::string& rqName  = drs.attName[ix][k] ;
+    std::string& rqValue = drs.attValue[ix][k] ;
 
     // find corresponding att_name of given vName in the file
-    int jx=var.getAttIndex(x_reqA[0]);
+    int jx=var.getAttIndex(rqName);
 
     // special: values may be available for cloud amounts
 
     // missing required attribute
-    if( jx == -1 && x_reqA[0] != "values" )
+    if( jx == -1 && rqName != "values" )
     {
        std::string key("2_1");
 
        if( notes->inq( key, vName) )
        {
-         std::string capt(hdhC::tf_att(vName,x_reqA[0]));
+         std::string capt(hdhC::tf_att(vName,rqName));
          capt += "is missing";
 
          (void) notes->operate(capt) ;
@@ -4226,7 +4240,7 @@ QA_Exp::requiredAttributes_checkVariable(InFile &in,
            if( notes->inq( key, vName) )
            {
              std::string capt("auxiliary ");
-             capt += hdhC::tf_var(plev + " for cloud amounts", pQA->s_colon);
+             capt += hdhC::tf_var(plev + " for cloud amounts", hdhC::colon);
              capt += "missing " + hdhC::tf_att("plev_bnds");
 
              (void) notes->operate(capt) ;
@@ -4235,7 +4249,7 @@ QA_Exp::requiredAttributes_checkVariable(InFile &in,
          }
 
          // check for auxiliary: plev_bnds
-         if( ! in.getVarIndex("plev_bnds") )
+         if( ! pQA->pIn->getVarIndex("plev_bnds") )
          {
            std::string key("5_2");
 
@@ -4251,9 +4265,9 @@ QA_Exp::requiredAttributes_checkVariable(InFile &in,
          }
        }
 
-       if( x_reqA[0] == "values" )
+       if( rqName == "values" )
        {
-          requiredAttributes_checkCloudVariableValues( in, vName, x_reqA[1]);
+          reqAttCheckCloudValues( vName, rqValue);
 
           // word 'values' is only for cloud amount case.
           continue;
@@ -4263,9 +4277,9 @@ QA_Exp::requiredAttributes_checkVariable(InFile &in,
     std::string &aN = var.attName[jx] ;
 
     // required attribute expects a value (not for cloud amounts)
-    if( x_reqA.size() == 2 )  // a value is required
+    if( rqValue.size() )  // a value is required
     {
-      if( ! isCloudAmount && x_reqA[0] == "values" )
+      if( ! isCloudAmount && rqName == "values" )
 	       continue;
 
       std::string aV( var.attValue[jx][0] ) ;
@@ -4280,9 +4294,9 @@ QA_Exp::requiredAttributes_checkVariable(InFile &in,
         std::string key("2_2");
         if( notes->inq( key, vName) )
         {
-           std::string capt(hdhC::tf_att(vName, aN, pQA->s_colon));
+           std::string capt(hdhC::tf_att(vName, aN, hdhC::colon));
            capt="missing required value=" ;
-           capt += x_reqA[1];
+           capt += rqValue;
 
            (void) notes->operate(capt) ;
            notes->setCheckMetaStr( pQA->fail );
@@ -4292,21 +4306,21 @@ QA_Exp::requiredAttributes_checkVariable(InFile &in,
        }
 
        // there is a value. is it the required one?
-       else if( aV != x_reqA[1] )
+       else if( aV != rqValue )
        {
          bool is=true;
-         if( x_reqA[0] == pQA->n_long_name)
+         if( rqName == pQA->n_long_name)
          {
            // mismatch tolerated, because the table does not agree with CMIP5
-           if( x_reqA[1] == "pressure" && aV == "pressure level" )
+           if( rqValue == "pressure" && aV == "pressure level" )
              is=false;
-           if( x_reqA[1] == "pressure level" && aV == "pressure" )
+           if( rqValue == "pressure level" && aV == "pressure" )
              is=false;
          }
-         else if( (x_reqA[0] == pQA->n_positive) || (x_reqA[0] == pQA->n_axis) )
+         else if( (rqName == pQA->n_positive) || (rqName == pQA->n_axis) )
          {
            // case insensitive
-           if( x_reqA[1] == hdhC::Lower()(aV) )
+           if( rqValue == hdhC::Lower()(aV) )
              is=false;
          }
 
@@ -4315,7 +4329,7 @@ QA_Exp::requiredAttributes_checkVariable(InFile &in,
          {
            std::string capt(hdhC::tf_att(vName, aN, aV));
            capt += "does not match required value=" ;
-           capt += x_reqA[1];
+           capt += rqValue;
 
            (void) notes->operate(capt) ;
            notes->setCheckMetaStr( pQA->fail );
@@ -4330,81 +4344,6 @@ QA_Exp::requiredAttributes_checkVariable(InFile &in,
 }
 
 void
-QA_Exp::requiredAttributes_readFile(
-    std::vector<std::string> &reqVname,
-    std::vector<std::vector<std::string> > &reqA)
-{
-   if( ! ifs_DRS_CV.isOpen() )
-   {
-      std::string key("7_2") ;
-      if( notes->inq( key, pQA->fileStr) )
-      {
-         std::string capt("could not open Table_DRS_CV, tried") ;
-         capt += hdhC::tf_val(table_DRS_CV.filename) ;
-
-         if( notes->operate(capt) )
-         {
-           notes->setCheckMetaStr( pQA->fail );
-           pQA->setExit( notes->getExitValue() ) ;
-         }
-      }
-   }
-
-   std::string s0;
-   std::vector<std::string> vs;
-
-   // parse table; trailing ':' indicates variable or 'global'
-   ifs_DRS_CV.skipWhiteLines();
-   ifs_DRS_CV.skipBashComment();
-   ifs_DRS_CV.clearSurroundingSpaces();
-
-   while( ! ifs_DRS_CV.getLine(s0) )
-   {
-     if( s0.size() == 0 )
-       continue;
-
-     if( s0 == "Begin: Table1" )
-     {
-        // check all domain related properties
-        // and leave boolean 'isRotated'; even in the case
-        // that the model is a 'non-rotational' one.
-        domainCheck(ifs_DRS_CV);
-        break;
-     }
-
-     // special: accept single ':' or "global"
-     if( s0[0] == ':' || s0 == "global" )
-       s0 = "global:";
-
-     size_t sz= s0.size();
-
-     // for the next variable
-     if( s0[sz-1] == ':' )
-     {
-       reqA.push_back( vs ) ;  // add empty vector
-       reqVname.push_back( s0.substr(0,sz-1) );
-
-       continue;
-     }
-
-     // attributes
-     // any colon as sep between varName and attName
-/*
-     size_t pos;
-     if( (pos=so.find(':')) < std::string::npos )
-     {
-       std::string t0(s0.substr(0,pos);
-       if( t0 != vvs.back() )
-          ; // error
-     }
-*/
-     reqA.back().push_back( s0 );
-   }
-
-   return;
-}
-
-void
 QA_Exp::run(std::vector<std::string>& optStr)
 {
    // apply parsed command-line args
@@ -4416,9 +4355,9 @@ QA_Exp::run(std::vector<std::string>& optStr)
 
    bool isNoTable = inqTables() ;
 
-   if( table_DRS_CV.is )
+   if( pQA->table_DRS_CV.is )
    {
-     DRS_Filename drsFN(pQA, optStr);
+     DRS_CV drsFN(pQA);
      drsFN.run();
    }
 
@@ -4454,7 +4393,7 @@ QA_Exp::varReqTableCheck(InFile &in, VariableMetaData &vMD,
 
    if( ! ifs.isOpen() )
    {
-      std::string key("7_3") ;
+      std::string key("7_4c") ;
       if( notes->inq( key, vMD.var->name) )
       {
          std::string capt("could not open the CORDEX_variables_requirement table, tried") ;
@@ -4515,8 +4454,9 @@ QA_Exp::varReqTableCheck(InFile &in, VariableMetaData &vMD,
    std::string key("3_1") ;
    if( notes->inq( key, vMD.var->name) )
    {
-     std::string capt(hdhC::tf_var(vMD.var->name + " for "
-        + hdhC::sAssign("frequency", getFrequency()), pQA->s_colon)) ;
+     std::string capt(hdhC::tf_var(vMD.var->name));
+     capt += " for " ;
+     capt += hdhC::sAssign("frequency", getFrequency()), hdhC::colon) ;
      capt += "Not found in the CORDEX_variables_requirement table";
 
      (void) notes->operate(capt) ;

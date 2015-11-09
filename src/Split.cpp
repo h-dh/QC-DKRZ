@@ -142,6 +142,17 @@ Split::addSeparator( std::string s, bool isContainer)
 }
 
 void
+Split::append(std::string t)
+{
+  if( ! isDecomposed )
+    decompose();
+
+  items.push_back(t);
+
+  return;
+}
+
+void
 Split::clear(void)
 {
   str = "";

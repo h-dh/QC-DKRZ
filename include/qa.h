@@ -34,8 +34,6 @@ linked by a pointer.
 // Proceedings have to be coded in DRS_CV which is called by QA_PROJECT.run()
 struct DRS_CV_Table
 {
-   DRS_CV_Table(QA* p){pQA=p;}
-
    void read(hdhC::FileSplit&);
 
    std::map<std::string, std::string> cvMap;
@@ -47,6 +45,9 @@ struct DRS_CV_Table
    std::vector<std::string> varName;
    std::vector<std::vector<std::string> > attName;
    std::vector<std::vector<std::string> > attValue;
+
+   std::vector<std::string> section;
+   std::vector<std::vector<std::string> > line;
 
    QA* pQA;
 };
@@ -175,6 +176,7 @@ class QA : public IObj
   //! Name of the netCDF file with results of the quality control
   std::string tablePath;
   struct hdhC::FileSplit qaFile;
+  struct hdhC::FileSplit table_DRS_CV;
   struct hdhC::FileSplit projectTableFile;
 
   std::string qaNcfileFlags;
@@ -183,6 +185,7 @@ class QA : public IObj
   bool isExit;
 
   Annotation* notes;
+  DRS_CV_Table drs_cv_table;
   NcAPI*      nc;
   QA_Exp      qaExp;
   QA_Time     qaTime;
@@ -230,13 +233,8 @@ class QA : public IObj
   std::string fail;
   std::string fileStr;
   std::string notAvailable;
-  std::string blank;
-  std::string no_blank;
-  std::string s_colon;
-  std::string s_empty;
+  std::string s_global;
   std::string s_mismatch;
-  std::string s_upper;
-  std::string s_lower;
 
   std::string n_axis;
   std::string n_cell_methods;

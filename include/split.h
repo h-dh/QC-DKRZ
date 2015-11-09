@@ -82,6 +82,8 @@ class Split
   /*! Ignored, when identical to a separation character */
   void   addStripSides(std::string s){ stripSides.push_back(s); isStripSides=true;}
 
+  void   append(std::string);
+
   //! Clear previous assignment, but leaving the setting alone.
   void clear(void);
 

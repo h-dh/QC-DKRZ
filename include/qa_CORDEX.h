@@ -21,23 +21,27 @@ are performed. Annotations are supplied via the Annotation class
 linked by a pointer.
 */
 
-struct DRS_Filename
+struct DRS_CV
 {
-  DRS_Filename(QA*, std::vector<std::string>&);
+  DRS_CV(QA*);
 
   void   applyOptions(std::vector<std::string>&);
-  void   check(InFile &);
-  void   checkModelName(InFile &, std::string &aN, std::string &aV,
+  void   checkModelName(std::string &aN, std::string &aV,
             char model, std::string iN="", std::string iV="");
 
   //! Match filename components and global attributes of the file.
-  void   checkFilename(InFile &) ;
+  void   checkFilename(std::string& fName, struct DRS_CV_Table&);
+  void   checkFilenameEncoding(Split&, struct DRS_CV_Table& );
 
   //! Test optional global attribute
-  void   checkDrivingExperiment(InFile &);
+  void   checkDrivingExperiment(void);
 
   //! Is it NetCDF-4, is it compressed?
-  void   checkNetCDF(InFile &);
+  void   checkNetCDF(void);
+  void   checkPath(std::string&, struct DRS_CV_Table&);
+  void   findDRS_faults(Split&, Split&,
+                   std::map<std::string, std::string>&,
+                   std::string& text);
 
   void run(void);
 
@@ -46,7 +50,7 @@ struct DRS_Filename
       match within the uncertainty of 0.75% of the time-step, then
       the file is assumed to be completely qa-processed.
       Syntax of date ranges as given in CORDEX  DRS Syntax.*/
-  bool   testPeriod(void);
+  bool   testPeriod(Split&);
   bool   testPeriodAlignment(std::vector<std::string> &sd, Date** pDates, bool b[])  ;
   void   testPeriodCut(std::vector<std::string> &sd) ;
   bool   testPeriodCut_CMOR_isGOD(std::vector<std::string> &sd, Date**);
@@ -210,7 +214,7 @@ class QA_Exp
   void   createVarMetaData(void);
 
   //! Check time properties.
-  void   domainCheck(ReadLine&);
+  void   domainCheck(void);
   void   domainCheckData(std::string &var_lon, std::string &var_lat,
             std::vector<std::string>&, std::string tbl_id);
   void   domainCheckDims(std::string item, std::string &t_Nlon,
@@ -276,16 +280,10 @@ class QA_Exp
   bool   readTableCaptions(ReadLine &, std::string freq,
             std::map<std::string, size_t> &col, std::string &str0);
 
-  void   requiredAttributes_check(InFile &);
-  void   requiredAttributes_checkCloudVariableValues(InFile &,
-             std::string &aux, std::string &vals) ;
-  void   requiredAttributes_checkGlobal(InFile &,
-             std::vector<std::string> &atts);
-  void   requiredAttributes_checkVariable(InFile &,
-             Variable &, std::vector<std::string> &atts);
-  void   requiredAttributes_readFile(
-           std::vector<std::string> &,
-           std::vector<std::vector<std::string> > &);
+  void   reqAttCheck(void);
+  void   reqAttCheckCloudValues(std::string &aux, std::string &vals) ;
+  void   reqAttCheckGlobal(Variable&);
+  void   reqAttCheckVariable(Variable&);
 
   void   run(std::vector<std::string>&);
 
@@ -316,7 +314,6 @@ class QA_Exp
             std::map<std::string, size_t> &col) ;
 */
 
-  struct hdhC::FileSplit table_DRS_CV;
   struct hdhC::FileSplit varReqTable;
 
   std::vector<VariableMetaData> varMeDa;
@@ -325,7 +322,6 @@ class QA_Exp
   QA* pQA;
 
   MtrxArr<double> tmp_mv;
-  ReadLine ifs_DRS_CV;
 
   // the same buf-size for all buffer is required for testing replicated records
   size_t bufferSize;
@@ -344,7 +340,7 @@ class QA_Exp
 
   std::vector<std::string> constValueOption;
   std::vector<std::string> fillValueOption;
-  std::vector<std::string> requiredAttributesOption;
+  std::vector<std::string> reqAttOption;
 
   std::string cfStndNames;
 

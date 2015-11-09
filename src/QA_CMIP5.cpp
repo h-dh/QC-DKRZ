@@ -1,14 +1,14 @@
 //#include "qa.h"
 
 
-DRS_CV::DRS_CV(QA* p, std::vector<std::string>& optStr)
+DRS_CV::DRS_CV(QA* p)
 {
   pQA = p;
   notes = pQA->notes;
 
   enabledCompletenessCheck=true;
 
-  applyOptions(optStr);
+  applyOptions(pQA->optStr);
 }
 
 void
@@ -43,18 +43,21 @@ DRS_CV::checkFilename(std::string& fName, struct DRS_CV_Table& drs_cv_table)
 
   checkFilenameGeographic(x_filename);
 
-  if( testPeriod(x_filename) && pQA->qaExp.getFrequency() != "fx" )
+  if( pQA->isCheckTime && pQA->qaExp.getFrequency() != "fx" )
   {
-    // no period in the filename
-     std::string key("1_7e");
+    if( testPeriod(x_filename) )
+    {
+      // no period in the filename
+      std::string key("1_7e");
 
-     if( notes->inq( key, pQA->fileStr) )
-     {
-       std::string capt("filename requires a period") ;
+      if( notes->inq( key, pQA->fileStr) )
+      {
+        std::string capt("filename requires a period") ;
 
-       (void) notes->operate(capt) ;
-       notes->setCheckMetaStr(pQA->fail);
-     }
+        (void) notes->operate(capt) ;
+        notes->setCheckMetaStr(pQA->fail);
+      }
+    }
   }
 
   return;
@@ -113,7 +116,7 @@ DRS_CV::checkFilenameEncoding(Split& x_filename, struct DRS_CV_Table& drs_cv_tab
       if( cvMap.count(x_e[x]) == 0 )
       {
         std::string key("7_3");
-        std::string capt("Fault in table " + pQA->qaExp.table_DRS_CV.getFile());
+        std::string capt("Fault in table " + pQA->table_DRS_CV.getFile());
         capt += ": encoding " + hdhC::tf_val("item", x_e[x]) + " not found in CV";
         if( notes->inq( key, "DRS") )
         {
@@ -171,13 +174,28 @@ DRS_CV::checkFilenameEncoding(Split& x_filename, struct DRS_CV_Table& drs_cv_tab
       }
     }
 
-    //count coincidences between path components and the DRS
-    for( size_t i=0 ; i < drs.size() ; ++i)
+    // special: add a StartTime-EndTime to drs when missing, e.g. because of fixed,
+    // also add '*' in case of geo_info
+    Split x_spcl(drs[drs.size()-1], '-');
+    if( x_spcl.size() == 2 )
     {
-      if( i < x_e.size() )
+      if( (hdhC::isDigit(x_spcl[0]) && hdhC::isDigit(x_spcl[1]))
+            || (x_spcl[0] == "g") )
+      drs.append("*");
+    }
+
+    //count coincidences between path components and the DRS
+    int x_eSz = x_e.size();
+    int drsSz = drs.size() ;
+    int drsBeg = drsSz - x_eSz ;
+
+    for( jx=0 ; jx < x_eSz ; ++jx)
+    {
+      t = gM[ x_e[jx] ];
+
+      if( (ix = drsBeg+jx) > -1 )
       {
-        std::string& tt = gM[ x_e[i] ] ;
-        if( drs[i] == tt || tt == n_ast )
+        if( drs[ix] == tt || tt == n_ast )
           ++countCI[ds];
       }
     }
@@ -207,8 +225,6 @@ DRS_CV::checkFilenameEncoding(Split& x_filename, struct DRS_CV_Table& drs_cv_tab
   std::vector<std::string> text;
   std::vector<std::string> keys;
 
-  std::vector<size_t> excludeSwapIx;
-
   for( size_t i=0 ; i < drs.size() ; ++i)
   {
     t = gM[ x_e[i] ];
@@ -219,64 +235,34 @@ DRS_CV::checkFilenameEncoding(Split& x_filename, struct DRS_CV_Table& drs_cv_tab
       {
         keys.push_back("1_5b");
         text.push_back( "A gridspec file must have frequency fx" );
-        continue;
       }
 
       if( x_e[i] == "ensemble member" )
       {
         keys.push_back("1_5a");
         text.push_back( "A gridspec file must have ensemble member r0i0p0" );
-        continue;
       }
-    }
-
-    if( drs[i] == t || t == n_ast )
-        continue;
-
-    // look for swapped items
-    bool Cont2=false;
-    for( size_t j=0 ; j < x_e.size() ; ++j)
-    {
-      if( hdhC::isAmong( j, excludeSwapIx) )
-      {
-        Cont2=true;
-        break;
-      }
-
-      if( i != j )
-      {
-        t = gM[ x_e[j] ];
-        if( drs[i] == t )
-        {
-          keys.push_back("1_4b");
-          text.push_back( ": swapped filename components, found [" );
-          text.back() += hdhC::sAssign( hdhC::itoa(i) + "]", x_e[i]) ;
-          text.back() += " and [";
-          text.back() += hdhC::sAssign(hdhC::itoa(j) + "]", x_e[j]);
-
-          excludeSwapIx.push_back(i);
-          Cont2=true;
-          break;
-        }
-      }
-    }
-
-    if( ! Cont2 )
-    {
-      // failed coincidences between path components and the DRS
-      keys.push_back("1_4a");
-      text.push_back( x_e[i] + ": found" + hdhC::tf_val(drs[i], hdhC::no_blank)
-            + ", expected" + hdhC::tf_val(gM[x_e[i]]) );
     }
   }
 
-  std::string capt("Filename encoding " + drs_cv_table.fileEncodingName[m] + ":");
-  for(size_t i=0 ; i < text.size() ; ++i )
+  std::string txt;
+  findDRS_faults(drs, x_e, gM, txt) ;
+  if( txt.size() )
   {
-    if( notes->inq( keys[i], "DRS") )
+     text.push_back(txt);
+     keys.push_back("1_2");
+  }
+
+  if( text.size() )
+  {
+    std::string capt("DRS CV filename:");
+    for(size_t i=0 ; i < text.size() ; ++i )
     {
-      (void) notes->operate(capt+text[i]) ;
-      notes->setCheckMetaStr(pQA->fail);
+      if( notes->inq( keys[i], "DRS") )
+      {
+        (void) notes->operate(capt+text[i]) ;
+        notes->setCheckMetaStr(pQA->fail);
+      }
     }
   }
 
@@ -511,7 +497,7 @@ DRS_CV::checkMIP_tableName(Split& x_filename)
   // compare file entry to the one in global header attribute table_id
   if( x_filename[1] != pQA->qaExp.currMIP_tableName )
   {
-    std::string key("46_9");
+    std::string key("7_8");
 
     if( notes->inq( key, "MIP") )
     {
@@ -570,7 +556,7 @@ DRS_CV::checkPath(std::string& path, struct DRS_CV_Table& drs_cv_table)
       if( cvMap.count(x_e[x]) == 0 )
       {
         std::string key("7_3");
-        std::string capt("Fault in table " + pQA->qaExp.table_DRS_CV.getFile());
+        std::string capt("Fault in table " + pQA->table_DRS_CV.getFile());
         capt += ": encoding " + hdhC::tf_val("item", x_e[x]) + " not found in CV";
         if( notes->inq( key, "DRS") )
         {
@@ -597,25 +583,23 @@ DRS_CV::checkPath(std::string& path, struct DRS_CV_Table& drs_cv_table)
         gM[x_e[x]] = globalVar.getAttValue(cvMap[x_e[x]]) ;
     }
 
-
     int i, ix, jx;
     std::string t;
+    int x_eSz = x_e.size();
+    int drsSz = drs.size() ;
+    int drsBeg = drsSz - x_eSz ;
 
-    for( i=drs.size()-1, ix=0 ; i > -1 ; --i)
+    for( jx=0 ; jx < x_eSz ; ++jx)
     {
-      //count coincidences between path components and the DRS
-      if( (jx = x_e.size()-ix-1) > -1 )
+      t = gM[ x_e[jx] ];
+
+      if( (ix = drsBeg+jx) > -1 )
       {
-        t = gM[ x_e[jx] ];
-        if( drs[i] == t || t == n_ast )
+        if( drs[ix] == t || t == n_ast )
           ++countCI[ds];
-        else if( x_e[jx] == "version number" || hdhC::isDigit(drs[i].substr(1)) )
+        else if( x_e[jx] == "version number" && hdhC::isDigit(drs[ix].substr(1)) )
           ++countCI[ds];
       }
-      else
-        break;
-
-      ++ix;
     }
 
     if( countCI[ds] == x_e.size() )
@@ -635,37 +619,31 @@ DRS_CV::checkPath(std::string& path, struct DRS_CV_Table& drs_cv_table)
   }
 
   std::vector<std::string> text;
+  std::vector<std::string> keys;
 
   Split& x_e = x_enc[m] ;
   std::map<std::string, std::string>& gM = globMap[m] ;
 
-  std::string t;
-  int i, ix, jx;
-
-  for( i=drs.size()-1, ix=0 ; i > -1 ; --i)
+  std::string txt;
+  findDRS_faults(drs, x_e, gM, txt) ;
+  if( txt.size() )
   {
-    //failed coincidences between path components and the DRS
-    if( (jx = x_e.size()-ix-1) > -1 )
-    {
-      t = gM[ x_e[jx] ];
-      if( ! (drs[i] == t || t == n_ast )  )
-        text.push_back( x_e[jx] + ": " + hdhC::sAssign("encoding",gM[x_e[jx]])
-              + " vs. " + hdhC::sAssign("path",drs[i]) );
-    }
-    else
-      break;
-
-    ++ix;
+    text.push_back(txt);
+    keys.push_back("1_2");
   }
 
-  std::string key("1_2");
-  std::string capt("Directory structure: failed DRS-CV check, found ");
-  if( notes->inq( key, pQA->fileStr) )
+  if( text.size() )
   {
-    for(size_t i=0 ; i < text.size() ; ++i )
-      (void) notes->operate(capt+text[i]) ;
+    std::string capt("DRS CV path:");
 
-    notes->setCheckMetaStr(pQA->fail);
+    for(size_t i=0 ; i < text.size() ; ++i )
+    {
+      if( notes->inq( keys[i], pQA->fileStr) )
+      {
+        (void) notes->operate(capt+text[i]) ;
+        notes->setCheckMetaStr(pQA->fail);
+      }
+    }
   }
 
   return;
@@ -689,6 +667,41 @@ DRS_CV::checkVariableName(std::string& f_vName)
   }
 
   return;
+}
+
+void
+DRS_CV::findDRS_faults(Split& drs, Split& x_e,
+                   std::map<std::string,std::string>& gM,
+                   std::string& text)
+{
+  std::string t;
+  std::string n_ast="*";
+  int x_eSz = x_e.size();
+  int drsSz = drs.size() ;
+  int drsBeg = drsSz - x_eSz +1 ;
+
+  if( drsBeg < 0)
+  {
+    text = "failed DRS check" ;
+    return; // fewer path items than expected
+  }
+
+  for( int j=0 ; j < x_eSz ; ++j)
+  {
+    t = gM[ x_e[j] ];
+
+    if( !(drs[drsBeg+j] == t || t == n_ast) )
+    {
+      text = "failed DRS check: expected " ;
+      text += hdhC::sAssign(x_e[j],t) ;
+      text += ", found" ;
+      text += hdhC::tf_val( drs[drsBeg+j]) ;
+
+      return;
+    }
+  }
+
+  return ;
 }
 
 std::string
@@ -719,8 +732,7 @@ DRS_CV::getEnsembleMember(void)
 void
 DRS_CV::run(void)
 {
-  DRS_CV_Table drs_cv_table(pQA);
-  drs_cv_table.read(pQA->qaExp.table_DRS_CV);
+  DRS_CV_Table& drs_cv_table = pQA->drs_cv_table ;
 
   // check the path
   checkPath(pQA->pIn->file.path, drs_cv_table) ;
@@ -748,8 +760,7 @@ DRS_CV::testPeriod(Split& x_f)
   // If the end of the period exceeds the time data figure,
   // then the nc-file is considered to be not completely processed.
 
-  // Does the filename has a trailing date range?
-  // Strip off the extension.
+  // Does the filename have a trailing date range?
   std::vector<std::string> sd;
   sd.push_back( "" );
   sd.push_back( "" );
@@ -1214,16 +1225,6 @@ QA_Exp::applyOptions(std::vector<std::string>& optStr)
        continue;
      }
 
-     if( split[0] == "tCV"
-           || split[0] == "tableControlledVocabulary"
-                || split[0] == "table_controlled_vocabulary" )
-     {
-       if( split.size() == 2 )
-          table_DRS_CV.setFile(split[1]) ;
-
-       continue;
-     }
-
      if( split[0] == "tVR"
           || split[0] == "table_varaible_requirements" )
      {
@@ -1242,9 +1243,6 @@ QA_Exp::applyOptions(std::vector<std::string>& optStr)
    }
 
    // apply a general path which could have also been provided by setTablePath()
-   if( table_DRS_CV.path.size() == 0 )
-      table_DRS_CV.setPath(pQA->tablePath);
-
    if( varReqTable.path.size() == 0 )
       varReqTable.setPath(pQA->tablePath);
 
@@ -2654,7 +2652,7 @@ QA_Exp::checkVarReqTable(InFile& in, VariableMetaData& vMD,
 
    if( ! ifs.isOpen() )
    {
-      std::string key("41") ;
+      std::string key("7_4") ;
 
       if( notes->inq( key, vMD.var->name) )
       {
@@ -2839,7 +2837,7 @@ QA_Exp::checkVarReqTableDimBounds(InFile& in, Split& splt_line,
    if( !( splt_line[col["bounds?"]] == "yes"
             || splt_line[col["bounds?"]] == "no" ) )
    {
-       std::string key("51");
+       std::string key("7_11");
 
        if( notes->inq( key, vMD.var->name) )
        {
@@ -3601,7 +3599,7 @@ QA_Exp::findNextVariableHeadline(ReadLine& ifs, std::string& str0,
 
    if( ifs.eof() )
    {
-     std::string key("42");
+     std::string key("7_5");
 
      if( notes->inq( key, vMD.var->name) )
      {
@@ -3682,7 +3680,7 @@ QA_Exp::findVarReqTableEntry(ReadLine& ifs, std::string& str0,
 
    if( splt_line.size() < col_max )
    {
-     std::string key("43");
+     std::string key("7_6");
 
      if( notes->inq( key, vMD.var->name) )
      {
@@ -4010,12 +4008,12 @@ QA_Exp::getMIP_tableName(std::string tName)
   {
     if( tName.size() == 0)
     {
-      std::string key("46_8");
+      std::string key("7_7");
 
       if( notes->inq( key, "global") )
       {
         std::string capt("invalid MIP table name in global attribute, found ") ;
-        capt += hdhC::tf_att(pQA->s_empty, "table_id", x_tableID.getStr()) ;
+        capt += hdhC::tf_att(hdhC::empty, "table_id", x_tableID.getStr()) ;
 
         (void) notes->operate(capt) ;
         pQA->setExit( notes->getExitValue() ) ;
@@ -4180,7 +4178,7 @@ QA_Exp::inqTables(void)
 {
   if( ! varReqTable.isExisting(varReqTable.path) )
   {
-     std::string key("57");
+     std::string key("7_12");
 
      if( notes->inq( key, pQA->fileStr) )
      {
@@ -4322,7 +4320,7 @@ QA_Exp::readHeadline(ReadLine& ifs,
 
    if( ifs.eof() )
    {
-      std::string key("49");
+      std::string key("7_9");
 
       if( notes->inq( key, varMeDa[0].var->name) )
       {
@@ -4440,11 +4438,8 @@ QA_Exp::run(std::vector<std::string>& optStr)
   {
     currMIP_tableName = getMIP_tableName() ;
 
-    if( table_DRS_CV.is )
-    {
-      DRS_CV drsFN(pQA, optStr);
-      drsFN.run();
-    }
+    DRS_CV drsFN(pQA);
+    drsFN.run();
 
     // get meta data from file and compare with tables
     checkMetaData(*(pQA->pIn));
