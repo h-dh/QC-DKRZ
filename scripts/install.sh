@@ -69,8 +69,10 @@ compilerSetting()
     cp .install_configure install_configure
     log "create install_configure" DONE
 
-    test ${isBuild:-f} = f -a ${isLink:-f} = f && \
+    if [ ${isBuild:-f} = f -a ${isLink:-f} = f ] ; then
       echo "Please, edit file install_configure."
+      exit
+    fi
   fi
 
   FC=""
