@@ -69,7 +69,9 @@ do
     h)  descript
         exit ;;
     q)  QUIET=t ;;
-    -)  if [ "${UOPTARG%%=*}" = PREFIX ] ; then
+    -)  if [ "${UOPTARG%=*}" = CURR_SRC ] ; then
+           currSrc=${QA_PATH}/local/source/${OPTARG#*=}
+        elif [ "${UOPTARG%%=*}" = PREFIX ] ; then
            prefix=${OPTARG#*=}
         elif [ "$UOPTARG" = HELP ] ; then
            descript
@@ -87,10 +89,8 @@ done
 
 shift $(( $OPTIND - 1 ))
 
-src=$installPath/source
-
-if [ -d "$src" ] ; then
-  cd $src &> /dev/null
+if [ -d $currSrc ] ; then
+  cd ${currSrc} &> /dev/null
 else
   exit 1
   return
@@ -106,14 +106,16 @@ fi
 
 if ! c ; then
   status=$?
-  echo "${src##*/}: configure failed"
-  exit $status
+  echo "${currSrc##*/}: configure failed"
+  exit 1
 fi
 
 if ! make check install  >>${out} 2>&1 ; then
   status=$?
-  echo "${src##*/}: make check install failed"
-  exit $status
+  echo "${currSrc##*/}: make check install failed"
+  exit 1
 fi
+
+date > $currSrc/QA_Compilation
 
 exit 0

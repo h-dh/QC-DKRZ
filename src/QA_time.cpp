@@ -731,7 +731,7 @@ QA_Time::initTimeTable(std::string id_1st, std::string id_2nd)
    splt_line.enableEmptyItems();
 
    std::string str;
-   
+
    do
    {
      // the loop cycles over the sub-tables
@@ -1165,7 +1165,7 @@ QA_Time::sync(void)
 
   // arriving here is an error, because the infile production
   // was reset or the file was shortened.
-  std::string key("80");
+  std::string key("9_2");
   if( notes->inq( key, name) )
   {
      std::string capt("renewal of a file?") ;
@@ -1239,6 +1239,10 @@ QA_Time::testTimeBounds(NcAPI &nc)
     }
   }
 
+  // checks below don't make any sense for climatologies
+  if( pIn->variable[timeBounds_ix].isClimatology )
+    return;
+  
   if( isFormattedDate )
   {
     refDate.setDate( currTimeBoundsValue[0] );
@@ -1289,14 +1293,14 @@ QA_Time::testTimeBounds(NcAPI &nc)
         std::ostringstream ostr(std::ios::app);
         ostr.setf(std::ios::fixed, std::ios::floatfield);
         ostr << "rec#="  << pIn->currRec << std::setprecision(0);
-        ostr << "\nprev time values=[" << prevTimeBoundsValue[0] << " - " ;
+        ostr << "\nprev t-b values=[" << prevTimeBoundsValue[0] << " - " ;
         ostr                           << prevTimeBoundsValue[1] << "]" ;
 
         ostr << ", dates=[" << refDate.getDate(prevTimeBoundsValue[0]).str()
              << " - ";
         ostr << refDate.getDate(prevTimeBoundsValue[1]).str() << "]" ;
 
-        ostr << "\ncurr time values=[" << currTimeBoundsValue[0]
+        ostr << "\ncurr t-b values=[" << currTimeBoundsValue[0]
                                        << " - " << currTimeBoundsValue[1] << "]" ;
         std::string cT( hdhC::double2String(currTimeBoundsValue[0]) );
         ostr << ", dates=[" << refDate.getDate(currTimeBoundsValue[0]).str()
@@ -1351,14 +1355,14 @@ QA_Time::testTimeBounds(NcAPI &nc)
         std::ostringstream ostr(std::ios::app);
         ostr.setf(std::ios::fixed, std::ios::floatfield);
         ostr << "rec#="  << pIn->currRec << std::setprecision(0);
-        ostr << "\nprev time values=[" << prevTimeBoundsValue[0] << " - " ;
+        ostr << "\nprev t-b values=[" << prevTimeBoundsValue[0] << " - " ;
         ostr                           << prevTimeBoundsValue[1] << "]" ;
 
         ostr << ", dates=[" << refDate.getDate(prevTimeBoundsValue[0]).str()
              << " - ";
         ostr << refDate.getDate(prevTimeBoundsValue[1]).str() << "]" ;
 
-        ostr << "\ncurr time values=[" << currTimeBoundsValue[0] << " - "
+        ostr << "\ncurr t-b values=[" << currTimeBoundsValue[0] << " - "
                                        << currTimeBoundsValue[1] << "]";
         ostr << ", dates=[" << refDate.getDate(currTimeBoundsValue[0]).str()
              << " - ";

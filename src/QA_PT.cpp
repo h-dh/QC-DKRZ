@@ -54,12 +54,12 @@ ProjectTable::check(Variable &dataVar, std::string entryID)
       continue;
 
     // found a valid entry
-    t_md = hdhC::stripSurrounding(str0) ;
+    t_md = hdhC::stripSides(str0) ;
 
     // read aux-lines
     while( getline(ifs, str0) )
     {
-      str0 = hdhC::stripSurrounding(str0) ;
+      str0 = hdhC::stripSides(str0) ;
       if( str0.substr(0,4) != "aux=" )
         goto BREAK ;  // found the end of the entry
 
@@ -93,11 +93,11 @@ BREAK:
 
   std::vector<std::string> xf;
   for( size_t i=0 ; i < xf_sz ; ++i )
-    xf.push_back( hdhC::stripSurrounding(splt_xf[i]) );
+    xf.push_back( hdhC::stripSides(splt_xf[i]) );
 
   std::vector<std::string> xt;
   for( size_t i=0 ; i < xt_sz ; ++i )
-    xt.push_back( hdhC::stripSurrounding(splt_xt[i]) );
+    xt.push_back( hdhC::stripSides(splt_xt[i]) );
 
   // simple test for identity
   if( xt_sz == xf_sz )
@@ -420,85 +420,6 @@ BREAK:
 }
 
 void
-ProjectTable::checkType(Variable &var, std::string &s)
-{
-   // Get the checksum of all non-unlimited variables
-   // The purpose of checksums of auxiliary variables is to
-   // ensure consistency between follow-up experiments.
-   // Note: targets have NC_DOUBLE and all other have NC_FLOAT
-
-   // collect all coordinate vars.
-   std::vector<std::string> cv;
-   size_t k;
-
-   for( size_t i=0 ; i < pIn->variable.size() ; ++i)
-   {
-     for( size_t j=0 ; j < pIn->variable[i].dimName.size() ; ++j)
-     {
-       for( k=0 ; k < cv.size() ; ++k)
-         if( pIn->variable[i].dimName[j] == cv[k] )
-             break;
-
-       if( k == cv.size() )
-          cv.push_back( pIn->variable[i].dimName[j] );
-     }
-   }
-
-   // test the type of the variable
-   std::string annotTxt;
-
-   if( var.isDATA )
-   {
-     if( var.type != NC_FLOAT )
-     {
-        // dimless variables are excluded from the check.
-        if( var.dimName.size() )
-          annotTxt="float";
-     }
-   }
-   else
-   {
-     for( k=0 ; k < cv.size() ; ++k)
-     {
-        if( cv[k] == var.name )
-        {
-          if( var.type != NC_DOUBLE )
-          {
-            annotTxt="double";
-            break;
-          }
-        }
-     }
-   }
-
-   std::string type(pIn->nc.getVarTypeStr( var.name ) ) ;
-
-   if( annotTxt.size() )  // wrong type
-   {
-     std::string key("32_1");
-     if( notes->inq( key, "PT") )
-     {
-       std::string capt("variable=");
-       capt += var.name ;
-       capt += ": data type " ;
-       capt += annotTxt;
-       capt += " is required";
-
-       std::string text("type (file)=");
-       text += type ;
-
-       (void) notes->operate(capt, text) ;
-       notes->setCheckMetaStr( "FAIL" );
-     }
-   }
-
-   s += ',';
-   s += type;
-
-   return;
-}
-
-void
 ProjectTable::getAtts(Variable &var, std::string &s)
 {
    size_t sz = var.attName.size();
@@ -568,7 +489,7 @@ ProjectTable::getMetaData(Variable &dataVar,
 
   // get attributes of the data variable
   getAtts(dataVar, md);
-  checkType(dataVar, md);
+  getVarType(dataVar, md);
 
   // get meta-data of auxiliaries
   for( size_t i=0 ; i < pIn->varSz ; ++i )
@@ -580,7 +501,7 @@ ProjectTable::getMetaData(Variable &dataVar,
     md += pIn->variable[i].name;
 
     getAtts(pIn->variable[i], md);
-    checkType(pIn->variable[i], md);
+    getVarType(pIn->variable[i], md);
   }
 
   return;
@@ -602,30 +523,49 @@ ProjectTable::getValues(Variable &var, std::string &s)
      return;
 
    // get data and determine the checksum
-   if( var.type == NC_CHAR )
+   if( ! var.checksum )
    {
-     pIn->nc.getData(vs, var.name);
-     bool reset=true;  // is set to false during the first call
-     for(size_t l=0 ; l < vs.size() ; ++l)
-     {
-       vs[l] = hdhC::stripSurrounding(vs[l]);
-       ck = hdhC::fletcher32_cmip5(vs[l], &reset) ;
-     }
-   }
-   else
-   {
-      ck=0;
-      MtrxArr<double> mv;
-      pIn->nc.getData(mv, var.name );
+      if( var.type == NC_CHAR )
+      {
+        pIn->nc.getData(vs, var.name);
+        bool reset=true;  // is set to false during the first call
+        for(size_t l=0 ; l < vs.size() ; ++l)
+        {
+          vs[l] = hdhC::stripSides(vs[l]);
+          ck = hdhC::fletcher32_cmip5(vs[l], &reset) ;
+        }
+      }
+      else
+      {
+          ck=0;
+          MtrxArr<double> mv;
+          pIn->nc.getData(mv, var.name );
 
-      if( mv.size() > 0 )
-        ck = hdhC::fletcher32_cmip5(mv.arr, mv.size()) ;
+          if( mv.size() > 0 )
+            ck = hdhC::fletcher32_cmip5(mv.arr, mv.size()) ;
+      }
    }
 
    std::ostringstream ostr;
    ostr << ",values=" << ck ;
 
    s += ostr.str() ;
+
+   return;
+}
+
+void
+ProjectTable::getVarType(Variable &var, std::string &s)
+{
+   // Get the checksum of all non-unlimited variables
+   // The purpose of checksums of auxiliary variables is to
+   // ensure consistency between follow-up experiments.
+   // Note: targets have NC_DOUBLE and all other have NC_FLOAT
+
+   // get type of the variable
+   std::string type(pIn->nc.getVarTypeStr( var.name ) ) ;
+   s += ',';
+   s += type;
 
    return;
 }

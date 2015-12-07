@@ -1329,9 +1329,6 @@ set_qa_par()
    par=${par}"${s}"aMDR=${APPLY_MAXIMUM_DATE_RANGE}
  fi
 
- test ${CASE_INSENSITIVE_VARIABLE_NAME:-f} = t && \
-   par=${par}"${s}"cIVN
-
  if [ ${CHECK_MODE:-f} != f ] ; then
    par=${par}"${s}"cM=${CHECK_MODE[0]}
    for(( i=1 ; i < ${#CHECK_MODE[*]} ; ++i )) ; do

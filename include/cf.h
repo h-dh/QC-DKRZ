@@ -276,13 +276,6 @@ template <typename T>
   std::string n_valid_range;
   std::string n_variable;
 
-  std::string blank;
-  std::string no_blank;
-  std::string s_colon;
-  std::string s_empty;
-  std::string s_upper;
-  std::string s_lower;
-
   static const bool lowerCase = true;
   std::string bKey;
   std::string fail;

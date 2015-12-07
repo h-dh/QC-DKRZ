@@ -39,9 +39,17 @@ struct DRS_CV
   //! Is it NetCDF-4, is it compressed?
   void   checkNetCDF(void);
   void   checkPath(std::string&, struct DRS_CV_Table&);
-  void   findDRS_faults(Split&, Split&,
+  void   checkProductName(std::string& drs_product,
+                   std::string prod_choice,
+                   std::map<std::string, std::string>& gM);
+ void    findFN_faults(Split&, Split&,
                    std::map<std::string, std::string>&,
                    std::string& text);
+  void   findPath_faults(Split&, Split&,
+                   std::map<std::string, std::string>&,
+                   std::string& text);
+  int    getPathBegIndex( Split& drs, Split& x_e,
+            std::map<std::string, std::string>& gM );
 
   void run(void);
 
@@ -56,7 +64,8 @@ struct DRS_CV
   bool   testPeriodCut_CMOR_isGOD(std::vector<std::string> &sd, Date**);
   void   testPeriodCutRegular(std::vector<std::string> &sd,
               std::vector<std::string>& text);
-  bool   testPeriodFormat(std::vector<std::string> &sd) ;
+  bool   testPeriodDatesFormat(std::vector<std::string> &sd) ;
+  bool   testPeriodFormat(Split&, std::vector<std::string> &sd) ;
 
   struct hdhC::FileSplit GCM_ModelnameTable;
   struct hdhC::FileSplit RCM_ModelnameTable;
@@ -213,6 +222,8 @@ class QA_Exp
   //! Make VarMetaData objects.
   void   createVarMetaData(void);
 
+  void   checkVariableType(void);
+
   //! Check time properties.
   void   domainCheck(void);
   void   domainCheckData(std::string &var_lon, std::string &var_lat,
@@ -329,7 +340,6 @@ class QA_Exp
   // init for test about times
   bool enabledCompletenessCheck;
   bool isUseStrict;
-  bool isCaseInsensitiveVarName;
   bool isCheckParentExpID;
   bool isCheckParentExpRIP;
   bool isClearBits;

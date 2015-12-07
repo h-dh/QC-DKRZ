@@ -766,31 +766,15 @@ getCurrPaths()
   if [ -w ~ ] ; then
     local cPath=~/.qa-dkrz
     test ! -d $cPath && mkdir -p $cPath 2> /dev/null
-
-    if [ ${CONDA_ENV} ] ; then
-      setKWL CONFIG_FILE=$cPath/config.conda
-    else
-      setKWL CONFIG_FILE=$cPath/config.src
-    fi
+    setKWL CONFIG_FILE=$cPath/config.txt
 
   elif [ -w "$QA_PATH" ] ; then
     test ! -d $QA_PATH/.qa-dkrz && mkdir -p $QA_PATH/.qa-dkrz 2> /dev/null
-
-    if [ ${CONDA_ENV} ] ; then
-      setKWL CONFIG_FILE=$QA_PATH/.qa-dkrz/conf.conda
-    else
-      setKWL CONFIG_FILE=$QA_PATH/.qa-dkrz/config.src
-    fi
-    test ! -d $QA_PATH && mkdir -p $QA_PATH 2> /dev/null
+    setKWL CONFIG_FILE=$QA_PATH/.qa-dkrz/conf.txt
 
   elif [ -w "$QA_WORK" ] ; then
     test ! -d $QA_WORK && mkdir -p $QA_WORK/.qa-dkrz 2> /dev/null
-
-    if [ ${CONDA_ENV} ] ; then
-      setKWL CONFIG_FILE=$QA_WORK/config.conda
-    else
-      setKWL CONFIG_FILE=$QA_WORK/config.src
-    fi
+    setKWL CONFIG_FILE=$QA_WORK/config.txt
 
   else
     std_out "${0##*/}::getCurrPaths():"
@@ -2194,25 +2178,10 @@ do
           exit 1
 
         elif [ "${UOPTARG%=*}" = "AUTO_UP" ] ; then
-          if [ "${OPTARG#*=}" = disable -o "${OPTARG#*=}" = f \
-                   -o "${OPTARG#*=}" = d ]
-          then
-            if grep -i -q AUTO_UP $CONFIG_FILE &> /dev/null; then
-              installArgs="${installArgs}--auto-up=d,"
-            fi
-          elif ! grep -i -q AUTO_UP $CONFIG_FILE &> /dev/null; then
-              installArgs="${installArgs}--auto-up,"
-          fi
+          installArgs="${installArgs}--auto-up=${optarg#*=},"
 
         elif [ "${UOPTARG%=*}" = "AUTO_TABLE_UP" ] ; then
-          if [ "${OPTARG#*=}" = disable -o "${OPTARG#*=}" = f -o "${OPTARG#*=}" = d ]
-          then
-            if grep -i -q AUTO_TABLE_UP ${QA_PATH}/.conf &> /dev/null; then
-              installArgs="${installArgs}--auto-table-up=d,"
-            fi
-          elif ! grep -i -q auto-up ${QA_PATH}/.conf &> /dev/null; then
-              installArgs="${installArgs}--auto-table-up,"
-          fi
+          installArgs="${installArgs}--auto-table-up=${optarg#*=},"
 
         elif [ "${UOPTARG:0:5}" = DEBUG ] ; then
           set -x

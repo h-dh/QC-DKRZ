@@ -19,10 +19,6 @@ class ProjectTable
   void   check(void);
   bool   check(Variable&, std::string entryID);
 
-  //! Check the type of variables
-  //! The target variable must be of FLOAT.
-  void   checkType(Variable&, std::string &);
-
   //! Put Attributes of given variable to string
   void   getAtts(Variable&, std::string &) ;
 
@@ -31,6 +27,8 @@ class ProjectTable
 
   //! Get the checksum of all non-unlimited variables
   void   getValues(Variable&, std::string &) ;
+
+  void   getVarType(Variable&, std::string &);
 
   bool   lockFile(std::string &fName);
 

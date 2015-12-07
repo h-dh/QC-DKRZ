@@ -5259,11 +5259,11 @@ NcAPI::setFileAccessMode(std::string fam)
     if( split[i].size() == 0 )
       continue;
 
-    fileAccessMode += hdhC::stripSurrounding( split[i] ) ;
+    fileAccessMode += hdhC::stripSides( split[i] ) ;
     fileAccessMode += '|' ;
   }
   fileAccessMode
-     += hdhC::stripSurrounding( split[split.size()-1] ) ;
+     += hdhC::stripSides( split[split.size()-1] ) ;
 
   return;
 }

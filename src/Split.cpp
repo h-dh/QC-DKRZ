@@ -153,6 +153,20 @@ Split::append(std::string t)
 }
 
 void
+Split::assign(size_t i0, std::string t)
+{
+  if( ! isDecomposed )
+    decompose();
+
+  if( i0 < items.size() )
+    items[i0] = t ;
+  else
+    items.push_back(t);
+
+  return;
+}
+
+void
 Split::clear(void)
 {
   str = "";

@@ -852,7 +852,7 @@ Statistics<T>::setSampleProperties(std::string s)
   {
     pair = splt[i] ;
 
-    s0 = hdhC::stripSurrounding(pair[0] );
+    s0 = hdhC::stripSides(pair[0]);
 
     if( s0 == "sampleMax" )
       sampleMax = static_cast<T>( pair.toDouble(1) );

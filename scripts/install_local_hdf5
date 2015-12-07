@@ -47,7 +47,9 @@ do
     h)  descript
         exit ;;
     q)  QUIET=t ;;
-    -)  if [ "${UOPTARG%=*}" = DEBUG ] ; then
+    -)  if [ "${UOPTARG%=*}" = CURR_SRC ] ; then
+           currSrc=${QA_PATH}/local/source/${OPTARG#*=}
+        elif [ "${UOPTARG%=*}" = DEBUG ] ; then
            test "${UOPTARG}" = DEBUG -o ${OPTARG#*=} = ${0##*/} && set -x
         elif [ "$UOPTARG" = DISTCLEAN ] ; then
            isDistClean=t
@@ -66,10 +68,8 @@ done
 
 shift $(( $OPTIND - 1 ))
 
-src=$installPath/source
-
-if [ -d "${src}" ] ; then
-  cd $src &> /dev/null
+if [ -d $currSrc ] ; then
+  cd ${currSrc} &> /dev/null
 else
   exit 1
   return
@@ -94,24 +94,25 @@ fi
 test $? -gt 0 && exit 1
 
 if ! make  >>${out} 2>&1 ; then
-  echo "${src##*/}: make failed" 1>&2
+  echo "${currSrc##*/}: make failed" 1>&2
   exit 2
 fi
 
 if ! make check  >>${out} 2>&1 ; then
-  echo "${src##*/}: make check failed" 1>&2
+  echo "${currSrc##*/}: make check failed" 1>&2
   exit 3
 fi           # run test suite.
 
 if ! make install  >>${out} 2>&1 ; then
-  echo "${src##*/}: make install failed"  1>&2
+  echo "${currSrc##*/}: make install failed"  1>&2
   exit 4
 fi
 
 if ! make check-install  >>${out} 2>&1  ; then
-  echo "${src##*/}: make check-install failed" 1>&2
+  echo "${currSrc##*/}: make check-install failed" 1>&2
   exit 5
 fi  # verify installation
 
+date > $currSrc/QA_Compilation
 
 exit 0

@@ -157,9 +157,9 @@ descript()
 distclean()
 {
   for f in bin include lib lib64 share ; do
-    \rm -rf ${QA_PATH}/local/$f
+    \rm -rf ${qaLocal}/$f
   done
-  \rm -f ${QA_PATH}/local/source/INDSTALL_*.log
+  \rm -f ${qaLocal}/source/INDSTALL_*.log
 
   local name
 
@@ -167,7 +167,7 @@ distclean()
     eval name=\${curr_${t}}
 
     bash ${QA_PATH}/scripts/install_local_${t} --distclean  \
-       -q --prefix=${qaLocalPath} ${QUIET:+-q}
+       -q --prefix=${qaLocal} ${QUIET:+-q}
   done
 
   return
@@ -178,19 +178,29 @@ editInstallConfigure_build()
   # adjust eventually install_configure settings
   # of LIB and INCLUDE to new paths
 
-  local ic=install_configure
+  local ic=${QA_PATH}/install_configure
 
-  if grep -q "^LIB=" ${QA_PATH}/$ic 2> /dev/null ; then
-    sed -i "/^LIB=/ c ${lib}" install_configure
-  else
-    # append after line '# e.g. LIB=...'
-    sed -i "/LIB=/ a LIB=${lib}" install_configure
+  local libStr="LIB=${qaLocal}/lib:${qaLocal}/lib64"
+  local asdf="$(grep "^LIB=" $ic 2> /dev/null)"
+
+  if [ "${libStr}" != "${asdf}" ] ; then
+    if [ "${asdf}" ] ; then
+      sed -i "/^LIB=/ c ${libStr}" $ic
+    else
+      # append after line '# e.g. LIB=...'
+      sed -i "/LIB=/  a ${libStr}" $ic
+    fi
   fi
 
-  if grep -q "^INCLUDE=" ${QA_PATH}/$ic 2> /dev/null ; then
-    sed -i "/^INCLUDE=/ c ${incl}" install_configure
-  else
-    sed -i "/INCLUDE=/ a INCLUDE=${incl}" install_configure
+  local inclStr="INCLUDE=${qaLocal}/include"
+  asdf="$(grep "^INCLUDE=" $ic 2> /dev/null)"
+
+  if [ "${inclStr}" != "${asdf}" ] ; then
+    if [ "${asdf}" ] ; then
+      sed -i "/^INCLUDE=/ c ${inclStr}" $ic
+    else
+      sed -i "/INCLUDE=/  a ${inclStr}" $ic
+    fi
   fi
 
   return
@@ -290,74 +300,79 @@ f_build()
 {
   local c dir is
 
-  if ls ${qaLocalPath}/lib/lib${1}.* &> /dev/null \
-        || ls ${qaLocalPath}/lib64/lib${1}.* &> /dev/null ; then
-      log ${1} DONE=up-to-date
-      return 0  # go on
-  fi
-
-  cd ${qaLocalPath}/source
+  cd ${qaLocal}/source
 
   # rebuild
-
-  # instance already available?
-  dir=$( ls -d ${qaLocalPath}/source/curr_${1}* 2> /dev/null )
-#  test ${#dir} -gt 0 && \rm -rf $dir
 
   local name
   eval name=\${curr_${1}}
 
-  if [ ${#dir} -eq 0 ] ; then
+  # instance already available?
+  dir=$( ls -d ${qaLocal}/source/${name} 2> /dev/null )
 
+  if [ ! ${dir} ] ; then
     local text
     if [ ${name:0:1} = 'n' ] ; then
-      text="-l1 -np -nc ftp://ftp.unidata.ucar.edu/pub/netcdf/old/${name}.tar.gz"
+      text="-l1 -N -np ftp://ftp.unidata.ucar.edu/pub/netcdf/old/${name}.tar.gz"
       wget ${text} &> INSTALL_netcdf.log
     elif [ ${name:0:1} = 'h' ] ; then
-      text="-l1 -np -nc www.hdfgroup.org/ftp/HDF5/releases/${name}/src/${name}.tar.gz"
+      text="-l1 -N -np www.hdfgroup.org/ftp/HDF5/releases/${name}/src/${name}.tar.gz"
       wget ${text} &> INSTALL_hdf.log
     elif [ ${name:0:1} = 'z' ] ; then
-      text="-l1 -np -nc www.zlib.net/${name}.tar.gz"
+      text="-l1 -N -np www.zlib.net/${name}.tar.gz"
       wget ${text} &> INSTALL_zlib.log
     elif [ ${name:0:1} = 'u' ] ; then
-      text="-O - ftp://ftp.unidata.ucar.edu/pub/udunits/${name}.tar.gz"
-      wget ${text}
+      text=""
+      wget -N ftp://ftp.unidata.ucar.edu/pub/udunits/udunits-2.2.*.tar.gz \
+          &> INSTALL_udunits.log
+
+      name=$( ls udunits-2.2.*.tar.gz )
+      name=${name%.tar.gz}
     fi
 
     if [ $? -eq 0 ] ; then
       log "download: $name" DONE
     else
       log "wget ${text}:" FAIL
-      exit 1
-    fi
-
-    if [ -f $name.tar.gz ] ; then
-      gzip -d $name.tar.gz 2> /dev/null
-      tar xf $name.tar > /dev/null
-      \rm -f $name.tar
+#      exit 1
     fi
   fi
 
-  bash ${QA_PATH}/scripts/install_local_${1}  \
-     ${isDebug:+--debug} ${QUIET:+-q} \
-     --prefix=${qaLocalPath} \
 
-  local status=$?
+  if [ -f $name.tar.gz -a ! -d $name ] ; then
+    # save the tar.gz file in order to avoid later wget downloads
+    cp -a ${name}.tar.gz  _${name}.tar.gz
 
-  if [ ${status} -gt 0 ] ; then
-    myStat=FAIL
-  else
-    myStat=DONE
+    gzip -d $name.tar.gz 2> /dev/null
+    tar xf $name.tar > /dev/null
+    \rm -f $name.tar
+
+    # save original tar.gzip file
+    mv _${name}.tar.gz ${name}.tar.gz
   fi
 
-  log ${QA_PATH}/scripts/install_local_${1} ${isDebug:+--debug} \
-  --prefix=${qaLocalPath} ${QUIET:+-q} ${myStat}
+  if [ ! -f ${QA_PATH}/local/source/$name/QA_Compilation ] ; then
+    bash ${QA_PATH}/scripts/install_local_${1}  \
+      ${isDebug:+--debug} ${QUIET:+-q} \
+      --prefix=${qaLocal} --curr_src=$name \
 
-  test ${myStat} = FAIL && exit 1
+    local status=$?
 
-  cd - &> /dev/null
+    if [ ${status} -gt 0 ] ; then
+      myStat=FAIL
+    else
+      myStat=DONE
+    fi
 
-  editInstallConfigure_build
+    log ${QA_PATH}/scripts/install_local_${1} ${isDebug:+--debug} \
+    --prefix=${qaLocal} ${QUIET:+-q} ${myStat} --curr_src=$name
+
+    test ${myStat} = FAIL && exit 1
+
+    cd - &> /dev/null
+
+    editInstallConfigure_build
+  fi
 
   return $status
 }
@@ -390,7 +405,7 @@ f_link()
       fi
 
       if [ ${is} = t ] ; then
-        log "${names[i]}: ${lnk}/${lib} hard-linked in ${QA_PATH}/local" DONE
+        log "${names[i]}: ${lnk}/${lib} hard-linked in ${qaLocal}" DONE
       else
         log "linking of ${names[i]} to ${lnk}" FAIL
         ret=1
@@ -744,7 +759,7 @@ saveAsCycle()
     done
 
     if [ ${isKeep:-f} = t ] ; then
-      cp -r $f ${f##*/}.$((++maxVal)) 2> /dev/null
+      cp -a $f ${f##*/}.$((++maxVal)) 2> /dev/null
     else
       mv $f ${f##*/}.$((++maxVal)) 2> /dev/null
     fi
@@ -754,7 +769,7 @@ saveAsCycle()
 saveLocal()
 {
   test -d $QA_PATH/local && \
-    saveAsCycle $QA_PATH/local
+    saveAsCycle KEEP-ORIG $QA_PATH/local
 
   test -f $QA_PATH/install_configure && \
     saveAsCycle KEEP-ORIG $QA_PATH/install_configure
@@ -788,7 +803,7 @@ tr_option()
 # ++++++++++++   main   +++++++++++++++
 
 #QA_PATH was exported
-qaLocalPath=${QA_PATH}/local
+qaLocal=${QA_PATH}/local
 
 while getopts hq-: option ${args[*]}
 do
@@ -841,7 +856,7 @@ do
            link_z=${OPTARG#*=}
            isLink=t
         elif [ "${UOPTARG:0:5}" = LOCAL ] ; then
-           qaLocalPath=${OPTARG#*=}
+           qaLocal=${OPTARG#*=}
         elif [ "${UOPTARG%%=*}" = PACKAGE ] ; then
            package=${OPTARG#*=}
         elif [ "${OPTARG}" = saveLocal ] ; then
@@ -872,11 +887,11 @@ log_pwd=$(pwd)/
 
 # Installation of external packages.
 
-mkdir -p $qaLocalPath
+mkdir -p $qaLocal
 
-if ! mkdir -p $qaLocalPath/source 2> /dev/null ; then
+if ! mkdir -p $qaLocal/source 2> /dev/null ; then
   descript
-  txt="Could not mkdir -p $qaLocalPath/source"
+  txt="Could not mkdir -p $qaLocal/source"
   echo -e "\n${txt}"
 
   log ${txt} DONE
@@ -886,7 +901,9 @@ fi
 test ${isDistClean:-f} = t  && distclean
 
 if [ ${isBuild:-f} = t ] ; then
-  f_build
+  for lName in zlib hdf5 netcdf udunits ; do
+    f_build $lName
+  done
 elif [ ${isLink:-f} = t ] ; then
   if [ "${link_z}" ] ; then
     test ! -d "${link_z}" && exit 1

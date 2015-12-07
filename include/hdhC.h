@@ -457,6 +457,12 @@ string2Double( std::string s, size_t nr ,int *restIndex,
                bool isRetNull=false) ;
 
 std::string
+tf_assign(std::string lvalue, std::string rvalue) ;
+
+std::string
+tf_assign(std::string rvalue) ;
+
+std::string
 tf_att(std::string v=s_void, std::string a=s_void, std::string val=s_void,
         std::string b1=s_void, std::string b2=s_void, std::string b3=s_void);
 
@@ -479,44 +485,32 @@ tf_var(std::string& v,  bool colon, bool blank, bool isUpper);
 std::string
 clearChars(std::string &str, std::string s=empty, bool isStr=false );
 
-//! replace multiple characters by a single one
-std::string
-clearInternalMultipleSpaces(std::string &str);
-
-std::string
-clearSuccessiveIdenticalCharacters(std::string &str, char );
-
 //! remove white spaces and newlines
 std::string
-clearSpaces(std::string &str );
+clearSpaces(std::string &str);
 
 //! concatenate a string-vector to a comma-separated (with blanks) string
 std::string
 catVector2Str(std::vector<std::string>&);
 
-std::string
-sAssign(std::string lvalue, std::string rvalue) ;
-
-std::string
-sAssign(std::string rvalue) ;
-
 //! strip off surrounding characters.
-/*! Surrounding ' ' and '\t' are removed, also any character provided
-   in 'key'. Additionally, keyword 'left' and 'right' may be given
-   causing stripping only from the left or right, respectively. */
+/*! Surrounding strings 'strip are removed; default: ' ' and '\t'.
+    Additionally, keyword 'left' and 'right' may be given
+    causing stripping only from the left or right, respectively. */
+//! enhanced function: strip (vector of) string(s); default whitespaces
 std::string
-stripSurrounding(std::string &str, std::string key=empty );
+stripSides(std::string, std::vector<std::string>& strip, std::string key=empty );
 
 //! enhanced function: strip (vector of) string(s); default whitespaces
 std::string
 stripSides(std::string, std::string strip=empty, std::string key=empty );
 
+//! replace multiple characters by a single one
 std::string
-stripSides(std::string, std::vector<std::string>& strip, std::string key=empty );
+unique(std::string &str, char);
 
-//! Convert char to lower case
-void
-lowerCase(char &c);
+std::string
+unique(std::string &str, std::string=":space:");
 
 //! concatenate strings; num==0 means full size of the vector
 std::string
@@ -526,6 +520,10 @@ std::string
 unsplit(Split&, std::string sep=empty, size_t num=0);
 
 //! Convert char to upper case
+//! Convert char to lower case
+void
+lowerCase(char &c);
+
 void
 upperCase(char &c);
 

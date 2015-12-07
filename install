@@ -5,42 +5,148 @@ package=QA-DKRZ
 hdf5=hdf5-1.8.14
 netcdf=netcdf-4.3.2
 zlib=zlib-1.2.8
-udunits=udunits-2.2.19
+udunits=udunits-2.2.20
 
 defaultProject=CORDEX
 
 editConfigFile()
 {
-  # return 0: modified entry, but not disabled
-  local args item name
+  # conversion from former usage
+  if [ ! -f ${CONFIG_FILE} ] ; then
+    if [ -f ${CONFIG_FILE%/*}/config.conda ] ; then
+      if [ ${CONDA_ENV} ] ; then
+        echo -e "\n${QA_PATH}:" >> $CONFIG_FILE
+        cat ${CONFIG_FILE%/*}/config.conda >> ${CONFIG_FILE}
+      else
+        local fs_x f_x
+        local fs_x=( $( which -a qa-dkrz ) )
+        local conda_qa_path
 
-  args=($*)
-  args=(${args[*]//=/ })
+        for f_x in ${fs_x[*]} ; do
+          conda_qa_path=
+          getCondaPath $f_x conda_qa_path
 
-#  if [ ${#args[*]} -eq 0 ] ; then
-#    return 1 # this is a fault
-#  el
-   if [ ${#args[*]} -eq 1 ] ; then
-    name=${args[0]}
-  else
-    name=${args[0]}
-    item=${args[1]}
+          if [ ${conda_qa_path} ] ; then
+            echo -e "\n${conda_qa_path}:" >> $CONFIG_FILE
+            cat ${CONFIG_FILE%/*}/config.conda >> ${CONFIG_FILE}
+            break
+          fi
+        done
+      fi
+    fi
+
+    # check for a src generated file
+    if [ -f ${CONFIG_FILE%/*}/config.src ] ; then
+      echo -e "\n${QA_PATH}:" >> $CONFIG_FILE
+      cat ${CONFIG_FILE%/*}/config.src >> ${CONFIG_FILE}
+    fi
   fi
 
-  if grep -i -q $name=${item:-enabled} $CONFIG_FILE &> /dev/null; then
-    return 0
+  test $# -eq 0 && return
+
+  # return 1 if a single parameter was passed whose value is 'disable'
+  local retVal=0
+
+  # find the corresponding section in the config file
+  test ! -f ${CONFIG_FILE} && touch $CONFIG_FILE
+
+  # adjust for spaces a user may have edited into the section
+  local line is num
+  local blkBeg=0
+  local blkEnd
+  local num=0
+  local str
+
+  while read line ; do
+    test "${is}" -a ! "${line}" && break
+
+    num=$((num + 1))
+
+    if [ "${line}" = ${QA_PATH}: ] ; then
+      is=t
+      blkBeg=$num
+      str=${QA_PATH}:
+      continue
+    fi
+
+    if [ ${is} ] ; then
+      line=${line// /}
+
+      while [ ${line/==/=} != ${line} ] ; do
+        line=${line/==/=}
+      done
+
+      str="${str} ${line}"
+    fi
+  done < ${CONFIG_FILE}
+
+  blkEnd=$num
+
+  sctn=( ${str} )
+  str=
+
+  local item name value
+
+  if [ ${blkBeg} -eq 0 ] ; then
+    # append a new section
+    echo -e "\n${QA_PATH}:" >> $CONFIG_FILE
+
+    for item in $* ; do
+      value=${item#*=}
+
+      if [ ${value} = ${item} ] ; then
+        item="${item}=enabled"
+      elif [ ${value} = d -o ${value:0:7} = disable ] ; then
+        test $# -eq 1 && retVal=1
+        continue
+      fi
+
+      echo ${item} >> $CONFIG_FILE
+    done
+
+    return retVal
   fi
 
-  if [ "${item#*=}" = disable -o "${item#*=}" = d ] ; then
-    sed -i "/${name}/ d" $CONFIG_FILE &> /dev/null
-    test ! -s $CONFIG_FILE && \rm $CONFIG_FILE
-    return 1
-  elif grep -i -q ${name} $CONFIG_FILE &> /dev/null; then
-    sed -i "/${name}/ d" $CONFIG_FILE &> /dev/null
-  fi
+  local i
+  for item in $* ; do
+    test ${item:$((${#item}-1))} = '=' && item=${item}enabled
 
-  echo ${name}=${item:-enabled} >> $CONFIG_FILE
-  return 0
+    name=${item%=*}
+    value=${item#*=}
+
+    if [ ${name} = ${item} ] ; then
+      item=${item}=enabled
+    elif [ ${value} = d -o ${value} = disabled ] ; then
+      item=${name}=d
+    fi
+
+    for(( i=0 ; i < ${#sctn[*]} ; ++i )) ; do
+      test ${sctn[i]} = ${item} && continue 2
+
+      if [ ${sctn[i]%=*} = ${name} ] ; then
+        num=$((blkBeg+i))
+        if [ "${value}" = d ] ; then
+          sed -i "${num} d" $CONFIG_FILE &> /dev/null
+          blkEnd=$((blkEnd -1 ))
+          unset sctn[i]
+          sctn=( ${sctn[*]} )
+          test $# -eq 1 && retval=1
+        else
+          sed -i "${num} c${item}" $CONFIG_FILE &> /dev/null
+        fi
+
+        continue 2
+      fi
+    done
+
+    if [ ${item#*=} != d ] ; then
+      sed -i "$((blkEnd++)) a${item}" $CONFIG_FILE &> /dev/null
+      sctn[i]="${item} ${sctn[i]}"
+      sctn=( ${sctn[*]} )
+    fi
+  done
+
+  return $retVal
 }
 
 descript()
@@ -82,6 +188,41 @@ descript()
   echo "  project-name      At present CF, CMIP5, and CORDEX; the latter by default."
 }
 
+getConfigEntry()
+{
+  local section=$1
+  local entry=$2
+  local configFile=$3
+
+  local line is
+
+  while read line ; do
+    test "${is}" -a ! "${line}" && break
+
+    if [ "${line}" = ${section}: ] ; then
+      is=t
+      continue
+    fi
+
+    if [ ${is} ] ; then
+      line=${line// /}
+
+      # repair some manually edited faults
+      while [ ${line/==/=} != ${line} ] ; do
+        line=${line/==/=}
+      done
+
+      if [ "${line%=*}" = "${entry}" ] ; then
+         eval ${entry}=${line}
+         return 0
+      fi
+    fi
+  done < $configFile
+
+  eval ${entry}=
+  return 1
+}
+
 getCurrPaths()
 {
   # where all the work is going to take place
@@ -104,33 +245,16 @@ getCurrPaths()
       local cPath=~/.qa-dkrz
       test ! -d $cPath && mkdir -p $cPath 2> /dev/null
 
-      if [ ${CONDA_ENV} ] ; then
-        CONFIG_FILE=$cPath/config.conda
-      else
-        CONFIG_FILE=$cPath/config.src
-      fi
+      export CONFIG_FILE=$cPath/config.txt
 
     elif [ -w "$QA_PATH" ] ; then
       test ! -d $QA_PATH/.qa-dkrz && mkdir -p $QA_PATH/.qa-dkrz 2> /dev/null
-
-      if [ ${CONDA_ENV} ] ; then
-        if [ -w "$QA_PATH" ] ; then
-          CONFIG_FILE=$QA_PATH/.qa-dkrz/config.conda
-        else
-          isPrint=t
-        fi
-      else
-        CONFIG_FILE=$QA_PATH/.qa-dkrz/config.src
-      fi
+      export CONFIG_FILE=$QA_PATH/.qa-dkrz/config.txt
 
     elif [ -w "$QA_WORK" ] ; then
+      # not determined but may-be provided by the user
       test ! -d $QA_WORK && mkdir -p $QA_WORK/.qa-dkrz 2> /dev/null
-
-      if [ ${CONDA_ENV} ] ; then
-        CONFIG_FILE=$QA_WORK/config.conda
-      else
-        CONFIG_FILE=$QA_WORK/config.src
-      fi
+      export CONFIG_FILE=$QA_WORK/config.txt
 
     else
       isPrint=t
@@ -139,7 +263,7 @@ getCurrPaths()
 
   if [ ${isPrint} = t ] ; then
     echo "HOME and QA_DKRZ without write permissions,"
-    echo "please restart with provided option --workspace=str"
+    echo "please restart with added option --workspace=path"
     exit
   fi
 
@@ -175,28 +299,33 @@ getRevNum()
   return
 }
 
+getCondaPath()
+{
+  local conda=f
+
+  local path=${1%/*}
+  path=${path%/*}
+  path=${path}/opt/qa-dkrz
+
+  if [ -d $path ] ; then
+    eval ${2}=$path
+  fi
+
+  return
+}
+
 getSrcPath()
 {
   # extract the path to the root of the QA package
 
   # is it in a conda built?
-  local x_conda=( ${0//\// } )
-  local i
-  for(( i=0 ; i < ${#x_conda[*]} ; ++i )) ; do
-    if [ ${x_conda[i]} = opt ] ; then
-      if [ ${x_conda[$((++i))]} = qa-dkrz ] ; then
-        CONDA_ENV=t
-        QA_PATH=
-        for(( j=0 ; j <= i ; ++j )) ; do
-          QA_PATH=${QA_PATH}/${x_conda[j]}
-        done
-        export QA_PATH
-        return
-      fi
-    fi
-  done
+  getCondaPath $0 QA_PATH
 
-  test ${QA_PATH} && return
+  if [ ${QA_PATH} ] ; then
+    export QA_PATH
+    CONDA_ENV=t
+    return
+  fi
 
   local target isInvalid
 
@@ -410,6 +539,7 @@ update()
     fi
 
     ${QA_PATH}/scripts/get_cfconventions \
+        --qa_path=${QA_PATH} \
         --config_file=$CONFIG_FILE \
         ${QA_WORK}/tables/projects/CF
   fi
@@ -424,7 +554,7 @@ zeroArg=$0
 allArgs=($*)
 
 if [ $# -gt 0 ] ; then
-  # save arguments
+  # safe arguments
   sArgs=($*)
 
   # higher priority options
@@ -481,7 +611,7 @@ do
         elif [ "${UOPTARG:0:5}" = BUILD ] ; then
           isBuild=t
         elif [ "${UOPTARG:0:11}" = CONFIG_FILE ] ; then
-          CONFIG_FILE=${OPTARG##*=}
+          export CONFIG_FILE=${OPTARG##*=}
         elif [ ${UOPTARG:0:5} = DEBUG -o ${UOPTARG} = 'DEBUG=install' ] ; then
           set -x
         elif [ "${UOPTARG%%=*}" = HELP ] ; then
@@ -543,9 +673,14 @@ update
 
 test ${DEF_PRJ} && editConfigFile DEFAULT_PROJECT=${DEF_PRJ}
 
-if defPrj=$( grep DEFAULT_PROJECT ${CONFIG_FILE} 2> /dev/null ) ; then
-  defPrj=--set_default_project=${defPrj#*=}
+getConfigEntry ${QA_PATH} DEFAULT_PROJECT ${CONFIG_FILE}
+
+if [ ${DEFAULT_PROJECT} ] ; then
+  defPrj=--set_default_project=${DEFAULT_PROJECT#*=}
 fi
+
+# safe
+editConfigFile # no parameter: check for a conversion from former
 
 test ${CONDA_ENV} && exit  # miniconda built executables
 

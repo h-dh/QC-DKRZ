@@ -105,7 +105,7 @@ FileSplit::setFile(std::string f)
    size_t pos ;
 
    // remove multiple /
-   clearSuccessiveIdenticalCharacters(f, '/') ;
+   unique(f, '/') ;
 
    // path
    if( (pos = f.rfind('/') ) < std::string::npos )
@@ -1667,6 +1667,22 @@ bool isNumber( std::string &str )
 // ----------------------------------------------------
 //! formatting of attribute|variable name in combination with value etc.
 
+std::string tf_assign(std::string right)
+{
+  if( right.size() > 10 )
+    return "= <" + right + ">" ;
+  else
+    return "=<" + right + ">" ;
+}
+
+std::string tf_assign(std::string left, std::string right)
+{
+  if( right.size() > 10 )
+    return left + " = <" + right + ">" ;
+  else
+    return left + "=<" + right + ">" ;
+}
+
 std::string
 tf_att(std::string p1, std::string p2, std::string p3,
     std::string p4, std::string p5, std::string p6)
@@ -1737,11 +1753,11 @@ tf_att(std::vector<std::string*>& p,
 }
 
 std::string
-tf_val(std::string v, std::string no_blnk)
+tf_val(std::string v, std::string blnk)
 {
   std::string s(" <" + v + ">" );
-  if(no_blnk.size() == 0)
-    s += " ";
+  if(blnk.size())
+    s += blank;
 
   return s ;
 }
@@ -2182,43 +2198,6 @@ clearChars(std::string &str, std::string s, bool isStr )
   return t ;
 }
 
-std::string clearInternalMultipleSpaces(std::string &str )
-{
-  // replace multiple internal spaces by a single blank
-  Split splt(str);
-
-  std::string s(splt[0]);
-
-  for( size_t p=1 ; p < splt.size() ; ++p )
-  {
-    s += " " ;
-    s += splt[p] ;
-  }
-
-  return s ;
-}
-
-std::string clearSuccessiveIdenticalCharacters(std::string &str, char c)
-{
-  // replace multiple identical characters by a single one
-  Split splt(str, c);
-
-  std::string s;
-  if( str[0] == c )
-    s += c;
-
-  for( size_t p=0 ; p < splt.size() ; ++p )
-  {
-    s += c ;
-    s += splt[p] ;
-  }
-
-  if( str.size() && str[str.size()-1] == c )
-    s += c;
-
-  return s ;
-}
-
 std::string clearSpaces(std::string &str )
 {
   // clear all spaces from string
@@ -2245,22 +2224,6 @@ catVector2Str(std::vector<std::string>& vs)
   }
 
   return s;
-}
-
-std::string sAssign(std::string right)
-{
-  if( right.size() > 10 )
-    return "= <" + right + ">" ;
-  else
-    return "=<" + right + ">" ;
-}
-
-std::string sAssign(std::string left, std::string right)
-{
-  if( right.size() > 10 )
-    return left + " = <" + right + ">" ;
-  else
-    return left + "=<" + right + ">" ;
 }
 
 std::string
@@ -2368,76 +2331,63 @@ stripSides(std::string str, std::vector<std::string>& strp, std::string mode )
   return str.substr(p0, p1 - p0 +1 ) ;
 }
 
-std::string stripSurrounding(std::string &str, std::string mode )
+std::string unique(std::string &str, char c)
 {
-  // strip off leading and trailing blanks and tabs
-  size_t p0=0;
-  size_t p1=str.size()-1;
-  bool isEmpty=true;
+  if( !str.size() )
+     return str;
 
-  std::string side;
+  // replace multiple identical characters by a single one
+  Split splt(str, c);
 
-  std::vector<char> token;
-  token.push_back(' ');
-  token.push_back('\t');
-  for( size_t i=0 ; i < mode.size() ; ++i )
+  std::string s;
+  if( str[0] == c )
+    s += c;
+  s += splt[0] ;
+
+  for( size_t p=1 ; p < splt.size() ; ++p )
   {
-    if( mode[i] == 'r' )
-    {
-      if( mode.substr(i, 5) == "right" )
-      {
-        side = "right";
-        i += 4;
-      }
-    }
-    else if( mode.substr(i, 4) == "left" )
-    {
-      side = "left";
-      i += 3;
-    }
+    s += c ;
+    s += splt[p] ;
   }
 
-  if( side != "right" )
+  if( str.size() && str[str.size()-1] == c )
+    s += c;
+
+  return s ;
+}
+
+std::string unique(std::string &str, std::string pat)
+{
+  if( !str.size() )
+     return str;
+
+  if( pat == ":space:" )
   {
-    for( size_t p=0 ; p < str.size() ; ++p )
-    {
-      bool isCont=false;
-      for( size_t i=0 ; i < token.size() ; ++i )
-        if( str[p] == token[i] )
-          isCont=true ;
-
-      if( isCont )
-        continue;
-
-      p0=p;
-      isEmpty=false;
-
-      break;
-    }
+    std::string s = unique(str, ' ');
+    return unique(str, '\t');
   }
 
-  if( side != "left" )
+  if( pat.size() == 1 )
+    return unique(str, pat[0]);
+
+  // replace multiple identical strings by a single one
+  Split splt(str, pat, true);
+
+  std::string s;
+  if( str.substr(0,pat.size()) == pat )
+    s += pat;
+  s += splt[0] ;
+
+  for( size_t p=1 ; p < splt.size() ; ++p )
   {
-    for( int p=str.size()-1 ; p > -1 ; --p )
-    {
-      bool isCont=false;
-      for( size_t i=0 ; i < token.size() ; ++i )
-        if( str[p] == token[i] )
-          isCont=true ;
-
-      if( isCont )
-        continue;
-
-      p1=p;
-      isEmpty=false;
-      break;
-    }
+    s += pat ;
+    s += splt[p] ;
   }
 
-  if( isEmpty )
-    return "" ;
+  if( str.size() > pat.size() && str.substr(str.size()-pat.size()) == pat )
+    s += pat;
 
-  return str.substr(p0, p1 - p0 +1 ) ;
+  return s ;
 }
 
 std::string

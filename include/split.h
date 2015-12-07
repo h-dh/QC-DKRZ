@@ -84,6 +84,8 @@ class Split
 
   void   append(std::string);
 
+  void   assign(size_t i, std::string);
+
   //! Clear previous assignment, but leaving the setting alone.
   void clear(void);
 
@@ -136,19 +138,17 @@ class Split
       is the end of the input string. If i0 exceeds the number of items, then
       an empty string is returned.*/
   std::string
-    range(size_t i0, size_t i1=-1);
+         range(size_t i0, size_t i1=-1);
 
   //! Replace i-th sub-string by string 's'.
-  void replace(size_t, std::string);
+  void   replace(size_t, std::string);
 
   //! Set a fixed field width for items.
   /*! Purpose: read formatted tables without explicit separator.*/
-  void
-    setFixedFormat( size_t w ){fixedWidth=w; isFixedWidth=true;}
+  void   setFixedFormat( size_t w ){fixedWidth=w; isFixedWidth=true;}
 
   //! Each separator is contained in the separated items.
-  void
-    setItemsWithSeparator(void){ isItemsWithSep=true;}
+  void   setItemsWithSeparator(void){ isItemsWithSep=true;}
 
   //! Discard specific character; replace former setting.
   void   setIgnore(char s){setIgnore(std::string(1,s));}

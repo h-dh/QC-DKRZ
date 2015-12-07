@@ -485,9 +485,9 @@ InFile::getVariable(void)
     if( (pos = fName.find("_")) < std::string::npos )
       fName = fName.substr(0,pos) ;
 
-    for( size_t i=0 ; i < pIn->varSz ; ++i )
+    for( size_t i=0 ; i < varSz ; ++i )
     {
-      if( fName == pIn->variable[i].name )
+      if( fName == variable[i].name )
       {
         dataVarIndex.push_back(i);
         break;

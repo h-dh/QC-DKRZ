@@ -101,6 +101,115 @@ descript()
   echo "                    Installation for both by default. Note: no '--'."
 }
 
+editConfigFile()
+{
+  test $# -eq 0 && return
+
+  # return 1 if a single parameter was passed whose value is 'disable'
+  local retVal=0
+
+  # find the corresponding section in the config file
+  test ! -f ${CONFIG_FILE} && touch $CONFIG_FILE
+
+  # adjust for spaces a user may have edited into the section
+  local line is num
+  local blkBeg=0
+  local blkEnd
+  local num=0
+  local str
+
+  while read line ; do
+    test "${is}" -a ! "${line}" && break
+
+    num=$((num + 1))
+
+    if [ "${line}" = ${QA_PATH}: ] ; then
+      is=t
+      blkBeg=$num
+      str=${QA_PATH}:
+      continue
+    fi
+
+    if [ ${is} ] ; then
+      line=${line// /}
+
+      while [ ${line/==/=} != ${line} ] ; do
+        line=${line/==/=}
+      done
+
+      str="${str} ${line}"
+    fi
+  done < ${CONFIG_FILE}
+
+  blkEnd=$num
+
+  sctn=( ${str} )
+  str=
+
+  local item name value
+
+  if [ ${blkBeg} -eq 0 ] ; then
+    # append a new section
+    echo -e "\n${QA_PATH}:" >> $CONFIG_FILE
+
+    for item in $* ; do
+      value=${item#*=}
+
+      if [ ${value} = ${item} ] ; then
+        item="${item}=enabled"
+      elif [ ${value} = d -o ${value:0:7} = disable ] ; then
+        test $# -eq 1 && retVal=1
+        continue
+      fi
+
+      echo ${item} >> $CONFIG_FILE
+    done
+
+    return retVal
+  fi
+
+  local i
+  for item in $* ; do
+    test ${item:$((${#item}-1))} = '=' && item=${item}enabled
+
+    name=${item%=*}
+    value=${item#*=}
+
+    if [ ${name} = ${item} ] ; then
+      item=${item}=enabled
+    elif [ ${value} = d -o ${value} = disabled ] ; then
+      item=${name}=d
+    fi
+
+    for(( i=0 ; i < ${#sctn[*]} ; ++i )) ; do
+      test ${sctn[i]} = ${item} && continue 2
+
+      if [ ${sctn[i]%=*} = ${name} ] ; then
+        num=$((blkBeg+i))
+        if [ "${value}" = d ] ; then
+          sed -i "${num} d" $CONFIG_FILE &> /dev/null
+          blkEnd=$((blkEnd -1 ))
+          unset sctn[i]
+          sctn=( ${sctn[*]} )
+          test $# -eq 1 && retval=1
+        else
+          sed -i "${num} c${item}" $CONFIG_FILE &> /dev/null
+        fi
+
+        continue 2
+      fi
+    done
+
+    if [ ${item#*=} != d ] ; then
+      sed -i "$((blkEnd++)) a${item}" $CONFIG_FILE &> /dev/null
+      sctn[i]="${item} ${sctn[i]}"
+      sctn=( ${sctn[*]} )
+    fi
+  done
+
+  return $retVal
+}
+
 formatText()
 {
   # format text ready for printing
@@ -290,20 +399,20 @@ libInclSetting()
      # install zlib, hdf5, and/or netcdf.
      # LIB and INCLUDE, respectively, are colon-separated singles
      if [ ${isBuild:-f} = t -o ${isLink:-f} = t ] && \
-             bash scripts/install_local ${coll[*]} --saveLocal ; then
-       isBuild=
-       isLink=
+             bash scripts/install_local ${coll[*]} --saveLocal \
+                  ${isBuild:+--build} ${isLink:+--link} ; then
+
+      isBuild=
+      isLink=
      else
-       echo "no path to netCDF, hdf, zlib, udunits2"
-       echo "Please, edit file install_configure or"
-       echo "apply option --build for downloading and building local instances."
-       exit 1
+      echo 'no path to at least one of netCDF, hdf, zlib, udunits2,'
+      echo 'please, inspect files QA_PATH/local/source/INSTALL_*.log'
+      exit 1
      fi
 
-     compilerSetting NO_EXPORT_LOG
-     libInclSetting
+     compilerSetting
 
-     return
+     store_LD_LIB_PATH
    fi
 
    LIB="${LIB/#/-L}"
@@ -588,38 +697,6 @@ saveAsCycle()
   done
 }
 
-set_dot_conf()
-{
-  local args item name
-
-  args=($*)
-  args=(${args[*]//=/ })
-
-  if [ ${#args[*]} -eq 0 ] ; then
-    return  # this is a fault
-  elif [ ${#args[*]} -eq 1 ] ; then
-    name=${args[0]}
-    item=enabled
-  else
-    name=${args[0]}
-    item=${args[1]}
-  fi
-
-  if grep -i -q $name=$item .conf &> /dev/null; then
-    return
-  fi
-
-  if [ "${item#*=}" = disable -o "${item#*=}" = d ] ; then
-    sed -i "/${name}/ d" .conf &> /dev/null
-    test ! -s .conf && \rm .conf
-  elif grep -i -q ${name} .conf &> /dev/null; then
-    sed -i "/${name}/ d" .conf &> /dev/null
-    echo ${name}=enabled >> .conf
-  fi
-
-  return
-}
-
 showInst()
 {
    echo "State of current QA Installation:"
@@ -771,27 +848,7 @@ store_LD_LIB_PATH()
   done
 
   # store/update LD_LIBRARY_PATH in .conf
-  set_dot_conf LD_LIBRARY_PATH=${ldp}
-
-   # current LD_LIB_PATH paths
-  local ld_lp
-  ld_lp=( ${LD_LIBRARY_PATH//:/ } )
-
-  local is isXport
-  for(( i=0 ; i < ${#lib[*]} ; ++i )) ; do
-    is=t
-    for(( j=0 ; j < ${#ld_lp[*]} ; ++j )) ; do
-      test "${lib[i]}" = "${ld_lp[j]}" && break
-    done
-
-    if [ ${j} -eq ${#ld_lp[*]} ] ; then
-       test ${#LD_LIBRARY_PATH} -gt 0 && LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:
-       LD_LIBRARY_PATH=${LD_LIBRARY_PATH}${lib[i]}
-       isXport=t
-    fi
-  done
-
-  test ${isXport:-f} = t && export LD_LIBRARY_PATH
+  editConfigFile LD_LIBRARY_PATH=${ldp}
 
   return
 }
@@ -871,14 +928,15 @@ shift $(( $OPTIND - 1 ))
 getSrcPath $0
 cd ${QA_PATH}
 
+export LD_LIBRARY_PATH=${QA_PATH}/local/lib64:${QA_PATH}/local/lib
+export LD_RUN_PATH=${LD_LIBRARY_PATH}
+
 # compiler settings
 # import setting; these have been created during first installation
 compilerSetting
 
 # existence, linking or building
 libInclSetting
-
-store_LD_LIB_PATH
 
 BIN=${QA_PATH}/bin
 

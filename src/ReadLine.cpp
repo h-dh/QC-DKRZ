@@ -207,7 +207,7 @@ ReadLine::getLine( std::string &str0)
   str0=line;
 
   if( isClearSurroundingSpaces )
-     str0 = hdhC::stripSurrounding( str0 );
+     str0 = hdhC::stripSides( str0 );
 
   return bret;
 }

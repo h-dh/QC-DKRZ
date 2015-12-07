@@ -33,18 +33,19 @@ class VariableMeta
 
   void clearCoord(void);
 
-  std::string name;
-  nc_type     type;
+  double      addOffset;
+  uint32_t    checksum;  //fletcher-32
   size_t      dimSize;
-  void       *fillValue;
-  void       *missingValue;
   double      doubleFillValue;
   double      doubleMissingValue;
-  double      scaleFactor;
-  double      addOffset;
-  double      range[2];
+  void       *fillValue;
   bool        isUnitsDefined;
+  void       *missingValue;
+  std::string name;
+  double      range[2];
+  double      scaleFactor;
   std::string std_name;
+  nc_type     type;
   std::string units;
 
   std::vector<std::string>               attName;

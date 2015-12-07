@@ -1010,7 +1010,7 @@ Annotation::printFlags(void)
          out += ' ';
 
       // remove surrounding blanks
-      std::string str(hdhC::stripSurrounding(mp_capt[f]));
+      std::string str(hdhC::stripSides(mp_capt[f]));
 
       // convert the first char of the caption to upper case.
       if( str[0] == '!' ) // suppression

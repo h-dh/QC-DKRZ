@@ -6,6 +6,7 @@ VariableMeta::VariableMeta()
   isAUX=false;
   isDATA=false;
 
+  checksum = 0;
   countAux = countData = 0;
 
   isArithmeticMean=false;

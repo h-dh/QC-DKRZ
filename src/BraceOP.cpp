@@ -296,8 +296,7 @@ BraceOP::getGroups(std::vector<std::vector<Branch*> > &sequences)
     {
       if( ix[i][j] > -1 )
       {
-       std::string t( hdhC::stripSurrounding(
-                           sequences[i][j]->str, "," ) ) ;
+       std::string t( hdhC::stripSides( sequences[i][j]->str, "," ) ) ;
        groups.push_back("");
        groups.back() += t[0];
        for( size_t k=1 ; k < t.size() ; ++k )

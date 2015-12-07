@@ -13,7 +13,7 @@ QA::~QA()
   if( nc )
   {
     nc->close();
-    delete nc ;
+   delete nc ;
     nc=0;
   }
 }
@@ -336,7 +336,7 @@ QA::closeEntry(void)
    }
 
    // This here is only for the regular QA time series file
-   if( isCheckTime )
+   if( qaTime.isTime )
      storeTime();
 
    ++currQARec;
@@ -409,7 +409,7 @@ QA::finally(int xCode)
   if( nc )
     xCode = finally_data(xCode) ;
 
-  if( xCode != 63 && isCheckTime )
+  if( xCode != 63 && qaTime.isTime )
     qaTime.finally( nc );
 
   setExit(xCode);
@@ -532,9 +532,6 @@ QA::init(void)
    // exclude user-defined data variables from any checking
    pIn->excludeVars();
 
-   if(! (isCheckTime && qaTime.init(optStr)) )
-     isCheckTime=false;
-
    // DRS and CV specifications
    drs_cv_table.read(table_DRS_CV);
 
@@ -542,11 +539,10 @@ QA::init(void)
    qaExp.run(optStr);
 
    // check existance of any data at all
-   if( (isCheckTime || isCheckData )
+   if( (qaTime.isTime || isCheckData )
             && pIn->ncRecBeg == 0 && pIn->ncRecEnd == 0 )
    {
       isCheckData=false;
-      isCheckTime=false;
 
       std::string key("6_15");
       if( notes->inq( key, fileStr) )
@@ -579,26 +575,21 @@ QA::init(void)
    if( getExit() || qaExp.isUseStrict || qaTime.isNoProgress )
    {
      isCheckData=false;
-     isCheckTime=false;
      return true;
    }
 
-   if( isCheckTime )
+   if( !isCheckTime )
+     notes->setCheckTimeStr("OMIT");
+   else if( qaTime.isTime && checkDataBody(qaTime.name) )
    {
-     if( qaTime.isTime && checkDataBody(qaTime.name) )
-     {
-       // time is defined, but there is no data
-       isCheckTime = false;
-       notes->setCheckTimeStr(fail);
-     }
-     else if( ! qaTime.isTime )
-     {
-       isCheckTime = false;
-       notes->setCheckTimeStr("FIXED");
-     }
-     else
-       notes->setCheckTimeStr("PASS");
+     // time is defined, but there is no data
+     qaTime.isTime = false;
+     notes->setCheckTimeStr(fail);
    }
+   else if( ! qaTime.isTime )
+     notes->setCheckTimeStr("FIXED");
+   else
+     notes->setCheckTimeStr("PASS");
 
    if( isCheckData )
    {
@@ -627,7 +618,7 @@ QA::init(void)
 void
 QA::initDataOutputBuffer(void)
 {
-  if( isCheckTime )
+  if( qaTime.isTime )
   {
     qaTime.timeOutputBuffer.initBuffer(this, currQARec, bufferSize);
     qaTime.sharedRecordFlag.initBuffer(this, currQARec, bufferSize);
@@ -766,7 +757,7 @@ QA::initResumeSession(void)
   qaTime.timeOutputBuffer.setNextFlushBeg(currQARec);
   qaTime.setNextFlushBeg(currQARec);
 
-  if( isCheckTime )
+  if( qaTime.isTime )
     qaTime.initResumeSession();
 
   return;
@@ -929,7 +920,7 @@ QA::openQA_Nc(InFile &in)
     nc->create(qaFile.getFile(),  "Replace");
 
   bool isNoTime=false;
-  if( isCheckTime && pIn->isTime )
+  if( qaTime.isTime && pIn->isTime )
   {
     // create a dimension for fixed variables only if there is any
     for( size_t m=0 ; m < qaExp.varMeDa.size() ; ++m )
@@ -1334,7 +1325,14 @@ DRS_CV_Table::read(hdhC::FileSplit& fs)
           x_item = s0;
 
           if( x_item.size() > 1 )
+          {
             cvMap[x_item[0]] = x_item[1];
+            if( x_item.size() > 2 )
+            {
+              std::string s(x_item[0]+"_constr");
+              cvMap[s] = x_item[2];
+            }
+          }
           else if( x_item.size() )
             cvMap[x_item[0]] = "*";
         }
@@ -1382,7 +1380,8 @@ DRS_CV_Table::read(hdhC::FileSplit& fs)
       std::string key("7_2");
       if( notes->inq( key, pQA->fileStr) )
       {
-        std::string capt("Syntax fault in the DRS_CV table: orphaned attribute, found ");
+        std::string capt(
+           "Syntax fault in the DRS_CV table: orphaned attribute, found ");
         capt += s0 ;
 
         (void) notes->operate(capt) ;

@@ -48,7 +48,9 @@ do
     h)  descript
         exit ;;
     q)  QUIET=t ;;
-    -)  if [ "${UOPTARG%=*}" = DEBUG ] ; then
+    -)  if [ "${UOPTARG%=*}" = CURR_SRC ] ; then
+           currSrc=${QA_PATH}/local/source/${OPTARG#*=}
+        elif [ "${UOPTARG%=*}" = DEBUG ] ; then
            test "${UOPTARG}" = DEBUG -o ${OPTARG#*=} = ${0##*/} && set -x
         elif [ "$UOPTARG" = DISTCLEAN ] ; then
            isDistClean=t
@@ -66,10 +68,8 @@ done
 
 shift $(( $OPTIND - 1 ))
 
-src=$installPath/source
-
-if [ -d "$src" ] ; then
-  cd $src &> /dev/null
+if [ -d $currSrc ] ; then
+  cd ${currSrc} &> /dev/null
 else
   exit 1
   return
@@ -86,7 +86,7 @@ fi
 unset LD_LIBRARY_PATH
 
 if ! ./configure ${prefix}  >>${out} 2>&1 ; then
-  exit $?
+  exit 1
 fi
 
 if ! make test  >>${out} 2>&1 ; then
@@ -96,5 +96,7 @@ fi
 if ! make install  >>${out} 2>&1 ; then
   exit $?
 fi
+
+date > $currSrc/QA_Compilation
 
 exit 0

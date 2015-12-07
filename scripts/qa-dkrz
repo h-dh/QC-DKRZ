@@ -302,9 +302,6 @@ callQaConfig()
   # always set
   PATH=${QA_BIN#*:}:$PATH
 
-  # add relevant compilation paths to LD_LIBRARY_PATH
-  setLD_LIB_PATH
-
   #save for NIGHT_SHIFT operation
   save_QA_EXEC_HOSTS=( ${QA_EXEC_HOSTS[*]} )
   save_NUM_EXEC_THREADS=( ${NUM_EXEC_THREADS[*]} )
@@ -375,7 +372,6 @@ callQaExecutor()
   keyW=( ${keyW[*]} \
           APPLY_MAXIMUM_DATE_RANGE \
           ARITHMETIC_MEAN \
-          CASE_INSENSITIVE_VARIABLE_NAME \
           CF \
           CF_FOLLOW_RECOMMENDATIONS \
           CF_NOTE \
@@ -1378,43 +1374,30 @@ getExperimentNameFromPath()
   pcs=${PROJECT_DATA}/$1
   pcs=( ${pcs//\// } )
 
-  # if the last item on the right side is a kind of version, then skip
-  local sz=$((${#pcs[*]}-1))
-  local c expPathIndex
-
-  expPathIndex=( ${EXP_PATH_INDEX[*]} )
-
-  if expr match ${pcs[sz]} 'v[[:digit:]]' &> /dev/null
-  then
-    # adjust indexes, because there is a trailing version_path_item
-    local sz=$(( ${#expPathIndex[*]} -1 ))
-
-    if [ ${expPathIndex[sz]} -gt 1 ] ; then
-      for(( c=0 ; c < ${#expPathIndex[*]} ; ++c )) ; do
-        expPathIndex[${c}]=$(( ${expPathIndex[c]} +1 ))
-      done
-
-      expPathIndex[${#expPathIndex[*]}]=1
-    fi
-  fi
-
   # check for path component 'output'
-  local isOutput=f
-  local N
+  test ! ${EXP_PATH_BASE} && EXP_PATH_BASE=${pcs[0]}
+
+  local c expPathIndex M N
   N=${#pcs[*]}
+
   for(( c=0 ; c < N ; ++c )) ; do
-    if [ "${pcs[c]}" = output ] ; then
-        expPathIndex=( $(( N - c )) ${expPathIndex[*]} )
-        break
+    if [ "${pcs[c]}" = ${EXP_PATH_BASE} ] ; then
+      local ix
+      for(( ix=0 ; ix < ${#EXP_PATH_INDEX[*]} ; ++ix )) ; do
+        expPathIndex[ix]=$(( c + ${EXP_PATH_INDEX[ix]} ))
+      done
+      break
     fi
   done
+
+  test ${#expPathIndex[*]} -eq 0 && expPathIndex=( ${EXP_PATH_INDEX[*]} )
 
   # compose the name
   CURR_EXP_NAME=
   for c in ${expPathIndex[*]} ; do
     if [ $c -lt $N ] ; then
       # subtract the reversed positional index from array size
-      CURR_EXP_NAME=${CURR_EXP_NAME}${pcs[$(( N - c ))]}_
+      CURR_EXP_NAME=${CURR_EXP_NAME}${pcs[c]}_
     else
       CURR_EXP_NAME=unknownExp
       break
@@ -3895,42 +3878,6 @@ rmEmptyPaths()
   while read -a subPath ; do
     rmdir -p ${QA_RESULTS}/data/${subPath[1]} &> /dev/null
   done < ${pathListFile}
-
-  return
-}
-
-setLD_LIB_PATH()
-{
-  # location of shared libraries not in default paths
-  # get those used for the compilation stored in .conf
-  local tmp
-  tmp=($( grep 'LD_LIBRARY_PATH=' ${QA_PATH}/.conf 2> /dev/null))
-  tmp=( ${tmp[*]//LD_LIBRARY_PATH=/} )
-  tmp=( ${tmp[*]//:/ } )
-
-  # check against current LD_LIBRARY_PATH
-  if [ ${LD_LIBRARY_PATH} ] ; then
-    local i j ldp
-    ldp=( ${LD_LIBRARY_PATH//:/ } )
-
-    for(( i=${#tmp[*]}-1 ; i > -1 ; --i )) ; do
-      for(( j=0 ; j < ${#ldp[*]} ; ++j )) ; do
-        if [ "${tmp[i]}" = "${ldp[j]}" ] ; then
-           unset tmp[${i}]
-           break
-        fi
-      done
-    done
-    tmp=( ${tmp[*]} )
-  fi
-
-  if [ ${#tmp[*]} -gt 0 ] ; then
-    for(( i=0 ; i < ${#tmp[*]} ; ++i )) ; do
-      test ${LD_LIBRARY_PATH} && LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:
-      LD_LIBRARY_PATH=${LD_LIBRARY_PATH}${tmp[i]}
-    done
-    export LD_LIBRARY_PATH
-  fi
 
   return
 }
