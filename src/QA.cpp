@@ -532,6 +532,8 @@ QA::init(void)
    // exclude user-defined data variables from any checking
    pIn->excludeVars();
 
+   qaTime.init(optStr);
+   
    // DRS and CV specifications
    drs_cv_table.read(table_DRS_CV);
 

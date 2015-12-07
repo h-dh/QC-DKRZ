@@ -4773,6 +4773,7 @@ NcAPI::putData(size_t rec, int varid, Type *arr )
 
     exceptionHandling(key, capt, text, checkType, getVarnameFromVarID(varid));
   }
+
   return ;
 }
 
@@ -4800,9 +4801,6 @@ NcAPI::putData(size_t rec_beg, size_t rec_count, int varid, Type *arr )
         layout.rec_start[varid], layout.rec_count[varid],
            (void*)arr);
 
-  // restore the record counter
-  layout.rec_count[varid][ layout.rec_index[varid] ] = 1 ;
-
   if(status)
   {
     std::string key("NC_8_2");
@@ -4815,7 +4813,11 @@ NcAPI::putData(size_t rec_beg, size_t rec_count, int varid, Type *arr )
     checkType.push_back("meta");
 
     exceptionHandling(key, capt, text, checkType, getVarnameFromVarID(varid));
+    return;
   }
+
+  // restore the record counter
+  layout.rec_count[varid][ layout.rec_index[varid] ] = 1 ;
 
   return ;
 }
