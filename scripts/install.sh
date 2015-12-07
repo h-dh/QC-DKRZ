@@ -4,7 +4,6 @@
 package=QA-DKRZ  # by default
 prg=install.sh
 
-defaultProject=CORDEX
 availableProjects=( CORDEX CMIP5 )
 
 MAKEFILE=Makefile

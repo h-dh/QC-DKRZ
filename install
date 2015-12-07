@@ -9,145 +9,6 @@ udunits=udunits-2.2.20
 
 defaultProject=CORDEX
 
-editConfigFile()
-{
-  # conversion from former usage
-  if [ ! -f ${CONFIG_FILE} ] ; then
-    if [ -f ${CONFIG_FILE%/*}/config.conda ] ; then
-      if [ ${CONDA_ENV} ] ; then
-        echo -e "\n${QA_PATH}:" >> $CONFIG_FILE
-        cat ${CONFIG_FILE%/*}/config.conda >> ${CONFIG_FILE}
-      else
-        local fs_x f_x
-        local fs_x=( $( which -a qa-dkrz ) )
-        local conda_qa_path
-
-        for f_x in ${fs_x[*]} ; do
-          conda_qa_path=
-          getCondaPath $f_x conda_qa_path
-
-          if [ ${conda_qa_path} ] ; then
-            echo -e "\n${conda_qa_path}:" >> $CONFIG_FILE
-            cat ${CONFIG_FILE%/*}/config.conda >> ${CONFIG_FILE}
-            break
-          fi
-        done
-      fi
-    fi
-
-    # check for a src generated file
-    if [ -f ${CONFIG_FILE%/*}/config.src ] ; then
-      echo -e "\n${QA_PATH}:" >> $CONFIG_FILE
-      cat ${CONFIG_FILE%/*}/config.src >> ${CONFIG_FILE}
-    fi
-  fi
-
-  test $# -eq 0 && return
-
-  # return 1 if a single parameter was passed whose value is 'disable'
-  local retVal=0
-
-  # find the corresponding section in the config file
-  test ! -f ${CONFIG_FILE} && touch $CONFIG_FILE
-
-  # adjust for spaces a user may have edited into the section
-  local line is num
-  local blkBeg=0
-  local blkEnd
-  local num=0
-  local str
-
-  while read line ; do
-    test "${is}" -a ! "${line}" && break
-
-    num=$((num + 1))
-
-    if [ "${line}" = ${QA_PATH}: ] ; then
-      is=t
-      blkBeg=$num
-      str=${QA_PATH}:
-      continue
-    fi
-
-    if [ ${is} ] ; then
-      line=${line// /}
-
-      while [ ${line/==/=} != ${line} ] ; do
-        line=${line/==/=}
-      done
-
-      str="${str} ${line}"
-    fi
-  done < ${CONFIG_FILE}
-
-  blkEnd=$num
-
-  sctn=( ${str} )
-  str=
-
-  local item name value
-
-  if [ ${blkBeg} -eq 0 ] ; then
-    # append a new section
-    echo -e "\n${QA_PATH}:" >> $CONFIG_FILE
-
-    for item in $* ; do
-      value=${item#*=}
-
-      if [ ${value} = ${item} ] ; then
-        item="${item}=enabled"
-      elif [ ${value} = d -o ${value:0:7} = disable ] ; then
-        test $# -eq 1 && retVal=1
-        continue
-      fi
-
-      echo ${item} >> $CONFIG_FILE
-    done
-
-    return retVal
-  fi
-
-  local i
-  for item in $* ; do
-    test ${item:$((${#item}-1))} = '=' && item=${item}enabled
-
-    name=${item%=*}
-    value=${item#*=}
-
-    if [ ${name} = ${item} ] ; then
-      item=${item}=enabled
-    elif [ ${value} = d -o ${value} = disabled ] ; then
-      item=${name}=d
-    fi
-
-    for(( i=0 ; i < ${#sctn[*]} ; ++i )) ; do
-      test ${sctn[i]} = ${item} && continue 2
-
-      if [ ${sctn[i]%=*} = ${name} ] ; then
-        num=$((blkBeg+i))
-        if [ "${value}" = d ] ; then
-          sed -i "${num} d" $CONFIG_FILE &> /dev/null
-          blkEnd=$((blkEnd -1 ))
-          unset sctn[i]
-          sctn=( ${sctn[*]} )
-          test $# -eq 1 && retval=1
-        else
-          sed -i "${num} c${item}" $CONFIG_FILE &> /dev/null
-        fi
-
-        continue 2
-      fi
-    done
-
-    if [ ${item#*=} != d ] ; then
-      sed -i "$((blkEnd++)) a${item}" $CONFIG_FILE &> /dev/null
-      sctn[i]="${item} ${sctn[i]}"
-      sctn=( ${sctn[*]} )
-    fi
-  done
-
-  return $retVal
-}
 
 descript()
 {
@@ -479,8 +340,7 @@ tr_option()
 
 update()
 {
-  if [ ${isAutoUp} ] || \
-  editConfigFile AUTO_UPDATE=$AUTO_UPDATE ; then
+  if . $QA_PATH/scripts/editConfigFile.txt $AUTO_UPDATE ; then
     if [ $CONDA_ENV ] ; then
       # look for a new conda-built package
       local tmp
@@ -493,11 +353,11 @@ update()
           item=${tmp[++i]}
           item=${item}-${tmp[++i]}
 
-          if ! editConfigFile CONDA_BUILD=$item ; then
+          if ! . $QA_PATH/scripts/editConfigFile.txt CONDA_BUILD=$item ; then
             conda update -c birdhouse qa-dkrz &> /dev/null
 
             getRevNum packRev
-            editConfigFile QA_REVISION=$packRev
+            . $QA_PATH/scripts/editConfigFile.txt QA_REVISION=$packRev
 
             exitVal=101
           fi
@@ -505,7 +365,7 @@ update()
         fi
       done
 
-    elif [ ! -f ${QA_PATH}/.ignore_GitHub_update ] ; then
+    elif [ ! -f ${QA_PATH}/.ignore_GitHub ] ; then
       cd $QA_PATH
 
       # is qa-dkrz going to change?
@@ -528,11 +388,11 @@ update()
       # revison num of the updated package
       getRevNum packRev
 
-      editConfigFile QA_REVISION=$packRev
+      . $QA_PATH/scripts/editConfigFile.txt QA_REVISION=$packRev
     fi
   fi
 
-  if editConfigFile AUTO_TABLE_UPDATE=$AUTO_TABLE_UPDATE \
+  if . $QA_PATH/scripts/editConfigFile.txt $AUTO_TABLE_UPDATE \
       || ${FORCE_RSYNC:-f} = t ; then
     if [ "$QA_WORK" != "$QA_PATH" ] ; then
       rsync -auz $QA_PATH/tables $QA_WORK &> /dev/null
@@ -549,7 +409,6 @@ update()
 
 
 # ----- main ------
-
 zeroArg=$0
 allArgs=($*)
 
@@ -602,16 +461,24 @@ do
     d)  coll[${#coll[*]}]=-d ;;
     h)  descript
         exit ;;
-    -)  if [ "${UOPTARG:0:7}" = AUTO_UP -o "${UOPTARG:0:7}" = AUTO-UP ] ; then
-          AUTO_UP=${OPTARG##*=}
-          isAutoUp=t
+    -)  OPTVAL=${OPTARG##*=}
+
+        if [ "${UOPTARG:0:7}" = AUTO_UP -o "${UOPTARG:0:7}" = AUTO-UP ] ; then
+          if [ ${OPTARG} = ${OPTVAL} ] ; then
+            AUTO_UPDATE=AUTO_UPDATE=
+          else
+            AUTO_UPDATE=AUTO_UPDATE=${OPTVAL}
+          fi
         elif [ "${UOPTARG:0:13}" = AUTO_TABLE_UP ] ; then
-          AUTO_TABLE_UPDATE=${OPTARG##*=}
-          isAutoTableUp=t
+          if [ ${OPTARG} = ${OPTVAL} ] ; then
+            AUTO_TABLE_UPDATE=AUTO_TABLE_UPDATE=
+          else
+            AUTO_TABLE_UPDATE=AUTO_TABLE_UPDATE=${OPTVAL}
+          fi
         elif [ "${UOPTARG:0:5}" = BUILD ] ; then
           isBuild=t
         elif [ "${UOPTARG:0:11}" = CONFIG_FILE ] ; then
-          export CONFIG_FILE=${OPTARG##*=}
+          export CONFIG_FILE=${OPTVAL}
         elif [ ${UOPTARG:0:5} = DEBUG -o ${UOPTARG} = 'DEBUG=install' ] ; then
           set -x
         elif [ "${UOPTARG%%=*}" = HELP ] ; then
@@ -622,13 +489,13 @@ do
         elif [ "${UOPTARG:0:6}" = ONLY_Q ] ; then
           :  # for backward compatibilty
         elif [ "${UOPTARG:0:7}" = QA_PATH ] ; then
-          export QA_PATH=${OPTARG##*=}
+          export QA_PATH=${OPTVAL}
         elif [ "${UOPTARG:0:7}" = QA_WORK ] ; then
-          QA_WORK=${OPTARG##*=}
+          QA_WORK=${OPTVAL}
         elif [ "${UOPTARG}" = SRC ] ; then
           :  # for backward compatibilty
         elif [ "${UOPTARG%=*}" = SET_DEFAULT_PROJECT ] ; then
-          DEF_PRJ=${OPTARG#*=}
+          DEF_PRJ=${OPTVAL}
           continue
         elif [ "${UOPTARG:0:2}" = UP ] ; then
           isUpdateQA=t
@@ -671,16 +538,19 @@ getSrcPath $zeroArg  # sets also CONDA_ENV
 getCurrPaths
 update
 
-test ${DEF_PRJ} && editConfigFile DEFAULT_PROJECT=${DEF_PRJ}
+test ${DEF_PRJ} \
+  && . $QA_PATH/scripts/editConfigFile.txt DEFAULT_PROJECT=${DEF_PRJ}
 
 getConfigEntry ${QA_PATH} DEFAULT_PROJECT ${CONFIG_FILE}
 
 if [ ${DEFAULT_PROJECT} ] ; then
   defPrj=--set_default_project=${DEFAULT_PROJECT#*=}
+else
+  defPrj=--set_default_project=$defaultProject
 fi
 
-# safe
-editConfigFile # no parameter: check for a conversion from former
+# no parameter: check for a conversion from former; safe
+. $QA_PATH/scripts/editConfigFile.txt
 
 test ${CONDA_ENV} && exit  # miniconda built executables
 

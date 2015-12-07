@@ -1,0 +1,137 @@
+# embedded function, i.e. has to included by source or '.'
+
+#editConfigFile()
+#{
+
+  # conversion from former usage
+  if [ ! -f ${CONFIG_FILE} ] ; then
+    if [ -f ${CONFIG_FILE%/*}/config.conda ] ; then
+      if [ ${CONDA_ENV} ] ; then
+        echo -e "\n${QA_PATH}:" >> $CONFIG_FILE
+        cat ${CONFIG_FILE%/*}/config.conda >> ${CONFIG_FILE}
+      else
+        fs_x=( $( which -a qa-dkrz ) )
+
+        for f_x in ${fs_x[*]} ; do
+          conda_qa_path=
+          getCondaPath $f_x conda_qa_path
+
+          if [ ${conda_qa_path} ] ; then
+            echo -e "\n${conda_qa_path}:" >> $CONFIG_FILE
+            cat ${CONFIG_FILE%/*}/config.conda >> ${CONFIG_FILE}
+            break
+          fi
+        done
+      fi
+    fi
+
+    # check for a src generated file
+    if [ -f ${CONFIG_FILE%/*}/config.src ] ; then
+      echo -e "\n${QA_PATH}:" >> $CONFIG_FILE
+      cat ${CONFIG_FILE%/*}/config.src >> ${CONFIG_FILE}
+    fi
+  fi
+
+  test $# -eq 0 && return 0
+
+  # return 1 if a single parameter was passed whose value is 'disable'
+  retVal=0
+
+  # find the corresponding section in the config file
+  test ! -f ${CONFIG_FILE} && touch $CONFIG_FILE
+
+  # adjust for spaces a user may have edited into the section
+  blkBeg=0
+  num=0
+
+  while read line ; do
+    test "${is}" -a ! "${line}" && break
+
+    num=$((num + 1))
+
+    if [ "${line}" = ${QA_PATH}: ] ; then
+      is=t
+      blkBeg=$num
+      str=${QA_PATH}:
+      continue
+    fi
+
+    if [ ${is} ] ; then
+      line=${line// /}
+
+      while [ ${line/==/=} != ${line} ] ; do
+        line=${line/==/=}
+      done
+
+      str="${str} ${line}"
+    fi
+  done < ${CONFIG_FILE}
+
+  blkEnd=$num
+
+  sctn=( ${str} )
+  str=
+
+  if [ ${blkBeg} -eq 0 ] ; then
+    # append a new section
+    echo -e "\n${QA_PATH}:" >> $CONFIG_FILE
+
+    for item in $* ; do
+      value=${item#*=}
+
+      if [ ${value} = ${item} ] ; then
+        item="${item}=enabled"
+      elif [ ${value} = d -o ${value:0:7} = disable ] ; then
+        test $# -eq 1 && retVal=1
+        continue
+      fi
+
+      echo ${item} >> $CONFIG_FILE
+    done
+
+    return retVal
+  fi
+
+  for item in $* ; do
+    test ${item:$((${#item}-1))} = '=' && item=${item}enabled
+
+    name=${item%=*}
+    value=${item#*=}
+
+    if [ ${name} = ${item} ] ; then
+      item=${item}=enabled
+    elif [ ${value} = d -o ${value} = disabled ] ; then
+      item=${name}=d
+    fi
+
+    for(( i=0 ; i < ${#sctn[*]} ; ++i )) ; do
+      if [ ${sctn[i]} = ${item} ] ; then
+        retVal=1
+        continue 2
+      fi
+
+      if [ ${sctn[i]%=*} = ${name} ] ; then
+        num=$((blkBeg+i))
+        if [ "${value}" = d ] ; then
+          sed -i "${num} d" $CONFIG_FILE &> /dev/null
+          blkEnd=$((blkEnd -1 ))
+          unset sctn[i]
+          sctn=( ${sctn[*]} )
+          test $# -eq 1 && retval=1
+        else
+          sed -i "${num} c${item}" $CONFIG_FILE &> /dev/null
+        fi
+
+        continue 2
+      fi
+    done
+
+    if [ ${item#*=} != d ] ; then
+      sed -i "$((blkEnd++)) a${item}" $CONFIG_FILE &> /dev/null
+      sctn[i]="${item} ${sctn[i]}"
+      sctn=( ${sctn[*]} )
+    fi
+  done
+
+  return $retVal
+#}
