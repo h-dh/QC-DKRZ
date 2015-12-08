@@ -582,12 +582,14 @@ log()
 
 makeProject()
 {
+  local cxxFlags="${CXXFLAGS}"
+
   for PROJECT in ${projects[*]} ; do
     export PROJECT=$PROJECT
 
     if [ ${PROJECT} = CF ] ; then
       local cfc=CF-checker
-      CXXFLAGS="${CXXFLAGS} -D CF_MACRO"
+      CXXFLAGS="${cxxFlags} -D CF_MACRO"
 #      export QA_PRJ_HEADER=qa_NONE.h
 #      export QA_PRJ_SRC=QA_NONE.cpp
 
@@ -598,10 +600,11 @@ makeProject()
     else
       export QA_PRJ_HEADER=qa_${PROJECT}.h
       export QA_PRJ_SRC=QA_${PROJECT}.cpp
-      CXXFLAGS="${CXXFLAGS} -D ${PROJECT}"
+      CXXFLAGS="${cxxFlags} -D ${PROJECT}"
+      unset cfc
 
       if [ $(ps -ef | grep -c qa-DKRZ) -gt 1 ] ; then
-        ##protect running sessions, but not really thread save
+        # protect running sessions, but not really thread save
         export PRJ_NAME=qqA-${PROJECT}
         test -f $BIN/qA-${PROJECT}.x && \
           cp -a $BIN/qA-${PROJECT}.x $BIN/${PRJ_NAME}.x
@@ -612,7 +615,7 @@ makeProject()
     fi
 
     if ! make ${always} -q -C $BIN -f ${QA_PATH}/$MAKEFILE ${cfc} ; then
-       # not up-to-date
+       # not upto-date
        if make ${always} ${mk_D} -C $BIN -f ${QA_PATH}/$MAKEFILE ${cfc} ; then
          test ${PROJECT} != CF && log "make qa-${PROJECT}.x" DONE
        else
@@ -962,6 +965,6 @@ fi
 getRevNum REVISION
 export REVISION
 
-makeProject $prj
+makeProject
 
 exit 0
