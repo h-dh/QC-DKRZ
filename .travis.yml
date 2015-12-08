@@ -34,7 +34,8 @@ install:
   - echo "INCLUDE=\"${PREFIX}/include\":/usr/include/uuid" >> install_configure
 
 script:
-  - export QA_PATH="$PWD"
   - touch .ignore_GitHub_update
   - ./install CF
   - ./install CORDEX
+  - ./install CMIP5
+  - [ -d ./bin ] && echo "bin dir found" || echo "bin dir not found"; exit 1
