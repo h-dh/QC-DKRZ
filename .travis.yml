@@ -38,4 +38,7 @@ script:
   - ./install CF
   - ./install CORDEX
   - ./install CMIP5
-  - [ -d ./bin ] && echo "bin dir found" || echo "bin dir not found"; exit 1
+after_script:
+  - test -d "./bin" \ 
+    && echo "bin dir found" \
+    || echo "bin dir not found"; exit 1
