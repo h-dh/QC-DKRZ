@@ -34,7 +34,7 @@ install:
   - echo "INCLUDE=\"${PREFIX}/include\":/usr/include/uuid" >> install_configure
 
 script:
-  - touch .ignore_GitHub_update
+  - touch .ignore_GitHub
   - ./install CF
   - ./install CORDEX
   - ./install CMIP5
