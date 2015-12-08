@@ -40,3 +40,4 @@ script:
   - ./install CMIP5
 after_script:
   - test -d "./bin" 
+  - ./scripts/qa-dkrz --example
