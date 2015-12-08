@@ -169,20 +169,19 @@ DRS_CV::checkFilename(std::string& fName, struct DRS_CV_Table& drs_cv_table)
 
   // note that this test is not part of the QA_Time class, because
   // coding depends on projects
-//  if( pQA->isCheckTime && pQA->qaExp.getFrequency() != "fx" )
-//  {
-    if( testPeriod(x_filename) )
-    {
-      std::string key("1_6a");
-      if( notes->inq( key, pQA->qaTime.name) )
-      {
-        std::string capt("filename requires a period");
+  std::string frq = pQA->qaExp.getFrequency();
 
-        (void) notes->operate(capt) ;
-        notes->setCheckMetaStr(pQA->fail);
-      }
+  if( testPeriod(x_filename) && frq.size() && frq != "fx" )
+  {
+    std::string key("1_6a");
+    if( notes->inq( key, pQA->qaTime.name) )
+    {
+      std::string capt("filename requires a period");
+
+      (void) notes->operate(capt) ;
+      notes->setCheckMetaStr(pQA->fail);
     }
-//  }
+  }
 
   checkFilenameEncoding(x_filename, drs_cv_table);
 
@@ -775,6 +774,16 @@ DRS_CV::findPath_faults(Split& drs, Split& x_e,
 
     if( !( drs[i] == t || t == n_ast) )
     {
+      if(x_e[j] == "activity" )
+      {
+        if( notes->inq( "1_1a", pQA->fileStr, "INQ_ONLY") )
+        {
+          std::string s( hdhC::Upper()(drs[i]) ) ;
+          if( s == t )
+            continue;
+        }
+      }
+
       text = " check failed, expected " ;
       text += hdhC::tf_assign(x_e[j],t) ;
       text += " found" ;
@@ -4547,6 +4556,10 @@ QA_Exp::reqAttCheckVariable(Variable &var)
   {
     std::string& rqName  = drs.attName[ix][k] ;
     std::string& rqValue = drs.attValue[ix][k] ;
+
+    // skip 'pseudo-att'
+    if( rqName == "VAR_TYPE" )
+      continue;
 
     // find corresponding att_name of given vName in the file
     int jx=var.getAttIndex(rqName);
