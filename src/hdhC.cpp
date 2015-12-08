@@ -2212,7 +2212,7 @@ std::string clearSpaces(std::string &str )
 
 //! concatenate a string-vector to a comma-separated (with blanks) string
 std::string
-catVector2Str(std::vector<std::string>& vs)
+catStringVector(std::vector<std::string>& vs)
 {
   std::string s;
   for( size_t i=0 ; i < vs.size() ; ++i)
@@ -2354,6 +2354,16 @@ std::string unique(std::string &str, char c)
     s += c;
 
   return s ;
+}
+
+std::vector<std::string>
+unique(std::vector<std::string> &vs, std::string pat)
+{
+  std::vector<std::string> vs_t;
+  for(size_t i=0 ; i < vs.size() ; ++i)
+    vs_t.push_back( unique(vs[i], pat ) );
+
+  return vs_t;
 }
 
 std::string unique(std::string &str, std::string pat)

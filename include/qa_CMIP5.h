@@ -134,6 +134,9 @@ struct CMOR
             struct DimensionMetaData& f_DMD,
             struct DimensionMetaData& t_DMD) ;
 
+  void   checkEnsembleMemItem(std::string& rqName, std::string& attVal);
+  void   checkForcing(std::vector<std::string>&, std::string&);
+
   void   checkRequestedAttributes(void);
   void   checkReqAtt_global(void);
   void   checkReqAtt_variable(Variable&);
@@ -210,6 +213,8 @@ struct CMOR
   static std::string n_CMOR_tables;
   static std::string n_CMOR_variable_name;
   static std::string n_coordinates;
+  static std::string n_forcing;
+  static std::string n_global;
   static std::string n_index_axis;
   static std::string n_long_name;
   static std::string n_name_alt;
@@ -251,6 +256,8 @@ std::string CMOR::n_CMOR_name           ="CMOR_name";
 std::string CMOR::n_CMOR_tables         ="CMOR_tables";
 std::string CMOR::n_CMOR_variable_name  ="CMOR_variable_name";
 std::string CMOR::n_coordinates         ="coordinates";
+std::string CMOR::n_forcing             ="forcing";
+std::string CMOR::n_global              ="global";
 std::string CMOR::n_index_axis          ="index_axis";
 std::string CMOR::n_long_name           ="long_name";
 std::string CMOR::n_name_alt            ="name_alt";

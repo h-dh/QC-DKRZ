@@ -1945,7 +1945,7 @@ getNextSubPath()
         progressTotalFileNum=0
         local fs lline num
         while read -a lline ; do
-          if [ ${#lline[*]} -gt 2 ] ; then
+          if [ ${#lline[*]} -gt 1 ] ; then
             test ${lline[0]} = '---EOF---' && break
             num=$( ls ${PROJECT_DATAV[${lline[0]}]}/${lline[1]}/*.nc \
                       | grep -c . 2> /dev/null)

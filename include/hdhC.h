@@ -38,13 +38,14 @@ namespace hdhC
 const double EQUALITY_TOLERANCE=1.e-12 ;
 
 static std::string blank(" ");
-static std::string no_blank("no_blank");
 static std::string colon(":");
-static std::string no_colon("no_colon");
-static std::string upper("upper");
-static std::string lower("lower");
 static std::string empty("");
+static std::string NA("N/A");
+static std::string no_blank("no_blank");
+static std::string no_colon("no_colon");
+static std::string lower("lower");
 static std::string s_void("void_bool");
+static std::string upper("upper");
 
 //! Epsilon tolerance in comparisons.
 /*! Facilitates equality comparisons of floating numbers,
@@ -491,7 +492,7 @@ clearSpaces(std::string &str);
 
 //! concatenate a string-vector to a comma-separated (with blanks) string
 std::string
-catVector2Str(std::vector<std::string>&);
+catStringVector(std::vector<std::string>&);
 
 //! strip off surrounding characters.
 /*! Surrounding strings 'strip are removed; default: ' ' and '\t'.
@@ -508,6 +509,9 @@ stripSides(std::string, std::string strip=empty, std::string key=empty );
 //! replace multiple characters by a single one
 std::string
 unique(std::string &str, char);
+
+std::vector<std::string>
+unique(std::vector<std::string> &vs, std::string=":space:");
 
 std::string
 unique(std::string &str, std::string=":space:");

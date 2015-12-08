@@ -319,7 +319,7 @@ DRS_CV::checkFilenameGeographic(Split& x_filename)
 
   // valid stand-alone '-' separated words
   std::vector<std::string> kw;
-  kw.push_back("global");
+  kw.push_back(CMOR::n_global);
   kw.push_back("lnd");
   kw.push_back("ocn");
   kw.push_back("zonalavg");
@@ -2206,6 +2206,126 @@ CMOR::checkDimSheet_validMax(InFile& in,
 }
 
 void
+CMOR::checkEnsembleMemItem(std::string& rqName, std::string& attVal)
+{
+  std::string capt;
+  std::string key;
+
+  if( ! hdhC::isDigit(attVal) )
+  {
+    key = "2_5a";
+    capt = n_global + hdhC::blank ;
+    capt += hdhC::tf_att(rqName);
+    capt += "must be integer, found ";
+    capt += attVal;
+  }
+  else
+  {
+    int id=atoi(attVal.c_str());
+
+    if( id == 0 && pExp->getFrequency() != "fx" )
+    {
+      key = "2_5b";
+      capt = n_global + hdhC::blank ;
+      capt += hdhC::tf_att(rqName);
+      capt += "must be an integer > 0 for";
+      capt += hdhC::tf_assign(pQA->n_frequency, pExp->getFrequency());
+    }
+
+    else if( id > 0 && pExp->getFrequency() == "fx" )
+    {
+      key = "2_5c";
+      capt = n_global + hdhC::blank ;
+      capt += hdhC::tf_att(rqName);
+      capt += "must be equal 0 for frequency=<fx> ";
+    }
+  }
+
+  if( capt.size() )
+  {
+    if( notes->inq( key, n_global) )
+    {
+      (void) notes->operate(capt) ;
+      notes->setCheckMetaStr(pQA->fail);
+      pQA->setExit( notes->getExitValue() ) ;
+    }
+  }
+
+  return;
+}
+
+void
+CMOR::checkForcing(std::vector<std::string>& vs_rqValue, std::string& aV)
+{
+  if( aV == hdhC::NA )
+    return;
+
+  Split x_aV(aV, ",");
+
+  std::vector<std::string> vs_items(x_aV.getItems());
+  vs_items = hdhC::unique(vs_items);
+
+  std::string item;
+  size_t p0, p1;
+
+  // not a comma-sep list, but separated by blanks?
+  if( vs_items.size() == 1 && aV.find(" ") < std::string::npos )
+  {
+      std::string key("2_6b");
+      if( notes->inq( key, pQA->s_global ) )
+      {
+        std::string capt(pQA->s_global);
+        capt += hdhC::blank;
+        capt += hdhC::tf_att(hdhC::empty, n_forcing, aV);
+        capt += "should be a comma separated list, found blanks";
+
+        (void) notes->operate(capt) ;
+        notes->setCheckMetaStr( pQA->fail );
+      }
+
+      x_aV.setSeparator(' ');
+      x_aV = aV;
+      vs_items = x_aV.getItems() ;
+      vs_items = hdhC::unique(vs_items);
+  }
+
+  for( size_t i=0 ; i < vs_items.size() ; ++i )
+  {
+    if( (p0=vs_items[i].find("(")) < std::string::npos )
+    {
+      if( p0 )
+        item = vs_items[i].substr(0,p0);
+
+      if( (p1=vs_items[i].find(")")) < std::string::npos )
+        item += vs_items[i].substr(++p1);
+    }
+    else
+      item=vs_items[i];
+
+    // check
+    if( ! hdhC::isAmong(item, vs_rqValue) )
+    {
+      std::string key("2_6a");
+      if( notes->inq( key, pQA->s_global ) )
+      {
+        std::string capt(pQA->s_global);
+        capt += hdhC::blank;
+        capt += hdhC::tf_att(hdhC::empty, n_forcing, item);
+        capt += "not among DRS-CV requested values";
+        capt += hdhC::tf_val( hdhC::catStringVector(vs_rqValue)) ;
+
+        (void) notes->operate(capt) ;
+        notes->setCheckMetaStr( pQA->fail );
+
+        break;
+      }
+    }
+  }
+
+  return;
+}
+
+void
 CMOR::checkRequestedAttributes(void)
 {
   // check requested attributes of specific variables
@@ -2357,6 +2477,12 @@ CMOR::checkReqAtt_global(void)
            capt=" missing requested value=";
            capt += rqValue;
 
+           if( rqName == n_forcing )
+           {
+             capt += ", expected at least";
+             capt += hdhC::tf_assign(n_forcing, "N/A") ;
+           }
+
            (void) notes->operate(capt) ;
            notes->setCheckMetaStr( pQA->fail );
 
@@ -2368,8 +2494,16 @@ CMOR::checkReqAtt_global(void)
           // note that several alternatives may be acceptable
           Split x_rqValue(rqValue, "|");
           std::vector<std::string> vs_rqValue(x_rqValue.getItems());
+          vs_rqValue = hdhC::unique(vs_rqValue);
 
-          if( x_rqValue[0] == "YYYY-MM-DDTHH:MM:SSZ" )
+          if( rqName == n_forcing )
+            checkForcing(vs_rqValue, aV);
+          else if( rqName == "initialization_method"
+                      || rqName == "physics_version_method"
+                         || rqName == "realization" )
+            checkEnsembleMemItem(rqName, aV) ;
+
+          else if( x_rqValue[0] == "YYYY-MM-DDTHH:MM:SSZ" )
           {
             // a valid date format may have T substituted by a blank
             // and Z omitted or the latter be lower case.
@@ -3976,7 +4110,7 @@ QA_Exp::getMIP_tableName(std::string tName)
     {
       std::string key("7_7");
 
-      if( notes->inq( key, "global") )
+      if( notes->inq( key, CMOR::n_global) )
       {
         std::string capt("invalid MIP table name in global attribute, found ") ;
         capt += hdhC::tf_att(hdhC::empty, "table_id", x_tableID.getStr()) ;

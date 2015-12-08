@@ -238,6 +238,7 @@ class QA : public IObj
 
   std::string n_axis;
   std::string n_cell_methods;
+  std::string n_frequency;
   std::string n_long_name;
   std::string n_outputVarName;
   std::string n_positive;
