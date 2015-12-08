@@ -908,7 +908,7 @@ do
            isLink=t
         elif [ "${UOPTARG%%=*}" = PACKAGE ] ; then
            package=${OPTARG#=*}
-        elif [ "${UOPTARG%=*}" = SET_DEFAULT_PROJECT ] ; then
+        elif [ "${UOPTARG%=*}" = DEFAULT_PROJECT ] ; then
            defaultProject=${OPTARG#*=}
         elif [ "${UOPTARG%=*}" = SHOW-INST ] ; then
            isShowInst=t
@@ -956,7 +956,7 @@ makeUtilities
 
 # check projects' qa executables
 if [ $# -eq 0 ] ; then
-  projects=( CORDEX )
+  projects=( ${defaultProject:-CORDEX} )
 else
   projects=( $* )
 fi
