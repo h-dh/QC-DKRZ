@@ -170,9 +170,10 @@ getCondaPath()
 
   if [ -d $path ] ; then
     eval ${2}=$path
+    return 0
   fi
 
-  return
+  return 1
 }
 
 getSrcPath()
@@ -182,11 +183,12 @@ getSrcPath()
   # is it in a conda built?
   getCondaPath $0 QA_PATH
 
-  if [ ${QA_PATH} ] ; then
+  if getCondaPath $0 QA_PATH ; then
     export QA_PATH
     CONDA_ENV=t
-    return
   fi
+
+  test ${QA_PATH} && return
 
   local target isInvalid
 

@@ -2,6 +2,8 @@
 
 #editConfigFile()
 #{
+  # return 1 if a single parameter was passed whose value is 'disable'
+  retVal=0
 
   # conversion from former usage
   if [ ! -f ${CONFIG_FILE} ] ; then
@@ -32,10 +34,7 @@
     fi
   fi
 
-  test $# -eq 0 && return 0
-
-  # return 1 if a single parameter was passed whose value is 'disable'
-  retVal=0
+  test $# -eq 0 && return $retVal
 
   # find the corresponding section in the config file
   test ! -f ${CONFIG_FILE} && touch $CONFIG_FILE
@@ -89,7 +88,7 @@
       echo ${item} >> $CONFIG_FILE
     done
 
-    return retVal
+    return $retVal
   fi
 
   for item in $* ; do
