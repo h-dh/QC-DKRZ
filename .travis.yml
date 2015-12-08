@@ -9,7 +9,7 @@ python:
   # We don't actually use the Travis Python, but this keeps it organized.
   - "2.7"
 install:
-  - sudo apt-get install -y libuuid1 uuid-dev
+  - sudo apt-get install -y libuuid1 uuid-dev bc
   - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh;
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
@@ -30,11 +30,14 @@ install:
   - echo "CXX=\"/usr/bin/g++\"" >> install_configure
   - echo "CFLAGS=\"-O2 -Wall\"" >> install_configure 
   - echo "CXXFLAGS=\"-O2 -Wall -D NC4\"" >> install_configure
-  - echo "LIB=\"${PREFIX}/lib\":/lib64" >> install_configure
+  - echo "LIB=\"${PREFIX}/lib\"" >> install_configure
   - echo "INCLUDE=\"${PREFIX}/include\":/usr/include/uuid" >> install_configure
 
 script:
-  - export QA_PATH="$PWD"
-  - touch .ignore_GitHub_update
+  - touch .ignore_GitHub
   - ./install CF
   - ./install CORDEX
+  - ./install CMIP5
+after_script:
+  - test -d "./bin" 
+  - ./scripts/qa-dkrz --example
