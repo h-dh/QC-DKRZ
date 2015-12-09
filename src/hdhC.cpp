@@ -2155,25 +2155,43 @@ double string2DoubleFct( std::string &s, size_t &index )
 
 // ----------------------------------------------------
 
+//! concatenate a string-vector to a comma-separated (with blanks) string
 std::string
-clearChars(std::string &str, std::string s, bool isStr )
+catStringVector(std::vector<std::string>& vs)
 {
-  // Rermove all characters from a str.
+  std::string s;
+  for( size_t i=0 ; i < vs.size() ; ++i)
+  {
+    if(i)
+      s += ", ";
+
+    s += vs[i];
+  }
+
+  return s;
+}
+
+//! Remove characters from a str.
+std::string
+clearChars(std::string str, std::string s, bool isStr )
+{
   // By default, each character in 's' is removed.
   // If isStr==true, then only every occurrence of
   // the string 's' is removed.
-
- std::string t;
+  size_t sz = s.size();
+  std::string t;
 
   if( isStr )
   {
-     size_t pos0=0, pos1;
-     while( (pos1=str.find(s,pos0)) < std::string::npos )
-     {
-       t += str.substr(pos0, pos1-pos0) ;
-       pos0=pos1+s.size();
-     };
-     t += str.substr(pos0) ;
+    size_t pos0=0;
+    size_t pos1;
+
+    while( (pos1=str.find(s,pos0)) < std::string::npos )
+    {
+      t += str.substr(pos0, pos1-pos0) ;
+      pos0=pos1+sz;
+    };
+    t += str.substr(pos0) ;
   }
   else
   {
@@ -2198,9 +2216,9 @@ clearChars(std::string &str, std::string s, bool isStr )
   return t ;
 }
 
-std::string clearSpaces(std::string &str )
+//! Clear all spaces from a string
+std::string clearSpaces(std::string str )
 {
-  // clear all spaces from string
   std::string s;
 
   for( size_t p=0 ; p < str.size() ; ++p )
@@ -2210,20 +2228,50 @@ std::string clearSpaces(std::string &str )
   return s ;
 }
 
-//! concatenate a string-vector to a comma-separated (with blanks) string
+// Replace characters of a str.
 std::string
-catStringVector(std::vector<std::string>& vs)
+replaceChars(std::string str, std::string pat, char rep, bool isStr )
 {
-  std::string s;
-  for( size_t i=0 ; i < vs.size() ; ++i)
-  {
-    if(i)
-      s += ", ";
+  size_t patSz = pat.size();
 
-    s += vs[i];
+  if( str.size() == 0 || patSz == 0 )
+    return str;
+
+  if( !isStr )
+  {
+    for( size_t i=0 ; i < patSz ; ++i )
+      str = replaceChars(str, pat[i], rep );
+
+    return str;
   }
 
-  return s;
+  std::string t;
+
+  size_t pos0=0;
+  size_t pos1;
+
+  while( (pos1=str.find(pat,pos0)) < std::string::npos )
+  {
+    t += str.substr(pos0, pos1-pos0) ;
+    t += rep;
+
+    pos0=pos1+patSz;
+  };
+
+  return t + str.substr(pos0) ;
+}
+
+std::string
+replaceChars(std::string str, char s, char rep)
+{
+  // each character of 's' in str is replaced by rep.
+  for( size_t j=0 ; j < str.size() ; ++j)
+  {
+    if( str[j] == s )
+      str[j] = rep;
+  }
+
+  return str ;
 }
 
 std::string
@@ -2331,7 +2379,7 @@ stripSides(std::string str, std::vector<std::string>& strp, std::string mode )
   return str.substr(p0, p1 - p0 +1 ) ;
 }
 
-std::string unique(std::string &str, char c)
+std::string unique(std::string str, char c)
 {
   if( !str.size() )
      return str;
@@ -2366,27 +2414,52 @@ unique(std::vector<std::string> &vs, std::string pat)
   return vs_t;
 }
 
-std::string unique(std::string &str, std::string pat)
+std::string unique(std::string str, std::string pat, bool isStr)
 {
   if( !str.size() )
      return str;
 
-  if( pat == ":space:" )
-  {
-    std::string s = unique(str, ' ');
-    return unique(str, '\t');
-  }
-
   if( pat.size() == 1 )
     return unique(str, pat[0]);
 
-  // replace multiple identical strings by a single one
-  Split splt(str, pat, true);
+  // unique for every char
+  if( pat.size() == 0 )
+  {
+    std::string t;
+    for( size_t i=0 ; i < str.size() ; ++i)
+    {
+      char& c=str[i++];
+      t += c;
 
+      for( ; i < str.size() ; ++i)
+      {
+        if( c != str[i] )
+        {
+          --i;
+          break;
+        }
+      }
+    }
+
+    return t;
+  }
+  else if(!isStr)
+  {
+    // each char of pat
+    for( size_t i=0 ; i < pat.size() ; ++i )
+      str=unique(str, pat[i]);
+
+    return str;
+  }
+
+  // unique for the entire pat-string
+  Split splt(str, pat, true);
   std::string s;
-  if( str.substr(0,pat.size()) == pat )
-    s += pat;
-  s += splt[0] ;
+
+  if( str.substr(0, pat.size()) == pat )
+    s = pat;
+
+  s += splt[0];
 
   for( size_t p=1 ; p < splt.size() ; ++p )
   {

@@ -480,19 +480,28 @@ tf_var(std::string v,
 std::string
 tf_var(std::string& v,  bool colon, bool blank, bool isUpper);
 
+//! concatenate a string-vector to a comma-separated (with blanks) string
+std::string
+catStringVector(std::vector<std::string>&);
+
 //! Remove all characters from a str.
 /*! By default, each character in 's' is removed. If isStr==true, then only
     every occurrence of the string 's'.*/
 std::string
-clearChars(std::string &str, std::string s=empty, bool isStr=false );
+clearChars(std::string str, std::string s, bool isStr=false );
 
 //! remove white spaces and newlines
 std::string
-clearSpaces(std::string &str);
+clearSpaces(std::string str);
 
-//! concatenate a string-vector to a comma-separated (with blanks) string
+//! Replace all characters from a str.
+/*! By default, each character of 's' is replaced in str by char r; default blank.
+    If isStr==true, then only every occurrence of the string 's'.*/
 std::string
-catStringVector(std::vector<std::string>&);
+replaceChars(std::string str, char, char r=' ');
+
+std::string
+replaceChars(std::string str, std::string s, char r=' ', bool isStr=false );
 
 //! strip off surrounding characters.
 /*! Surrounding strings 'strip are removed; default: ' ' and '\t'.
@@ -507,14 +516,15 @@ std::string
 stripSides(std::string, std::string strip=empty, std::string key=empty );
 
 //! replace multiple characters by a single one
+/*! if char is specified, then only for this specific one.*/
 std::string
-unique(std::string &str, char);
+unique(std::string str, char);
 
 std::vector<std::string>
-unique(std::vector<std::string> &vs, std::string=":space:");
+unique(std::vector<std::string> &vs, std::string=empty, bool isStr=false);
 
 std::string
-unique(std::string &str, std::string=":space:");
+unique(std::string str, std::string=empty, bool isStr=false);
 
 //! concatenate strings; num==0 means full size of the vector
 std::string
