@@ -500,7 +500,7 @@ DRS_CV::checkMIP_tableName(Split& x_filename)
       std::string capt("Ambiguous MIP table names, found ") ;
       capt += hdhC::tf_assign("MIP-table(file)", x_filename[1]) ;
       capt += " vs. global ";
-      capt += hdhC::tf_att("table_id",CMOR::tableSheet);
+      capt += hdhC::tf_att(CMOR::n_table_id,CMOR::tableSheet);
 
       (void) notes->operate(capt) ;
       pQA->setExit( notes->getExitValue() ) ;
@@ -3658,6 +3658,8 @@ CMOR::run(InFile& in, VariableMetaData& vMD)
   // Matching the ncfile inherent meta-data against pre-defined
   // CMOR tables.
 
+  // commented out, because requested type is given in the table
+  // and checked in that context.
 //  checkReqVariableType();
 
   checkRequestedAttributes();
@@ -4037,7 +4039,7 @@ QA_Exp::getFrequency(void)
   std::string mip_f = splt[1];
 
   // now, try also global att 'table_id'
-  Split mip_a( pQA->pIn->nc.getAttString("table_id") ) ;
+  Split mip_a( pQA->pIn->nc.getAttString(CMOR::n_table_id) ) ;
 
   if( mip_a.size() > 1 )
   {
@@ -4049,9 +4051,9 @@ QA_Exp::getFrequency(void)
       frequency = "yr" ;
     else if( mip_f.substr(mip_f.size()-3) == "mon" )
       frequency = "mon" ;
-    else if( mip_f.substr(mip_f.size()-3) == "Day" )
-      frequency = "day" ;
     else if( mip_f == "day" )
+      frequency = "day" ;
+    else if( mip_f.substr(mip_f.size()-3) == "Day" )
       frequency = "day" ;
     else if( mip_f.substr(0,3) == "6hr" )
       frequency = "6hr" ;
@@ -4075,7 +4077,7 @@ QA_Exp::getMIP_tableName(std::string tName)
   if( tName.size() )
     tableID = tName ;
   else
-    tableID = pQA->pIn->nc.getAttString("table_id") ;
+    tableID = pQA->pIn->nc.getAttString(CMOR::n_table_id) ;
 
   if( tableID.size() == 0 )
     return tableID;
@@ -4083,21 +4085,23 @@ QA_Exp::getMIP_tableName(std::string tName)
   Split x_tableID(tableID);
 
   // The table sheet name from the global attributes.
-  // Ignore specific variations
-  if( x_tableID.size() > 1 )
+  // Find valid names, even with deviations
+  size_t x_tSz = x_tableID.size() ;
+
+  if( x_tSz > 1 )
   {
     if(  x_tableID[0].substr(1,4) == "able"
         || x_tableID[0].substr(1,4) == "ABLE" )
-    tableID = x_tableID[1] ;
+      tName = x_tableID[1] ;
   }
   else if( x_tableID.size() )
-    tableID = x_tableID[0] ;
+    tName = x_tableID[0] ;
 
-  //check for valid names
+  // check the format of the total line
   bool is=true;
   for( size_t i=0 ; i < MIP_tableNames.size() ; ++i )
   {
-    if( MIP_tableNames[i] == tableID )
+    if( MIP_tableNames[i] == tName )
     {
       is=false ;
       break;
@@ -4106,21 +4110,46 @@ QA_Exp::getMIP_tableName(std::string tName)
 
   if( is )
   {
-    if( tName.size() == 0)
+    std::string key("7_7a");
+
+    if( notes->inq( key, CMOR::n_global) )
     {
-      std::string key("7_7");
+      std::string capt("invalid MIP table name in global ") ;
+      capt += hdhC::tf_att(hdhC::empty, CMOR::n_table_id, x_tableID.getStr()) ;
 
-      if( notes->inq( key, CMOR::n_global) )
-      {
-        std::string capt("invalid MIP table name in global attribute, found ") ;
-        capt += hdhC::tf_att(hdhC::empty, "table_id", x_tableID.getStr()) ;
-
-        (void) notes->operate(capt) ;
-        pQA->setExit( notes->getExitValue() ) ;
-      }
+      (void) notes->operate(capt) ;
+      pQA->setExit( notes->getExitValue() ) ;
     }
 
-    tableID.clear();
+    tName.clear();
+    return tName;
+  }
+
+  // Is the date of the table given; within ()?
+  size_t p0,p1;
+  std::string dateItem;
+  if( (p0=tableID.find("(")) < std::string::npos )
+    if( (p1=tableID.find(")", p0)) < std::string::npos )
+      dateItem = tableID.substr(p0+1, p1-p0-1);
+
+  is=true;
+  if( dateItem.size() )
+    if( Date::isValidDate(dateItem) )
+      is=false;
+
+  if( is )
+  {
+    std::string key("7_7b");
+
+    if( notes->inq( key, CMOR::n_global) )
+    {
+      std::string capt(CMOR::n_global + hdhC::blank) ;
+      capt += hdhC::tf_att(hdhC::empty, CMOR::n_table_id, x_tableID.getStr()) ;
+      capt += ": missing date of the MIP table, expected e.g. (5 Jan 2016)";
+
+      (void) notes->operate(capt) ;
+      pQA->setExit( notes->getExitValue() ) ;
+    }
   }
 
   return tableID;

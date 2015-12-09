@@ -330,6 +330,9 @@ public:
   //! Inquire whether a reference date was set.
   bool   isSet( void ){ return isDateSet ;}
 
+  static bool
+         isValidDate(std::string);
+         
   //! Set the calendar type
   /*! Valid types: proleptic_georgian|georgian, noleap,
       equal_months|360_day. The case of the strings doesn't

@@ -2405,11 +2405,11 @@ std::string unique(std::string str, char c)
 }
 
 std::vector<std::string>
-unique(std::vector<std::string> &vs, std::string pat)
+unique(std::vector<std::string> &vs, std::string pat, bool isStr)
 {
   std::vector<std::string> vs_t;
   for(size_t i=0 ; i < vs.size() ; ++i)
-    vs_t.push_back( unique(vs[i], pat ) );
+    vs_t.push_back( unique(vs[i], pat, isStr ) );
 
   return vs_t;
 }
