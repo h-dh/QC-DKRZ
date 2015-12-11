@@ -22,7 +22,8 @@ install:
 
   # Replace dep1 dep2 ... with your dependencies
   - conda config --add channels birdhouse
-  - conda install -q libnetcdf hdf5 zlib udunits
+  - conda config --add channels ioos
+  - conda install -q libnetcdf hdf5 zlib udunits2
 
   # Get build script
   - export PREFIX="$HOME/miniconda"
