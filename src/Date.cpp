@@ -912,16 +912,6 @@ Date::gregorian2Julian( double y, double mo, double d, double dh )
   return prolGreg2Julian(y, mo, d, dh);
 }
 
-bool
-Date::isDigit(std::string s)
-{
-  for(size_t k=0; k < s.size(); ++k)
-    if( !isdigit(s[k]) )
-      return false;
-
-  return true;
-}
-
 void
 Date::init(void)
 {
@@ -947,6 +937,74 @@ Date::isNotASingleDigit(std::string s)
       return false;
 
   return true;
+}
+
+bool
+Date::isDigit(std::string s)
+{
+  for(size_t k=0; k < s.size(); ++k)
+    if( !isdigit(s[k]) )
+      return false;
+
+  return true;
+}
+
+bool
+Date::isValidDate(std::string s)
+{
+  std::string mn("january february march april may june july");
+  mn += " august september october november december" ;
+  Split x_mn(mn);
+
+  s = hdhC::Lower()(s);
+  s = hdhC::replaceChars(s, ',', ' ');
+  Split x_s(s);
+
+  if( x_s.size() != 3 )
+    return false;
+
+  int i_d, i_m, i_y;
+  i_d = i_m = i_y = 0;
+
+  for(size_t i=0 ; i < x_s.size() ; ++i )
+  {
+    if( hdhC::isAlpha(x_s[i]) )
+    {
+      for(size_t m=0 ; m < x_mn.size() ; ++m )
+      {
+        if( x_s[i] == x_mn[m].substr(0, x_s[i].size()) )
+        {
+          i_m = hdhC::string2Double(x_s[i]) ;
+          break;
+        }
+      }
+    }
+    else
+    {
+      if( hdhC::isDigit(x_s[i]) )
+      {
+        if( x_s[i].size() > 2 )
+          i_y = hdhC::string2Double(x_s[i]) ;
+        else
+          i_d = hdhC::string2Double(x_s[i]) ;
+      }
+      else
+        i_d = hdhC::string2Double(x_s[i]) ;
+    }
+  }
+
+  bool is=true;
+  if( i_d == 0 )
+    is=false ;
+  if( i_m == 0 )
+    is=false ;
+  if( i_y == 0 )
+    is=false ;
+
+  if(is)
+    return true;
+
+  return false;
 }
 
 void

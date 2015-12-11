@@ -227,6 +227,7 @@ struct CMOR
   static std::string n_product;
   static std::string n_requested;
   static std::string n_standard_name;
+  static std::string n_table_id;
   static std::string n_tol_on_requests;
   static std::string n_type;
   static std::string n_unformatted_units;
@@ -269,6 +270,7 @@ std::string CMOR::n_priority            ="priority";
 std::string CMOR::n_product             ="product";
 std::string CMOR::n_requested           ="requested";
 std::string CMOR::n_standard_name       ="standard_name";
+std::string CMOR::n_table_id            ="table_id";
 std::string CMOR::n_tol_on_requests     ="tol_on_requests";
 std::string CMOR::n_type                ="type";
 std::string CMOR::n_unformatted_units   ="unformatted_units";

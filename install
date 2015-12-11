@@ -546,9 +546,9 @@ test ${DEF_PRJ} \
 getConfigEntry ${QA_PATH} DEFAULT_PROJECT ${CONFIG_FILE}
 
 if [ ${DEFAULT_PROJECT} ] ; then
-  defPrj=--set_default_project=${DEFAULT_PROJECT#*=}
+  defPrj=--default_project=${DEFAULT_PROJECT#*=}
 else
-  defPrj=--set_default_project=$defaultProject
+  defPrj=--default_project=$defaultProject
 fi
 
 # no parameter: check for a conversion from former; safe
