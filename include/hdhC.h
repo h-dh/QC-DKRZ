@@ -337,7 +337,7 @@ findPos(T, std::vector<T>&);
 //! return vector composed to a char-separated string
 /*! A space follows 'sep', if isSpace=true*/
 std::string
-getComposedVector(std::vector<std::string>& vs, bool isSpace=false, char sep=',');
+getVector2Str(std::vector<std::string>& vs, bool isSpace=false, char sep=',');
 
 //! Get non-alpha characters.
 /*! Return empty if no one was found.*/
@@ -373,8 +373,13 @@ isAlpha(std::string, bool isContains=false);
 bool
 isAlphaNum(unsigned char);
 
+// "": exact, "beg"|"end": match from begin|end, "find": anywhere
 bool
-isAmong(std::string&, std::vector<std::string>& set);
+isAmong(std::string&, std::vector<std::vector<std::string> >& set,
+        std::string mode="");
+
+bool
+isAmong(std::string&, std::vector<std::string>& set, std::string mode="");
 
 template <typename T>
 bool
@@ -417,7 +422,16 @@ interpolArray2Array( int idxa, int idxn , int idya, int idyn,
                      double spv, double **fa, double **fn);
 */
 
+//! Itemise a string,  e.g. "a: b c d: e f"  --> "a: b c", "d: e f"
+/*! pos indicates the position of key. empty --> key must macth,
+    first --> at the beginning, last --> at the end */
+std::vector<std::string>
+itemise(std::string&, std::string key, std::string pos=empty);
+
 //! Convert int to string (based on K&R).
+std::vector<std::string>
+itoa(std::vector<int>& );
+
 std::string
 itoa(int n );
 

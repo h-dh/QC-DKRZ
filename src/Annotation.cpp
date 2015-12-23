@@ -332,6 +332,13 @@ Annotation::findIndex(std::string &key, bool isOnly)
 std::vector<std::string>
 Annotation::getAnnotation(std::string tag)
 {
+  std::vector<std::string> s;
+    return getAnnotation(tag, s);
+}
+
+std::vector<std::string>
+Annotation::getAnnotation(std::string tag, std::vector<std::string>& txt)
+{
   std::vector<std::string> vs;
 
   if ( mp.begin() == mp.end() )
@@ -343,6 +350,7 @@ Annotation::getAnnotation(std::string tag)
 
   for( it=mp.begin() ; it != mp.end() ; ++it )
   {
+    // remove internal versioning
     size_t sz;
     if( (sz=it->first.find('|')) == std::string::npos )
       sz = it->first.size();
@@ -350,7 +358,10 @@ Annotation::getAnnotation(std::string tag)
     str = it->first.substr(0,sz) ;
 
     if( str.find(tag) < std::string::npos )
+    {
        vs.push_back(str);
+       txt.push_back(it->second);
+    }
   }
 
   return vs;
