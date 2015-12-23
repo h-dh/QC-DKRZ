@@ -1292,7 +1292,7 @@ uint32_t fletcher32_LE_clear( T *data, size_t len, bool *reset, size_t nShift )
 // ----------------------------------------------------
 
 std::string
-getComposedVector(std::vector<std::string>& vs, bool isSpace, char sep)
+getVector2Str(std::vector<std::string>& vs, bool isSpace, char sep)
 {
   std::string s;
 
@@ -1542,11 +1542,58 @@ bool isAlphaNum(unsigned char c)
 }
 
 bool
-isAmong(std::string& item, std::vector<std::string>& set)
+isAmong(std::string& item, std::vector<std::vector<std::string> >& set,
+  std::string mode)
 {
   for(size_t i=0 ; i < set.size() ; ++i )
-    if( item == set[i] )
+    if( isAmong(item, set[i], mode ) )
       return true ;
+
+  return false;
+}
+
+bool
+isAmong(std::string& item, std::vector<std::string>& set, std::string mode)
+{
+  //mode: ""     --> 1: exact
+  //      "beg"  --> 2: sub-str on the left
+  //      "end"  --> 3: sub-string to the right
+  //      "find" --> 2: find anywhere
+  int imode;
+  if( ! mode.size() )
+    imode=0;
+  else if( mode == "beg" )
+    imode=1;
+  else if( mode == "end" )
+    imode=2;
+  else if( mode == "find" )
+    imode=3;
+
+  if(!imode)
+  {
+    for(size_t i=0 ; i < set.size() ; ++i )
+      if( item == set[i] )
+        return true ;
+  }
+  else if( imode == 1 )
+  {
+    for(size_t i=0 ; i < set.size() ; ++i )
+      if( item == set[i].substr(0,item.size()) )
+        return true ;
+  }
+  else if( imode == 2 )
+  {
+    for(size_t i=0 ; i < set.size() ; ++i )
+      if( item == set[i].substr(set[i].size() - item.size()) )
+        return true ;
+  }
+  else if( imode == 3 )
+  {
+    for(size_t i=0 ; i < set.size() ; ++i )
+      if( set[i].find(item) < std::string::npos )
+        return true ;
+  }
+
 
   return false;
 }
@@ -1812,6 +1859,15 @@ tf_var(std::string& v,
 
 
 // ----------------------------------------------------
+std::vector<std::string> itoa(std::vector<int>& vi_in )
+{
+  std::vector<std::string> vs_out;
+
+  for(size_t i=0 ; i < vi_in.size() ; ++i )
+    vs_out.push_back( itoa(vi_in[i]) );
+
+  return vs_out;
+}
 
 std::string itoa(int n )
 {
@@ -2226,6 +2282,69 @@ std::string clearSpaces(std::string str )
       s += str[p] ;
 
   return s ;
+}
+
+std::vector<std::string>
+itemise(std::string& s, std::string key, std::string mode)
+{
+  std::vector<std::string> vs_item;
+
+  Split x_s(s);
+
+  if( mode.size() )
+  {
+    size_t kSz = key.size();
+    if( mode == "first" )
+    {
+      for( size_t i=0 ; i < x_s.size() ; ++ i )
+      {
+        if(x_s[i].substr(0,kSz) == key )
+          vs_item.push_back(x_s[i]);
+        else
+        {
+          if( vs_item.size() == 0 )
+            return vs_item ;  // fault
+
+          vs_item.back() += blank ;
+          vs_item.back() += x_s[i] ;
+        }
+      }
+    }
+    else if( mode == "last" )
+    {
+      for( size_t i=0 ; i < x_s.size() ; ++ i )
+      {
+        if(x_s[i].substr(x_s[i].size()-kSz) == key )
+          vs_item.push_back(x_s[i]);
+        else
+        {
+          if( vs_item.size() == 0 )
+            return vs_item ;  // fault
+
+          vs_item.back() += blank ;
+          vs_item.back() += x_s[i] ;
+        }
+      }
+    }
+  }
+  else
+  {
+    for( size_t i=0 ; i < x_s.size() ; ++ i )
+    {
+      if(x_s[i].find(key) < std::string::npos )
+        vs_item.push_back(x_s[i]);
+      else
+      {
+        if( vs_item.size() == 0 )
+          return vs_item ;  // fault
+
+        vs_item.back() += blank ;
+        vs_item.back() += x_s[i] ;
+      }
+    }
+  }
+
+  return vs_item;
 }
 
 // Replace characters of a str.

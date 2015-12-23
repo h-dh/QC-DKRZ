@@ -68,6 +68,8 @@ class Annotation : public IObj
   bool findIndex(std::string &key, bool only=false);
   std::vector<std::string>
        getAnnotation(std::string tag);
+  std::vector<std::string>
+       getAnnotation(std::string tag, std::vector<std::string>& txt);
   std::string
        getCheckResults(void);
   int  getExitValue(void);

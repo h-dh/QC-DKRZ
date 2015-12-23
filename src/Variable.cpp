@@ -32,17 +32,17 @@ VariableMeta::VariableMeta()
   is_1st_rotX=true;
   is_1st_rotY=true;
 
-  coord.indication_X=0;
-  coord.indication_Y=0;
-  coord.indication_Z=0;
-  coord.indication_T=0;
-
-  indication_DV=0;
+  weight_DV=0;
 
   isUnlimited_=-1;
 
   range[0]=MAXDOUBLE;
   range[1]=-MAXDOUBLE;
+
+  coord.cType.push_back('X');
+  coord.cType.push_back('Y');
+  coord.cType.push_back('Z');
+  coord.cType.push_back('T');
 
   clearCoord();
 }
@@ -52,11 +52,16 @@ VariableMeta::clearCoord(void)
 {
   coord.isAny=false;
   coord.isCoordVar=false;
-  coord.isX=false;
-  coord.isY=false;
-  coord.isZ=false;
+
+  coord.isZ_p=false;
   coord.isZ_DL=false;
-  coord.isT=false;
+
+  coord.isC.clear();
+  for( size_t c=0 ; c < 4 ; ++c )
+  {
+    coord.isC.push_back(false);
+    coord.weight.push_back(0);
+  }
 
   return;
 }
@@ -65,6 +70,8 @@ void
 Variable::addDataCount(int i)
 {
   countData += i ;
+  addWeight(-1);
+
   return;
 }
 
@@ -72,6 +79,20 @@ void
 Variable::addAuxCount(int i)
 {
   countAux += i ;
+  return;
+}
+
+void
+Variable::addWeight(int ix )
+{
+  if( ix < 0 )
+  {
+    for(size_t c=0 ; c < 4 ; ++c )
+      --coord.weight[c];
+  }
+  else
+    ++coord.weight[ix];
+
   return;
 }
 
@@ -85,26 +106,6 @@ Variable::clear(void)
     pSrcBase=0;
     pIn=0;
     pNc=0;
-}
-
-void
-Variable::disableAmbiguities(void)
-{
-   size_t count=0;
-
-   if( coord.isX )
-      ++count;
-   if( coord.isY )
-      ++count;
-   if( coord.isZ )
-      ++count;
-   if( coord.isT )
-      ++count;
-
-   if( count > 1 )
-      coord.isX = coord.isY = coord.isZ = coord.isT = false;
-
-   return;
 }
 
 int
@@ -145,6 +146,32 @@ Variable::getAttValue(std::string aName, bool forceLowerCase)
   }
 
   return s ;
+}
+
+int
+Variable::getCoordinateType(void)
+{
+  // return when only one type exists: X: 0, Y: 1, Z: 2, T: 3, none: -1
+  // return sum(i*10
+
+
+  int i=0 ;
+  int fact=1;
+
+  for( size_t c=0 ; c < coord.isC.size() ; ++c )
+  {
+    if( coord.isC[c] )
+    {
+      if(i)
+        fact *= 10 ;
+      i += c*fact;
+    }
+  }
+
+  if( i < 5 )  // ordinary case
+    return i-1 ;
+
+  return i ;
 }
 
 template<typename T>
@@ -263,24 +290,17 @@ Variable::getDimNameStr(bool isWithVar, char sep)
    return s;
 }
 
-int
-Variable::getCoordinateType(void)
+bool
+Variable::isCoordinate(void)
 {
-  // X: 0, Y: 1, Z: 2, T: 3, Any: 4, none: -1
-  int i=-1 ;
+  if(coord.isAny)
+    return true;
 
-  if( coord.isX )
-    i = 0;
-  if( coord.isY )
-    i = 1;
-  if( coord.isZ )
-    i = 2;
-  if( coord.isT )
-    i = 3;
-  if( coord.isAny )
-    i = 4;
+  for( size_t c=0 ; c < 4 ; ++c)
+    if( coord.isC[c] )
+      return true;
 
-  return i ;
+  return false;
 }
 
 bool
