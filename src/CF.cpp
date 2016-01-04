@@ -224,6 +224,7 @@ CF::analyseCoordWeights(void)
        {
          for( size_t j=0 ; j < pIn->varSz ; ++j )
          {
+// note: verification that the others are also
             if( hdhC::isAmong(var.name, ca_vvs) )
             {
               isC[c]=true;

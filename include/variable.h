@@ -108,6 +108,7 @@ class VariableMeta
   bool is_1st_rotY;
 
   std::vector<std::string> dimName;
+  std::vector<size_t>      dimSize;
   std::vector<size_t>      dim_ix;
 
 //  std::string associatedTo;
