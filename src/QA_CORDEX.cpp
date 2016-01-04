@@ -2353,7 +2353,7 @@ QA_Exp::domainFindTableTypeByRange(
                 if( pQA->pIn->variable[k].coord.isCoordVar )
                 {
                   cName.push_back( name );  // is a candidate
-                  cSize.push_back( pQA->pIn->variable[k].dimSize ) ;
+                  cSize.push_back( pQA->pIn->nc.getDimSize(name) ) ;
                 }
 
                 break;
@@ -4796,7 +4796,9 @@ QA_Exp::varReqTableCheck(InFile &in, VariableMetaData &vMD,
 
      for(size_t l=0 ; l < vMD.var->dim_ix.size() ; ++l)
      {
-       if( pQA->pIn->variable[ vMD.var->dim_ix[l] ].dimSize == 1 )
+       Variable& dVar = pQA->pIn->variable[ vMD.var->dim_ix[l] ] ;
+
+       if( dVar.dimSize[l] == 1 )
           continue;
 
        // new instance
@@ -4805,8 +4807,7 @@ QA_Exp::varReqTableCheck(InFile &in, VariableMetaData &vMD,
        // the spot where meta-data of var-reps of dims is taken
        // note: CORDEX standard tables doesn't provide anything, but
        // it is necessary for writing the project table.
-       getDimMetaData(in, vMD, dimNcMeDa.back(),
-                pQA->pIn->variable[ vMD.var->dim_ix[l] ].name) ;
+       getDimMetaData(in, vMD, dimNcMeDa.back(), dVar.name) ;
      }
 
      return;

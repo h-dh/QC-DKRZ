@@ -431,6 +431,7 @@ InFile::getVariable(void)
     for( size_t j=0 ; j < ds.size() ; ++j)
     {
       var.dimName.push_back( ds[j] );
+      var.dimSize.push_back( nc.getDimSize(ds[j]) );
       var.dim_ix.push_back(j);
     }
 
