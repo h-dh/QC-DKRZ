@@ -385,12 +385,6 @@ InFile::getVariableMeta(Variable &var)
 
   // get some meta data of variables defined in the base class.
 
-  // size of dimension, when represented by a variable
-  var.dimSize=0 ;  // just to have it defined
-  int sz = nc.getDimSize(var.name);
-  if( sz > -1 )
-    var.dimSize = static_cast<size_t>(sz);
-
   // type of variable to be used further
   var.type=nc.getVarType(var.name);
 
@@ -437,6 +431,7 @@ InFile::getVariable(void)
     for( size_t j=0 ; j < ds.size() ; ++j)
     {
       var.dimName.push_back( ds[j] );
+      var.dimSize.push_back( nc.getDimSize(ds[j]) );
       var.dim_ix.push_back(j);
     }
 
@@ -458,7 +453,7 @@ InFile::getVariable(void)
   // vector with indexes for targets and record-type targets;
   for( size_t i=0 ; i < varSz ; ++i )
   {
-    if( variable[i].coord.isT )
+    if( variable[i].coord.isC[3] )
     {
        // time is coordinate variable
        // note: this is global; not specific to variables

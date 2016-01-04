@@ -35,7 +35,6 @@ class VariableMeta
 
   double      addOffset;
   uint32_t    checksum;  //fletcher-32
-  size_t      dimSize;
   double      doubleFillValue;
   double      doubleMissingValue;
   void       *fillValue;
@@ -70,22 +69,18 @@ class VariableMeta
   {
      bool isAny;
      bool isCoordVar;   // coordinate variable, e.g. time(time) with units
-     bool isT;
-     bool isX;
-     bool isY;
-     bool isZ;
+     bool isZ_p;
      bool isZ_DL;  //dimensionless coord
 
-     int  indication_X;
-     int  indication_Y;
-     int  indication_Z;
-     int  indication_T;
+     std::vector<char> cType;
+     std::vector<bool> isC;
+     std::vector<int> weight;
   };
   Coordinates coord;
 
   int  countData;
   int  countAux;
-  int  indication_DV;
+  int  weight_DV;
   int  isUnlimited_;  // access by isUnlimited() method
 
   bool isArithmeticMean; // externally set
@@ -113,6 +108,7 @@ class VariableMeta
   bool is_1st_rotY;
 
   std::vector<std::string> dimName;
+  std::vector<size_t>      dimSize;
   std::vector<size_t>      dim_ix;
 
 //  std::string associatedTo;
@@ -135,6 +131,7 @@ class Variable : public VariableMeta
 {
   public:
 
+  void addWeight(int) ; // int--> index 0: X, 1: Y, 2: Z, 3: T, -1: decrease all
   void addDataCount(int i=1) ;
   void addAuxCount(int i=1) ;
   void clear(void);
@@ -145,7 +142,6 @@ class Variable : public VariableMeta
   template<typename T>
   void setExceptions( T*, MtrxArr<T>*) ;
 
-  void disableAmbiguities(void);
   int  getAttIndex(std::string, bool tryLowerCase=true) ;
   // forceLowerCase==true will return the value always as lower-case
   std::string
@@ -159,9 +155,8 @@ class Variable : public VariableMeta
        getDimNameStr(bool isWithVar=false, char sep=',');
   int  getVarIndex(){ return id ;}
   bool isAuxiliary(void) { return (countAux > countData ) ? true : false ;}
-  bool isCoordinate(void)
-         {return coord.isAny || coord.isX || coord.isY || coord.isZ || coord.isT ;}
-  bool isDataVar(void) { return (countData > countAux ) ? true : false ;}
+  bool isCoordinate(void);
+  bool isDataVar(void){ return (countData >= countAux ) ? true : false ; }
   bool isUnlimited(void) ;
   bool isValidAtt(std::string s, bool tryLowerCase=true);
   bool isValidAtt(std::string s, std::string sub_str);

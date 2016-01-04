@@ -253,7 +253,10 @@ for(( i=0 ; i < ${#fs[*]} ; ++i )) ; do
 
   if [ ${isTestSuite:-f} = t ] && echo ${fs[i]} | grep -q Fail ; then
     asdf="$(ncdump -h ${fs[i]} | grep :comment[^[:digit:]])"
-    echo -e "${asdf#*:}\n"
+    echo "${asdf#*:}"
+#    asdf="$(ncdump -h ${fs[i]} | grep :note)"
+#    test "${asdf}" && echo -e "${asdf#*:}"
+    echo -e "\n"
   fi
 done
 

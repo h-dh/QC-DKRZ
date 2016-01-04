@@ -46,86 +46,86 @@ class CF : public IObj
 
   void   chap2(void);       // names
   void   chap2_reco(void);      // NetCDF files and components
-  void   chap2_1(void);     // filename
-  void   chap2_2(void);     // dimensions
-  void   chap2_3(void);     // names
-  void   chap2_3_reco(void);    // names
-  void   chap2_4(void);     // dimensions
-  void   chap2_4_reco(void);    // dimensions of a variable
-  void   chap2_5_1(void);   // missing data
-  void   chap2_6(void);     // attributes
-  bool   chap2_6_1(void);   // convention
-  void   chap2_6_2_reco(void);  // title and history
+  void   chap21(void);     // filename
+  void   chap22(void);     // dimensions
+  void   chap23(void);     // names
+  void   chap23_reco(void);    // names
+  void   chap24(void);     // dimensions
+  void   chap24_reco(void);    // dimensions of a variable
+  void   chap251(void);   // missing data
+  void   chap26(void);     // attributes
+  bool   chap261(void);   // convention
+  void   chap262_reco(void);  // title and history
 
   void   chap3(void);                  //
   void   chap3_reco(void);      // description of data
-  void   chap3_3(void);     // standard_name etc.
-  void   chap3_4(void);     // ancillary_variables
-  void   chap3_5(void);     // flags
-  void   chap3_5_reco(void);    // description of data
+  void   chap33(void);     // standard_name etc.
+  void   chap34(void);     // ancillary_variables
+  void   chap35(void);     // flags
+  void   chap35_reco(void);    // description of data
 
   void   chap4(void);                  // Coordinate Types
   bool   chap4(Variable&);      // Coordinate Types
-  bool   chap4_1(Variable&);    // lat/lon coordinate
-  bool   chap4_3(Variable&);    // vertical coordinate
-  bool   chap4_3_1(Variable&);  // vertical dimensional coord
-  void   chap4_3_2(void);       // vertical dimensionless coord
-  bool   chap4_3_2(Variable&, std::vector<std::string>&, std::vector<std::string>&,
+  bool   chap41(Variable&);    // lat/lon coordinate
+  bool   chap43(Variable&);    // vertical coordinate
+  bool   chap431(Variable&);  // vertical dimensional coord
+  void   chap432(void);       // vertical dimensionless coord
+  bool   chap432(Variable&, std::vector<std::string>&, std::vector<std::string>&,
                    int ft_jx, int sn_jx);
   // check of standard_name vs. formula_terms (case: dimless vertical coord)
-  bool   chap4_3_2_checkSNvsFT( Variable& var,
+  bool   chap432_checkSNvsFT( Variable& var,
             std::vector<std::string>& valid_sn,
             std::vector<std::string>& valid_ft,
             int& valid_sn_ix,
             int& ft_ix, int& sn_ix, std::string& units );
-  void   chap4_3_2_deprecatedUnits(Variable&, std::string &units);
-  void   chap4_3_2_getParamVars( Variable&,
+  void   chap432_deprecatedUnits(Variable&, std::string &units);
+  void   chap432_getParamVars( Variable&,
             std::vector<std::string>& valid_sn,
             std::vector<std::string>& valid_ft,
             int& valid_ft_ix, int& valid_sn_ix, int att_ft_ix,
             std::vector<std::pair<std::string, std::string> >& att_ft_pv) ;
-  void   chap4_3_2_verify_FT(Variable&, int, std::string &reqFormTerms,
+  void   chap432_verify_FT(Variable&, int, std::string &reqFormTerms,
             int att_ft_ix, std::vector<std::string> &fTerms,
             std::vector<std::pair<std::string, std::string> >& p_found_ft);
-  bool   chap4_4(Variable&);    // time
-  void   chap4_4a_reco(Variable&);   // ref time 0
-  bool   chap4_4_1(Variable&);  // calendar
+  bool   chap44(Variable&);    // time
+  void   chap44a_reco(Variable&);   // ref time 0
+  bool   chap441(Variable&);  // calendar
 
   void   chap5(void);    // Coordinate Systems
   void   chap5_reco(void);      // coordinate types
-  void   chap5_0(void);  // dim-list of variables; post-poned
-  void   chap5_1(Variable&);  // coordinate variables
-  void   chap5_2(void);  // coordinate attribute(s)
-  void   chap5_3(void);  // reduced horizontal grid:
-//  void   chap5_4(void);  // time series of station data
-//  void   chap5_5(void);  // trajectories: checked implicitely
-  void   chap5_6(void);  // grid mapping
-  int    chap5_6_gridMappingVar(Variable& dv, std::string &, std::string);
-  void   chap5_6_attProps(Variable& dataVar,
+  void   chap50(void);  // dim-list of variables; post-poned
+  void   chap51(Variable&);  // coordinate variables
+  void   chap52(void);  // coordinate attribute(s)
+  void   chap53(void);  // reduced horizontal grid:
+//  void   chap54(void);  // time series of station data
+//  void   chap55(void);  // trajectories: checked implicitely
+  void   chap56(void);  // grid mapping
+  int    chap56_gridMappingVar(Variable& dv, std::string &, std::string);
+  void   chap56_attProps(Variable& dataVar,
             std::string mCV[]);       // map coordinates
 
   void   chap6(void);    // labels
 
   void   chap7(void);    // cells
-  void   chap7_3_inqBounds(Variable&,  std::vector<std::string>& name,
+  void   chap73_inqBounds(Variable&,  std::vector<std::string>& name,
             std::vector<std::string>& method, bool );
-  void   chap7_1(void);  // pertains to both boundaries and climatologies
-  void   chap7_1_reco(Variable&);   // cell boundaries
-  void   chap7_2(void);  // cell measure
-  void   chap7_3(void);  // cell methods
-  bool   chap7_3_cellMethods_Comment(std::string&, Variable&) ;
-  bool   chap7_3_cellMethods_Method(std::string&, Variable&) ;
-  bool   chap7_3_cellMethods_Name(std::string&, Variable&) ;
-  void   chap7_3b_reco(Variable&, std::vector<std::string> &dim );
-  bool   chap7_3_3(std::string& method, Variable&, std::string mode) ;
-  bool   chap7_3_4a(std::string&) ;
-  void   chap7_3_4b(Variable&, std::vector<std::string> &dim, std::vector<std::string> &method);
-  void   chap7_4a(void);  // climatological statistics
-  bool   chap7_4b(Variable&, std::vector<std::string> &name, std::vector<std::string> &method) ;
+  void   chap71(void);  // pertains to both boundaries and climatologies
+  void   chap71_reco(Variable&);   // cell boundaries
+  void   chap72(void);  // cell measure
+  void   chap73(void);  // cell methods
+  bool   chap73_cellMethods_Comment(std::string&, Variable&) ;
+  bool   chap73_cellMethods_Method(std::string&, Variable&) ;
+  bool   chap73_cellMethods_Name(std::string&, Variable&) ;
+  void   chap73b_reco(Variable&, std::vector<std::string> &dim );
+  bool   chap733(std::string& method, Variable&, std::string mode) ;
+  bool   chap734a(std::string&) ;
+  void   chap734b(Variable&, std::vector<std::string> &dim, std::vector<std::string> &method);
+  void   chap74a(void);  // climatological statistics
+  bool   chap74b(Variable&, std::vector<std::string> &name, std::vector<std::string> &method) ;
 
   void   chap8(void);    // reduction of data size
-  void   chap8_1(Variable&);  // packed data
-  void   chap8_2(Variable&);  // compression by gathering (scal_factor, offset)
+  void   chap81(Variable&);  // packed data
+  void   chap82(Variable&);  // compression by gathering (scal_factor, offset)
 
   void   chap9(void);    // discrete sampling geometries (CF-1.6)
   void   chap9_featureType(std::vector<std::string> &validFeatureType,
@@ -146,6 +146,7 @@ class CF : public IObj
   bool   chap9_trajectoryProfile(std::vector<int>& xyzt_ix, std::vector<size_t>& dv_ix);
 
   void   applyOptions(void);
+  void   analyseCoordWeights(void);
   void   attributeSpellCheck(void);
 
   void   checkCoordinateValues(Variable&, bool isFormTermAux=false) ;
@@ -167,17 +168,16 @@ template <typename T>
   void   finalAtt(void) ;
   void   finalAtt_axis(void);
   void   finalAtt_coordinates(void);
-  void   finalAtt_coordinates_A(std::vector<size_t>& dv_ix,
-            std::vector<size_t>& cv_ix, std::vector<size_t>& acv_ix );
-  void   finalAtt_coordinates_B(std::vector<size_t>& dv_ix,
-            std::vector<size_t>& cv_ix, std::vector<size_t>& acv_ix );
-  void   finalAtt_coordinates_C(std::vector<size_t>& dv_ix,
-            std::vector<size_t>& cv_ix, std::vector<size_t>& acv_ix );
+  void   finalAtt_coordinates_A(void);
+  void   finalAtt_coordinates_B(void);
+  void   finalAtt_coordinates_C(void);
   void   finalAtt_positive(void);
+  void   finalAtt_units(void);
   void   final_dataVar(void);
   void   findAmbiguousCoords(void);
-  bool   findLabel(Variable&);
   void   findCellMeasures(Variable&);
+  void   findIndexVar(void);
+  bool   findLabel(Variable&);
   void   getAssociatedGroups(void);
   void   getDims(void);
   std::vector<std::string>
@@ -187,16 +187,14 @@ template <typename T>
   void   getVarStateEvidences(Variable&);
   void   hasBounds(Variable&);
   void   initDefaults(void);
-  void   inqAuxVersusPureCoord(void);
   bool   isBounds(Variable&);
-  bool   isChap6_labelSubstAuxCoord(Variable& coord_aux, std::vector<std::string>& ca);
   bool   isChap9_specialLabel(Variable& label, Variable& var);
   bool   isCompressAux(Variable&);
   bool   isCompressEvidence(Variable&, bool*) ; // bool* for int-type
 //  bool   isCompliant(void){ return isCF;}
   bool   isLatitude(void);
   bool   isLongitude(void);
-  bool   isXYZinCoordAtt(bool withT=false);
+  bool   isXYZinCoordAtt(size_t v_ix);
   bool   parseUnits( std::string s);
   void   postAnnotations(void);
 
@@ -286,11 +284,9 @@ template <typename T>
   static std::vector<char>        attType;  // S: string, N: numeric, D: data type
   std::vector<std::string>        dimensions;
   std::vector<size_t>             effDims_ix;
-  std::vector<size_t>             varRepDims_ix;
 
   // properties of coordinates attributes
   std::vector<std::pair<int, int> > ca_pij;
-  std::vector<int> ca_ix; // ca_vx[i] points to var_ix, def.: -1
   std::vector<std::vector<std::string> > ca_vvs ;
 };
 
