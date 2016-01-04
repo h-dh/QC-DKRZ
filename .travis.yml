@@ -4,13 +4,11 @@ branches:
     - master
     - develop
     - birdhouse
-sudo: true
+sudo: false
 python:
   # We don't actually use the Travis Python, but this keeps it organized.
   - "2.7"
 install:
-  - sudo apt-get update -y
-  - sudo apt-get install -y libuuid1 uuid-dev bc
   - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh;
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
@@ -24,7 +22,7 @@ install:
   # Replace dep1 dep2 ... with your dependencies
   - conda config --add channels birdhouse
   - conda config --add channels ioos
-  - conda install -q libnetcdf hdf5 zlib udunits2
+  - conda install -q libnetcdf hdf5 zlib udunits2 libuuid
 
   # Get build script
   - export PREFIX="$HOME/miniconda"
@@ -33,7 +31,7 @@ install:
   - echo "CFLAGS=\"-O2 -Wall\"" >> install_configure 
   - echo "CXXFLAGS=\"-O2 -Wall -D NC4\"" >> install_configure
   - echo "LIB=\"${PREFIX}/lib\"" >> install_configure
-  - echo "INCLUDE=\"${PREFIX}/include\":/usr/include/uuid" >> install_configure
+  - echo "INCLUDE=\"${PREFIX}/include\"" >> install_configure
 
 script:
   - touch .ignore_GitHub
