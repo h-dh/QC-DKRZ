@@ -100,7 +100,7 @@ class VariableMeta
   bool isMissingValue;
   bool isNoData;
   bool isScalar;
-  bool isVoid;
+  bool isVoid;  // variables which may/must have no data
 
   bool is_1st_X;  // one-time switches in units_lon_lat()
   bool is_1st_Y;

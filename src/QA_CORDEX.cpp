@@ -2733,7 +2733,9 @@ QA_Exp::domainCheckPole(std::string item,
   // compare lat/lon of N. Pole  specified in CORDEX Table 1 with
   // corresponding values in the NetCF file.
 
-  if( item == "N.Pole lon" && t_num == "N/A" )
+  bool isItem = item == "N.Pole lon" ;
+
+  if( isItem && t_num == "N/A" )
     return;  // any lon value would do for the North pole in rotated coord.
 
   // remove trailing zeros and a decimal point
@@ -2741,42 +2743,74 @@ QA_Exp::domainCheckPole(std::string item,
 
   std::string f_num;
 
-  // try for the assumption of variable name 'rotated_pole' with
-  // attribute grid_north_pole_latitude / ..._longitude
-  int ix;
-  if( (ix=pQA->pIn->getVarIndex("rotated_pole")) > -1 )
+  // find variable name for 'rotated_pole' with
+  // attribute grid_north_pole_latitude / ..._longitude and
+  // grid_mapping_name==rotated_latitude_longitude
+  size_t ix;
+  int jx = -1;
+
+  bool is=false;
+
+  for(size_t i=0 ; i < pQA->pIn->varSz ; ++i )
   {
-    Variable &var = pQA->pIn->variable[ix];
+    Variable& var = pQA->pIn->variable[i] ;
 
-    if( item == "N.Pole lon" )
+    if(isItem)
     {
-      std::string s(var.getAttValue("grid_north_pole_longitude")) ;
-
-      if( s.size() )
+      if( (jx=var.getAttIndex("grid_north_pole_longitude")) > -1 )
       {
-        // found the attribute
-        f_num = hdhC::double2String( hdhC::string2Double(s), -5) ;
-        if( f_num == t_num )
-          return;
+        ix=i;
+        is=true;
+        break;
       }
     }
     else
     {
-      std::string s(var.getAttValue("grid_north_pole_latitude")) ;
-
-      if( s.size() )
+      if( (jx=var.getAttIndex("grid_north_pole_latitude")) > -1 )
       {
-        // found the attribute
-        f_num = hdhC::double2String( hdhC::string2Double(s), -5) ;
-        if( f_num == t_num )
-          return;
+        ix=i;
+        is=true;
+        break;
       }
     }
   }
 
-  // may-be the names didn't match.
-  if( ix > -1 )
+  if(is)
   {
+    Variable &var = pQA->pIn->variable[ix];
+
+    if(isItem)
+    {
+      if( jx > -1 )
+      {
+        std::string& s = var.attValue[jx][0] ;
+
+        if( s.size() )
+        {
+          // found the attribute
+          f_num = hdhC::double2String( hdhC::string2Double(s), -5) ;
+          if( f_num == t_num )
+            return;
+        }
+      }
+    }
+    else
+    {
+      if( jx > -1 )
+      {
+        std::string& s = var.attValue[jx][0] ;
+
+        if( s.size() )
+        {
+          // found the attribute
+          f_num = hdhC::double2String( hdhC::string2Double(s), -5) ;
+          if( f_num == t_num )
+            return;
+        }
+      }
+    }
+
+    // may-be the names didn't match.
     std::string key = "7_8";
     if( notes->inq(key, pQA->fileStr) )
     {
@@ -2789,17 +2823,15 @@ QA_Exp::domainCheckPole(std::string item,
       notes->setCheckMetaStr(pQA->fail);
     }
   }
-  else
-  {
-    std::string key = "5_5";
-    if( notes->inq(key, pQA->fileStr) )
-    {
-      std::string capt("auxiliary " + hdhC::tf_var("rotated_pole") );
-      capt += "is missing" ;
 
-      (void) notes->operate(capt) ;
-      notes->setCheckMetaStr(pQA->fail);
-    }
+  std::string key = "5_5";
+  if( notes->inq(key, pQA->fileStr) )
+  {
+    std::string capt("auxiliary " + hdhC::tf_var("rotated_pole") );
+    capt += "is missing" ;
+
+    (void) notes->operate(capt) ;
+    notes->setCheckMetaStr(pQA->fail);
   }
 
   return ;
