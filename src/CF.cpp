@@ -941,6 +941,35 @@ CF::entry(void)
   // get properties from the file according to CF-1.x chapters
   chap();
 
+  // no data?
+  for( size_t i=0 ; i < pIn->varSz ; ++i )
+  {
+    Variable& var = pIn->variable[i] ;
+
+    if( var.isNoData && !var.isVoid && var.isDataVar() )
+    {
+      if( pIn->nc.isIndexType(var.name)
+            && notes->inq(bKey + "12e", var.name) )
+      {
+        std::string capt("index ");
+        capt += hdhC::tf_var(var.name);
+        capt += "must have data" ;
+
+        (void) notes->operate(capt) ;
+        notes->setCheckCF_Str( fail );
+      }
+
+      else if( notes->inq(bKey + "0e", var.name) )
+      {
+        std::string capt(hdhC::tf_var(var.name, hdhC::colon));
+        capt += "No data" ;
+
+        (void) notes->operate(capt) ;
+        notes->setCheckCF_Str( fail );
+      }
+    }
+  }
+
   // find groups of related variables
   checkGroupRelation();
 
@@ -2622,30 +2651,6 @@ CF::run(void)
          firstDim.clear();
        else if( var.dimName[0] != firstDim )
          firstDim.clear();
-     }
-
-     // no data?
-     if( var.isNoData && var.isDataVar() )
-     {
-       if( pIn->nc.isIndexType(var.name)
-              && notes->inq(bKey + "12e", var.name) )
-       {
-         std::string capt("index ");
-         capt += hdhC::tf_var(var.name);
-         capt += "must have data" ;
-
-         (void) notes->operate(capt) ;
-         notes->setCheckCF_Str( fail );
-       }
-
-       else if( notes->inq(bKey + "0e", var.name) )
-       {
-         std::string capt(hdhC::tf_var(var.name, hdhC::colon));
-         capt += "No data" ;
-
-         (void) notes->operate(capt) ;
-         notes->setCheckCF_Str( fail );
-       }
      }
    }
 
@@ -6444,6 +6449,8 @@ CF::chap56_gridMappingVar(Variable& var, std::string &s, std::string gmn)
 
         if( str.size() )
         {
+          var_gmv.isVoid=true;  // no data
+
           if( gmn.size() == 0 )
           {
             // all methods defined in CF
