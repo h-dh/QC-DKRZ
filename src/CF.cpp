@@ -995,6 +995,13 @@ CF::entry(void)
       var.isDATA = true;
     else
       var.isAUX = true;
+
+    if( var.isAUX && var.isDATA )
+    {
+      // time dependent var in context of dimless Z
+      var.isDATA = false;
+      var.countData = 0;
+    }
   }
 
   return true;
@@ -1212,7 +1219,7 @@ CF::finalAtt_axis(void)
     {
       if( notes->inq(bKey + "5h", var.name) )
       {
-        std::string capt(cFVersion + ": Auxiliary coordinate ");
+        std::string capt("CF-" + cFVersion + ": Auxiliary coordinate ");
         capt += hdhC::tf_var(var.name);
         capt += "must not have " + hdhC::tf_att(n_axis);
 
@@ -7148,23 +7155,32 @@ CF::chap72(void)
       {
         if( (meas_ix = pIn->getVarIndex(cm_arg[k])) == -1 )
         {
-          if( notes->inq(bKey + "72e", var.name, "INQ_ONLY") )
+          if( notes->inq(bKey + "72e", "", "INQ_ONLY") )
           {
             bool isCont=false;
 
-            if( (jx = var.getAttIndex("associated_files")) > -1 )
+            // accepted to be provided globally or even in another var
+            for( size_t m=0 ; m < pIn->variable.size() ; ++m )
             {
-              for(size_t i=0 ; i < var.attValue[jx].size() ; ++i )
-              {
-                Split x_av(var.attValue[jx][i]);
+              Variable& var_af = pIn->variable[m];
 
-                for(size_t j=0 ; j < x_av.size() ; ++j )
+              if( (jx = var_af.getAttIndex("associated_files")) > -1 )
+              {
+                for(size_t i=0 ; i < var_af.attValue[jx].size() ; ++i )
                 {
-                  if( x_av[j] == (cm_arg[k]+":") )
+                  Split x_av(var_af.attValue[jx][i]);
+
+                  for(size_t j=0 ; j < x_av.size() ; ++j )
                   {
-                    isCont=true;
-                    break;
+                    if( x_av[j] == (cm_arg[k]+":") )
+                    {
+                      isCont=true;
+                      break;
+                    }
                   }
+
+                  if(isCont)
+                    break;
                 }
 
                 if(isCont)

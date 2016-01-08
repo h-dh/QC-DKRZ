@@ -3644,7 +3644,7 @@ QA_Exp::findTableEntry(ReadLine &ifs, std::string &name_f,
          {
              t_VMD_entry.attMap[n_long_name] = splt_line[ col[pQA->n_long_name] ];
              t_VMD_entry.attMap[n_long_name]
-                = hdhC::unique(t_VMD_entry.attMap[n_long_name]);
+                = hdhC::unique(t_VMD_entry.attMap[n_long_name], ' ');
          }
 
          if( t_VMD_entry.attMap.count(n_units) == 0 &&
@@ -3652,7 +3652,7 @@ QA_Exp::findTableEntry(ReadLine &ifs, std::string &name_f,
          {
              t_VMD_entry.attMap[n_units] = splt_line[ col[pQA->n_units] ];
              t_VMD_entry.attMap[n_units]
-                = hdhC::unique(t_VMD_entry.attMap[n_units]);
+                = hdhC::unique(t_VMD_entry.attMap[n_units], ' ');
 
              if( t_VMD_entry.attMap[n_units].size() )
                t_VMD_entry.isUnitsDefined=true;
@@ -4196,7 +4196,8 @@ BREAK2:
      if( splt_line[c].substr(0,3) == "frq" || splt_line[c] == "ag" )
        continue;
 
-     t = hdhC::unique(splt_line[c]);
+     t = hdhC::unique(splt_line[c], ' ');
+
      // some user like to set a trailing ':' randomly
      if ( t[ t.size()-1 ] == ':' )
        t = t.substr(0,t.size()-1) ;
