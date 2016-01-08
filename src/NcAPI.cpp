@@ -4144,15 +4144,21 @@ NcAPI::getVars(void)
 bool
 NcAPI::isIndexType(std::string vName)
 {
+  bool is=false;
+
   if( isVariableValid(vName) )
   {
      nc_type tp = getVarType(vName);
      if( tp == NC_BYTE || tp == NC_INT || tp == NC_SHORT || tp == NC_USHORT
             || tp == NC_UINT || tp == NC_INT64 || tp == NC_UINT64 )
-       return true;
+     {
+       std::string str(getAttString("units", vName));
+       if(str.size() == 0. || str == "1" )
+         is=true;
+     }
   }
 
-  return false;
+  return is;
 }
 
 bool

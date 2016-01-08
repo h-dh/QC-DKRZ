@@ -136,6 +136,9 @@ public:
 //! Full access to the ifstream object.
   std::ifstream   *ifstream ;
 
+  bool
+    isEOF(void){ return isEof;}
+    
 //! Is stream open?
   bool
     isOpen(void) { return is_fopen; }
