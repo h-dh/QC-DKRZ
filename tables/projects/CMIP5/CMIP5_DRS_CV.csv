@@ -58,17 +58,16 @@ global:
    experiment_id
    forcing = Nat|Ant|GHG|SD|SI|SA|TO|SO|Oz|LU|SI|VI|SS|Ds|BC|MD|OC|AA
    frequency=yr|mon|day|6hr|3hr|subhr|monClim|fx
-   initialization_id
+   initialization_method
    institute_id
    institution
    model_id
    modeling_realm=atmos|ocean|land|landIce|seaIce|aerosol|atmosChem|ocnBgchem
    parent_experiment_id
    parent_experiment_rip
-   physic_version
+   physics_version
    product=output
    project_id=CMIP5
-   rcm_version_id
    realization
    source
    table_id

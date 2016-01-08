@@ -34,108 +34,154 @@ struct CMOR
    each variable at first time encounter in the CMIP Project ensuring
    conformance.*/
 
-  // the next one is applied to several checks
-  void   checkStringValues(
-            struct DimensionMetaData& f_DMD,
-            struct DimensionMetaData& t_DMD,
-            std::string&, size_t maxSz=0 );
+  void   checkEnsembleMemItem(std::string& rqName, std::string& attVal);
+  void   checkForcing(std::vector<std::string>&, std::string&);
 
-  void   checkDimSheet(std::vector<std::string>&, InFile& in,
+  void   checkMIPT_dim(std::vector<std::string>&,
             VariableMetaData&,
-            std::vector<struct DimensionMetaData>&,
-            std::map<std::string, size_t>& col,
-            std::string dName, size_t colMax);
+            std::map<std::string, size_t>& col, std::string& CMORdimName);
 
   //! Check dimensions
-  void   checkDimSheetEntries(InFile& in,
+  void   checkMIPT_dimEntry(
             VariableMetaData& var,
             struct DimensionMetaData& f_DMD,
             struct DimensionMetaData& t_DMD) ;
 
   //! Compare dimensional properties from the table to the file
-  void   checkDimSheet_axis(InFile& in,
+  void   checkMIPT_dim_axis(
            VariableMetaData& vMD,
            struct DimensionMetaData& f_DMD,
            struct DimensionMetaData& t_DMD);
 
-  void   checkDimSheet_boundsQuest(InFile& in,
+  void   checkMIPT_dim_boundsQuest(
             VariableMetaData& var,
             struct DimensionMetaData& f_DMD,
             struct DimensionMetaData& t_DMD) ;
 
-  void   checkDimSheet_boundsRequested(InFile& in,
+  void   checkMIPT_dim_boundsRequested(
             VariableMetaData& var,
             struct DimensionMetaData& f_DMD,
             struct DimensionMetaData& t_DMD) ;
 
-  void   checkDimSheet_boundsValues(InFile& in,
+  void   checkMIPT_dim_boundsValues(
             VariableMetaData& var,
             struct DimensionMetaData& f_DMD,
             struct DimensionMetaData& t_DMD) ;
 
-  void   checkDimSheet_coordsAtt(InFile& in,
+  void   checkMIPT_dim_coordsAtt(
             VariableMetaData& var,
             struct DimensionMetaData& f_DMD,
             struct DimensionMetaData& t_DMD) ;
 
-  void   checkDimSheet_indexAxis(InFile& in,
+  void   checkMIPT_dim_indexAxis(
             VariableMetaData& var,
             struct DimensionMetaData& f_DMD,
             struct DimensionMetaData& t_DMD) ;
 
-  void   checkDimSheet_longName(InFile& in,
+  void   checkMIPT_dim_longName(
             VariableMetaData& var,
             struct DimensionMetaData& f_DMD,
             struct DimensionMetaData& t_DMD) ;
 
-  bool   checkDimSheet_outname(InFile& in,
+  bool   checkMIPT_dim_outname(
            VariableMetaData& vMD,
            struct DimensionMetaData& f_DMD,
            struct DimensionMetaData& t_DMD);
 
-  void   checkDimSheet_positive(InFile& in,
+  void   checkMIPT_dim_positive(
            VariableMetaData& vMD,
            struct DimensionMetaData& f_DMD,
            struct DimensionMetaData& t_DMD);
 
-  void   checkDimSheet_requested(InFile& in,
+  void   checkMIPT_dim_requested(
             VariableMetaData& var,
             struct DimensionMetaData& f_DMD,
             struct DimensionMetaData& t_DMD) ;
 
-  void   checkDimSheet_stdName(InFile& in,
+  void   checkMIPT_dim_stdName(
            VariableMetaData& vMD,
            struct DimensionMetaData& f_DMD,
            struct DimensionMetaData& t_DMD);
 
-  void   checkDimSheet_type(InFile& in,
+  void   checkMIPT_dim_type(
            VariableMetaData& vMD,
            struct DimensionMetaData& f_DMD,
            struct DimensionMetaData& t_DMD);
 
   //! Check the units of a dimension's variable representation.
-  void   checkDimSheet_units(InFile& in,
+  void   checkMIPT_dim_units(
             VariableMetaData& var,
             struct DimensionMetaData& f_DMD,
             struct DimensionMetaData& t_DMD);
 
-  void   checkDimSheet_validMax(InFile& in,
+  void   checkMIPT_dim_validMax(
             VariableMetaData& var,
             struct DimensionMetaData& f_DMD,
             struct DimensionMetaData& t_DMD) ;
 
-  void   checkDimSheet_validMin(InFile& in,
+  void   checkMIPT_dim_validMin(
             VariableMetaData& var,
             struct DimensionMetaData& f_DMD,
             struct DimensionMetaData& t_DMD) ;
 
-  void   checkDimSheet_value(InFile& in,
+  void   checkMIPT_dim_value(
             VariableMetaData& var,
             struct DimensionMetaData& f_DMD,
             struct DimensionMetaData& t_DMD) ;
 
-  void   checkEnsembleMemItem(std::string& rqName, std::string& attVal);
-  void   checkForcing(std::vector<std::string>&, std::string&);
+  void   checkMIPT_var(
+            VariableMetaData& vMD, VariableMetaData& tEntry,
+            std::map<std::string, size_t>&);
+
+  void   checkMIPT_var_cellMeasures(
+            VariableMetaData& vMD,
+            VariableMetaData& tEntry);
+
+  void   checkMIPT_var_cellMethods(
+            VariableMetaData& vMD,
+            VariableMetaData& tEntry);
+
+  void   checkMIPT_var_flagMeanings(
+            VariableMetaData& vMD,
+            VariableMetaData& tEntry);
+
+  void   checkMIPT_var_flagValues(
+            VariableMetaData& vMD,
+            VariableMetaData& tEntry);
+
+  void   checkMIPT_var_frequency(
+            VariableMetaData& vMD,
+            VariableMetaData& tEntry);
+
+  void   checkMIPT_var_longName(
+            VariableMetaData& vMD,
+            VariableMetaData& tEntry);
+
+  bool   checkMIPT_var_positive(
+            VariableMetaData& vMD,
+            VariableMetaData& tEntry);
+
+  void   checkMIPT_var_realm(
+            VariableMetaData& vMD,
+            VariableMetaData& tEntry);
+
+  void   checkMIPT_var_stdName(
+            VariableMetaData& vMD,
+            VariableMetaData& tEntry);
+
+  void   checkMIPT_var_type(
+            VariableMetaData& vMD,
+            VariableMetaData& tEntry);
+
+  void   checkMIPT_var_unformattedUnits(
+            VariableMetaData& vMD,
+            VariableMetaData& tEntry);
+
+  //! Check variables' properties
+  /*! Prepare the check for dimensions and variable.*/
+  bool   checkMIP_table(InFile& in,
+            VariableMetaData& var,
+            std::vector<struct DimensionMetaData>&);
 
   void   checkRequestedAttributes(void);
   void   checkReqAtt_global(void);
@@ -145,10 +191,11 @@ struct CMOR
   void   checkReqVariableType(void);
 */
 
-  /*! Prepare the check for dimensions and variable.*/
-  bool   checkVarReqTable(InFile& in,
-            VariableMetaData& var,
-            std::vector<struct DimensionMetaData>& );
+  // the next one is applied to several checks
+  void   checkStringValues(
+            struct DimensionMetaData& f_DMD,
+            struct DimensionMetaData& t_DMD,
+            std::string&, size_t maxSz=0 );
 
   //! Apply the cross-check for the variable.
   void   checkVarReqTableEntry(
@@ -167,36 +214,49 @@ struct CMOR
   //! Find entry of a requested variable in the standard table.
   bool   findVarReqTableEntry(ReadLine& , std::string& ,
             VariableMetaData& var,
-            std::map<std::string, size_t>& col, size_t col_max );
+            std::map<std::string, size_t>& col, VariableMetaData& tEntry);
 
   //! Find the name of requested sub-table in string str0.
   bool   findVarReqTableSheet(ReadLine& , std::string& str0,
-            VariableMetaData& var);
-
-  void   findVarReqTableSubSheet(std::string& str0, VariableMetaData& vMD );
+            VariableMetaData& var, VariableMetaData& tEntry);
 
   //! Store properties of a dimension in the struct.
   /*! Note: the name of the dimension is passed by the struct.
       dim-name is returned; accounts for a switch to a label-name*/
-  std::string
-         getDimMetaData(InFile& in,
-             VariableMetaData& ,
-             struct DimensionMetaData& , std::string dName);
+  bool   getDimMetaData(InFile& in, VariableMetaData& ,
+             struct DimensionMetaData& , std::string dName, size_t);
+
+  // read dim columns for a given CMOR_dim; if column == empty, then all columns
+  void   getDimSheetEntry(std::string& CMOR_dim, std::vector<std::string>&,
+                          std::map<std::string, size_t>& col,
+                          DimensionMetaData&, std::string column="");
+
+  void   getMIPT_var(std::string& entry,
+            VariableMetaData& tEntry,
+            std::map<std::string, size_t>&);
+
+  void   getVarReqTableSubSheetName(std::string& str0, VariableMetaData& vMD );
 
   void   initDefaults(void);
 
   //! Read the headlines for dimensions and variable.
   /*! Read from the standard table; used to identify columns.*/
   bool   readHeadline(ReadLine&,
-            VariableMetaData&,
+            VariableMetaData&, std::string& fx_header,
             std::vector<std::string>&,
             std::map<std::string, size_t>& v_col,
-            std::map<std::string, size_t>& d_col,
-            size_t& v_colMax, size_t& d_colMax);
-
+            std::map<std::string, size_t>& d_col);
 
   //! Starting function for all table cross-checks.
   void   run(InFile&, VariableMetaData&);
+
+  static std::string tableSheet;
+  static std::string tableSheetSub;
+
+  // a little bit intricated, because of Omon-3D tracers, cf3hr, and cfSites
+  void                     bufTableSheets(VariableMetaData&);
+  std::vector<std::string> tableSheetBuf;
+  size_t                   tableSheetBufIx;
 
   std::string parentExpID;
   std::string parentExpRIP;
@@ -213,11 +273,13 @@ struct CMOR
   static std::string n_CMOR_tables;
   static std::string n_CMOR_variable_name;
   static std::string n_coordinates;
+  static std::string n_flag_meanings;
+  static std::string n_flag_values;
   static std::string n_forcing;
+  static std::string n_frequency;
   static std::string n_global;
   static std::string n_index_axis;
   static std::string n_long_name;
-  static std::string n_name_alt;
   static std::string n_outname;
   static std::string n_output;
   static std::string n_output_dim_name;
@@ -225,6 +287,7 @@ struct CMOR
   static std::string n_positive;
   static std::string n_priority;
   static std::string n_product;
+  static std::string n_realm;
   static std::string n_requested;
   static std::string n_standard_name;
   static std::string n_table_id;
@@ -235,10 +298,6 @@ struct CMOR
   static std::string n_valid_max;
   static std::string n_valid_min;
   static std::string n_value;
-
-  static std::string tableSheet;
-  static std::string tableSheetAlt;  // special case, cf. Omon, cf3hr, and cfSites
-  static std::string tableSheetSub;
 
   Annotation* notes;
   QA*         pQA;
@@ -257,17 +316,20 @@ std::string CMOR::n_CMOR_name           ="CMOR_name";
 std::string CMOR::n_CMOR_tables         ="CMOR_tables";
 std::string CMOR::n_CMOR_variable_name  ="CMOR_variable_name";
 std::string CMOR::n_coordinates         ="coordinates";
+std::string CMOR::n_flag_meanings       ="flag_meanings";
+std::string CMOR::n_flag_values         ="flag_values";
 std::string CMOR::n_forcing             ="forcing";
+std::string CMOR::n_frequency           ="frequency";
 std::string CMOR::n_global              ="global";
 std::string CMOR::n_index_axis          ="index_axis";
 std::string CMOR::n_long_name           ="long_name";
-std::string CMOR::n_name_alt            ="name_alt";
 std::string CMOR::n_output              ="output";
 std::string CMOR::n_output_dim_name     ="output_dimension_name";
 std::string CMOR::n_output_var_name     ="output_variable_name";
 std::string CMOR::n_positive            ="positive";
 std::string CMOR::n_priority            ="priority";
 std::string CMOR::n_product             ="product";
+std::string CMOR::n_realm               ="realm";
 std::string CMOR::n_requested           ="requested";
 std::string CMOR::n_standard_name       ="standard_name";
 std::string CMOR::n_table_id            ="table_id";
@@ -280,7 +342,6 @@ std::string CMOR::n_valid_min           ="valid_min";
 std::string CMOR::n_value               ="value";
 
 std::string CMOR::tableSheet=hdhC::empty;
-std::string CMOR::tableSheetAlt=hdhC::empty;  // special case, cf. Omon, cf3hr, and cfSites
 std::string CMOR::tableSheetSub=hdhC::empty;
 
 struct DRS_CV
@@ -291,7 +352,7 @@ struct DRS_CV
   void   checkFilename(std::string& fName, struct DRS_CV_Table&);
   void   checkFilenameEncoding(Split&, struct DRS_CV_Table&);
   void   checkFilenameGeographic(Split&);
-  void   checkMIP_tableName(Split&);
+  void   checkMIPT_tableName(Split&);
   void   checkPath(std::string&, struct DRS_CV_Table&);
   void   findFN_faults(Split&, Split&,
                    std::map<std::string, std::string>&,
@@ -308,6 +369,8 @@ struct DRS_CV
          getEnsembleMember(void);
   int    getPathBegIndex( Split& drs, Split& x_e,
             std::map<std::string, std::string>& gM );
+  bool   isInstantTime(void);
+
   void   run(void);
 
     //! Test the time-period of the input file.
@@ -358,7 +421,6 @@ class VariableMetaData
   DataOutputBuffer dataOutputBuffer;
 
   std::map<std::string, std::string> attMap;
-  size_t priority;
   bool isNewVar;
 
   Annotation* notes;
@@ -425,8 +487,7 @@ public:
   bool   readHeadline(ReadLine&,
             VariableMetaData&,
             std::map<std::string, size_t>& v_col,
-            std::map<std::string, size_t>& d_col,
-            size_t& v_colMax, size_t& d_colMax);
+            std::map<std::string, size_t>& d_col);
 
   //! Connect this with the object to be checked
 //  void   setInFilePointer(InFile *p) { pIn = p; }
