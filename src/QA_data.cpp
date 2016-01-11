@@ -1130,6 +1130,14 @@ ReplicatedRecord::report(std::vector<std::string> &range,
 
    if( range.size() > 4 )
    {
+     if( groupSize )
+     {
+       size_t diff=static_cast<size_t>(hdhC::string2Double(range[4]) );
+       diff -= static_cast<size_t>(hdhC::string2Double(range[0]) );
+       if( diff < groupSize )
+         return;
+     }
+
      capt += range[0];
      capt += "-";
      capt += range[4];
