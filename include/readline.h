@@ -138,7 +138,7 @@ public:
 
   bool
     isEOF(void){ return isEof;}
-    
+
 //! Is stream open?
   bool
     isOpen(void) { return is_fopen; }
@@ -191,7 +191,7 @@ public:
 
 //! Set a breakpoint within a line
   void
-    setBreakpoint(char b){ breakpoint=b; isBreakpoint=true;}
+    setLineContinuation(char b){ lineContinuation=b;}
 
 //! Set filename.
   bool
@@ -249,16 +249,12 @@ public:
   std::string
     subLine(size_t pos, size_t n){ return line.substr(pos, n);}
 
-//! Unset a breakpoint within a line
-  void
-    unsetBreakpoint(void){ isBreakpoint=false;}
-
 private:
   // Input filenames
   std::string inFile ;
   std::string line ;
   std::string prevLine ;
-  char breakpoint;
+  char lineContinuation;
   std::vector<char> vSkipChars;
   std::vector<double> val ; //line: converted values
 
@@ -268,7 +264,6 @@ private:
   bool   isRange ;        // true: range wird abgefragt
   bool   is_fopen;
 
-  bool isBreakpoint;
   bool isClearSurroundingSpaces;
   bool isEof;
   bool isExternalStream;

@@ -51,7 +51,6 @@ ReadLine::init()
   rangeLast = MAXDOUBLE ;
   rangeCol = 0  ;
 
-  isBreakpoint=false;
   isClearSurroundingSpaces = false;
   isEof=false;
   isPutBackLine=false;
@@ -61,6 +60,8 @@ ReadLine::init()
   isRange = false ;
   isReadFloat=false;
   is_fopen=false;
+
+  lineContinuation='\\';
 
   stream=0;
 }
@@ -357,15 +358,19 @@ ReadLine::readLine(bool isVoid)
       continue;
     }
 
-    if( isBreakpoint )
+    if(cbuf == lineContinuation)
     {
-      // read across lines to the breakpoint
-      if( cbuf == '\n' || cbuf == '\r' )
-       continue;
+      cbuf = stream->peek();
+      if( cbuf == '\n' || cbuf == '\r')
+      {
+        cbuf = stream->get();
+        if( cbuf == '\n' || cbuf == '\r')
+          cbuf = stream->get();
 
-      if( cbuf == breakpoint )
-        return false ;  // Zeile erfolgreich gelesen
+        continue;
+      }
     }
+
     else if( cbuf == '\n' || cbuf == '\r' )
     {
       if( (cbuf = stream->peek()) == '\n' )
