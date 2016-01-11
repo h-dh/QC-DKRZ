@@ -1255,7 +1255,6 @@ Annotation::readConf(void)
   ReadLine ifs( notesConf ) ;
   ifs.skipBashComment();
   ifs.clearSurroundingSpaces();
-  ifs.setBreakpoint('&');  // wil be toggled
 
   // at first, read settings from file
 //  std::ifstream ifs(notesConf.c_str(), std::ios::in);
@@ -1267,15 +1266,18 @@ Annotation::readConf(void)
 
   std::string txt;
   BraceOP groups;
+  Split x_txt;
+  x_txt.setSeparator("&");
+
 
   while( !ifs.getLine(txt) )
   {
     if( txt.size() == 0 )
       continue;
 
+    size_t pos;
     if(txt.find("PERMITTED_FLAG_BEGIN") < std::string::npos)
     {
-       size_t pos;
        if( (pos=txt.find("=")) < std::string::npos)
        {
          Split splt(txt.substr(++pos), ",") ;
@@ -1288,7 +1290,6 @@ Annotation::readConf(void)
 
     // one for all
     size_t pos_x=0;
-    size_t pos;
     if( useAlways.size()
           || (pos_x=txt.find("NOTE_ALWAYS=")) < std::string::npos
             || (pos=txt.find("NOTE_ALWAYS")) < std::string::npos )
@@ -1313,10 +1314,10 @@ Annotation::readConf(void)
       break; // leave the while loop
     }
 
-    // regular entries my be arbitrarily split across several lines
-    ifs.unsetBreakpoint() ;
-    ifs.getLine(str0) ;
-    ifs.setBreakpoint('&') ;
+    // separation of text and task at &
+    x_txt = txt ;
+    txt=x_txt[0];
+    str0=x_txt[1];
 
     if( levelLimit ||
           txt.find("NOTE_LEVEL_LIMIT") < std::string::npos )
@@ -1348,7 +1349,7 @@ Annotation::readConf(void)
     if( txt.size() && txt[txt.size()-1] != '.' )
       txt += '.' ;
 
-    groups.set( str0 );
+    groups.set(str0);
     while ( groups.next(str0) )
       setConfVector( txt, str0 ) ;
   }
