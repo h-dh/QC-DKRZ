@@ -1044,10 +1044,10 @@ displayStatusLine()
 {
   local pbForStatus
 
-  if [ "${progressFileNum}" -a ${progressTotalFileNum:-0} -gt 0  ] ; then
-    pbForStatus=" (${progressFileNum}/${progressTotalFileNum})"
+  if [ "${progressAtomicNum}" -a ${progressTotalAtomicNum:-0} -gt 0  ] ; then
+    pbForStatus=" (${progressAtomicNum}/${progressTotalAtomicNum})"
 
-    local perc=$( echo "${progressFileNum} / ${progressTotalFileNum} * 100" | bc -l)
+    local perc=$( echo "${progressAtomicNum} / ${progressTotalAtomicNum} * 100" | bc -l)
     # use if-construct, because this only works on AIX
     local is=$( echo "if ( ${perc} >= ${progressNext} ) 1" | bc -l )
     if [ ${is:-0} -eq 1 ] ; then
@@ -1061,7 +1061,7 @@ displayStatusLine()
       progressNext=$( echo "${is:0:i} * $progressStep +$progressStep" | bc -l)
 
       if [ ${PROGRESS_BAR} ] ; then
-        eval echo "${progressFileNum} ${progressTotalFileNum}" ${progressFile}
+        eval echo "${progressAtomicNum} ${progressTotalAtomicNum}" ${progressFile}
       fi
     fi
   fi
@@ -1663,7 +1663,6 @@ getNextVariable()
     fi
   done
   if [ ${is:-f} = t ] ; then
-    progressFileNum=$(( ${progressFileNum:-0} + num ))
     nextFile=  # ignore, try next
     return 0
   fi
@@ -1695,7 +1694,6 @@ getNextVariable()
     fi
   done
   if [ ${is:-f} = t ] ; then
-    progressFileNum=$(( ${progressFileNum:-0} + num ))
     nextFile=  # ignore, try next
     return 0
   fi
@@ -1722,7 +1720,6 @@ getNextVariable()
   # there is no warning, when all files of a given variable
   # are broken links.
   if [ ${IGNORE_BROKEN_LINKS:-f} = t -a ! ${#nV_fls[*]} -eq 0 ] ; then
-    progressFileNum=$(( ${progressFileNum:-0} + num ))
     nextFile=  # ignore, try next
     return 0
   fi
@@ -1735,7 +1732,6 @@ getNextVariable()
   # only, if there are more than one qa-files backup files.
   # The function shall clear such.
   if checkValidNcFile ${QA_RESULTS}/data/${subPath} $1 ; then
-    progressFileNum=$(( ${progressFileNum:-0} + num ))
     nextFile=  # ignore, try next
     return 0
   fi
@@ -1769,7 +1765,6 @@ getNextVariable()
     test $status -gt 1 && \rm ${QA_RESULTS}/data/${subPath}/qa_${1}.* 2> /dev/null
 
     if [ $status -eq 6 ] ; then
-      progressFileNum=$(( ${progressFileNum:-0} + num ))
       # creation_date and/or tracking_id was kept
       nextFile=  # ignore, try next
       return 0
@@ -1833,7 +1828,6 @@ getNextVariable()
       # get number of data files for progress estimation
       # note: all files no matter whether processed or locked
       local num=${#nV_fls[*]}
-      progressFileNum=$(( ${progressFileNum:-0} + num ))
 #    fi
 
     nextFile=
@@ -1843,7 +1837,6 @@ getNextVariable()
   if [ $status -eq 3 ] ; then
 #    if [ ${PROGRESS_BAR} ] ; then
       local num=${#nV_fls[*]}
-      progressFileNum=$(( ${progressFileNum:-0} + num ))
 #    fi
 
     isAnythingDone=t
@@ -1874,7 +1867,6 @@ getNextVariable()
         # get number of data files for progress estimation
         # note: all files no matter whether processed or locked
         local num=${#nV_fls[*]}
-        progressFileNum=$(( ${progressFileNum:-0} + num ))
 #      fi
 
       nextFile=
@@ -1886,7 +1878,6 @@ getNextVariable()
   if [ $status -gt 10 ] ; then
 #    if [ ${PROGRESS_BAR} ] ; then
       local num=${#nV_fls[*]}
-      progressFileNum=$(( ${progressFileNum:-0} + num ))
 #    fi
 
     isAnythingDone=t
@@ -1940,21 +1931,10 @@ getNextSubPath()
 
   # init progress estimation
 #  if [ ${PROGRESS_BAR} ] ; then
-    if [ ${progressTotalFileNum:-0} -eq 0 ] ; then
+    if [ ${progressTotalAtomicNum:-0} -eq 0 ] ; then
       if [ "$(tail -n 1 ${pathListFile})" = '---EOF---' ] ; then
-        progressTotalFileNum=0
-        local fs lline num
-        while read -a lline ; do
-          if [ ${#lline[*]} -gt 1 ] ; then
-            test ${lline[0]} = '---EOF---' && break
-            num=$( ls ${PROJECT_DATAV[${lline[0]}]}/${lline[1]}/*.nc \
-                      | grep -c . 2> /dev/null)
-          else
-            num=1  # explixit filename
-          fi
-
-          progressTotalFileNum=$(( progressTotalFileNum + num ))
-        done < ${pathListFile}
+        progressTotalAtomicNum=$(wc -l ${pathListFile} | awk '{print $1}')
+        progressTotalAtomicNum=$(( progressTotalAtomicNum -1 ))
       fi
     fi
 #  fi
@@ -1971,6 +1951,8 @@ getNextSubPath()
       explFName=''
       return
     fi
+
+    progressAtomicNum=$(( ${progressAtomicNum} + 1 ))
 
     subPath=${line[1]}
     explFName=${line[2]}  # available only for a single file selection
@@ -3642,7 +3624,6 @@ operatePipes()
         # no processing due to a lock-file
 #        if [ ${PROGRESS_BAR} ] ; then
           local num=${#p_nF[*]}
-          progressFileNum=$(( ${progressFileNum:-0} + num ))
 #        fi
       fi
 
@@ -3734,7 +3715,6 @@ operatePipes()
 
 #      if [ ${PROGRESS_BAR} ] ; then
         # get number of data files for progress estimation
-        progressFileNum=$(( ${progressFileNum:-0} + 1 ))
 #      fi
 
       displayStatusLine ${#nextFile} "\rNEXT File: ${nextFile}"
@@ -3761,7 +3741,6 @@ operatePipes()
 #      if [ ${NO_STATUS} = f  ] ; then
 #        if [ ${SIMPLE_STATUS_LINE:-f} = t ] ; then
 #          # get number of data files for progress estimation
-#          progressFileNum=$(( ${progressFileNum:-0} + 1 ))
 
 #          displayStatusLine ${#nextFile[nF_IX]} "\rNEXT File: ${nextFile[nF_IX]}"
 #        fi
@@ -4189,7 +4168,6 @@ testLocks()
 #    if [ ${PROGRESS_BAR} ] ; then
       local num=$( ls -d ${PROJECT_DATA}/${subPath}/${fBase[ix]}*.nc \
                     | grep -c . )
-      progressFileNum=$(( ${progressFileNum:-0} + num ))
 #    fi
 
     return 0  # is blocked
