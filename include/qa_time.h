@@ -41,7 +41,7 @@ class TimeOutputBuffer
 
 enum TimeTableMode
 {
-    UNDEF, REGULAR, ORPHAN, DISABLE, CYCLE
+    INIT, UNDEF, REGULAR, ORPHAN, DISABLE, CYCLE
 };
 TimeTableMode timeTableMode;
 

@@ -69,7 +69,7 @@ QA_Time::applyOptions(std::vector<std::string> &optStr)
             || split[0] == "table_time_ranges" )
      {
           timeTable.setFile(split[1]) ;
-          timeTableMode=UNDEF;
+          timeTableMode=INIT;
           continue;
      }
    }
@@ -433,7 +433,9 @@ QA_Time::initDefaults(void)
    bufferCount=0;
    maxBufferSize=1500;
 
-  return;
+   timeTableMode=UNDEF;
+
+   return;
 }
 
 bool
@@ -724,6 +726,8 @@ QA_Time::initTimeTable(std::string id_1st, std::string id_2nd)
      timeTableMode = REGULAR ;
      return ;
    }
+
+   ifs.skipComment();
 
    // find the identifier in the table
    Split splt_line;
@@ -1242,7 +1246,7 @@ QA_Time::testTimeBounds(NcAPI &nc)
   // checks below don't make any sense for climatologies
   if( pIn->variable[timeBounds_ix].isClimatology )
     return;
-  
+
   if( isFormattedDate )
   {
     refDate.setDate( currTimeBoundsValue[0] );
