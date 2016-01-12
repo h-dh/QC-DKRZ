@@ -1253,7 +1253,7 @@ Annotation::readConf(void)
   notesConf += checkList ;
 
   ReadLine ifs( notesConf ) ;
-  ifs.skipBashComment();
+  ifs.skipComment();
   ifs.clearSurroundingSpaces();
 
   // at first, read settings from file
