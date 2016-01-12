@@ -1890,10 +1890,18 @@ getNextVariable()
     y_time_values=FAIL
     y_status=${status}
 
-#    local k
-#    for(( k=0 ; k < ${#nextFile[*]} ; ++k )) ; do
-      y_text[${k}]="${nextFile[k]}"
-#    done
+    local yCount=0
+    local l;
+    for(( k=0 ; k < ${#nextFile[*]} ; ++k )) ; do
+      for(( l=0 ; l < ${#nextFile[k]} ; ++l )) ; do
+        if [ "${nextFile[k]:l:2}" = "\n" ] ; then
+           yCount=$(( yCount +1 ))
+           break
+        else
+          y_text[yCount]="${y_text[yCount]}${nextFile[k]:l:1}"
+        fi
+      done
+    done
 
     initLog $1
 
@@ -2774,7 +2782,7 @@ initLog()
   y_data=
 
   local i
-  if [ ${y_text[i]} ] ; then
+  if [ "${y_text[0]}" ] ; then
     sTxt[$((ix++))]="7text:"
     for(( i=0 ; i < ${#y_text[*]} ; ++i )) do
       sTxt[$((ix++))]='7 - '"${y_text[i]}"
