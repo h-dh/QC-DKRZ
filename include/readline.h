@@ -214,11 +214,6 @@ public:
   size_t
     size(void){ return split.size(); }
 
-//! Discard Bash comments.
-/*! From the first appearance to the end of the line.*/
-    void
-    skipBashComment( void ){ isSkipBashComment=true; }
-
     //! Discard characters.
 /*! From the first appearance to the end of the line.*/
     void
@@ -227,6 +222,11 @@ public:
 /*! Note that each character is discrded, not just the string */
     void
     skipCharacter(std::string);
+
+//! Discard comments indicated by character [default: #].
+/*! From the first appearance to the end of the line.*/
+    void
+    skipComment(char c='#');
 
 //! Skip the first int lines.
   bool
@@ -254,6 +254,8 @@ private:
   std::string inFile ;
   std::string line ;
   std::string prevLine ;
+
+  char commentChar; // default #
   char lineContinuation;
   std::vector<char> vSkipChars;
   std::vector<double> val ; //line: converted values
@@ -269,7 +271,7 @@ private:
   bool isExternalStream;
   bool isPutBackLine;
   bool isReadFloat ;
-  bool isSkipBashComment;
+  bool isSkipComment;
   bool isSkipCharacter;
   bool isSkipWhiteLine;
   bool isSwappedEof;

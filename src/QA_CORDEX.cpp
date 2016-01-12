@@ -363,7 +363,7 @@ DRS_CV::checkModelName(std::string &aName, std::string &aValue,
 
    // parse table; trailing ':' indicates variable or 'global'
    ifs.skipWhiteLines();
-   ifs.skipBashComment();
+   ifs.skipComment();
 
    bool isModel=false;
    bool isInst=false;
@@ -1226,7 +1226,7 @@ DRS_CV::testPeriodCutRegular(std::vector<std::string> &sd,
        if( ! (sd[0][3] == '1' || sd[0][3] == '6') )
          text.push_back(": StartTime should begin with YYY1 or YYY6");
 
-       if( sd[0].substr(4,4) != "0101" )
+      if( sd[0].substr(4,4) != "0101" )
          text.push_back(": StartTime should be YYYY0101");
      }
 
@@ -1235,8 +1235,10 @@ DRS_CV::testPeriodCutRegular(std::vector<std::string> &sd,
        if( ! (sd[1][3] == '0' || sd[1][3] == '5') )
          text.push_back(": EndTime should begin with YYY0 or YYY5");
 
-       if( sd[1].substr(4,4) != "1231" )
-         text.push_back(": EndTime should be YYYY1231");
+       std::string numDec(hdhC::double2String(
+                          pQA->qaTime.refDate.regularMonthDays[11]));
+       if( sd[1].substr(4,4) != "12"+numDec )
+         text.push_back(": EndTime should be YYYY12"+numDec);
      }
   }
   else if( frequency == "mon" )
@@ -1264,8 +1266,10 @@ DRS_CV::testPeriodCutRegular(std::vector<std::string> &sd,
        if( ! (sd[1][3] == '0' || sd[1][3] == '5') )
          text.push_back(": EndTime should begin with YYY0");
 
+       std::string numDec(hdhC::double2String(
+                          pQA->qaTime.refDate.regularMonthDays[11]));
        if( sd[1].substr(4,4) != "12" )
-         text.push_back(": EndTime should be YYYY1231");
+         text.push_back(": EndTime should be YYYY12"+numDec);
      }
   }
   else if( frequency == "sem" )

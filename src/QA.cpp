@@ -533,7 +533,7 @@ QA::init(void)
    pIn->excludeVars();
 
    qaTime.init(optStr);
-   
+
    // DRS and CV specifications
    drs_cv_table.read(table_DRS_CV);
 
@@ -1250,7 +1250,7 @@ DRS_CV_Table::read(hdhC::FileSplit& fs)
   if( ! ifs.isOpen() )
   {
      std::string key("7_1");
-     if( pQA->notes->inq( key, pQA->fileStr) )
+     if( pQA->notes->inq( key) )
      {
         std::string capt("no path to a table, tried " + fs.getFile()) ;
 
@@ -1269,7 +1269,7 @@ DRS_CV_Table::read(hdhC::FileSplit& fs)
 
   // parse table; trailing ':' indicates variable or 'global'
   ifs.skipWhiteLines();
-  ifs.skipBashComment();
+  ifs.skipComment();
   ifs.skipCharacter("<>");
   ifs.clearSurroundingSpaces();
 
@@ -1380,7 +1380,7 @@ DRS_CV_Table::read(hdhC::FileSplit& fs)
     if( attName.size() == 0 )
     {
       std::string key("7_2");
-      if( notes->inq( key, pQA->fileStr) )
+      if( notes->inq( key) )
       {
         std::string capt(
            "Syntax fault in the DRS_CV table: orphaned attribute, found ");

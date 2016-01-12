@@ -54,7 +54,7 @@ ReadLine::init()
   isClearSurroundingSpaces = false;
   isEof=false;
   isPutBackLine=false;
-  isSkipBashComment = false;
+  isSkipComment = false;
   isSkipCharacter=false;
   isSkipWhiteLine = false;
   isRange = false ;
@@ -62,6 +62,7 @@ ReadLine::init()
   is_fopen=false;
 
   lineContinuation='\\';
+  commentChar='#';
 
   stream=0;
 }
@@ -334,8 +335,7 @@ ReadLine::readLine(bool isVoid)
 
   prevLine = line;
   line.erase();
-
-  bool skip=false;
+  bool isSkip;
 
   // variable number of columns
   while( !(isEof = stream->eof()) )
@@ -343,9 +343,10 @@ ReadLine::readLine(bool isVoid)
     cbuf = stream->get();
 
     // skip fom #-char to the end of tzhe line
-    if( isSkipBashComment && cbuf == '#' )
-      skip=true;
-    if( skip )
+    if( isSkipComment && cbuf == commentChar )
+      isSkip=true;
+    
+    if(isSkip)
     {
       if(cbuf == '\n' || cbuf == '\r')
       {
@@ -510,6 +511,14 @@ ReadLine::skipCharacter(std::string s)
 
   isSkipCharacter=true;
 
+  return;
+}
+
+void
+ReadLine::skipComment(char c)
+{
+  commentChar=c;
+  isSkipComment=true;
   return;
 }
 
