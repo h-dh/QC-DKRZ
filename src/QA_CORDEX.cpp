@@ -3489,68 +3489,60 @@ QA_Exp::checkVariableType(void)
 
       if( tAttName == "VAR_TYPE" )
       {
-        bool isA = false ;
         size_t v;
         for(v=0 ; v < pQA->pIn->varSz ; ++v )
         {
           Variable& var = pQA->pIn->variable[v] ;
 
           if( var.name == tName )
-          {
-            isA=true;
-            break;
-          }
+            checkVariableTypeX(v, i, j, tName);
         }
 
-        if( v == pQA->pIn->varSz )
-        {
-          for(v=0 ; v < pQA->pIn->varSz ; ++v )
-          {
-            Variable& var = pQA->pIn->variable[v] ;
-
-            if( var.isDATA && tName == "DATA_VAR" )
-            {
-              isA = true;
-              break;
-            }
-            else if( var.isAUX && tName == "AUX_VAR" )
-            {
-              isA = true;
-              break;
-            }
-          }
-        }
-
-        if( isA )
+        for(v=0 ; v < pQA->pIn->varSz ; ++v )
         {
           Variable& var = pQA->pIn->variable[v] ;
-          std::string& tAttValue = table.attValue[i][j] ;
 
-          std::string s(pQA->pIn->nc.getVarTypeStr(var.name));
-
-          if( tAttValue != s )
-          {
-            std::string key("3_2");
-            if( notes->inq( key, var.name) )
-            {
-              std::string capt;
-              if( tName == "DATA_VAR" )
-                capt = "data ";
-              else if( tName == "AUX_VAR" )
-                capt = "auxiliary ";
-
-              capt += hdhC::tf_var(var.name);
-              capt += "has wrong data type, found";
-              capt += hdhC::tf_val(s);
-              capt += ", expected";
-              capt += hdhC::tf_val(tAttValue);
-
-              (void) notes->operate(capt) ;
-              notes->setCheckMetaStr( pQA->fail );
-            }
-          }
+          if( var.isDATA && tName == "DATA_VAR" )
+            checkVariableTypeX(v, i, j, tName);
+          else if( var.isAUX && tName == "AUX_VAR" )
+            checkVariableTypeX(v, i, j, tName);
         }
       }
+    }
+  }
+
+  return;
+}
+
+void
+QA_Exp::checkVariableTypeX(size_t v, size_t i, size_t j, std::string& tName)
+{
+  DRS_CV_Table& table = pQA->drs_cv_table ;
+
+  Variable& var = pQA->pIn->variable[v] ;
+  std::string& tAttValue = table.attValue[i][j] ;
+
+  std::string s(pQA->pIn->nc.getVarTypeStr(var.name));
+
+  if( tAttValue != s )
+  {
+    std::string key("3_2");
+    if( notes->inq( key, var.name) )
+    {
+      std::string capt;
+      if( tName == "DATA_VAR" )
+        capt = "data ";
+      else if( tName == "AUX_VAR" )
+        capt = "auxiliary ";
+
+      capt += hdhC::tf_var(var.name);
+      capt += "has wrong data type, found";
+      capt += hdhC::tf_val(s);
+      capt += ", expected";
+      capt += hdhC::tf_val(tAttValue);
+
+      (void) notes->operate(capt) ;
+      notes->setCheckMetaStr( pQA->fail );
     }
   }
 

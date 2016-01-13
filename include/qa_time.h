@@ -137,7 +137,7 @@ class QA_Time
   void   initResumeSession(void);
 
   bool   initTimeBounds(double offset=0.) ;
-  void   initTimeTable(std::string id_1st, std::string id_2nd="");
+  void   initTimeTable(void);
 
   void   openQA_NcContrib(NcAPI*);
 

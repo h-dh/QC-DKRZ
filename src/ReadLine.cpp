@@ -185,23 +185,6 @@ ReadLine::getLine( std::string &str0)
   if( (bret=readLine()) )
     return bret;
 
-  if( isSkipCharacter )
-  {
-     str0.clear();
-     for(size_t i=0 ; i < line.size() ; ++i )
-     {
-       bool is=true;
-       for( size_t j=0 ; j < vSkipChars.size() ; ++j )
-         if( line[i] == vSkipChars[j] )
-           is=false;
-
-       if( is )
-         str0 += line[i] ;
-     }
-
-     line = str0;
-  }
-
   if( isSkipWhiteLine )
     if( hdhC::isWhiteString( line ) )
       return getLine(str0) ; // safe for empty str0
@@ -336,27 +319,60 @@ ReadLine::readLine(bool isVoid)
   prevLine = line;
   line.erase();
   bool isSkip;
+  bool isLeading=true;
 
   // variable number of columns
   while( !(isEof = stream->eof()) )
   {
     cbuf = stream->get();
 
+    if( cbuf == '\n' || cbuf == '\r' )
+    {
+      if( (cbuf = stream->peek()) == '\n' )
+        cbuf = stream->get();
+
+      return false ;  // Zeile erfolgreich gelesen
+    }
+
+    if(isLeading && vc_skipLeadingChar.size())
+    {
+      bool is=false;
+      for( size_t i=0 ; i < vc_skipLeadingChar.size() ; ++i )
+      {
+        if( cbuf == vc_skipLeadingChar[i] )
+        {
+          is=true;
+          break;
+        }
+      }
+
+      if(is)
+        continue;
+      else
+        isLeading=false;
+    }
+
     // skip fom #-char to the end of tzhe line
     if( isSkipComment && cbuf == commentChar )
       isSkip=true;
-    
-    if(isSkip)
-    {
-      if(cbuf == '\n' || cbuf == '\r')
-      {
-        if( (cbuf = stream->peek()) == '\n' )
-          cbuf = stream->get();
 
-        return false;
+    if(isSkip)
+      continue;
+
+    if( isSkipCharacter )
+    {
+      bool is=false;
+      for( size_t j=0 ; j < vSkipChars.size() ; ++j )
+      {
+        if( cbuf == vSkipChars[j] )
+        {
+          is=true;
+          break;
+        }
       }
 
-      continue;
+      if( is )
+        continue ;
     }
 
     if(cbuf == lineContinuation)
@@ -370,14 +386,6 @@ ReadLine::readLine(bool isVoid)
 
         continue;
       }
-    }
-
-    else if( cbuf == '\n' || cbuf == '\r' )
-    {
-      if( (cbuf = stream->peek()) == '\n' )
-        cbuf = stream->get();
-
-      return false ;  // Zeile erfolgreich gelesen
     }
 
     line += cbuf ;  // line enthaelt alle SPACE-Chars
@@ -519,6 +527,31 @@ ReadLine::skipComment(char c)
 {
   commentChar=c;
   isSkipComment=true;
+  return;
+}
+
+//! Skip leading character(s)
+void
+ReadLine::skipLeadingChar(char c)
+{
+  vc_skipLeadingChar.clear();
+
+  // white chars by default
+  if( c == '\0' )
+  {
+    vc_skipLeadingChar.push_back(' ');
+    vc_skipLeadingChar.push_back('\t');
+  }
+  else
+    vc_skipLeadingChar.push_back(c);
+
+  return;
+}
+
+void
+ReadLine::skipLeadingChar(std::vector<char>& vc)
+{
+  vc_skipLeadingChar = vc;
   return;
 }
 

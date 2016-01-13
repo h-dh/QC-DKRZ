@@ -382,7 +382,7 @@ QA_Time::init(std::vector<std::string>& optStr)
    }
 
    applyOptions(optStr);
-   initTimeTable( pQA->qaExp.getFrequency() );
+   initTimeTable();
 
    return true;
 }
@@ -690,8 +690,11 @@ QA_Time::initResumeSession(void)
 }
 
 void
-QA_Time::initTimeTable(std::string id_1st, std::string id_2nd)
+QA_Time::initTimeTable(void)
 {
+   std::string id_1st(QA::tableSheet);
+   std::string id_2nd(QA::tableSheetSub);
+
    if( timeTableMode == UNDEF )
      return;
 
@@ -727,6 +730,7 @@ QA_Time::initTimeTable(std::string id_1st, std::string id_2nd)
      return ;
    }
 
+   ifs.skipLeadingChar();
    ifs.skipComment();
 
    // find the identifier in the table
@@ -1570,7 +1574,7 @@ QA_Time::testTimeStep(void)
     if( notes->inq( key, name, ANNOT_ACCUM) )
     {
       std::string capt;
-      std::ostringstream ostr(std::ios::app);
+      std::string text;
 
       if( isAcrossFiles )
         capt = "gap between time values across files";
@@ -1584,40 +1588,49 @@ QA_Time::testTimeStep(void)
       {
         if( isAcrossFiles )
         {
-          ostr << "last time of previous file=";
-          ostr << prevTimeValue ;
-          ostr << ", first time of this file=" ;
-          ostr << currTimeValue << ", " ;
+          text  = "last time of previous file=";
+          text += prevTimeValue ;
+          text += ", first time of this file=" ;
+          text += currTimeValue  ;
         }
         else
         {
-          ostr << "prev rec# " << (pIn->currRec-1);
-          ostr << ", time=" << prevTimeValue ;
-          ostr << "curr rec# " << pIn->currRec ;
-          ostr << ", time=" << currTimeValue ;
+          text  = "prev=" ;
+          text += hdhC::double2String(prevTimeValue) ;
+          text += ", curr=" ;
+          text += hdhC::double2String(currTimeValue) ;
         }
       }
       else
       {
         if( isAcrossFiles )
         {
-           ostr << "last time of previous file=" << prevTimeValue;
-           ostr << " (date=" << refDate.getDate(prevTimeValue).str() ;
-           ostr << "), first time of this file=" << currTimeValue
-                << " (date=" << refDate.getDate(currTimeValue).str() << ")" ;
+           text  = "t(last) of previous file=" ;
+           text += hdhC::double2String(prevTimeValue);
+           text += " (" ;
+           text += refDate.getDate(prevTimeValue).str() ;
+           text += "), t(1st) of current file=" ;
+           text += hdhC::double2String(currTimeValue);
+           text += " (" ;
+           text += refDate.getDate(currTimeValue).str() ;
+           text += ")" ;
 
         }
         else
         {
-           ostr << "prev=" << prevTimeValue;
-           ostr << " (date=" << refDate.getDate(prevTimeValue).str() ;
-           ostr << ")\ncurr=" << currTimeValue << " (date:"
-                << refDate.getDate(currTimeValue).str() ;
-           ostr << ")" ;
+           text  = "prev=" ;
+           text += hdhC::double2String(prevTimeValue);
+           text += " (" ;
+           text += refDate.getDate(prevTimeValue).str() ;
+           text += "), curr=" ;
+           text += hdhC::double2String(currTimeValue) ;
+           text += " (" ;
+           text += refDate.getDate(currTimeValue).str() ;
+           text += ")" ;
         }
       }
 
-      if( notes->operate(capt, ostr.str()) )
+      if( notes->operate(capt, text) )
       {
         notes->setCheckTimeStr(fail);
 

@@ -223,6 +223,7 @@ class QA_Exp
   void   createVarMetaData(void);
 
   void   checkVariableType(void);
+  void   checkVariableTypeX(size_t, size_t, size_t, std::string&);
 
   //! Check time properties.
   void   domainCheck(void);

@@ -230,6 +230,9 @@ class QA : public IObj
   std::vector<std::string> srcStr;
   std::string revision;
 
+  static std::string tableSheet;
+  static std::string tableSheetSub;
+
   std::string fail;
   std::string fileStr;
   std::string notAvailable;
@@ -262,4 +265,8 @@ class QA : public IObj
   void        setTable(std::string, std::string acronym="");
 };
 
+std::string QA::tableSheet=hdhC::empty;
+std::string QA::tableSheetSub=hdhC::empty;
+
 #endif
+

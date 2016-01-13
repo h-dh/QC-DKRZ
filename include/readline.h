@@ -216,17 +216,25 @@ public:
 
     //! Discard characters.
 /*! From the first appearance to the end of the line.*/
-    void
+  void
     skipCharacter( char c){ vSkipChars.push_back(c); isSkipCharacter=true; }
 
 /*! Note that each character is discrded, not just the string */
-    void
+  void
     skipCharacter(std::string);
 
 //! Discard comments indicated by character [default: #].
 /*! From the first appearance to the end of the line.*/
-    void
+  void
     skipComment(char c='#');
+
+//! Skip leading character(s)
+/*! Note: the vector member has to be used for skipping '\0'.*/
+  void
+    skipLeadingChar(char c='\0'); // white chars by default
+
+  void
+    skipLeadingChar(std::vector<char>&);
 
 //! Skip the first int lines.
   bool
@@ -257,6 +265,8 @@ private:
 
   char commentChar; // default #
   char lineContinuation;
+  std::vector<char> vc_skipLeadingChar;
+
   std::vector<char> vSkipChars;
   std::vector<double> val ; //line: converted values
 
