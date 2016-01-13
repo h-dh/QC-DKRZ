@@ -273,11 +273,11 @@ class QA_Exp
   std::string
          getTableEntryID(std::string vN="");
 
+  void   init(std::vector<std::string>&);
+
   //! Initialisation of flushing gathered results to netCDF file.
   /*! Parameter indicates the number of variables. */
   void   initDataOutputBuffer(void);
-
-  //! Set default values.
   void   initDefaults(void);
 
   //! Initialisiation of a resumed session.
@@ -297,7 +297,7 @@ class QA_Exp
   void   reqAttCheckGlobal(Variable&);
   void   reqAttCheckVariable(Variable&);
 
-  void   run(std::vector<std::string>&);
+  void   run(void);
 
   void   setParent(QA*);
 

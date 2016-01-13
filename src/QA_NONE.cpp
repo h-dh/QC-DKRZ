@@ -75,6 +75,18 @@ QA_Exp::getTableEntryID(std::string vName)
 }
 
 void
+QA_Exp::init(std::vector<std::string>& optStr)
+{
+   // apply parsed command-line args
+   applyOptions(optStr);
+
+   // Create and set VarMetaData objects.
+   createVarMetaData() ;
+
+   return ;
+}
+
+void
 QA_Exp::initDataOutputBuffer(void)
 {
     for( size_t i=0 ; i < varMeDa.size() ; ++i)
@@ -170,14 +182,8 @@ QA_Exp::pushBackVarMeDa(Variable *var)
 }
 
 void
-QA_Exp::run(std::vector<std::string>& optStr)
+QA_Exp::run(void)
 {
-   // apply parsed command-line args
-   applyOptions(optStr);
-
-   // Create and set VarMetaData objects.
-   createVarMetaData() ;
-
    return ;
 }
 

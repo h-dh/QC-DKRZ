@@ -3964,6 +3964,24 @@ QA_Exp::getVarnameFromFilename(std::string fName)
 }
 
 void
+QA_Exp::init(std::vector<std::string>& optStr)
+{
+   // apply parsed command-line args
+   applyOptions(optStr);
+
+   fVarname = getVarnameFromFilename();
+   getFrequency();
+   getSubTable() ;
+
+   notes->setCheckMetaStr("PASS");
+
+   // Create and set VarMetaData objects.
+   createVarMetaData() ;
+
+   return;
+}
+
+void
 QA_Exp::initDataOutputBuffer(void)
 {
     for( size_t i=0 ; i < varMeDa.size() ; ++i)
@@ -4729,17 +4747,8 @@ QA_Exp::reqAttCheckVariable(Variable &var)
 }
 
 void
-QA_Exp::run(std::vector<std::string>& optStr)
+QA_Exp::run(void)
 {
-   // apply parsed command-line args
-   applyOptions(optStr);
-
-   notes->setCheckMetaStr("PASS");
-
-   fVarname = getVarnameFromFilename();
-   getFrequency();
-   getSubTable() ;
-
    bool isNoTable = inqTables() ;
 
    if( pQA->table_DRS_CV.is )
@@ -4747,9 +4756,6 @@ QA_Exp::run(std::vector<std::string>& optStr)
      DRS_CV drsFN(pQA);
      drsFN.run();
    }
-
-   // Create and set VarMetaData objects.
-   createVarMetaData() ;
 
    // check variable type; uses DRS_CV_Table
    checkVariableType();

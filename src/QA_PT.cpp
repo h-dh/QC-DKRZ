@@ -493,7 +493,7 @@ Consistency::getMetaData(Variable &dataVar,
 
   // dimensions
   md += "dims=";
-  md += dataVar.getDimNameStr();
+  md += dataVar.getDimNameStr(false, ' ');
 
   // get attributes of the data variable
   getAtts(dataVar, md);

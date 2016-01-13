@@ -461,6 +461,8 @@ public:
   //! Check the path to the tables;
   bool   inqTables(void);
 
+  void   init(std::vector<std::string>&);
+
   //! Initialisation of flushing gathered results to netCDF file.
   /*! Parameter indicates the number of variables. */
   void   initDataOutputBuffer(void);
@@ -482,7 +484,7 @@ public:
   //! Connect this with the object to be checked
 //  void   setInFilePointer(InFile *p) { pIn = p; }
 
-  void   run(std::vector<std::string>&);
+  void   run(void);
 
   void setParent(QA*);
 

@@ -534,15 +534,16 @@ QA::init(void)
 
    qaTime.init(optStr);
 
-   // check consistency between sub-sequent files Oor experiments
-   if( checkConsistency(*pIn) )
-   {
-      // DRS and CV specifications
-      drs_cv_table.read(table_DRS_CV);
+   qaExp.init(optStr);
 
-      // experiment specific obj: set parent, pass over options
-      qaExp.run(optStr);
-   }
+   // check consistency between sub-sequent files or experiments
+   (void) checkConsistency(*pIn) ;
+
+   // DRS and CV specifications
+   drs_cv_table.read(table_DRS_CV);
+
+   // experiment specific obj: set parent, pass over options
+   qaExp.run();
 
    // check existance of any data at all
    if( (qaTime.isTime || isCheckData )

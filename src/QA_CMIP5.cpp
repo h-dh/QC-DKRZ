@@ -4319,6 +4319,23 @@ QA_Exp::getVarnameFromFilename(std::string fName)
 }
 
 void
+QA_Exp::init(std::vector<std::string>& optStr)
+{
+  // apply parsed command-line args
+  applyOptions(optStr);
+
+  fVarname = getVarnameFromFilename(pQA->pIn->file.filename);
+  getFrequency();
+
+  notes->setCheckMetaStr("PASS");
+
+  // Create and set VarMetaData objects.
+  createVarMetaData() ;
+
+  return;
+}
+
+void
 QA_Exp::initDataOutputBuffer(void)
 {
   for( size_t i=0 ; i < varMeDa.size() ; ++i)
@@ -4514,19 +4531,8 @@ QA_Exp::pushBackVarMeDa(Variable *var)
 }
 
 void
-QA_Exp::run(std::vector<std::string>& optStr)
+QA_Exp::run(void)
 {
-  // apply parsed command-line args
-  applyOptions(optStr);
-
-  notes->setCheckMetaStr("PASS");
-
-  fVarname = getVarnameFromFilename(pQA->pIn->file.filename);
-  getFrequency();
-
-  // Create and set VarMetaData objects.
-  createVarMetaData() ;
-
   if( inqTables() )
   {
     QA::tableSheet = getMIP_tableName() ;
