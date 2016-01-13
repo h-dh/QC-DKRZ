@@ -3007,8 +3007,6 @@ QA_Exp::checkHeightValue(InFile &in)
 void
 QA_Exp::checkMetaData(InFile &in)
 {
-  notes->setCheckMetaStr("PASS");
-
   domainCheck();
 
   // check attributes required in the meta data section of the file
@@ -3524,7 +3522,7 @@ QA_Exp::checkVariableTypeX(size_t v, size_t i, size_t j, std::string& tName)
 
   std::string s(pQA->pIn->nc.getVarTypeStr(var.name));
 
-  if( tAttValue != s )
+  if( tAttValue != s && !var.isVoid)
   {
     std::string key("3_2");
     if( notes->inq( key, var.name) )
@@ -4736,6 +4734,8 @@ QA_Exp::run(std::vector<std::string>& optStr)
    // apply parsed command-line args
    applyOptions(optStr);
 
+   notes->setCheckMetaStr("PASS");
+
    fVarname = getVarnameFromFilename();
    getFrequency();
    getSubTable() ;
@@ -4755,10 +4755,8 @@ QA_Exp::run(std::vector<std::string>& optStr)
    checkVariableType();
 
    if( !isNoTable )
-   {
       // get meta data from file and compare with tables
       checkMetaData(*(pQA->pIn));
-   }
 
    return ;
 }

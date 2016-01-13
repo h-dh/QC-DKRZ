@@ -3975,8 +3975,6 @@ QA_Exp::checkDataVarNum(void)
 void
 QA_Exp::checkMetaData(InFile& in)
 {
-  notes->setCheckMetaStr("PASS");
-
   // is it NetCDF-3 classic?
   checkNetCDF(in);
 
@@ -4520,6 +4518,8 @@ QA_Exp::run(std::vector<std::string>& optStr)
 {
   // apply parsed command-line args
   applyOptions(optStr);
+
+  notes->setCheckMetaStr("PASS");
 
   fVarname = getVarnameFromFilename(pQA->pIn->file.filename);
   getFrequency();

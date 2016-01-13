@@ -1126,6 +1126,9 @@ Annotation::printNotes(std::string &tag, std::string &caption,
     printHeader(ofsNotes);
   }
 
+  if( isMultipleTags || !str.size() )
+     return;
+
   // prevent error message flooding
   if( count[currIndex]++ > recErrCountLimit )
     return;
@@ -1154,6 +1157,9 @@ Annotation::printNotes(std::string &tag, std::string &caption,
     if( str[i] == '\n' )
        str[i] = ';' ;
 
+  if( mp_txt[tag].size() )
+    mp_txt[tag] += ';' ;
+  
   mp_txt[tag] += str;
 
   return ;

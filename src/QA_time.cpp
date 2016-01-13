@@ -435,6 +435,9 @@ QA_Time::initDefaults(void)
 
    timeTableMode=UNDEF;
 
+   fail="FAIL";
+   notAvailable="N/A";
+
    return;
 }
 
@@ -857,15 +860,15 @@ QA_Time::initTimeTable(void)
        {
          std::string capt("time value before the first time-table range");
 
-         std::ostringstream ostr(std::ios::app);
-         ostr << "frequency=" << id_1st;
-         ostr << "\nrec#=0" ;
-         ostr << "\ndate in record=" << refDate.getDate(currTimeValue).str() ;
-         ostr << "\nrange from time-table=" ;
-         ostr << tt_dateRange[0].str() << " - " ;
-         ostr << tt_dateRange[1].str() ;
+         std::string text("frequency=" + id_1st);
+         text += "\nrec#=0" ;
+         text += "\ndate in record=" ;
+         text += refDate.getDate(currTimeValue).str() ;
+         text += "\nrange from time-table=" ;
+         text += tt_dateRange[0].str() + " - " ;
+         text += tt_dateRange[1].str() ;
 
-         if( notes->operate(capt, ostr.str()) )
+         if( notes->operate(capt, text) )
          {
            notes->setCheckTimeStr(fail);
            pQA->setExit( notes->getExitValue() ) ;
@@ -930,13 +933,13 @@ QA_Time::parseTimeTable(size_t rec)
         {
           std::string capt("too many time values compared to the time-table");
 
-          std::ostringstream ostr(std::ios::app);
-          ostr << "frequency=" << tt_id;
-          ostr << "\nrec#=" << rec;
-          ostr << "\ndate in record=" << refDate.getDate(currTimeValue).str() ;
-          ostr << "\nvalue from time-table=" << tt_xmode[tt_index] ;
+          std::string text("frequency=" + tt_id);
+          text += "\nrec#=" + hdhC::double2String(rec);
+          text += "\ndate in record=" ;
+          text += refDate.getDate(currTimeValue).str() ;
+          text += "\nvalue from time-table=" + tt_xmode[tt_index] ;
 
-          if( notes->operate(capt, ostr.str()) )
+          if( notes->operate(capt, text) )
           {
             notes->setCheckTimeStr(fail);
             pQA->setExit( notes->getExitValue() ) ;
@@ -971,13 +974,13 @@ QA_Time::parseTimeTable(size_t rec)
        {
          std::string capt("time record does not match time-table value");
 
-         std::ostringstream ostr(std::ios::app);
-         ostr << "frequency=" << tt_id;
-         ostr << "\nrec#=" << rec;
-         ostr << "\ndate in record=" << refDate.getDate(currTimeValue).str() ;
-         ostr << "\nvalue from time-table=" << tt_xmode[tt_index] ;
+         std::string text("frequency=" + tt_id);
+         text += "\nrec#=" + hdhC::double2String(rec);
+         text += "\ndate in record=" ;
+         text += refDate.getDate(currTimeValue).str() ;
+         text += "\nvalue from time-table=" + tt_xmode[tt_index] ;
 
-         if( notes->operate(capt, ostr.str()) )
+         if( notes->operate(capt, text) )
          {
             notes->setCheckTimeStr(fail);
             pQA->setExit( notes->getExitValue() ) ;
@@ -1185,7 +1188,7 @@ QA_Time::sync(void)
 
      if( notes->operate(capt, ostr.str()) )
      {
-       notes->setCheckMetaStr( fail );
+       notes->setCheckMetaStr(fail);
        notes->setCheckTimeStr(fail);
        notes->setCheckDataStr(fail);
 
@@ -1360,24 +1363,25 @@ QA_Time::testTimeBounds(NcAPI &nc)
           capt += " across files";
         }
 
-        std::ostringstream ostr(std::ios::app);
-        ostr.setf(std::ios::fixed, std::ios::floatfield);
-        ostr << "rec#="  << pIn->currRec << std::setprecision(0);
-        ostr << "\nprev t-b values=[" << prevTimeBoundsValue[0] << " - " ;
-        ostr                           << prevTimeBoundsValue[1] << "]" ;
+        std::string text("rec#=");
+        text += hdhC::double2String(pIn->currRec) ;
+        text += "\nprev t-b values=[" ;
+        text += hdhC::double2String(prevTimeBoundsValue[0]) + " - " ;
+        text += hdhC::double2String(prevTimeBoundsValue[1]) + "]" ;
 
-        ostr << ", dates=[" << refDate.getDate(prevTimeBoundsValue[0]).str()
-             << " - ";
-        ostr << refDate.getDate(prevTimeBoundsValue[1]).str() << "]" ;
+        text += ", [" + refDate.getDate(prevTimeBoundsValue[0]).str();
+        text += " - ";
+        text += refDate.getDate(prevTimeBoundsValue[1]).str() + "]" ;
 
-        ostr << "\ncurr t-b values=[" << currTimeBoundsValue[0] << " - "
-                                       << currTimeBoundsValue[1] << "]";
-        ostr << ", dates=[" << refDate.getDate(currTimeBoundsValue[0]).str()
-             << " - ";
-        ostr << refDate.getDate(currTimeBoundsValue[1]).str() << "]";
+        text += "\ncurr t-b values=[" ;
+        text += hdhC::double2String(currTimeBoundsValue[0]) + " - " ;
+        text += hdhC::double2String(currTimeBoundsValue[1]) + "]";
+        text += ", [" + refDate.getDate(currTimeBoundsValue[0]).str();
+        text += " - ";
+        text += refDate.getDate(currTimeBoundsValue[1]).str() + "]";
 
-        (void) notes->operate(capt, ostr.str()) ;
-        notes->setCheckTimeStr( fail );
+        (void) notes->operate(capt, text) ;
+        notes->setCheckTimeStr(fail);
       }
     }
   }
@@ -1483,8 +1487,8 @@ QA_Time::testTimeStep(void)
 
       if( notes->operate(capt, ostr.str()) )
       {
-        notes->setCheckTimeStr( fail );
-        notes->setCheckDataStr( fail );
+        notes->setCheckTimeStr(fail);
+        notes->setCheckDataStr(fail);
 
         pQA->setExit( notes->getExitValue() ) ;
       }
@@ -1519,7 +1523,7 @@ QA_Time::testTimeStep(void)
       if( notes->inq( key, name, ANNOT_ACCUM) )
       {
         std::string capt("identical time values");
-        std::ostringstream ostr(std::ios::app);
+        std::string text;
 
         if( isAcrossFiles )
            capt += " across files";
@@ -1528,21 +1532,23 @@ QA_Time::testTimeStep(void)
         {
           if( isAcrossFiles )
           {
-            ostr << "last time of previous file=" << prevTimeValue ;
-            ostr << ", first time of this file=" << currTimeValue  ;
+            text = "last time of previous file=" ;
+            text += hdhC::double2String(prevTimeValue) ;
+            text += ", first time of curent file=" ;
+            text += hdhC::double2String(currTimeValue)  ;
           }
           else
           {
-            ostr << "prev rec# " << (pIn->currRec-1) ;
-            ostr << ", time=" << prevTimeValue ;
-            ostr << ", curr rec# " << pIn->currRec ;
-            ostr << ", time=" << currTimeValue ;
+            text  = "prev rec# " + hdhC::double2String(pIn->currRec-1) ;
+            text += ", time=" + hdhC::double2String(prevTimeValue) ;
+            text += ", curr rec# " + hdhC::double2String(pIn->currRec) ;
+            text += ", time=" +hdhC::double2String( currTimeValue) ;
           }
         }
 
-        if( notes->operate(capt, ostr.str()) )
+        if( notes->operate(capt, text) )
         {
-          notes->setCheckTimeStr( fail );
+          notes->setCheckTimeStr(fail);
 
           pQA->setExit( notes->getExitValue() ) ;
         }
@@ -1633,7 +1639,6 @@ QA_Time::testTimeStep(void)
       if( notes->operate(capt, text) )
       {
         notes->setCheckTimeStr(fail);
-
         pQA->setExit( notes->getExitValue() ) ;
       }
     }

@@ -238,12 +238,12 @@ QA::applyOptions(bool isPost)
           || split[0] == "tableProject" )  // dummy
      {
        if( split.size() == 2 )
-          projectTableFile.setFile(split[1]);
+          consistencyFile.setFile(split[1]);
      }
    }
 
-   if( projectTableFile.path.size() == 0 )
-      projectTableFile.setPath(tablePath);
+   if( consistencyFile.path.size() == 0 )
+      consistencyFile.setPath(tablePath);
 
    if( table_DRS_CV.path.size() == 0 )
       table_DRS_CV.setPath(tablePath);
@@ -290,24 +290,24 @@ QA::checkDataBody(std::string vName)
   return false;
 }
 
-void
-QA::checkProjectTable(InFile &in)
+bool
+QA::checkConsistency(InFile &in)
 {
   defaultPrjTableName() ;
 
   // Read or write the project table.
-  ProjectTable projectTable(this, &in, projectTableFile);
-  projectTable.setAnnotation(notes);
-  projectTable.setExcludedAttributes( excludedAttribute );
+  Consistency consistency(this, &in, consistencyFile);
+  consistency.setAnnotation(notes);
+  consistency.setExcludedAttributes( excludedAttribute );
 
-  projectTable.check();
+  bool is = consistency.check();
 
   // inquire whether the meta-data checks passed
   int ev;
   if( (ev = notes->getExitValue()) > 1 )
     setExit( ev );
 
-  return;
+  return is;
 }
 
 void
@@ -350,8 +350,8 @@ QA::defaultPrjTableName(void)
   // tables names usage: both project and standard tables
   // reside in the same path.
   // Naming of the project table:
-  if( ! projectTableFile.is )
-    projectTableFile.setFilename("pt_NONE.csv");
+  if( ! consistencyFile.is )
+    consistencyFile.setFilename("pt_NONE.csv");
 
   return;
 }
@@ -534,11 +534,15 @@ QA::init(void)
 
    qaTime.init(optStr);
 
-   // DRS and CV specifications
-   drs_cv_table.read(table_DRS_CV);
+   // check consistency between sub-sequent files Oor experiments
+   if( checkConsistency(*pIn) )
+   {
+      // DRS and CV specifications
+      drs_cv_table.read(table_DRS_CV);
 
-   // experiment specific obj: set parent, pass over options
-   qaExp.run(optStr);
+      // experiment specific obj: set parent, pass over options
+      qaExp.run(optStr);
+   }
 
    // check existance of any data at all
    if( (qaTime.isTime || isCheckData )
@@ -569,10 +573,6 @@ QA::init(void)
    // open netCDF for creating, continuation or resuming qa_<varname>.nc.
    // note that this must happen before checkMetaData which uses currQARec
    openQA_Nc(*pIn);
-
-   // check consistency between sub-sequent files. Must come after
-   // openQA_Nc.
-   checkProjectTable(*pIn);
 
    if( getExit() || qaExp.isUseStrict || qaTime.isNoProgress )
    {

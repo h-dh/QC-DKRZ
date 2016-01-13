@@ -188,5 +188,4 @@ class QA_Time
   InFile *pIn;
   QA *pQA;
 };
-
 #endif

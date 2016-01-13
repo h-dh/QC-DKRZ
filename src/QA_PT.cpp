@@ -1,6 +1,6 @@
 #include "qa_PT.h"
 
-ProjectTable::ProjectTable(QA *p0, InFile *p1,
+Consistency::Consistency(QA *p0, InFile *p1,
     struct hdhC::FileSplit& pTFile )
 {
    qa  = p0;
@@ -11,10 +11,12 @@ ProjectTable::ProjectTable(QA *p0, InFile *p1,
    excludedAttributes.push_back("comment");
    excludedAttributes.push_back("history");
    excludedAttributes.push_back("associated_files");
+
+   status=false;
 }
 
-void
-ProjectTable::check(void)
+bool
+Consistency::check(void)
 {
   for( size_t i=0 ; i < pIn->dataVarIndex.size() ; ++i )
   {
@@ -23,14 +25,17 @@ ProjectTable::check(void)
      std::string entryID( qa->qaExp.getTableEntryID(var.name) );
 
      if( check(var, entryID) )
+     {
        write(var, entryID);
+       status=true;
+     }
   }
 
-  return;
+  return status;
 }
 
 bool
-ProjectTable::check(Variable &dataVar, std::string entryID)
+Consistency::check(Variable &dataVar, std::string entryID)
 {
   // return value is true, when there is not a project table, yet.
 
@@ -47,6 +52,7 @@ ProjectTable::check(Variable &dataVar, std::string entryID)
   size_t sz_PV = entryID.size();
 
   std::string t_md;
+  bool notFound=true;
 
   while( getline(ifs, str0) )
   {
@@ -54,6 +60,7 @@ ProjectTable::check(Variable &dataVar, std::string entryID)
       continue;
 
     // found a valid entry
+    notFound=false;
     t_md = hdhC::stripSides(str0) ;
 
     // read aux-lines
@@ -68,7 +75,8 @@ ProjectTable::check(Variable &dataVar, std::string entryID)
     }
   }
 
-  return true;  // entry not found
+  if(notFound)
+    return true;  // entry not found
 
 BREAK:
 
@@ -199,30 +207,25 @@ BREAK:
               break;  // try the next attribute
 
             // different values --> annotation
+            status=true;
+
             std::string key("8_8");
             if( notes->inq( key, dataVar.name ) )
             {
               std::string capt;
               if( xt_a[0].substr(0,4) == "aux=" )
               {
-                capt = "auxiliary=";
-                capt += xt_a[0].substr(4) ;
+                capt = "auxiliary ";
+                capt += hdhC::tf_var(xt_a[0].substr(4), hdhC::colon) ;
               }
               else
-              {
-                capt = "variable=";
-                capt += xt_a[0] ;
-              }
+                capt += hdhC::tf_var(xt_a[0], hdhC::colon) ;
+
+              capt += "changed ";
 
               if( xt_eq[0] == "values" )
-                capt += ": changed layout";
-              else
-              {
-                capt += ", att=";
-                capt += xt_eq[0];
-                capt += ": changed value" ;
-              }
-              capt += " as to the project table";
+                capt += "layout ";
+              capt += "across sub-temporal files";
 
               std::string text(xt_eq[0]) ;
               text += " (table)" ;
@@ -255,34 +258,32 @@ BREAK:
 
         if( isAttMissing )
         {
+          status=true;
+
           std::string key("8_7");
           if( notes->inq( key, dataVar.name ) )
           {
             std::string capt;
             if( xt_a[0].substr(0,4) == "aux=" )
             {
-              capt = "auxiliary=";
-              capt += xt_a[0].substr(4) ;
+              capt = "auxiliary ";
+              capt += hdhC::tf_var(xt_a[0].substr(4), hdhC::colon) ;
             }
             else
-            {
-              capt = "variable=";
-              capt += xt_a[0] ;
-            }
+              capt += hdhC::tf_var(xt_a[0], hdhC::colon) ;
 
             if( xt_eq[0] == "values" )
-              capt += ": no value";
+              capt += "no data";
             else
             {
-              capt += ", att=";
-              capt += xt_eq[0];
-              capt += ": missing" ;
+              capt += hdhC::tf_att(xt_eq[0]);
+              capt += "is missing " ;
             }
 
             if( qa->currQARec )
-              capt += " across sub-temporal files";
+              capt += "across sub-temporal files";
             else
-              capt += " across parent experiments";
+              capt += "across experiments";
 
             (void) notes->operate(capt) ;
             notes->setCheckMetaStr( "FAIL" );
@@ -293,22 +294,25 @@ BREAK:
 
     if( isMissAux )
     {
+      status=true;
+
       std::string key("8_4");
       if( notes->inq( key, dataVar.name ) )
       {
         std::string capt;
         if( xt_a[0].substr(0,4) == "aux=" )
         {
-          capt = "auxiliary=";
-          capt += xt_a[0].substr(4) ;
+          capt = "auxiliary ";
+          capt += hdhC::tf_var(xt_a[0].substr(4), hdhC::colon) ;
         }
         else
-        {
-          capt = "variable=";
-          capt += xt_a[0] ;
-        }
+          capt += hdhC::tf_var(xt_a[0], hdhC::colon) ;
 
-        capt += ": missing compared to the project table" ;
+        capt += "missing " ;
+        if( qa->currQARec )
+          capt += "across sub-temporal files";
+        else
+          capt += "across experiments";
 
         (void) notes->operate(capt) ;
         notes->setCheckMetaStr( "FAIL" );
@@ -369,6 +373,8 @@ BREAK:
 
         if( isAddAtt )
         {
+          status=true;
+
           // additional attribute of auxiliary in the file
           std::string key("8_6");
           if( notes->inq( key, dataVar.name ) )
@@ -376,22 +382,28 @@ BREAK:
             std::string capt;
             if( xt_a[0].substr(0,4) == "aux=" )
             {
-              capt = "auxiliary=";
-              capt += xf_a[0].substr(4) ;
+              capt = "auxiliary ";
+              capt += hdhC::tf_var(xf_a[0].substr(4), hdhC::colon) ;
             }
             else
-            {
-              capt = "variable=";
-              capt += xf_a[0] ;
-            }
+              capt += hdhC::tf_var(xf_a[0].substr(4), hdhC::colon) ;
 
             if( xt_eq[0] == "values" )
-              capt += ": additional values compared to the project table";
+            {
+              capt += "additional data across ";
+              if( qa->currQARec )
+                capt += "sub-temporal files";
+              else
+                capt += "experiments";
+            }
             else
             {
-              capt += ", att=";
-              capt += xf_eq[0];
-              capt += " is a new attribute compared to the project table" ;
+              capt += hdhC::tf_att(xf_eq[0]);
+              capt += "is new across " ;
+              if( qa->currQARec )
+                capt += "sub-temporal files";
+              else
+                capt += "experiments";
             }
 
             (void) notes->operate(capt) ;
@@ -403,12 +415,18 @@ BREAK:
 
     if( isAddAux )
     {
+      status=true;
+
       std::string key("8_5");
       if( notes->inq( key, dataVar.name) )
       {
-        std::string capt("additional auxiliary=");
-        capt += xf_a[0].substr(4) ;
-        capt += " compared to the project table" ;
+        std::string capt("additional auxiliary ");
+        capt += hdhC::tf_var(xf_a[0].substr(4)) ;
+
+        if( qa->currQARec )
+          capt += "across sub-temporal files";
+        else
+          capt += "across experiments";
 
         (void) notes->operate(capt) ;
         notes->setCheckMetaStr( "FAIL" );
@@ -420,12 +438,9 @@ BREAK:
 }
 
 void
-ProjectTable::getAtts(Variable &var, std::string &s)
+Consistency::getAtts(Variable &var, std::string &s)
 {
    size_t sz = var.attName.size();
-
-   if( sz )
-     s += ',';
 
    for(size_t j=0 ; j < sz ; ++j )
    {
@@ -444,6 +459,7 @@ ProjectTable::getAtts(Variable &var, std::string &s)
      if( isCont )
        continue;
 
+     s += ',';
      s += var.attName[j] ;
      s += '=';
 
@@ -457,9 +473,6 @@ ProjectTable::getAtts(Variable &var, std::string &s)
 
        s += t ;
      }
-
-     if( j < (sz-1) )
-       s += ',';
    }
 
    // get checksum of values
@@ -470,7 +483,7 @@ ProjectTable::getAtts(Variable &var, std::string &s)
 }
 
 void
-ProjectTable::getMetaData(Variable &dataVar,
+Consistency::getMetaData(Variable &dataVar,
     std::string& entryID, std::string &md)
 {
   // Put all meta-data to string.
@@ -480,12 +493,7 @@ ProjectTable::getMetaData(Variable &dataVar,
 
   // dimensions
   md += "dims=";
-  for( size_t i=0 ; i < dataVar.dimName.size() ; ++i )
-  {
-    if( i )
-      md += ' ' ;
-    md += dataVar.dimName[i] ;
-  }
+  md += dataVar.getDimNameStr();
 
   // get attributes of the data variable
   getAtts(dataVar, md);
@@ -508,7 +516,7 @@ ProjectTable::getMetaData(Variable &dataVar,
 }
 
 void
-ProjectTable::getValues(Variable &var, std::string &s)
+Consistency::getValues(Variable &var, std::string &s)
 {
    // Get the checksum of the limited variables.
    // The purpose of checksums of auxiliary variables is to
@@ -546,16 +554,14 @@ ProjectTable::getValues(Variable &var, std::string &s)
       }
    }
 
-   std::ostringstream ostr;
-   ostr << ",values=" << ck ;
-
-   s += ostr.str() ;
+   s += ",values=";
+   s += hdhC::double2String(ck) ;
 
    return;
 }
 
 void
-ProjectTable::getVarType(Variable &var, std::string &s)
+Consistency::getVarType(Variable &var, std::string &s)
 {
    // Get the checksum of all non-unlimited variables
    // The purpose of checksums of auxiliary variables is to
@@ -564,14 +570,14 @@ ProjectTable::getVarType(Variable &var, std::string &s)
 
    // get type of the variable
    std::string type(pIn->nc.getVarTypeStr( var.name ) ) ;
-   s += ',';
+   s += ",type=";
    s += type;
 
    return;
 }
 
 bool
-ProjectTable::lockFile(std::string &fName )
+Consistency::lockFile(std::string &fName )
 {
   //test for a lock
   std::string lockFile(fName);
@@ -628,7 +634,7 @@ ProjectTable::lockFile(std::string &fName )
 }
 
 void
-ProjectTable::setExcludedAttributes(std::vector<std::string> &v)
+Consistency::setExcludedAttributes(std::vector<std::string> &v)
 {
    for( size_t i=0 ; i < v.size() ; ++i )
      excludedAttributes.push_back(v[i]) ;
@@ -636,7 +642,7 @@ ProjectTable::setExcludedAttributes(std::vector<std::string> &v)
 }
 
 bool
-ProjectTable::unlockFile(std::string &fName )
+Consistency::unlockFile(std::string &fName )
 {
   //test for a lock
   std::string lockFile(fName);
@@ -662,7 +668,7 @@ ProjectTable::unlockFile(std::string &fName )
 }
 
 void
-ProjectTable::write(Variable &dataVar, std::string& entryID)
+Consistency::write(Variable &dataVar, std::string& entryID)
 {
   // store meta data info
   std::string md;

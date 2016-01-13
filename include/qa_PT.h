@@ -8,15 +8,15 @@
 class QA;
 class InFile;
 
-class ProjectTable
+class Consistency
 {
   public:
-  ProjectTable(QA *, InFile*, struct hdhC::FileSplit& );
+  Consistency(QA *, InFile*, struct hdhC::FileSplit& );
 
   //! Prepare the comparison of dimensions between file and project table.
   /*! This is checked for each chunk or atomic data set in each
   experiment ensuring conformance.*/
-  void   check(void);
+  bool   check(void);
   bool   check(Variable&, std::string entryID);
 
   //! Put Attributes of given variable to string
@@ -45,6 +45,8 @@ class ProjectTable
   std::vector<std::string> excludedAttributes;
 
   struct hdhC::FileSplit projectTableFile;
+
+  bool status;
 
   Annotation *notes;
   InFile     *pIn;

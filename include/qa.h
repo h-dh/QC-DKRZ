@@ -90,7 +90,8 @@ class QA : public IObj
 
   bool   checkDataBody(std::string vName="");
 
-  void   checkProjectTable(InFile &in);
+  //!    true requires a check against the project meta data
+  bool   checkConsistency(InFile &in);
 
   /*! Close records for time and data.*/
   void   closeEntry(void);
@@ -177,7 +178,7 @@ class QA : public IObj
   std::string tablePath;
   struct hdhC::FileSplit qaFile;
   struct hdhC::FileSplit table_DRS_CV;
-  struct hdhC::FileSplit projectTableFile;
+  struct hdhC::FileSplit consistencyFile;
 
   std::string qaNcfileFlags;
 
