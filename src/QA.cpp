@@ -536,9 +536,6 @@ QA::init(void)
 
    qaExp.init(optStr);
 
-   // check consistency between sub-sequent files or experiments
-   (void) checkConsistency(*pIn) ;
-
    // DRS and CV specifications
    drs_cv_table.read(table_DRS_CV);
 
@@ -580,6 +577,9 @@ QA::init(void)
      isCheckData=false;
      return true;
    }
+
+   // check consistency between sub-sequent files or experiments
+   (void) checkConsistency(*pIn) ;
 
    if( !isCheckTime )
      notes->setCheckTimeStr("OMIT");
