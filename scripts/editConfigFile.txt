@@ -1,7 +1,17 @@
-# embedded function, i.e. has to included by source or '.'
-
 #editConfigFile()
 #{
+
+# embedded function, i.e. has to included by source or '.'
+
+# note that such embedded functionality replaces positional parameters
+# by thos which are passed. If none are passed, then the positional parameters
+# of the calling instance are used.
+
+# For the passing of parameters from the calling instance here,
+# a parameter ARG: is prefixed if the parameter could be empty
+
+  test ${1} = 'ARG:' && shift
+
   # return 1 if a single parameter was passed whose value is 'disable'
   retVal=0
 

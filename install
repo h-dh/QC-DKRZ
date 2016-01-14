@@ -342,7 +342,7 @@ tr_option()
 
 update()
 {
-  if . $QA_PATH/scripts/editConfigFile.txt $AUTO_UPDATE ; then
+  if . $QA_PATH/scripts/editConfigFile.txt ARG: $AUTO_UPDATE ; then
     if [ $CONDA_ENV ] ; then
       # look for a new conda-built package
       local tmp
@@ -394,7 +394,7 @@ update()
     fi
   fi
 
-  if . $QA_PATH/scripts/editConfigFile.txt $AUTO_TABLE_UPDATE \
+  if . $QA_PATH/scripts/editConfigFile.txt ARG: $AUTO_TABLE_UPDATE \
       || ${FORCE_RSYNC:-f} = t ; then
     if [ "$QA_WORK" != "$QA_PATH" ] ; then
       rsync -auz $QA_PATH/tables $QA_WORK &> /dev/null
@@ -552,7 +552,7 @@ else
 fi
 
 # no parameter: check for a conversion from former; safe
-. $QA_PATH/scripts/editConfigFile.txt
+. $QA_PATH/scripts/editConfigFile.txt ARG:
 
 test ${CONDA_ENV} && exit  # miniconda built executables
 
