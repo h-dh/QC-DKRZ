@@ -26,189 +26,49 @@ descript()
   exit
 }
 
-add_partial_atomic()
-{
-  # events that are not atomic ones are marked to cancel from
-  # the corresponding sub-temporal blocks
-
-  local i j k
-  local ivs iv_0 iv_1 tg # indexes events:, event: - begin, - end, tag
-  declare -a iv_0 iv_1 f_tgs
-
-  getBadIndexes
-
-  local ablk nblk hblk
-
-  # copy leading common block
-  for(( i=0 ; i < ${ivs} ; ++i )) ; do
-     hblk[${i}]="${blk[i]}"
-  done
-
-  local aCount=0
-  local nCount=0
-  local a_tgs
-
-  splitString a_tgs , tags[ix]
-
-  # placeholder for number of sub-temp events
-  ablk[0]=''
-  nblk[0]=''
-
-  # go through the events
-  for(( i=0 ; i < ${#f_tgs[*]} ; ++i )) ; do
-     local is=f
-     for(( j=0 ; j < ${#a_tgs[*]} ; ++j )) ; do
-       if [ ${a_tgs[j]} = ${f_tgs[i]} ] ; then
-         is=t
-         break
-       fi
-     done
-
-     if [ $is = t ] ; then
-       for(( k=${iv_0[i]} ; k < ${iv_1[i]} ; ++k )) ; do
-          # add to the atomic blk
-          ablk[${#ablk[*]}]=${blk[k]}
-       done
-       aCount=$(( aCount +1 ))  # the number of remaining sub-temp events
-     else
-       for(( k=${iv_0[i]} ; k < ${iv_1[i]} ; ++k )) ; do
-          # add to the current sub-temp blk
-          nblk[${#nblk[*]}]=${blk[k]}
-       done
-       nCount=$(( nCount +1 ))  # the number of remaining sub-temp events
-     fi
-  done
-
-  # should be only the status line, but who knows
-  # the last line belongs to the next block
-  local sz=${#blk[*]}
-
-  for(( k=${iv_1[$((${#iv_1[*]}-1))]} ; k < sz ; ++k )) ; do
-    ablk[${#ablk[*]}]=${blk[k]}
-    nblk[${#nblk[*]}]=${blk[k]}
-  done
-
-  # adjust the number of sub-temp events
-  ablk[0]="   events: ${aCount}"
-  nblk[0]="   events: ${nCount}"
-
-  # cat both to blk
-  blk=()
-
-  for(( k=0 ; k < ${#hblk[*]} ; ++k )) ; do
-    if [ $k -eq $f_ix ] ; then
-      # substitute 'file: ...' by 'atomic: ...}
-      blk[${k}]="   atomic: ${scopeName[ix]}"
-    else
-      blk[${k}]=${hblk[k]}
-    fi
-  done
-  for(( k=0 ; k < ${#ablk[*]} ; ++k )) ; do
-    blk[${#blk[*]}]=${ablk[k]}
-  done
-
-  for(( k=0 ; k < ${#hblk[*]} ; ++k )) ; do
-    blk[${#blk[*]}]=${hblk[k]}
-  done
-  for(( k=0 ; k < ${#nblk[*]} ; ++k )) ; do
-    blk[${#blk[*]}]=${nblk[k]}
-  done
-
-  return
-}
-
-adjustBadAtomic()
-{
-  local tg
-
-  # eventually for no trailing empty line
-  if [ ${isNew} = t ] ; then
-    isTotallyAtomic[${ix}]=t
-    tags[${ix}]=${tag}
-  elif [ ${isOld} = t -a "${isTotallyAtomic[ix]}" != f ] ; then
-    if [ $tag != ${tags[${ix}]} ] ; then
-      # is at least one or more tags remainig atomic?
-      local tagx tagsx
-      splitString tagsx , tags[ix]  # provide separator ','
-      splitString tagx , tag
-      for tgs in ${tagsx[*]} ; do
-        for tg in ${tagx[*]} ; do
-          test ${tgs} = ${tg} && continue 2
-        done
-
-        # this one is good at least one time; take it out
-        tags[${ix}]=${tags[ix]/${tgs},/}
-        isTotallyAtomic[${ix}]=p
-      done
-
-      if [ "${tags[ix]}" = '' ] ; then
-        isTotallyAtomic[${ix}]=f
-        noScope[${#noScope[*]}]=${scopeName[ix]}
-        scopeName[${ix}]=''
-      fi
-    fi
-  fi
-
-  return
-}
-
-atomicBadConversion()
+printAnnotations()
 {
   local k line
-  local bad out
   local blk
   declare -a blk
 
-  for(( k=0 ; k < ${#fs[*]} ; ++k )) ; do
-#    f=${fs[k]##*/}
+  #note that there is no header
+  read line
+  blk[${#blk[*]}]="$line"
 
-    if [ ${#dir} -gt 0 ] ; then
-      bad="${path[k]}${dir}bad/${f%.log}.note"
-      out=${bad}.$$
+  while read line ; do
+    if [ "${line:0:8}" = ' - date:' ] ; then
+      print_blk
+      unset blk
     fi
 
-    # read from file
-    exec 9<&0 # save stdin
-    exec 0< ${bad}
-
-    #note that there is no header
-    # init reading of blocks
-    read line
-    blk[${#blk[*]}]="$line"
-
-    while read line ; do
-      if [ "${line:0:8}" = ' - date:' ] ; then
-        atomicBadConversion_blk
-        unset blk
-      fi
-
-      blk[${#blk[*]}]=$line
-    done
-
-    # the last block
-    atomicBadConversion_blk
-    unset blk
-
-    # save the results
-    test -e $out && mv ${out} ${bad}
-
-    # restore stdin and free #9
-    exec 0<&9 9<&-
+    blk[${#blk[*]}]=$line
   done
+
+  # the last block
+  print_blk
+  unset blk
 
   return
 }
 
-atomicBadConversion_blk()
+print_blk()
 {
   local i ix j
-  local f_ws
-  local f_ix=-1
-  local e_ix=-1
+  local fName
+  local file_ix=-1
+  local end_ix=-1
+  local events_ix=-1
 
-  declare -a f_ws
+  local event_ix
+  declare -a event_ix
+
+  local words
+  declare -a words
 
   local sz=${#blk[*]}
+
+  isHeader=f
 
   for(( i=0 ; i < sz ; ++i )) ; do
     # skip leading spaces
@@ -218,187 +78,212 @@ atomicBadConversion_blk()
 
     # find next file
     if [ "${blk[i]:j:1}" = 'f' -a "${blk[i]:j:5}" = 'file:' ] ; then
-      splitString f_ws blk[i]
-      f_ix=$i
-    elif [ "${blk[i]:j:1}" = 'e' -a "${blk[i]:j:4}" = 'end:' ] ; then
-      e_ix=$i
-      break
+      splitString words "${blk[i]}"
+      fName=${words[1]}
+      file_ix=$i
+    elif [ "${blk[i]:j:1}" = 'e' ] ; then
+      if [ "${blk[i]:j:4}" = 'end:' ] ; then
+        end_ix=$i
+      elif [ "${blk[i]:j:7}" = 'events:' ] ; then
+        events_ix=$i
+      fi
+    elif [ "${blk[i]:j:8}" = '- event:' ] ; then
+        event_ix[${#event_ix[*]}]=$i
     fi
   done
 
   # not a usual block, e.g. qa_version
-  test ${i} -eq ${sz} -a ${f_ix} -eq -1 && return
+  test ${i} -eq ${sz} -a ${file_ix} -eq -1 && return
 
-  # look for a matching atomic scope
-  for(( ix=0 ; ix < ${#scopeName[*]} ; ++ix )) ; do
-    test ${#scopeName[ix]} -eq 0 && continue # defined and later cancelled
+  local szA
+  local tag0 tag tags0 tags
+  declare -a tags
+  declare -a tags0
 
-    sz=${#scopeName[ix]}
-
-    if [ ${f_ws[1]:0:${sz}} = ${scopeName[ix]} ] ; then
-      if [ ${isTotallyAtomic[ix]} = t ] ; then
-        # all events are atomic; redefine the block totally as atomic
-        blk[${f_ix}]="   atomic: ${scopeName[ix]}"
-
-        # adjust period:
-        test ${e_ix} -gt -1 && blk[${e_ix}]="    end: ${scopeEnd[ix]}"
-
-        isTotallyAtomic[ix]=c  # remove subsequent matching blocks
-        break
-      elif [ ${isTotallyAtomic[ix]} = p ] ; then
-        # events are only partially atomic; print them
-        # this will change to 'pc' after the forst occurrence
-        add_partial_atomic
-        isTotallyAtomic[ix]=pc  # remove subsequent matching events
-        break
-
-      elif [ ${isTotallyAtomic[ix]} = c ] ; then
-         # remove the block simply by skipping
-         return
-
-      elif [ ${isTotallyAtomic[ix]} = pc ] ; then
-         # remove only the event(s) given by 'tags'
-         remove_atomic_events
-
-         break
-      fi
-    fi
+  # look for a matching base
+  local szAB=${#atomicBase[*]}
+  for(( ix=0 ; ix < szAB ; ++ix )) ; do
+    szA=${#atomicBase[ix]}
+    test "${fName:0:${szA}}" = "${atomicBase[ix]}" & break
   done
 
-  processBlock $out
+  # look for a matching tags
+  if [ $ix -lt ${szAB} ] ; then
+    splitString tags "${pureAtomicTags[ix]}" ','
 
-  return
-}
-
-atomicConversion()
-{
-  # this has to come first
-  unset scopeName noScope isTotallyAtomic tags scopeEnd
-  getBadAtomicScopes
-  atomicBadConversion
-
-  unset scopeName noScope isTotallyAtomic tags scopeEnd
-
-  getGoodAtomicScopes
-  atomicGoodConversion
-
-  # good and bad
-  for(( k=0 ; k < ${#fs[*]} ; ++k )) ; do
-    if [ ${#dir} -gt 0 ] ; then
-      good="${path[k]}${dir}good/${f%.log}.note"
-      bad="${path[k]}${dir}bad/${f%.log}.note"
-
-      \rm  -f ${path[k]}${dir}${f%.log}.note
-
-      if [ -s $bad ] ; then
-        mv ${bad} ${path[k]}${dir}${f%.log}.note
-      else
-        \rm -f $bad
+    for(( i=0 ; i < ${#tags[*]} ; ++i )) ; do
+      if [ "${tags[i]}" ] ;then
+        printPureAtomicTag ${tags[i]}
       fi
-
-      \rm -f $good
-      rmdir ${path[k]}${dir}good ${path[k]}${dir}bad 2> /dev/null
-    fi
-
-  done
-
-  return
-}
-
-atomicGoodConversion()
-{
-  local k line
-  local good out
-  local blk
-  declare -a blk
-
-  for(( k=0 ; k < ${#fs[*]} ; ++k )) ; do
-    if [ ${#dir} -gt 0 ] ; then
-      good="${path[k]}${dir}good/${f%.log}.note"
-      out=${good}.$$
-    fi
-
-    # read from file
-    exec 9<&0 # save stdin
-    exec 0< ${good}
-
-    #note that there is no header
-    # init reading of blocks
-    read line
-    blk[${#blk[*]}]="$line"
-
-    while read line ; do
-      if [ "${line:0:8}" = ' - date:' ] ; then
-        atomicGoodConversion_blk
-        unset blk
-      fi
-
-      blk[${#blk[*]}]=$line
     done
+  fi
 
-    # the last block
-    atomicGoodConversion_blk
-    unset blk
-
-    # save the results
-    mv ${out} ${good}
-
-    # restore stdin and free #9
-    exec 0<&9 9<&-
-  done
+  printNonAtomicTag
 
   return
 }
 
-atomicGoodConversion_blk()
+printHeader()
 {
-  local i ix j
-  local f_ws
-  local f_ix e_ix
+  test ${isHeader:-f} = t && return
 
-  declare -a f_ws
-
-  local sz=${#blk[*]}
+  local i sz
+  sz=$(( events_ix + 1 ))
 
   for(( i=0 ; i < sz ; ++i )) ; do
-    # skip leading spaces
-    for(( j=0 ; j < ${#blk[i]} ; ++j )) ; do
-       test "${blk[i]:j:1}" != ' ' && break
-    done
-
-    # find next file
-    if [ "${blk[i]:j:1}" = 'f' -a "${blk[i]:j:5}" = 'file:' ] ; then
-      splitString f_ws blk[i]
-      f_ix=$i
-    elif [ "${blk[i]:j:1}" = 'e' -a "${blk[i]:j:4}" = 'end:' ] ; then
-      e_ix=$i
-      break
+    if [ "$1" = atom ] ; then
+      if [ $i -eq ${file_ix} ] ; then
+        echo "   atomic: ${atomicBase[ix]}.nc"
+        continue
+      elif [ $i -eq ${end_ix} ] ; then
+        echo "    end: ${atomicEnd[ix]}"
+        continue
+      fi
     fi
+
+    echo "${blk[i]}"
   done
 
-  # look for a matching atomic scope
-  for(( ix=0 ; ix < ${#scopeName[*]} ; ++ix )) ; do
-    test ${#scopeName[ix]} -eq 0 && continue # defined and later cancelled
+  isHeader=t
+  return
+}
 
-    if [ "${f_ws[1]:0:${#scopeName[ix]}}" = ${scopeName[ix]} ] ; then
-      if [ ${isTotallyAtomic[ix]} = t ] ; then
-        # all events are atomic; redefine the block totally as atomic
-        blk[${f_ix}]="   atomic: ${scopeName[ix]}"
+printPureAtomicTag()
+{
+  local aTag=$1
 
-        # adjust period:
-        blk[${e_ix}]="    end: ${scopeEnd[ix]}"
+  local e i j
+  local varTag
 
-        isTotallyAtomic[ix]=c  # remove subsequent matching blocks
-        break
+  local words
+  declare -a words
 
-      elif [ ${isTotallyAtomic[ix]} = c ] ; then
-         # remove the block simply by skipping
-         return
+  for e in ${event_ix[*]} ; do
+    i=$((e+3))  # index of tag:
+    splitString words "${blk[i]}"
+
+    if [ "${words[0]}" = 'tag:' ] ; then
+      getVarTag varTag $i
+
+      if [ "${varTag}" = "$aTag" ] ; then
+        for((j=0 ; j < ${#solvedPureAtomicTags[*]} ; ++j )) ; do
+          test ${solvedPureAtomicTags[j]} = "${varTag}" && continue 2
+        done
+
+        printHeader atom # safe when already done
+
+        j=${#solvedPureAtomicTags[*]}
+        solvedPureAtomicTags[j]=$aTag
+
+        echo "${blk[e]}" # the line with event:
+
+        for(( i=e+1 ; i < sz ; ++i )) ; do
+          splitString words "${blk[i]}"
+
+          # next event or end of last event
+          test "${words[1]}" = 'event:' && return
+          echo "${blk[i]}"
+          test "${words[0]}" = 'status:' && return
+        done
       fi
     fi
   done
 
-  processBlock $out
+  return
+}
+
+printNonAtomicTag()
+{
+  local e i j
+  local varTag
+
+  local words
+  declare -a words
+
+  for e in ${event_ix[*]} ; do
+    for(( i=e+1 ; i < sz ; ++i )) ; do
+      splitString words "${blk[i]}"
+
+      if [ "${words[0]}" = 'tag:' ] ; then
+        getVarTag varTag $i
+
+        for((j=0 ; j < ${#solvedPureAtomicTags[*]} ; ++j )) ; do
+          test ${solvedPureAtomicTags[j]} = "${varTag}" && continue 3
+        done
+
+        printHeader # safe when already done
+
+        echo "${blk[e]}" # the line with event:
+
+        for(( i=e+1 ; i < sz ; ++i )) ; do
+          splitString words "${blk[i]}"
+
+          # next event or end of last event
+          test "${words[1]}" = 'event:' && break 2
+          echo "${blk[i]}"
+          test "${words[0]}" = 'status:' && return
+        done
+      fi
+    done
+  done
+
+  return
+}
+
+atomise()
+{
+  # fBase: plain array
+  # atomicTags:  comma-sep groups of tags;
+  #              a group is separated by /
+  #              each tag has the sh1sum of the caption appended
+  # atomicEnd:   end time
+
+  unset atomicBase atomicTags atomicEnd pureAtomicTags solvedPureAtomicTags
+
+  exec 0< $annot
+
+  atomicParsing
+  atomicFinal
+
+  exec 0< $annot  # rewind
+  exec 1> $atom
+  printAnnotations
+
+  unset atomicTags # no longer needed
+
+  return
+}
+
+atomicFinal()
+{
+  # find pure atomic tags. If found, then remove them from the non-atomic tags
+
+  local ix isAtomic tag0 tag tags0 tags
+  declare -a tags
+  declare -a tags0
+
+  for(( ix=0 ; ix < ${#atomicBase[*]} ; ++ix )) ; do
+    splitString tags "${atomicTags[ix]}" ','
+    splitString tags0 "${tags[0]}" '/'
+
+    for tag0 in ${tags0[*]} ; do
+      isAtomic=t
+      for tag in ${tags[*]} ; do
+        if [ "${tag}" = "${tag/${tag0}/}" ] ; then
+          isAtomic=f
+          break;
+        fi
+      done
+
+      if [ ${isAtomic} = t ] ; then
+         atomicTags[ix]=${atomicTags[ix]//${tag0}/}
+         pureAtomicTags[ix]=${pureAtomicTags[ix]}${pureAtomicTags[ix]:+,}${tag0}
+      else
+         pureAtomicTags[ix]=''
+      fi
+    done
+
+  done
 
   return
 }
@@ -441,6 +326,8 @@ clearRedundantBlock()
 
   local out
 
+  IFS=''
+
   exec 7<&1
 
   for(( i=0 ; i < ${#fs[*]} ; ++i )) ; do
@@ -451,8 +338,6 @@ clearRedundantBlock()
 
     out="${path[i]}tmp_${f}"
     exec 1>$out
-
-    IFS=''
 
     # skip header
     countLines=0
@@ -519,7 +404,7 @@ clearRedundantBlock()
   return
 }
 
-findBlock2Xtract()
+findAnnotatedBlock()
 {
   # return 0 for a xtracting a block
   local i j tag tags
@@ -537,21 +422,11 @@ findBlock2Xtract()
 
     # find next tag
     if [ "${blk[i]:j:1}" = 't' -a "${blk[i]:j:4}" = 'tag:' ] ; then
-      tags[${#tags[*]}]=${blk[i]:6}
+      return 0
     fi
   done
 
-  test ${#tags[*]} -eq 0 && return 1
-
-  # xtract only specified flags; skips leading 'T'
-  isNoFlag=t
-  for flag in ${flags[*]} ; do
-    for tag in ${tags[*]} ; do
-      test "${tag}" = "$flag" && return 1
-    done
-  done
-
-  return 0
+  return 1
 }
 
 findRedundantBlocks()
@@ -599,157 +474,101 @@ findRedundantBlocks()
   fi
 }
 
-getBadIndexes()
+parseBlock()
 {
-  # use variables from the outer scope
-
-  # find events:
-  local i j words sz v_indent indent
-  declare -a words
-
-  v_indent=0
-
-  sz=${#blk[*]}
-
-  for(( i=0 ; i < sz ; ++i )) ; do
-     # count leading spaces
-     for(( indent=0 ; indent < ${#blk[i]} ; ++indent )) ; do
-       test "${blk[i]:indent:1}" != ' ' && break
-     done
-
-     splitString words  blk[i]
-
-     if [ ${words[0]} = 'events:' ] ; then
-       ivs=$i
-     elif [ "${words[1]}" = 'event:' ] ; then
-       v_indent=${indent}
-
-       # points to the next event
-       iv_0[${#iv_0[*]}]=$i
-       test ${#iv_0[*]} -gt 1 && iv_1[${#iv_1[*]}]=${iv_0[$(( ${#iv_0[*]} - 1 ))]}
-     elif [ ${indent} -le ${v_indent}  ] ; then
-       iv_1[${#iv_1[*]}]=$i
-     elif [ ${words[0]} = 'tag:' ] ; then
-       f_tgs[${#f_tgs[*]}]=${words[1]}  # no index but the tag itself
-     fi
-  done
-
-  # when there was no status: line
-  test ${#iv_1[*]} -lt ${#iv_0[*]} && iv_1[${#iv_1[*]}]=$i
-
-  return
-}
-
-gBAS_block()
-{
-  isNew=f  # a new atomic scope name
-  isOld=f # same atomic scope as found before; go on in the block
-  tag=
-
   local words
   declare -a words
 
   local sz=${#blk[*]}
-  local range
+  local fBase range
+  local ix=-1
+  local tag capt
 
   # the first line is always ' - date: ...'
   for(( i=1 ; i < sz ; ++i )) ; do
-    splitString words blk[i]
+    splitString words "${blk[i]}"
 
     if [ "${words[0]}" = 'file:' ] ; then
       words[1]=${words[1]%.nc}
 
       if range=$(expr match "${words[1]}" \
-                     '.*_\([[:digit:]]\+-[[:digit:]]\+\)' 2> /dev/null ) ; then
+                    '.*_\([[:digit:]]\+-[[:digit:]]\+\)' 2> /dev/null ) ; then
         fBase=${words[1]%_${range}}
       elif range=$(expr match "${words[1]}" \
-                     '.*_\([[:digit:]]\+\)' 2> /dev/null ) ; then
+                    '.*_\([[:digit:]]\+\)' 2> /dev/null ) ; then
         fBase=${words[1]%_${range}}
       else
         fBase=${words[1]%.*}
       fi
 
-      # is this scope also available in 'good', then bad is not atomic
-      for(( j=0 ; j < ${#noScope[*]} ; ++j )) ; do
-         test ${noScope[j]} = $fBase && break 2
-      done
-      if grep -q -m 1 $fBase $good ; then
-         noScope[${#noScope[*]}]=$fBase
-         break
-      fi
-
-      # scopeName and already found
-      for(( ix=0 ; ix < ${#scopeName[*]} ; ++ix )) ; do
-        if [ "${scopeName[ix]}" = $fBase ] ; then
-          isOld=t
-          continue 2
-        fi
+      for(( ix=0 ; ix < ${#atomicBase[*]} ; ++ix )) ; do
+        test ${atomicBase[ix]} = $fBase && break
       done
 
-      isNew=t
-      ix=${#scopeName[*]}
-      scopeName[${ix}]=$fBase
-      scopeEnd[${ix}]=$(grep -A 10 "file: $fBase" $bad \
+      if [ ${ix} -eq ${#atomicBase[*]} ] ; then
+        atomicBase[ix]=$fBase
+        atomicEnd[ix]=$(grep -A 10 "file: $fBase" $bad \
                         | grep 'end:' | awk 'END{print $NF}' )
-      continue
-    fi
-
-    if [ "${words[0]}" = 'tag:' ] ; then
-      tag=${tag}${words[1]},
+      fi
+    elif [ "${words[0]}" = 'tag:' ] ; then
+      local varTag
+      getVarTag varTag $i
+      tag=${tag}${tag:+/}${varTag}
     fi
   done
 
-  adjustBadAtomic
+  if [ ${ix} -gt -1 ] ; then
+    atomicTags[ix]=${atomicTags[ix]}${atomicTags[ix]:+,}${tag}
+  fi
 
   return
 }
 
-getBadAtomicScopes()
+getVarTag()
 {
-  local fBase i ix j k line words range
-  local good bad
+  local sz=${#blk[*]}
+  local tag=$1
+  local tag_ix=$2
+  local capt_ix=$(( tag_ix - 2 ))
+
+  local x_tag x_capt
+
+  splitString x_tag "${blk[tag_ix]}"
+  splitString x_capt "${blk[capt_ix]}"
+
+  local capt=$( echo "${x_capt[1]}" | sha1sum | awk '{print $1}' )
+  eval ${1}=${x_tag[1]}=${capt}
+
+  return
+}
+
+atomicParsing()
+{
+  local i ix j k line words
+
   local blk
   declare -a blk
 
-  # on global scope: isTotallyAtomic scopeName tags
+  #note: there is no header
+  local is isNew isOld
+  local blkCount=0
 
-  for(( k=0 ; k < ${#fs[*]} ; ++k )) ; do
-    f=${fs[k]##*/}
+  # read: no need to preserve leading blanks
+  # init reading of blocks
+  read line
+  blk[${#blk[*]}]=$line
 
-    if [ ${#dir} -gt 0 ] ; then
-      good="${path[k]}${dir}good/${f%.log}.note"
-      bad="${path[k]}${dir}bad/${f%.log}.note"
+  while read line ; do
+    if [ "${line:0:8}" = ' - date:' ] ; then
+      parseBlock
+      unset blk
     fi
 
-    # read from file
-    exec 9<&0 # save stdin
-    exec 0< ${bad}
-
-    #note that there is no header
-    local is isNew isOld
-    local blkCount=0
-
-    # read: no need to preserve leading blanks
-    # init reading of blocks
-    read line
     blk[${#blk[*]}]=$line
-
-    while read line ; do
-      if [ "${line:0:8}" = ' - date:' ] ; then
-        # examine the  block
-        gBAS_block
-        unset blk
-      fi
-
-      blk[${#blk[*]}]=$line
-    done
-
-    # the final block
-    gBAS_block
-
-    # restore stdin and free #9
-    exec 0<&9 9<&-
   done
+
+  # the final block
+  parseBlock
 
   return
 }
@@ -774,109 +593,7 @@ getByToken()
 
     fs=( $( ls -d ${t}.log ) )
 
-    xtrctGoodBad
-  done
-
-  return
-}
-
-gGAS_block()
-{
-  local words
-  declare -a words
-
-  isNew=f  # a new atomic scope name
-
-  # the last line belongs to the next block
-  local sz=${#blk[*]}
-  local j
-
-  # the first line is always ' - date: ...'
-  for(( i=1 ; i < sz ; ++i )) ; do
-    splitString words blk[i]
-
-    if [ "${words[0]}" = 'file:' ] ; then
-      if range=$(expr match "${words[1]}" \
-                     '.*_\([[:digit:]]*-[[:digit:]]*.*\.nc\)' 2> /dev/null \
-                   || expr match "${words[1]}" '.*_\([[:digit:]]*\.nc\)' 2> /dev/null ) ; then
-        fBase=${words[1]%_${range}}
-
-        # is this scope also available in 'good', then bad is not atomic
-        for(( j=0 ; j < ${#noScope[*]} ; ++j )) ; do
-           test ${noScope[j]} = $fBase && break 2
-        done
-        if grep -q -m 1 $fBase $bad ; then
-           noScope[${#noScope[*]}]=$fBase
-           break
-        fi
-
-        # scopeName; already found
-        for(( j=0 ; j < ${#scopeName[*]} ; ++j )) ; do
-          test ${scopeName[j]} = $fBase && return
-        done
-
-        isNew=t
-        j=${#scopeName[*]}
-        scopeName[${j}]=$fBase
-        scopeEnd[${j}]=$(grep -A 10 "file: $fBase" $good \
-                        | grep 'end:' | awk 'END{print $NF}' )
-        isTotallyAtomic[${j}]=t
-        return
-      else
-        return # fixed or atomic
-      fi
-    fi
-  done
-
-  return
-}
-
-getGoodAtomicScopes()
-{
-  local fBase  # used in gGAS_block()
-  local i ix j k line words range
-  local good bad
-  local blk
-  declare -a blk
-
-  # on global scope: isTotallyAtomic scopeName tags
-
-  for(( k=0 ; k < ${#fs[*]} ; ++k )) ; do
-    f=${fs[k]##*/}
-
-    if [ ${#dir} -gt 0 ] ; then
-      good="${path[k]}${dir}good/${f%.log}.note"
-      bad="${path[k]}${dir}bad/${f%.log}.note"
-    fi
-
-    # read from file
-    exec 9<&0 # save stdin
-    exec 0< ${good}
-
-    #note that there is no header
-    local is isNew isOld
-    local blkCount=0
-
-    # read: no need to preserve leading blanks
-    # init reading of blocks
-    read line
-    blk[${#blk[*]}]=$line
-
-    while read line ; do
-      if [ "${line:0:8}" = ' - date:' ] ; then
-        # examine the  block
-        gGAS_block
-        unset blk
-      fi
-
-      blk[${#blk[*]}]=$line
-    done
-
-    # the final block
-    gGAS_block
-
-    # restore stdin and free #9
-    exec 0<&9 9<&-
+    xtrctAnnotated
   done
 
   return
@@ -922,7 +639,7 @@ grepBlock()
     while read line ; do
       if [ ${line:0:2} = ' -' ] ; then
         # the begin of a block
-        splitString words ${line}
+        splitString words "${line}"
         test "${words[0]}" = '-' -a "${words[1]}" = ' date:' && unset blk
 
         blk[${#blk[*]}]="$line"
@@ -998,106 +715,81 @@ processBlock()
   fi
 
   # xtract notes
-  if [ $# -gt 0 ] ; then
-    for(( i=0 ; i < sz ; ++i )) ; do
-      test "${blk[i]}" != cancel && echo "${blk[i]}" >> $1
-    done
-  else
-    for(( i=0 ; i < sz ; ++i )) ; do
-      test "${blk[i]}" != cancel && echo "${blk[i]}"
-    done
-  fi
-
-  return
-}
-
-remove_atomic_events()
-{
-  # atomic events are marked to cancel from the corresponding sub-temporal blocks
-
-  local i j k tgs
-  local ivs iv_0 iv_1 tg # indexes events:, event: - begin, - end, tag
-  declare -a iv_0 iv_1 f_tgs
-
-  getBadIndexes
-
-  local count=0
-  local a_tgs
-
-  splitString a_tgs , tags[ix]
-
-  for(( i=0 ; i < ${#f_tgs[*]} ; ++i )) ; do
-     # cancel for matching of an atomic tag with a sub-temporal one
-     local is=f
-     for(( j=0 ; j < ${#a_tgs[*]} ; ++j )) ; do
-       if [ ${a_tgs[j]} = ${f_tgs[i]} ] ; then
-         is=t
-         break
-       fi
-     done
-
-     if [ $is = t ] ; then
-       for(( k=${iv_0[i]} ; k < ${iv_1[i]} ; ++k )) ; do
-          blk[${k}]="cancel"
-       done
-     else
-       count=$(( count +1 ))  # the number of remaining sub-temp events
-     fi
+  for(( i=0 ; i < sz ; ++i )) ; do
+    test "${blk[i]}" != cancel && echo "${blk[i]}"
   done
-
-  if [ ${count} -eq 0 ] ; then
-    # this sub-temp file is represented entirely by atomic events
-    blk=()
-  else
-    # adjust the number of sub-temp events
-    blk[${ivs}]="   events: ${count}"
-  fi
 
   return
 }
 
 splitString()
 {
- local arg=$1
+  # split a string at given separator
+  local sep
 
-  if [ $# -eq 2 ] ; then
-    local IFS=' '
-    shift
-  elif [ $# -eq 3 ] ; then
-    local IFS="$2"
-    shift 2
+  if [ "${3}" ] ; then
+    sep=${3}
+  else
+    sep=' '
   fi
 
+  local p0 p1 vals
+  declare -a vals
+
+  local str="${2}"
+  p0=0
+
+  for((p0=0 ; p0 < ${#str} ; ++p0 )) ; do
+    test "${str:p0:1}" != "${sep}" && break
+  done
+
+  for((p1=p0+1 ; p1 < ${#str} ; ++p1 )) ; do
+    if [ "${str:p1:1}" = "${sep}" ] ; then
+       vals[${#vals[*]}]=${str:p0:$((p1-p0))}
+
+       for((p0=p1+1 ; p0 < ${#str} ; ++p0 )) ; do
+         if [ "${str:p0:1}" != "${sep}" ] ; then
+           p1=$((p0+1))
+           break
+         fi
+       done
+    fi
+  done
+  test $((p0+1)) -lt $p1 && vals[${#vals[*]}]=${str:p0:$((p1-p0))}
+
   # a '#' could harm, but that is not looked for
-  eval ${arg}=\( ${!1} \) 2> /dev/null
+  eval ${1}=\( ${vals[*]} \) 2> /dev/null
+
   return
 }
 
-xtrctGoodBad()
+xtrctAnnotated()
 {
   local blk
   declare -a blk
 
   local file i line
 
+  # save stdin
+  exec 9<&0 # save stdin
+
   for(( i=0 ; i < ${#fs[*]} ; ++i )) ; do
     file=${fs[i]##*/}
 
     if [ ${#dir} -gt 0 ] ; then
-      mkdir -p ${path[i]}${dir}good ${path[i]}${dir}bad
-      good="${path[i]}${dir}good/${file%.log}.note"
-      bad="${path[i]}${dir}bad/${file%.log}.note"
-      echo -n '' > $good
-      echo -n '' > $bad
-#      out="${path[i]}${dir}${f%.log}.note"
-#      exec 1>$out
+      mkdir -p ${path[i]}${dir}annot
+      mkdir -p ${path[i]}${dir}head
+
+      head="${path[i]}${dir}head/${file%.log}.head"
+      annot="${path[i]}${dir}annot/${file%.log}.anot"
+      atom="${path[i]}${dir}annot/${file%.log}.atom"
+      finA="${path[i]}${dir}${file%.log}.note"
     fi
 
     test "${file##*.}" != log && continue
 
-    # save stdin
-    exec 9<&0 # save stdin
     exec 0< ${path[i]}$file
+    exec 1> $annot
 
     IFS=''
 
@@ -1107,7 +799,7 @@ xtrctGoodBad()
       countHeaderLines=$(( countHeaderLines +1 ))
 
       if [ ${isAddHeader} = t ] ; then
-        echo "${line}" >> $good
+        echo "${line}" >> $head
       fi
 
       test "${line}" = 'items:' && break
@@ -1121,37 +813,34 @@ xtrctGoodBad()
     while read line ; do
       if [ "${line:0:8}" = ' - date:' ] ; then
         # the end of a block
-        out=$good
-        if findBlock2Xtract ; then
-          out=$bad
+        if findAnnotatedBlock ; then
+          processBlock
         fi
-        processBlock $out
 
         unset blk
       fi
-
-      if expr match "${line}" '.*creation_date:' &> /dev/null ; then continue ; fi
-      if expr match "${line}" '.*tracking_id:'   &> /dev/null ; then continue ; fi
-      if expr match "${line}" '.*checksum:'      &> /dev/null ; then continue ; fi
-
       blk[${#blk[*]}]="$line"
     done
 
     # last block
-    out=$good
-    if findBlock2Xtract ; then
-      out=$bad
+    if findAnnotatedBlock ; then
+      processBlock
     fi
-    processBlock $out
 
-    # remove empty output file or just containing the headline
-#    clear_out
+    atomise
 
-    # restore stdin and free #9
-    exec 0<&9 9<&-
+    if [ -s $atom ] ; then
+      mv $head $finA
+      cat $atom >> $finA
+    fi
 
-    atomicConversion
   done
+
+  \rm -r ${path[i]}${dir}annot
+  \rm -r ${path[i]}${dir}head
+
+  # restore stdin and free #9
+  exec 0<&9 9<&-
 
   IFS=$oldIFS
 
@@ -1212,8 +901,6 @@ shift $(( $OPTIND - 1 ))
 
 declare -a blk
 
-#set -x
-
 path=
 
 # given files
@@ -1260,6 +947,4 @@ if [ ${#tokens[*]} -gt 0 ] ; then
   exit
 fi
 
-declare -a scopeName noScope isTotallyAtomic tags scopeEnd
-
-xtrctGoodBad
+xtrctAnnotated
