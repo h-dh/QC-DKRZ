@@ -221,34 +221,19 @@ BREAK:
               else
                 capt += hdhC::tf_var(xt_a[0], hdhC::colon) ;
 
-              capt += "changed ";
-
               if( xt_eq[0] == "values" )
-                capt += "layout ";
-              capt += "across sub-temporal files";
-
-              std::string text(xt_eq[0]) ;
-              text += " (table)" ;
-              if( xt_eq[1].size() )
-              {
-                text += '=' ;
-                text += xt_eq[1] ;
-              }
+                capt += "values have changed ";
               else
-                text += ": not available" ;
-
-              text += "\n" ;
-              text += xf_eq[0] ;
-              text += " (file)" ;
-              if( xf_eq[1].size() )
               {
-                text += '=' ;
-                text += xf_eq[1] ;
+                capt += xt_eq[0] ;
+                capt += " has changed from";
+                capt += hdhC::tf_val(xt_eq[1]) ;
+                capt += " to";
+                capt += hdhC::tf_val(xf_eq[1]) ;
+                capt += " across experiment or sub-temporal files";
               }
-              else
-                text += ": not available" ;
 
-              (void) notes->operate(capt, text) ;
+              (void) notes->operate(capt) ;
               notes->setCheckMetaStr( "FAIL" );
             }
 
@@ -555,7 +540,7 @@ Consistency::getValues(Variable &var, std::string &s)
    }
 
    s += ",values=";
-   s += hdhC::double2String(ck) ;
+   s += hdhC::double2String(ck, "p=|adj,float") ;
 
    return;
 }

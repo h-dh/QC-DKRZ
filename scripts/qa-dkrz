@@ -4017,6 +4017,8 @@ std_out()
 
 taskSum()
 {
+  test ${NO_SUMMARY:-f} = t && return
+
   local cvr prj qrs tcl ers
   test ${PROJECT}    && prj="-P ${PROJECT}"
   test ${QA_RESULTS} && qrs="-r ${QA_RESULTS}"
