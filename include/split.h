@@ -73,6 +73,12 @@ class Split
   void   addIgnore( std::string s, bool isStr=false);
 
   //! Add another separator to those already set.
+  void   addProtector( std::string s, bool isContainer=false);
+
+  //! Add another separator to those already set.
+  void   addProtector( char s){addProtector(std::string(1,s));}
+
+  //! Add another separator to those already set.
   void   addSeparator( char s){addSeparator(std::string(1,s));}
 
   //! Add another separator to those already set.
@@ -147,9 +153,6 @@ class Split
   /*! Purpose: read formatted tables without explicit separator.*/
   void   setFixedFormat( size_t w ){fixedWidth=w; isFixedWidth=true;}
 
-  //! Each separator is contained in the separated items.
-  void   setItemsWithSeparator(void){ isItemsWithSep=true;}
-
   //! Discard specific character; replace former setting.
   void   setIgnore(char s){setIgnore(std::string(1,s));}
 
@@ -157,6 +160,12 @@ class Split
   /*! By default, each character in the string is set as individual
    separator. If the entire string is a separator, isStr=true.*/
   void   setIgnore( std::string s, bool isStr=false);
+
+  //! Each separator is contained in the separated items.
+  void   setItemsWithSeparator(void){ isItemsWithSep=true;}
+
+  //! Protect tokenising until the next protector
+  void   setProtector( std::string, bool isContainer=false);
 
   //! Set a new separator; replace former setting.
   void   setSeparator(char s){setSeparator(std::string(1,s));}
@@ -197,6 +206,7 @@ class Split
 
 private:
   void   decompose(void);
+  void   decomposeWithProtect(void);
   void   decomposeAlNum(void);
   void   doIgnore(std::string);
   void   getFixedFormat(void);
@@ -215,6 +225,7 @@ private:
   bool   isDecomposed;
   bool   isEmptyItemsEnabled;
   bool   isFixedWidth ;
+  bool   isProtectAlNum;
   bool   isItemsWithSep;
 
   size_t fixedWidth;
@@ -227,7 +238,8 @@ private:
   std::vector<std::string> sep;
   std::vector<std::string> ignore;
   std::vector<std::string> items;
-  std::vector<size_t> itemPos;
+  std::vector<size_t>      itemPos;
+  std::vector<std::string> protector;
   std::vector<std::string> stripSides;
 };
 

@@ -119,6 +119,29 @@ Split::addIgnore( std::string s, bool isStr)
 }
 
 void
+Split::addProtector( std::string s, bool isContainer)
+{
+  if( s == ":alnum:" )
+  {
+    isProtectAlNum=true;
+    return;
+  }
+  else if(isContainer)
+  {
+    std::string t;
+    for( size_t i=0 ; i < s.size() ; ++i)
+    {
+      t=s[i];
+      protector.push_back(t);
+    }
+  }
+  else
+    protector.push_back(s);
+
+  return ;
+}
+
+void
 Split::addSeparator( std::string s, bool isContainer)
 {
   if( s == ":alnum:" )
@@ -206,6 +229,9 @@ Split::c_str(size_t i)
 void
 Split::decompose(void)
 {
+  if( protector.size() )
+    return decomposeWithProtect();
+
   items.clear();
   itemPos.clear();
 
@@ -252,6 +278,200 @@ Split::decompose(void)
           }
         }
       }
+
+      if( sepIndex == -1 )
+      {
+        // last regular item or no separator at all
+        items_beg.push_back(pos0);
+        sep_ix.push_back(-1);
+        items_len.push_back( sz - pos0 );
+        break;
+      }
+      else
+      {
+        len = sep[sepIndex].size() ;
+
+        if( pos > pos0 )
+        {
+          // a regular item
+          items_beg.push_back(pos0);
+          sep_ix.push_back(-1);
+          items_len.push_back( pos-pos0 );
+        }
+
+        items_beg.push_back(pos);
+        sep_ix.push_back(sepIndex);
+        items_len.push_back(len);
+      }
+
+      pos0 = pos + len ;
+    } while ( pos0 < sz ) ;
+
+    // context change
+    sz = items_beg.size();
+
+    // regular case: avoid trailing separators
+    if( ! (isItemsWithSep || isEmptyItemsEnabled) )
+    {
+      for( int j=sz-1 ; j >= 0 ; --j)
+      {
+        if( sep_ix[j] > -1 )
+          --sz;
+        else
+          break;
+      }
+    }
+
+    for( size_t i=0 ; i < sz ; ++i )
+    {
+      if( sep_ix[i] == -1 || isItemsWithSep )
+      {
+        std::string t0(str.substr(items_beg[i], items_len[i]));
+
+        if( isStripSides )
+          t0 = hdhC::stripSides(t0, stripSides) ;
+
+        if( t0.size() )  // empty item if !(sz == 1 && t0 == stripSides[0])
+        {
+          items.push_back(t0);
+          itemPos.push_back(items_beg[i]);
+        }
+      }
+      else if( isEmptyItemsEnabled && sep_ix.size() && sep_ix[i-1] > -1 )
+      {
+        items.push_back( empty );
+        itemPos.push_back(items_beg[i]);
+      }
+    }
+  }
+
+  isDecomposed=true;
+
+  return ;
+}
+
+void
+Split::decomposeWithProtect(void)
+{
+  items.clear();
+  itemPos.clear();
+
+  if( ignore.size() )
+    doIgnore( str ) ;  // will perhaps change object wide 'str'
+
+  if( isAlNum )
+  {
+    decomposeAlNum();
+    return;
+  }
+
+  std::vector<size_t> items_beg;
+  std::vector<size_t> items_len;
+  std::vector<int> sep_ix;
+  int sepIndex;
+
+  if( isFixedWidth )
+     getFixedFormat();
+  else
+  {
+    std::string::size_type pos, pos0  ;
+    pos0=0;
+
+    size_t sz = str.size();
+    size_t len=0;
+
+    std::vector<std::pair<size_t,size_t> > vs_protector;
+
+    // find positions with protectors. No nesting.
+    bool isFindProtectors=true;
+    if( protector.size() == 1
+            && (pos0=str.find(protector[0])) < std::string::npos )
+    {
+      vs_protector.push_back( std::pair<size_t,size_t>(0,pos0) );
+      isFindProtectors=false;
+    }
+    else if( (str.find(protector[0])) > (pos=str.find(protector[1])) )
+    {
+      vs_protector.push_back( std::pair<size_t,size_t>(0,pos0) );
+      pos0=pos+1;
+    }
+
+    while( isFindProtectors )
+    {
+      size_t p1st=std::string::npos;
+      size_t ix_1st=0;
+      size_t p2nd;
+
+      for( size_t ix=0 ; ix < protector.size() ; ix+=2 )
+      {
+        if( (pos=str.find(protector[ix], pos0)) < std::string::npos )
+        {
+          if( p1st > pos )
+          {
+            p1st=pos;
+            ix_1st=ix;
+          }
+        }
+      }
+
+      if( p1st == std::string::npos )
+        break;
+
+      p2nd=str.find(protector[ix_1st+1], p1st) ;
+      if( p2nd < std::string::npos )
+        ++p2nd;
+
+      vs_protector.push_back( std::pair<size_t,size_t>(p1st,p2nd) );
+
+      pos0=p1st+1;
+    }
+
+    pos0=0;
+
+    do
+    {
+      sepIndex=-1;
+
+      // Works for multiple separators.
+      // Find position of a next separator
+      size_t pos=std::string::npos;
+      bool isProtect=false;
+      size_t p_try=pos0;
+
+      do
+      {
+        size_t pMin=std::string::npos;
+        size_t sep_ix=-1;
+        for( size_t i=0 ; i < sep.size() ; ++i)
+        {
+          size_t p;
+          if( ( p = str.find(sep[i], p_try)) < std::string::npos )
+          {
+            if( pMin > p )
+            {
+                pMin=p;
+                sep_ix= static_cast<int>(i);
+            }
+          }
+        }
+
+        isProtect=false;
+        for( size_t b=0 ; b < vs_protector.size() ; ++b )
+        {
+          if( vs_protector[b].first < pMin && pMin < vs_protector[b].second )
+          {
+            isProtect=true;
+            p_try=pMin+1;
+            break;
+          }
+        }
+
+        if( !isProtect )
+        {
+          pos=pMin;
+          sepIndex= static_cast<int>(sep_ix);
+        }
+      } while(isProtect) ;
 
       if( sepIndex == -1 )
       {
@@ -554,6 +774,17 @@ Split::setIgnore( std::string s, bool isStr)
   ignore.clear();
 
   addIgnore(s, isStr);
+
+  return ;
+}
+
+void
+Split::setProtector( std::string s, bool isContainer)
+{
+  isDecomposed=false;
+  protector.clear();
+
+  addProtector(s, isContainer);
 
   return ;
 }
