@@ -2805,6 +2805,8 @@ CMOR::checkRequestedAttributes(void)
     }
   }
 
+  checkSource();
+
 /*
   // check attribute _FillValue and missing_value, if available
   std::string fV("_FillValue");
@@ -2845,31 +2847,6 @@ CMOR::checkRequestedAttributes(void)
     }
   }
 
-  // for data variables, both _FillValue and missing_value
-  // should be defined in CORDEX
-  for( size_t i=0 ; i < pQA->pIn->dataVarIndex.size() ; ++i)
-  {
-    Variable &var = pQA->pIn->variable[pQA->pIn->dataVarIndex[i]];
-
-    bool is_fV = var.isValidAtt(fV) ;
-    bool is_mV = var.isValidAtt(mV) ;
-
-    if( (is_fV || is_mV) && (is_fV != is_mV) )
-    {
-      std::string key("3_12");
-
-      if( notes->inq( key, var.name) )
-      {
-        std::string capt(hdhC::tf_var(var.name, hdhC::colon)) ;
-        capt += "if " + hdhC::tf_att(fV);
-        capt += "or " + mV ;
-        capt += ", then both should be defined";
-
-        (void) notes->operate(capt) ;
-        notes->setCheckMetaStr( pQA->fail );
-      }
-    }
-  }
 */
 
   return ;
@@ -3155,6 +3132,178 @@ CMOR::checkReqAtt_variable(Variable &var)
     }
   } // end of for-loop
 */
+
+  return;
+}
+
+void
+CMOR::checkSource(void)
+{
+  // global attribure 'source'
+  Variable& glob = pQA->pIn->variable[pQA->pIn->varSz] ;
+
+  std::string n_source("source");
+
+  Split x_colon(glob.getAttValue(n_source),";");
+
+  // note: existence is checked elsewhere
+  if( x_colon.size() == 0 )
+    return;
+
+  // some words
+  std::string n_model_id("model_id");
+
+  std::vector<std::string> vs_dscr;
+  vs_dscr.push_back("atmosphere:");
+  vs_dscr.push_back("ocean:");
+  vs_dscr.push_back("sea ice:");
+  vs_dscr.push_back("land:");
+
+  Split x_word(x_colon[0]);
+  x_word.setProtector("()",true);
+
+  Split x_brackets;
+
+  for( size_t i=0; i < x_colon.size() ; ++i )
+  {
+    size_t j=0;
+    x_word = x_colon[i] ;
+
+    if( i==0 )
+    {
+      std::string model_id(glob.getAttValue(n_model_id)) ;
+
+      if( x_word[j].size() == 0 )
+      {
+        std::string key("2_7a");
+        if( notes->inq(key) )
+        {
+          std::string capt(hdhC::tf_att(n_global, n_source, hdhC::colon));
+          capt += "The 1st item should be the model_id attribute";
+
+          (void) notes->operate(capt) ;
+          notes->setCheckMetaStr(pQA->fail);
+        }
+      }
+
+      else
+      {
+        if( model_id.size() != x_word[j].size() )
+        {
+          std::string key("2_7b");
+          if( notes->inq(key) )
+          {
+            std::string capt(hdhC::tf_att(n_global, n_source, hdhC::colon));
+            capt += "The model_id does not match, found";
+            capt += hdhC::tf_val(x_word[j]) ;
+            capt += ", expected";
+            capt += hdhC::tf_val(model_id) ;
+
+            (void) notes->operate(capt) ;
+            notes->setCheckMetaStr(pQA->fail);
+          }
+
+          ++j;
+        }
+
+        if( x_word[j].size() > 1 )
+        {
+          if( ! hdhC::isDigit(x_word[1]) )
+          {
+            std::string key("2_7c");
+            if( notes->inq(key) )
+            {
+              std::string capt(hdhC::tf_att(n_global, n_source, hdhC::colon));
+              capt += "The 2nd item should be a year in digits";
+
+              (void) notes->operate(capt) ;
+              notes->setCheckMetaStr(pQA->fail);
+            }
+          }
+
+          ++j;
+        }
+      }
+    }
+
+    // look for descriptors
+    size_t dscr_ix;
+    for( dscr_ix=0 ; dscr_ix < vs_dscr.size() ; ++dscr_ix )
+      if( vs_dscr[dscr_ix] == x_word[j] )
+        break;
+
+    if( dscr_ix < vs_dscr.size() )
+    {
+      // model_name is required before ()-term
+      if( x_word[j][0] == '(' )
+      {
+        std::string key("2_7d");
+        if( notes->inq(key) )
+        {
+          std::string capt(hdhC::tf_att(n_global, n_source, hdhC::colon));
+          capt += "The descriptor";
+          capt += hdhC::tf_val(vs_dscr[dscr_ix]) ;
+          capt += " should be followed by a model_name";
+
+          (void) notes->operate(capt) ;
+          notes->setCheckMetaStr(pQA->fail);
+        }
+      }
+      else
+        ++j;
+    }
+
+    // the term in brackets
+    bool foundBrackets=false;
+
+    for( ; j < x_word.size() ; ++j )
+    {
+      size_t last = x_word[j].size() - 2;
+
+      if( x_word[j][0] == '(' && x_word[j][last] == ')' )
+      {
+        foundBrackets=true;
+        x_brackets = x_word[j].substr(1,last-1);
+
+        bool isA = (x_brackets.size() == 1 && dscr_ix != 2 )
+                    ? true : false ;   // sea ice: or land:
+
+        if( !isA )
+          isA = x_brackets.size() != 2 ? true : false;
+        if( x_brackets.size() == 1  )
+
+        if(isA)
+        {
+          std::string key("2_7f");
+          if( notes->inq(key) )
+          {
+            std::string capt(hdhC::tf_att(n_global, n_source, hdhC::colon));
+            capt += "faulty term (<technical_name>, <resolution_and_levels>), found";
+            capt += hdhC::tf_val(x_brackets.getStr()) ;
+
+            (void) notes->operate(capt) ;
+            notes->setCheckMetaStr(pQA->fail);
+          }
+
+          break;
+        }
+      }
+    }
+
+    if( dscr_ix < vs_dscr.size() && !foundBrackets )
+    {
+      std::string key("2_7e");
+      if( notes->inq(key) )
+      {
+        std::string capt(hdhC::tf_att(n_global, n_source, hdhC::colon));
+        capt += "Missing bracketed term in ";
+        capt += x_colon[i];
+
+        (void) notes->operate(capt) ;
+        notes->setCheckMetaStr(pQA->fail);
+      }
+    }
+  }
 
   return;
 }

@@ -187,6 +187,8 @@ struct CMOR
   void   checkReqAtt_global(void);
   void   checkReqAtt_variable(Variable&);
 
+  void   checkSource(void);
+  
   // the next one is applied to several checks
   void   checkStringValues(
             struct DimensionMetaData& f_DMD,
