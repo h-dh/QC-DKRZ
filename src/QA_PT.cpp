@@ -222,7 +222,7 @@ BREAK:
                 capt += hdhC::tf_var(xt_a[0], hdhC::colon) ;
 
               if( xt_eq[0] == "values" )
-                capt += "values have changed ";
+                capt += "data has changed";
               else
               {
                 capt += xt_eq[0] ;
@@ -230,8 +230,8 @@ BREAK:
                 capt += hdhC::tf_val(xt_eq[1]) ;
                 capt += " to";
                 capt += hdhC::tf_val(xf_eq[1]) ;
-                capt += " across experiment or sub-temporal files";
               }
+              capt += " across experiment or sub-temporal files";
 
               (void) notes->operate(capt) ;
               notes->setCheckMetaStr( "FAIL" );
@@ -293,11 +293,7 @@ BREAK:
         else
           capt += hdhC::tf_var(xt_a[0], hdhC::colon) ;
 
-        capt += "missing " ;
-        if( qa->currQARec )
-          capt += "across sub-temporal files";
-        else
-          capt += "across experiments";
+        capt += "missing across experiments or sub-temporal files";
 
         (void) notes->operate(capt) ;
         notes->setCheckMetaStr( "FAIL" );
@@ -375,20 +371,12 @@ BREAK:
 
             if( xt_eq[0] == "values" )
             {
-              capt += "additional data across ";
-              if( qa->currQARec )
-                capt += "sub-temporal files";
-              else
-                capt += "experiments";
+              capt += "additional data across experiments or sub-temporal files";
             }
             else
             {
               capt += hdhC::tf_att(xf_eq[0]);
-              capt += "is new across " ;
-              if( qa->currQARec )
-                capt += "sub-temporal files";
-              else
-                capt += "experiments";
+              capt += "is new across experiments or sub-temporal files";
             }
 
             (void) notes->operate(capt) ;
@@ -407,11 +395,7 @@ BREAK:
       {
         std::string capt("additional auxiliary ");
         capt += hdhC::tf_var(xf_a[0].substr(4)) ;
-
-        if( qa->currQARec )
-          capt += "across sub-temporal files";
-        else
-          capt += "across experiments";
+        capt += "across experiments or sub-temporal files";
 
         (void) notes->operate(capt) ;
         notes->setCheckMetaStr( "FAIL" );
@@ -592,11 +576,10 @@ Consistency::lockFile(std::string &fName )
       std::string key("8_3");
       if( notes->inq( key, "PT") )
       {
-         std::string capt("project table is locked for 1/2 hour") ;
-         std::string text("Check running applications.") ;
+         std::string capt("consistency-check table is locked for 1/2 hour") ;
 
-         if( notes->operate(capt, text) )
-           qa->setExit( notes->getExitValue() ) ;
+         (void) notes->operate(capt) ;
+         qa->setExit( notes->getExitValue() ) ;
       }
     }
   }
@@ -606,7 +589,7 @@ Consistency::lockFile(std::string &fName )
      std::string key("8_2");
      if( notes->inq( key, "PT") )
      {
-        std::string capt("could not lock the project table") ;
+        std::string capt("could not lock the consistency-check table") ;
 
         if( notes->operate(capt) )
           qa->setExit( notes->getExitValue() ) ;
@@ -679,13 +662,9 @@ Consistency::write(Variable &dataVar, std::string& entryID)
     std::string key("8_1");
     if( notes->inq( key, "PT") )
     {
-      std::string capt("could not create a project table") ;
+      std::string capt("could not create a consistency-check table") ;
 
-      std::string text("Could not create project table=") ;
-      text += pFile ;
-      text += "\nPlease, check the setting in the configuration file." ;
-
-      if( notes->operate(capt, text) )
+      if( notes->operate(capt) )
       {
         notes->setCheckMetaStr( qa->fail );
         qa->setExit( notes->getExitValue() ) ;

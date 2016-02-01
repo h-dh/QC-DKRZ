@@ -1205,17 +1205,6 @@ QA::setProcessing(void)
 }
 
 void
-QA::setTable(std::string t, std::string acronym)
-{
-  // it is possible that this method is called from a spot,
-  // where there is still no valid table name.
-  if( t.size() )
-    notes->setTable(t, acronym);
-
-  return;
-}
-
-void
 QA::storeData(VariableMetaData& vMD, hdhC::FieldData& fA)
 {
   //FieldData structure defined in geoData.h

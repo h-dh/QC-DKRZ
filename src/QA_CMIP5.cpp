@@ -2293,8 +2293,7 @@ CMOR::checkMIPT_dim_units(
     if( notes->inq( key, vMD.var->name) )
     {
       std::string capt(QA_Exp::getCaptionIntroDim(f_DMD, t_DMD, n_units ));
-      capt += "found " + hdhC::tf_assign(n_units, f_units) ;
-      capt += ", expected dim-less";
+      capt += "expted dim-less, found " + hdhC::tf_assign(n_units, f_units) ;
 
       (void) notes->operate(capt) ;
       notes->setCheckMetaStr(pQA->fail);
@@ -2752,16 +2751,19 @@ CMOR::checkMIPT_var_type(
       std::string currTable(QA::tableSheet) ;
 
       std::string capt(QA_Exp::getCaptionIntroVar(currTable, vMD, n_type));
-      capt += "found" ;
-      if( vMD.attMap[n_type].size() )
-        capt += hdhC::tf_val(vMD.attMap[n_type]) ;
-      else
-        capt += hdhC::tf_val(pQA->notAvailable) ;
-
       capt += ", expected";
 
       if( tEntry.attMap[n_type].size() )
         capt += hdhC::tf_assign("type", tEntry.attMap[n_type]) ;
+      else
+        capt += " no type";
+
+      capt += ", found" ;
+      if( vMD.attMap[n_type].size() )
+        capt += hdhC::tf_val(vMD.attMap[n_type]) ;
+      else
+        capt += "no type" ;
+
 
       (void) notes->operate(capt) ;
       notes->setCheckMetaStr(pQA->fail);
@@ -4518,8 +4520,9 @@ QA_Exp::initResumeSession(std::vector<std::string>& prevTargets)
        std::string key("3_14");
        if( notes->inq( key, prevTargets[i]) )
        {
-         std::string capt("variable=");
-         capt += prevTargets[i] + " is missing in sub-temporal file" ;
+         std::string capt("variable");
+         capt += hdhC::tf_val(prevTargets[i]) ;
+         capt += " is missing in sub-temporal file" ;
 
          if( notes->operate(capt) )
          notes->setCheckMetaStr( pQA->fail );
@@ -4541,8 +4544,9 @@ QA_Exp::initResumeSession(std::vector<std::string>& prevTargets)
        std::string key("3_15");
        if( notes->inq( key, pQA->fileStr) )
        {
-         std::string capt("variable=");
-         capt += varMeDa[j].var->name + " is new in sub-temporal file" ;
+         std::string capt("variable");
+         capt += hdhC::tf_val(varMeDa[j].var->name);
+         capt += " is new in sub-temporal file" ;
 
          if( notes->operate(capt) )
          notes->setCheckMetaStr( pQA->fail );

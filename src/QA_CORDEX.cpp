@@ -2515,7 +2515,7 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
     {
       std::string capt("resolution of CORDEX ");
       capt += hdhC::tf_assign("domain", tName) ;
-      capt += " does not match. Found " ;
+      capt += " does not match, found " ;
       if( is_lon && is_lat )
       {
         capt += var_lon;
@@ -3228,7 +3228,7 @@ QA_Exp::checkVarTableEntry_cell_methods(
       if( cm_val.size() )
       {
         capt = hdhC::tf_att(vMD.var->name, cm_name, cm_val) ;
-        capt += "does not match" ;
+        capt += "does not match, found" ;
         if( isOld )
           capt += hdhC::tf_val(t_DMD_entry.attMap[n_cell_methods]) ;
         else
@@ -3865,7 +3865,7 @@ QA_Exp::getFrequency(void)
      std::string key("9_4");
      if( notes->inq( key, pQA->fileStr) )
      {
-       std::string capt(hdhC::tf_assign("frequency","fx") + " with time dependency" );
+       std::string capt(hdhC::tf_assign("frequency","fx") + " is time-dependent" );
 
        if( notes->operate(capt) )
        {
@@ -4080,8 +4080,6 @@ QA_Exp::inqTables(void)
 
   if( ! varReqTable.isExisting(varReqTable.path) )
     ret=true;
-  else
-    pQA->setTable( varReqTable.filename, "ST" );
 
   for( size_t i=0 ; i <  pPath.size() ; ++i)
   {
@@ -4698,8 +4696,8 @@ QA_Exp::reqAttCheckVariable(Variable &var)
         if( notes->inq( key, vName) )
         {
            std::string capt(hdhC::tf_att(vName, aN, hdhC::colon));
-           capt="missing required value=" ;
-           capt += rqValue;
+           capt="missing required value" ;
+           capt += hdhC::tf_val(rqValue);
 
            (void) notes->operate(capt) ;
            notes->setCheckMetaStr( pQA->fail );
@@ -4731,8 +4729,8 @@ QA_Exp::reqAttCheckVariable(Variable &var)
          if( is &&  notes->inq( key, vName ) )
          {
            std::string capt(hdhC::tf_att(vName, aN, aV));
-           capt += "does not match required value=" ;
-           capt += rqValue;
+           capt += "does not match required value " ;
+           capt += hdhC::tf_val(rqValue);
 
            (void) notes->operate(capt) ;
            notes->setCheckMetaStr( pQA->fail );
