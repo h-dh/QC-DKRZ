@@ -1216,5 +1216,4 @@ if [ ${#tokens[*]} -gt 0 ] ; then
   exit
 fi
 
-set  -x
 xtrctAnnotated
