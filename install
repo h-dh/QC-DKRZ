@@ -307,7 +307,8 @@ tr_option()
 
 update()
 {
-  if . $QA_PATH/scripts/updateConfigFile.txt ${AUTO_UPDATE:-AUTO_UPDATE} ; then
+  if . $QA_PATH/scripts/updateConfigFile.txt ${AUTO_UPDATE:-AUTO_UPDATE} \
+        || [ ${isUpdateQA:-f} = t ]; then
     if [ $CONDA_ENV ] ; then
       # look for a new conda-built package
       local tmp
