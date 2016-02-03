@@ -594,9 +594,8 @@ DRS_CV::checkPath(std::string& path, struct DRS_CV_Table& drs_cv_table)
         std::string key("7_3");
         std::string capt("Fault in table ");
         capt += pQA->table_DRS_CV.getFile() ;
-        capt += ": encoding " ;
+        capt += ": encoding not available in CV, found " ;
         capt += hdhC::tf_assign("item", x_e[x]) ;
-        capt += " not found in CV";
 
         if( notes->inq( key, "DRS") )
         {
@@ -791,7 +790,7 @@ DRS_CV::findPath_faults(Split& drs, Split& x_e,
 
     if( i == -1 )
     {
-      text = " check failed, suspicion of a missing item in the path, found" ;
+      text = " suspicion of a missing item in the path, found" ;
       text += hdhC::tf_val(drs.getStr()) ;
       break;
     }

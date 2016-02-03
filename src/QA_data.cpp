@@ -1288,7 +1288,7 @@ QA_Data::checkFinally(Variable *var)
       std::string key("6_3");
       if( notes->inq( key, name, ANNOT_NO_MT) )
       {
-        std::string capt("all records are identical") ;
+        std::string capt("all data records are identical") ;
 
         notes->operate(capt) ;
         notes->setCheckDataStr(pQA->fail);
