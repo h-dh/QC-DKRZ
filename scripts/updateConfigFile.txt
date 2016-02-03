@@ -1,4 +1,4 @@
-#editConfigFile()
+#updateConfigFile()
 #{
 
 # embedded function, i.e. has to included by source or '.'
@@ -9,8 +9,6 @@
 
 # For the passing of parameters from the calling instance here,
 # a parameter ARG: is prefixed if the parameter could be empty
-
-  test ${1} = 'ARG:' && shift
 
   # return 1 if a single parameter was passed whose value is 'disable'
   retVal=0
@@ -102,16 +100,12 @@
   fi
 
   for item in $* ; do
-    test ${item:$((${#item}-1))} = '=' && item=${item}enabled
+    test "${item}" = "${item%%=*} && item=${item}=enabled
 
     name=${item%=*}
     value=${item#*=}
 
-    if [ ${name} = ${item} ] ; then
-      item=${item}=enabled
-    elif [ ${value} = d -o ${value} = disabled ] ; then
-      item=${name}=d
-    fi
+    test ${value} = d -o ${value} = disabled && item=${name}=d
 
     for(( i=0 ; i < ${#sctn[*]} ; ++i )) ; do
       if [ ${sctn[i]} = ${item} ] ; then
