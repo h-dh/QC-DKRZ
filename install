@@ -361,7 +361,7 @@ update()
 
   if . $QA_PATH/scripts/updateConfigFile.txt \
           ${AUTO_TABLE_UPDATE:-AUTO_TABLE_UPDATE} \
-              || ${FORCE_RSYNC:-f} = t ; then
+              || [ ${FORCE_RSYNC:-f} = t ] ; then
     if [ "$QA_WORK" != "$QA_PATH" ] ; then
       rsync -auz $QA_PATH/tables $QA_WORK &> /dev/null
     fi
