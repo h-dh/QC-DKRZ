@@ -367,7 +367,7 @@ findPureAtomic()
   # ensemble of atomic vars; either for all or for groups
 
   # array with all pure atomic tags
-  for(( ix=1 ; ix < ${#pureAtomicTags[*]} ; ++ix )) ; do
+  for(( ix=0 ; ix < ${#pureAtomicTags[*]} ; ++ix )) ; do
     tags=( ${pureAtomicTags[ix]//,/ } )
 
     for(( j=0 ; j < ${#tags[*]} ; ++j )) ; do
@@ -388,7 +388,7 @@ findPureAtomic()
   for(( i=0 ; i < N ; ++i )) ; do
 
     # each tag gets indices of corresponding atomicBase names
-    for(( ix=1 ; ix < ${#pureAtomicTags[*]} ; ++ix )) ; do
+    for(( ix=0 ; ix < ${#pureAtomicTags[*]} ; ++ix )) ; do
       tags=( ${pureAtomicTags[ix]//,/ } )
 
       for(( j=0 ; j < ${#tags[*]} ; ++j )) ; do
@@ -743,7 +743,7 @@ printA_fileTag()
 
       echo "${blk[e]}" # the line with event:
 
-      for(( j=1 ; j < ${#event_ix[*]} ; ++j )) ; do
+      for(( j=0 ; j < ${#event_ix[*]} ; ++j )) ; do
         test ! ${event_ix[j]} && continue
 
         e=${event_ix[j]}
@@ -810,41 +810,29 @@ printA_header()
 
   for(( i=0 ; i < sz ; ++i )) ; do
     if [ "$1" = group ] ; then
-      if [ ${#b_ix[*]} -eq 1 ] ; then
-        if [ $i -eq ${file_ix} ] ; then
-          echo "   atomic: ${atomicBase[${b_ix[0]}]}"
-          continue
-        elif [ $i -eq ${end_ix} ] ; then
-          echo "    end: ${atomicEnd[${b_ix[0]}]}"
-          continue
-        fi
+      if [ $i -eq ${file_ix} ] ; then
+        echo "   variable:"
 
-      else
-        if [ $i -eq ${file_ix} ] ; then
-          echo "   variable:"
+        for(( j=0 ; j < ${#b_ix[*]} ; ++j )) ; do
+          echo "    - ${atomicBase[${b_ix[j]}]}"
+        done
 
-          for(( j=0 ; j < ${#b_ix[*]} ; ++j )) ; do
-            echo "    - ${atomicBase[${b_ix[j]}]}"
-          done
+        #adjust the path: remove the trailing varName-directory
+#         local atomicBaseSet
+#         declare -a atomicBaseSet
+#         for(( j=0 ; j < ${#b_ix[*]} ; ++j )) ; do
+#           atomicBaseSet[j]=${atomicBase[${b_ix[j]}]}
+#         done
 
-          #adjust the path: remove the trailing varName-directory
-#          local atomicBaseSet
-#          declare -a atomicBaseSet
-#          for(( j=0 ; j < ${#b_ix[*]} ; ++j )) ; do
-#            atomicBaseSet[j]=${atomicBase[${b_ix[j]}]}
-#          done
+#         splitAtomicBase
 
-#          splitAtomicBase
-
-          echo "${blk[$((++i))]%/*/*}" # data_path
-          echo "${blk[$((++i))]%/*/*}" # result_path
-          continue
-        elif [ $i -eq ${end_ix} ] ; then
-          echo "    end: ${atomicEnd[ix]}"
-          continue
-        fi
+        echo "${blk[$((++i))]%/*/*}" # data_path
+        echo "${blk[$((++i))]%/*/*}" # result_path
+        continue
+      elif [ $i -eq ${end_ix} ] ; then
+        echo "    end: ${atomicEnd[ix]}"
+        continue
       fi
-
     fi
 
     echo "${blk[i]}"
@@ -1119,6 +1107,7 @@ xtrctAnnotated()
 
   rmdir ${path[i]}${dir}head &> /dev/null
   rmdir ${path[i]}${dir}annot &> /dev/null
+  rmdir ${path[i]}${dir} &> /dev/null
 
   # restore stdin and free #9
   exec 0<&9 9<&-
@@ -1227,4 +1216,5 @@ if [ ${#tokens[*]} -gt 0 ] ; then
   exit
 fi
 
+set  -x
 xtrctAnnotated

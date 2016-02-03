@@ -776,12 +776,9 @@ DRS_CV::findPath_faults(Split& drs, Split& x_e,
     {
       if(x_e[j] == "activity" )
       {
-        if( notes->inq( "1_1a", pQA->fileStr, "INQ_ONLY") )
-        {
-          std::string s( hdhC::Upper()(drs[i]) ) ;
-          if( s == t )
-            continue;
-        }
+        std::string s( hdhC::Upper()(drs[i]) ) ;
+        if( s == t  && !notes->inq( "1_3a", pQA->fileStr, "INQ_ONLY") )
+          continue;
       }
 
       text = " check failed, expected " ;

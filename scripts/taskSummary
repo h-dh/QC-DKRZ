@@ -25,6 +25,78 @@ descript()
   echo "  --help"
 }
 
+blk2Files()
+{
+  # same header for the current entry of each file
+  word=( ${blk[iP]} )
+  str0="\n - annotation:"
+  str0="${str0}\n   path: ${word[1]}"
+
+  if [ "${iV}" -gt -1 ] ; then
+    word=( ${blk[iV]} )
+    str0="${str0}\n   variable:"
+
+    # add the list of variables
+    for(( i=iV+1 ; i < iP ; ++i )) ; do
+      word=( ${blk[i]} )
+      str0="${str0}\n    - ${word[1]}"
+    done
+  elif [ "${iA}" -gt -1 ] ; then
+    # note: the same for file: and atomic:
+    word=( ${blk[iA]} )
+    str0="${str0}\n   atomic: ${word[1]}"
+  elif [ "${iF}" -gt -1 ] ; then
+    # note: the same for file: and atomic:
+    word=( ${blk[iF]} )
+    str0="${str0}\n   file: ${word[1]}"
+  fi
+
+  # a sorted array is required below
+  tags=( $( echo -e ${tags[*]/%\\n} | sort) )
+  tags_ix=( ${tags[*]#*|} )
+  tags=( ${tags[*]%|*} )
+
+  prev_tag=
+  N=${#tags_ix[*]}
+
+  for(( j=0 ; j < N ; ++j )) ; do
+    ix=${tags_ix[j]}
+
+    # strip embracing '
+    tag=${tags[j]}
+
+    word=( ${blk[$((ix-1))]} )
+    impact=${word[1]}
+
+    # switch to a another output file
+    if [ "${prev_tag}" != $tag ] ; then
+      # flush before the switch
+      test "${str:0:1}" && echo -e "${str}" >> $outT
+
+      outT=$summary/$exp/${impact}-${tag}
+      test ! -e $outT && echo -e "--- # Annotations (${tag})\n" > $outT
+
+      prev_tag=$tag
+      str="${str0}\n   events:"
+    fi
+
+    str="${str}\n    - event:"
+    str="${str}\n       caption: ${blk[$((ix-2))]:9}"
+    str="${str}\n       impact: ${impact}"
+    str="${str}\n       tag: '${tag}'"
+  done
+
+  unset blk
+  tags=()
+  tags_ix=()
+  iP=-1
+  iV=-1
+  iF=-1
+  iA=-1
+
+  return
+}
+
 period()
 {
   # determine periods checked so far.
@@ -205,73 +277,7 @@ txt="Annotation summary of the QA of experiment\n \
   while read line ; do
     if [ "${line:0:7}" = '- date:' ] ; then
       # the end of a block
-
-      # same header for the current entry of each file
-      word=( ${blk[iP]} )
-      str0="\n - annotation:"
-      str0="${str0}\n   path: ${word[1]}"
-
-      if [ "${iV}" -gt -1 ] ; then
-        word=( ${blk[iV]} )
-        str0="${str0}\n   variable:"
-
-        # add the list of variables
-        for(( i=iV+1 ; i < iP ; ++i )) ; do
-          word=( ${blk[i]} )
-          str0="${str0}\n    - ${word[1]}"
-        done
-      elif [ "${iA}" -gt -1 ] ; then
-        # note: the same for file: and atomic:
-        word=( ${blk[iA]} )
-        str0="${str0}\n   atomic: ${word[1]}"
-      elif [ "${iF}" -gt -1 ] ; then
-        # note: the same for file: and atomic:
-        word=( ${blk[iF]} )
-        str0="${str0}\n   file: ${word[1]}"
-      fi
-
-      # a sorted array is required below
-      tags=( $( echo -e ${tags[*]/%\\n} | sort) )
-      tags_ix=( ${tags[*]#*|} )
-      tags=( ${tags[*]%|*} )
-
-      prev_tag=
-      N=${#tags_ix[*]}
-
-      for(( j=0 ; j < N ; ++j )) ; do
-        ix=${tags_ix[j]}
-
-        # strip embracing '
-        tag=${tags[j]}
-
-        word=( ${blk[$((ix-1))]} )
-        impact=${word[1]}
-
-        # switch to a another output file
-        if [ "${prev_tag}" != $tag ] ; then
-          # flush before the switch
-          test "${str:0:1}" && echo -e "${str}" >> $outT
-
-          outT=$summary/$exp/${impact}-${tag}
-          test ! -e $outT && echo -e "--- # Annotations (${tag})\n" > $outT
-
-          prev_tag=$tag
-          str="${str0}\n   events:"
-        fi
-
-        str="${str}\n    - event:"
-        str="${str}\n       caption: ${blk[$((ix-2))]:9}"
-        str="${str}\n       impact: ${impact}"
-        str="${str}\n       tag: '${tag}'"
-      done
-
-      unset blk
-      tags=()
-      tags_ix=()
-      iP=-1
-      iV=-1
-      iF=-1
-      iA=-1
+      blk2Files
     fi
 
     # indices
@@ -293,6 +299,9 @@ txt="Annotation summary of the QA of experiment\n \
 
     blk[${#blk[*]}]="$line"
   done
+
+  # the last one is still missing
+  blk2Files
 
   # there is still one remaining
   test "${str:0:1}" && echo -e "${str}" >> $outT
