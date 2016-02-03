@@ -263,7 +263,6 @@ class QA : public IObj
   void        setExit(int);
   void        setCheckMode(std::string);
   void        setProcessing(void);
-  void        setTable(std::string, std::string acronym="");
 };
 
 std::string QA::tableSheet=hdhC::empty;

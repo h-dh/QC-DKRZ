@@ -2654,7 +2654,13 @@ init()
        getPaths
        getAllExps
      else
-       EXP_NAMES=( ${ONLY_SUMMARY//,/ } )
+       if [ ${ONLY_SUMMARY} = all ] ; then
+        EXP_NAMES=( $(ls -d ${QA_RESULTS}/check_logs/*.log) )
+        EXP_NAMES=( ${EXP_NAMES[*]##*/} )
+       else
+        EXP_NAMES=( ${ONLY_SUMMARY//,/ } )
+       fi
+
        local i
        for(( i=0 ; i < ${#EXP_NAMES[*]} ; ++i )) ; do
          if [ ${EXP_NAMES[i]} != ${EXP_NAMES[i]%.log} ] ; then
@@ -4035,13 +4041,47 @@ taskSum()
     ers=" -e ${ers// /,}"
   fi
 
-  if [ ${#EXP_NAMES[*]} -gt 0 ] ; then
-    /bin/bash ${QA_PATH}/scripts/taskSummary ${DEBUG_X} \
-       -p ${QA_RESULTS}/check_logs --src=$QA_PATH \
-       ${cvr} ${ers} ${prj} ${qrs} ${tcl} ${EXP_NAMES[*]}
 
-  fi
+  # multiple threads, but a maximum of 2
+  local exp_ix=0
+  local pidBufMax=2
+  local pidBuf
+  local isStart=f
+  local buf_ix=0
+  local i
 
+  for(( i=0 ; i < pidBufMax ; ++i )) ; do
+    pidBuf[i]=''
+  done
+
+  while [ ${exp_ix} -lt ${#EXP_NAMES[*]} ] ; do
+    for(( i=0 ; i < pidBufMax ; ++i )) ; do
+      if [ "${pidBuf[i]}" ] ; then
+        if ! ps -p ${pidBuf[i]} -o pid= &> /dev/null  ; then
+          # there is still an active job for this fBase
+          isStart=t
+          break
+        fi
+      else
+        isStart=t
+        break
+      fi
+    done
+
+    if [ ${isStart} = t ] ; then
+      /bin/bash ${QA_PATH}/scripts/taskSummary ${DEBUG_X} \
+        -p ${QA_RESULTS}/check_logs --src=$QA_PATH \
+        ${cvr} ${ers} ${prj} ${qrs} ${tcl} ${EXP_NAMES[exp_ix]} &
+
+      pidBuf[i]=$!
+      isStart=f
+      exp_ix=$((exp_ix+1))
+    else
+      sleep 1
+    fi
+  done
+
+  wait
   return
 }
 

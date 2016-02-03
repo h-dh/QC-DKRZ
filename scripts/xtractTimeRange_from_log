@@ -111,7 +111,7 @@ opFiles()
     file=${files[*]}
 
     ff=${file##*/}
-    out=${path[i]}Period.yaml/${ff%.log}.period
+    out=${path[i]}Period/${ff%.log}.period
     echo -n '' > $out
 
     readFile
@@ -145,7 +145,7 @@ for(( n=0 ; n < ${#tokens[*]} ; ++n )) ; do
 
   files=( $( ls -d ${path}${t}.log ) )
 
-  out=Period.yaml/${token//,/_}.period
+  out=Period/${token//,/_}.period
   echo -n '' > $out
 
   fName=()
@@ -341,7 +341,7 @@ if [ $# -gt 0 ] ; then
       path[$i]=''
     fi
 
-    mkdir -p ${path[i]}Period.yaml
+    mkdir -p ${path[i]}Period
   done
 
   unset ffiles
