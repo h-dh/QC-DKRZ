@@ -826,8 +826,12 @@ printA_header()
 
 #         splitAtomicBase
 
-        echo "${blk[$((++i))]%/*/*}" # data_path
-        echo "${blk[$((++i))]%/*/*}" # result_path
+        # work-around due to a particular machine
+        i=$((i+1))
+        echo "${blk[i]%/*/*}" # data_path
+        i=$((i+1))
+        echo "${blk[i]%/*/*}" # result_path
+
         continue
       elif [ $i -eq ${end_ix} ] ; then
         echo "    end: ${atomicEnd[ix]}"
