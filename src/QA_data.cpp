@@ -1407,7 +1407,7 @@ QA_Data::flush(void)
      }
 
      // Test for replicated records.
-     if( replicated )
+     else if( replicated )
      {
          int nRecs=static_cast<int>( pQA->nc->getNumOfRecords() );
 
@@ -1870,7 +1870,9 @@ QA_Data::testConst(hdhC::FieldData &fA)
     sharedRecordFlag.currFlag += 200;
 
     std::string capt("entire record of constant values, found");
-    capt += hdhC::tf_val(val) ;
+    capt += hdhC::tf_val(val);
+    capt += " in record" ;
+    capt += hdhC::tf_val(hdhC::itoa(pQA->pIn->currRec));
 
     (void) notes->operate(capt) ;
     notes->setCheckDataStr(pQA->fail);

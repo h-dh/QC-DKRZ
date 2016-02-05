@@ -49,6 +49,8 @@ atomise()
 
 atomicParsing_blk()
 {
+  local isSoundBlk=$1
+
   local IFS=${oldIFS}
 
   local words
@@ -88,6 +90,8 @@ atomicParsing_blk()
                         | grep 'end:' | awk 'END{print $NF}' )
       fi
 
+      test $isSoundBlk = t && break
+
       # skip a few lines
       for(( i=i+1 ; i < sz ; ++i )) ; do
         words=( ${blk[i]} )
@@ -111,7 +115,7 @@ atomicParsing_blk()
   done
 
   if [ ${ix} -gt -1 ] ; then
-    atomicTags[ix]=${atomicTags[ix]}${atomicTags[ix]:+,}${tag}
+    atomicTags[ix]=${atomicTags[ix]}${atomicTags[ix]:+,}${tag[0]}
     for(( j=1 ; j < ${#tag[*]} ; ++j )) ; do
       atomicTags[ix]=${atomicTags[ix]}/${tag[j]}
     done
@@ -342,6 +346,7 @@ findPureAtomic()
   declare -a pAT
 
   for(( ix=0 ; ix < ${#atomicBase[*]} ; ++ix )) ; do
+
     tags=( ${atomicTags[ix]//,/ } )
     tags0=( ${tags[0]//\// } )
 
@@ -1078,13 +1083,19 @@ xtrctAnnotated()
       echo "${line}" >> $head
     done
 
+    local isSound
+
     while read line ; do
       if [ "${line:0:8}" = ' - date:' ] ; then
         # the end of a block
         if findAnnotatedBlock ; then
           processBlock
-          atomicParsing_blk
+          isSound=t
+        else
+          isSound=f
         fi
+
+        atomicParsing_blk $isSound
 
         unset blk
       fi
@@ -1094,8 +1105,11 @@ xtrctAnnotated()
     # last block
     if findAnnotatedBlock ; then
       processBlock
-      atomicParsing_blk
+      isSound=t
+    else
+      isSound=f
     fi
+    atomicParsing_blk $isSound
 
     atomise
 
