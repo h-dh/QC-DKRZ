@@ -346,7 +346,6 @@ findPureAtomic()
   declare -a pAT
 
   for(( ix=0 ; ix < ${#atomicBase[*]} ; ++ix )) ; do
-
     tags=( ${atomicTags[ix]//,/ } )
     tags0=( ${tags[0]//\// } )
 
@@ -372,7 +371,7 @@ findPureAtomic()
   # ensemble of atomic vars; either for all or for groups
 
   # array with all pure atomic tags
-  for(( ix=0 ; ix < ${#pureAtomicTags[*]} ; ++ix )) ; do
+  for(( ix=0 ; ix < ${#atomicBase[*]} ; ++ix )) ; do
     tags=( ${pureAtomicTags[ix]//,/ } )
 
     for(( j=0 ; j < ${#tags[*]} ; ++j )) ; do
@@ -393,7 +392,7 @@ findPureAtomic()
   for(( i=0 ; i < N ; ++i )) ; do
 
     # each tag gets indices of corresponding atomicBase names
-    for(( ix=0 ; ix < ${#pureAtomicTags[*]} ; ++ix )) ; do
+    for(( ix=0 ; ix < ${#atomicBase[*]} ; ++ix )) ; do
       tags=( ${pureAtomicTags[ix]//,/ } )
 
       for(( j=0 ; j < ${#tags[*]} ; ++j )) ; do
@@ -1090,9 +1089,9 @@ xtrctAnnotated()
         # the end of a block
         if findAnnotatedBlock ; then
           processBlock
-          isSound=t
-        else
           isSound=f
+        else
+          isSound=t
         fi
 
         atomicParsing_blk $isSound
@@ -1105,9 +1104,9 @@ xtrctAnnotated()
     # last block
     if findAnnotatedBlock ; then
       processBlock
-      isSound=t
-    else
       isSound=f
+    else
+      isSound=t
     fi
     atomicParsing_blk $isSound
 
