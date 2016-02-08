@@ -11,7 +11,9 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-   qa-user-manual
+   .. introduction
+   userguide/index
+
 
 
 Indices and tables
