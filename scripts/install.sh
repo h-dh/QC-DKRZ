@@ -100,115 +100,6 @@ descript()
   echo "                    Installation for both by default. Note: no '--'."
 }
 
-editConfigFile()
-{
-  test $# -eq 0 && return
-
-  # return 1 if a single parameter was passed whose value is 'disable'
-  local retVal=0
-
-  # find the corresponding section in the config file
-  test ! -f ${CONFIG_FILE} && touch $CONFIG_FILE
-
-  # adjust for spaces a user may have edited into the section
-  local line is num
-  local blkBeg=0
-  local blkEnd
-  local num=0
-  local str
-
-  while read line ; do
-    test "${is}" -a ! "${line}" && break
-
-    num=$((num + 1))
-
-    if [ "${line}" = ${QA_PATH}: ] ; then
-      is=t
-      blkBeg=$num
-      str=${QA_PATH}:
-      continue
-    fi
-
-    if [ ${is} ] ; then
-      line=${line// /}
-
-      while [ ${line/==/=} != ${line} ] ; do
-        line=${line/==/=}
-      done
-
-      str="${str} ${line}"
-    fi
-  done < ${CONFIG_FILE}
-
-  blkEnd=$num
-
-  sctn=( ${str} )
-  str=
-
-  local item name value
-
-  if [ ${blkBeg} -eq 0 ] ; then
-    # append a new section
-    echo -e "\n${QA_PATH}:" >> $CONFIG_FILE
-
-    for item in $* ; do
-      value=${item#*=}
-
-      if [ ${value} = ${item} ] ; then
-        item="${item}=enabled"
-      elif [ ${value} = d -o ${value:0:7} = disable ] ; then
-        test $# -eq 1 && retVal=1
-        continue
-      fi
-
-      echo ${item} >> $CONFIG_FILE
-    done
-
-    return retVal
-  fi
-
-  local i
-  for item in $* ; do
-    test ${item:$((${#item}-1))} = '=' && item=${item}enabled
-
-    name=${item%=*}
-    value=${item#*=}
-
-    if [ ${name} = ${item} ] ; then
-      item=${item}=enabled
-    elif [ ${value} = d -o ${value} = disabled ] ; then
-      item=${name}=d
-    fi
-
-    for(( i=0 ; i < ${#sctn[*]} ; ++i )) ; do
-      test ${sctn[i]} = ${item} && continue 2
-
-      if [ ${sctn[i]%=*} = ${name} ] ; then
-        num=$((blkBeg+i))
-        if [ "${value}" = d ] ; then
-          sed -i "${num} d" $CONFIG_FILE &> /dev/null
-          blkEnd=$((blkEnd -1 ))
-          unset sctn[i]
-          sctn=( ${sctn[*]} )
-          test $# -eq 1 && retval=1
-        else
-          sed -i "${num} c${item}" $CONFIG_FILE &> /dev/null
-        fi
-
-        continue 2
-      fi
-    done
-
-    if [ ${item#*=} != d ] ; then
-      sed -i "$((blkEnd++)) a${item}" $CONFIG_FILE &> /dev/null
-      sctn[i]="${item} ${sctn[i]}"
-      sctn=( ${sctn[*]} )
-    fi
-  done
-
-  return $retVal
-}
-
 formatText()
 {
   # format text ready for printing
@@ -850,7 +741,7 @@ store_LD_LIB_PATH()
   done
 
   # store/update LD_LIBRARY_PATH in .conf
-  editConfigFile LD_LIBRARY_PATH=${ldp}
+  . $QA_PATH/scripts/updateConfigFile LD_LIBRARY_PATH=${ldp}
 
   return
 }

@@ -363,7 +363,7 @@ DRS_CV::checkModelName(std::string &aName, std::string &aValue,
 
    // parse table; trailing ':' indicates variable or 'global'
    ifs.skipWhiteLines();
-   ifs.skipBashComment();
+   ifs.skipComment();
 
    bool isModel=false;
    bool isInst=false;
@@ -776,12 +776,9 @@ DRS_CV::findPath_faults(Split& drs, Split& x_e,
     {
       if(x_e[j] == "activity" )
       {
-        if( notes->inq( "1_1a", pQA->fileStr, "INQ_ONLY") )
-        {
-          std::string s( hdhC::Upper()(drs[i]) ) ;
-          if( s == t )
-            continue;
-        }
+        std::string s( hdhC::Upper()(drs[i]) ) ;
+        if( s == t  && !notes->inq( "1_3a", pQA->fileStr, "INQ_ONLY") )
+          continue;
       }
 
       text = " check failed, expected " ;
@@ -1226,7 +1223,7 @@ DRS_CV::testPeriodCutRegular(std::vector<std::string> &sd,
        if( ! (sd[0][3] == '1' || sd[0][3] == '6') )
          text.push_back(": StartTime should begin with YYY1 or YYY6");
 
-       if( sd[0].substr(4,4) != "0101" )
+      if( sd[0].substr(4,4) != "0101" )
          text.push_back(": StartTime should be YYYY0101");
      }
 
@@ -1235,8 +1232,10 @@ DRS_CV::testPeriodCutRegular(std::vector<std::string> &sd,
        if( ! (sd[1][3] == '0' || sd[1][3] == '5') )
          text.push_back(": EndTime should begin with YYY0 or YYY5");
 
-       if( sd[1].substr(4,4) != "1231" )
-         text.push_back(": EndTime should be YYYY1231");
+       std::string numDec(hdhC::double2String(
+                          pQA->qaTime.refDate.regularMonthDays[11]));
+       if( sd[1].substr(4,4) != "12"+numDec )
+         text.push_back(": EndTime should be YYYY12"+numDec);
      }
   }
   else if( frequency == "mon" )
@@ -1264,8 +1263,10 @@ DRS_CV::testPeriodCutRegular(std::vector<std::string> &sd,
        if( ! (sd[1][3] == '0' || sd[1][3] == '5') )
          text.push_back(": EndTime should begin with YYY0");
 
+       std::string numDec(hdhC::double2String(
+                          pQA->qaTime.refDate.regularMonthDays[11]));
        if( sd[1].substr(4,4) != "12" )
-         text.push_back(": EndTime should be YYYY1231");
+         text.push_back(": EndTime should be YYYY12"+numDec);
      }
   }
   else if( frequency == "sem" )
@@ -2511,7 +2512,7 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
     {
       std::string capt("resolution of CORDEX ");
       capt += hdhC::tf_assign("domain", tName) ;
-      capt += " does not match. Found " ;
+      capt += " does not match, found " ;
       if( is_lon && is_lat )
       {
         capt += var_lon;
@@ -3003,8 +3004,6 @@ QA_Exp::checkHeightValue(InFile &in)
 void
 QA_Exp::checkMetaData(InFile &in)
 {
-  notes->setCheckMetaStr("PASS");
-
   domainCheck();
 
   // check attributes required in the meta data section of the file
@@ -3226,7 +3225,7 @@ QA_Exp::checkVarTableEntry_cell_methods(
       if( cm_val.size() )
       {
         capt = hdhC::tf_att(vMD.var->name, cm_name, cm_val) ;
-        capt += "does not match" ;
+        capt += "does not match, found" ;
         if( isOld )
           capt += hdhC::tf_val(t_DMD_entry.attMap[n_cell_methods]) ;
         else
@@ -3485,68 +3484,60 @@ QA_Exp::checkVariableType(void)
 
       if( tAttName == "VAR_TYPE" )
       {
-        bool isA = false ;
         size_t v;
         for(v=0 ; v < pQA->pIn->varSz ; ++v )
         {
           Variable& var = pQA->pIn->variable[v] ;
 
           if( var.name == tName )
-          {
-            isA=true;
-            break;
-          }
+            checkVariableTypeX(v, i, j, tName);
         }
 
-        if( v == pQA->pIn->varSz )
-        {
-          for(v=0 ; v < pQA->pIn->varSz ; ++v )
-          {
-            Variable& var = pQA->pIn->variable[v] ;
-
-            if( var.isDATA && tName == "DATA_VAR" )
-            {
-              isA = true;
-              break;
-            }
-            else if( var.isAUX && tName == "AUX_VAR" )
-            {
-              isA = true;
-              break;
-            }
-          }
-        }
-
-        if( isA )
+        for(v=0 ; v < pQA->pIn->varSz ; ++v )
         {
           Variable& var = pQA->pIn->variable[v] ;
-          std::string& tAttValue = table.attValue[i][j] ;
 
-          std::string s(pQA->pIn->nc.getVarTypeStr(var.name));
-
-          if( tAttValue != s )
-          {
-            std::string key("3_2");
-            if( notes->inq( key, var.name) )
-            {
-              std::string capt;
-              if( tName == "DATA_VAR" )
-                capt = "data ";
-              else if( tName == "AUX_VAR" )
-                capt = "auxiliary ";
-
-              capt += hdhC::tf_var(var.name);
-              capt += "has wrong data type, found";
-              capt += hdhC::tf_val(s);
-              capt += ", expected";
-              capt += hdhC::tf_val(tAttValue);
-
-              (void) notes->operate(capt) ;
-              notes->setCheckMetaStr( pQA->fail );
-            }
-          }
+          if( var.isDATA && tName == "DATA_VAR" )
+            checkVariableTypeX(v, i, j, tName);
+          else if( var.isAUX && tName == "AUX_VAR" )
+            checkVariableTypeX(v, i, j, tName);
         }
       }
+    }
+  }
+
+  return;
+}
+
+void
+QA_Exp::checkVariableTypeX(size_t v, size_t i, size_t j, std::string& tName)
+{
+  DRS_CV_Table& table = pQA->drs_cv_table ;
+
+  Variable& var = pQA->pIn->variable[v] ;
+  std::string& tAttValue = table.attValue[i][j] ;
+
+  std::string s(pQA->pIn->nc.getVarTypeStr(var.name));
+
+  if( tAttValue != s && !var.isVoid)
+  {
+    std::string key("3_2");
+    if( notes->inq( key, var.name) )
+    {
+      std::string capt;
+      if( tName == "DATA_VAR" )
+        capt = "data ";
+      else if( tName == "AUX_VAR" )
+        capt = "auxiliary ";
+
+      capt += hdhC::tf_var(var.name);
+      capt += "has wrong data type, found";
+      capt += hdhC::tf_val(s);
+      capt += ", expected";
+      capt += hdhC::tf_val(tAttValue);
+
+      (void) notes->operate(capt) ;
+      notes->setCheckMetaStr( pQA->fail );
     }
   }
 
@@ -3871,7 +3862,7 @@ QA_Exp::getFrequency(void)
      std::string key("9_4");
      if( notes->inq( key, pQA->fileStr) )
      {
-       std::string capt(hdhC::tf_assign("frequency","fx") + " with time dependency" );
+       std::string capt(hdhC::tf_assign("frequency","fx") + " is time-dependent" );
 
        if( notes->operate(capt) )
        {
@@ -3967,6 +3958,24 @@ QA_Exp::getVarnameFromFilename(std::string fName)
     fName = fName.substr(0,pos) ;
 
   return fName;
+}
+
+void
+QA_Exp::init(std::vector<std::string>& optStr)
+{
+   // apply parsed command-line args
+   applyOptions(optStr);
+
+   fVarname = getVarnameFromFilename();
+   getFrequency();
+   getSubTable() ;
+
+   notes->setCheckMetaStr("PASS");
+
+   // Create and set VarMetaData objects.
+   createVarMetaData() ;
+
+   return;
 }
 
 void
@@ -4068,8 +4077,6 @@ QA_Exp::inqTables(void)
 
   if( ! varReqTable.isExisting(varReqTable.path) )
     ret=true;
-  else
-    pQA->setTable( varReqTable.filename, "ST" );
 
   for( size_t i=0 ; i <  pPath.size() ; ++i)
   {
@@ -4686,8 +4693,8 @@ QA_Exp::reqAttCheckVariable(Variable &var)
         if( notes->inq( key, vName) )
         {
            std::string capt(hdhC::tf_att(vName, aN, hdhC::colon));
-           capt="missing required value=" ;
-           capt += rqValue;
+           capt="missing required value" ;
+           capt += hdhC::tf_val(rqValue);
 
            (void) notes->operate(capt) ;
            notes->setCheckMetaStr( pQA->fail );
@@ -4719,8 +4726,8 @@ QA_Exp::reqAttCheckVariable(Variable &var)
          if( is &&  notes->inq( key, vName ) )
          {
            std::string capt(hdhC::tf_att(vName, aN, aV));
-           capt += "does not match required value=" ;
-           capt += rqValue;
+           capt += "does not match required value " ;
+           capt += hdhC::tf_val(rqValue);
 
            (void) notes->operate(capt) ;
            notes->setCheckMetaStr( pQA->fail );
@@ -4735,15 +4742,8 @@ QA_Exp::reqAttCheckVariable(Variable &var)
 }
 
 void
-QA_Exp::run(std::vector<std::string>& optStr)
+QA_Exp::run(void)
 {
-   // apply parsed command-line args
-   applyOptions(optStr);
-
-   fVarname = getVarnameFromFilename();
-   getFrequency();
-   getSubTable() ;
-
    bool isNoTable = inqTables() ;
 
    if( pQA->table_DRS_CV.is )
@@ -4752,17 +4752,12 @@ QA_Exp::run(std::vector<std::string>& optStr)
      drsFN.run();
    }
 
-   // Create and set VarMetaData objects.
-   createVarMetaData() ;
-
    // check variable type; uses DRS_CV_Table
    checkVariableType();
 
    if( !isNoTable )
-   {
       // get meta data from file and compare with tables
       checkMetaData(*(pQA->pIn));
-   }
 
    return ;
 }

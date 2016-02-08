@@ -332,7 +332,7 @@ public:
 
   static bool
          isValidDate(std::string);
-         
+
   //! Set the calendar type
   /*! Valid types: proleptic_georgian|georgian, noleap,
       equal_months|360_day. The case of the strings doesn't
@@ -400,6 +400,8 @@ public:
 
   void   clear(void);
 
+  double *regularMonthDays ;
+
 private:
   enum Calendar { GREGORIAN, PROLEPTIC_GREGORIAN, JULIAN,
                   EQUAL_MONTHS, ALL_LEAP, NO_LEAP, UNDEF } ;
@@ -413,8 +415,6 @@ private:
   int         lY_cycleDays;  // num of days between consecutive leap years
   bool        lY_is;
 
-  // this will be shifted, so index==-1 gets the 31 days from jan
-  double *regularMonthDays ;
   int precision ;
 
   bool         isDateSet ;

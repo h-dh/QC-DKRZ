@@ -12,7 +12,7 @@
 //! Annotation QA exceptions.
 /*! A file with user supplied directives is parsed to
     respond for any annotation/task. An example of such a file
-    is given by file QA-0.4/tables/SVN_defaults/CMIP5_check-list.conf.
+    is given by file QA-0.4/tables/projects/CMIP5/CMIP5_check-list.conf.
     Flags within the file have to be specified in the QA class in order
     to identify conditions for annotation.\n
     The methods inq() and operate() are applied paired off: inq() inquires
@@ -115,12 +115,12 @@ class Annotation : public IObj
   //! Insert a directive internally aside a check-list file.
   void push_back(std::string pf_code, std::string pf_var,
           std::vector<std::string> &pf_frq, std::string pf_level,
-          std::string pf_table, std::string pf_task, std::string pf_text,
+          bool pf_isAll, std::string pf_task, std::string pf_text,
           std::vector<std::string> &pf_value,
           std::vector<size_t> &xRec_0, std::vector<size_t> &xRec_1 );
   void push_front(std::string pf_code, std::string pf_var,
           std::vector<std::string> &pf_frq, std::string pf_level,
-          std::string pf_table, std::string pf_task, std::string pf_text,
+          bool pf_isAll, std::string pf_task, std::string pf_text,
           std::vector<std::string> &pf_value,
           std::vector<size_t> &xRec_0, std::vector<size_t> &xRec_1 );
 
@@ -136,7 +136,6 @@ class Annotation : public IObj
   void setConstraintFreq(std::string s){ constraintFrq=s;}
   void setCurrentRecord(size_t i){ currentRecord=i;}
 
-  void setTable(std::string, std::string acronym="");
   void setUseAlways(std::string s, std::string mode="always");
   std::vector<std::string> options;
   std::vector<std::string> descript;
@@ -178,7 +177,7 @@ class Annotation : public IObj
   std::vector<std::string> code;   // from check_list.txt
   std::vector<size_t>      count;  // number of of occurences
   std::vector<std::string> level;  // L1, ... ,L4
-  std::vector<std::string> table;  // VR/PT: standard/project
+  std::vector<bool>        isAll;  // enabled by default
   std::vector<std::string> task;   // D/E/S/W: disable/error/warning
   std::vector<std::string> text;   // user-provided headlines
   std::vector<std::string> var;    // acronym; name

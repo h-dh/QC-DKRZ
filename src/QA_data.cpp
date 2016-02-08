@@ -418,6 +418,10 @@ Outlier::test(QA_Data *pQAD)
   if( name.size() == 0 )
     return retCode;
 
+  if( !( notes->inq( "R400", name, "INQ_ONLY")
+          || notes->inq( "R800", name, "INQ_ONLY")) )
+    return retCode;
+
   names.push_back( name + "_min"  );
   names.push_back( name + "_max"  );
 
@@ -691,13 +695,14 @@ Outlier::test(QA_Data *pQAD)
 
         std::ostringstream ostr(std::ios::app);
         ostr.setf(std::ios::scientific, std::ios::floatfield);
+        ostr << "suspicion of outlier (" << extStr[i] << ")";
 
         if(pQA->qaExp.varMeDa.size() > 1 )
           ostr << name << ", ";
         ostr << "rec# ";
 
-        ostr << outRecMax<< ", outlier suspicion (" << extStr[i];
-        ostr << "), value=" ;
+        ostr << outRecMax ;
+        ostr << ", value=" ;
         ostr << std::setw(12) << std::setprecision(5) << outValMax;
 
         std::string capt(ostr.str());
@@ -1130,6 +1135,14 @@ ReplicatedRecord::report(std::vector<std::string> &range,
 
    if( range.size() > 4 )
    {
+     if( groupSize )
+     {
+       size_t diff=static_cast<size_t>(hdhC::string2Double(range[4]) );
+       diff -= static_cast<size_t>(hdhC::string2Double(range[0]) );
+       if( diff < groupSize )
+         return;
+     }
+
      capt += range[0];
      capt += "-";
      capt += range[4];
@@ -1275,13 +1288,10 @@ QA_Data::checkFinally(Variable *var)
       std::string key("6_3");
       if( notes->inq( key, name, ANNOT_NO_MT) )
       {
-        std::string capt("all records (data at given time steps) are identical") ;
+        std::string capt("all data records are identical") ;
 
-        std::string text("Variable=") ;
-        text +=  name;
-
-        if( notes->operate(capt, text) )
-          notes->setCheckDataStr(pQA->fail);
+        notes->operate(capt) ;
+        notes->setCheckDataStr(pQA->fail);
 
         // erase redundant map entries
         notes->eraseAnnotation("R3200");
@@ -1397,7 +1407,7 @@ QA_Data::flush(void)
      }
 
      // Test for replicated records.
-     if( replicated )
+     else if( replicated )
      {
          int nRecs=static_cast<int>( pQA->nc->getNumOfRecords() );
 
@@ -1859,16 +1869,12 @@ QA_Data::testConst(hdhC::FieldData &fA)
   {
     sharedRecordFlag.currFlag += 200;
 
-    std::string capt("entire record of constant value=");
-    capt += val ;
+    std::string capt("entire record of constant values, found");
+    capt += hdhC::tf_val(val);
+    capt += " in record" ;
+    capt += hdhC::tf_val(hdhC::itoa(pQA->pIn->currRec));
 
-    std::ostringstream ostr(std::ios::app);
-    ostr.setf(std::ios::fixed, std::ios::floatfield);
-    ostr << "rec#=" << pIn->currRec;
-    ostr << ", variable=" << name;
-    ostr << ", date=" << pQA->qaTime.currDateStr;
-
-    (void) notes->operate(capt, ostr.str()) ;
+    (void) notes->operate(capt) ;
     notes->setCheckDataStr(pQA->fail);
   }
   return true;
@@ -1885,15 +1891,10 @@ QA_Data::testInfNaN(hdhC::FieldData &fA)
   {
     sharedRecordFlag.currFlag += 6400;
 
-    std::string capt("Inf or NaN value(s) found");
+    std::string capt("Inf or NaN value(s), found rec#");
+    capt += hdhC::tf_val( hdhC::itoa(pIn->currRec));
 
-    std::ostringstream ostr(std::ios::app);
-    ostr.setf(std::ios::fixed, std::ios::floatfield);
-    ostr << "rec#=" << pIn->currRec;
-    ostr << ", variable=" << name;
-    ostr << ", date=" << pQA->qaTime.currDateStr;
-
-    (void) notes->operate(capt, ostr.str()) ;
+    (void) notes->operate(capt) ;
     notes->setCheckDataStr(pQA->fail);
   }
 
@@ -1916,20 +1917,8 @@ QA_Data::testStndDev(hdhC::FieldData &fA)
   std::string key=("R1600");
 
   if( notes->inq( key, name, ANNOT_ACCUM) )
-  {
     sharedRecordFlag.currFlag += 1600 ;
 
-    std::string capt("undefined standard deviation");
-
-    std::ostringstream ostr(std::ios::app);
-    ostr.setf(std::ios::fixed, std::ios::floatfield);
-    ostr << "rec#=" << pIn->currRec;
-    ostr << ", variable=" << name;
-    ostr << ", date=" << pQA->qaTime.currDateStr;
-
-    (void) notes->operate(capt, ostr.str()) ;
-    notes->setCheckDataStr(pQA->fail);
-  }
   return true ;
 }
 
@@ -1960,15 +1949,10 @@ QA_Data::testValidity(hdhC::FieldData &fA)
   {
     sharedRecordFlag.currFlag += 100 ;
 
-    std::string capt("entire record with filling value");
+    std::string capt("entire record with filling value, found for rec#");
+    capt += hdhC::tf_val(hdhC::itoa(pIn->currRec));
 
-    std::ostringstream ostr(std::ios::app);
-    ostr.setf(std::ios::fixed, std::ios::floatfield);
-    ostr << "rec#=" << pIn->currRec;
-    ostr << ", variable=" << name;
-    ostr << ", date=" << pQA->qaTime.currDateStr;
-
-    (void) notes->operate(capt, ostr.str()) ;
+    (void) notes->operate(capt) ;
     notes->setCheckDataStr(pQA->fail);
   }
 

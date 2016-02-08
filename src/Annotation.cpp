@@ -111,29 +111,12 @@ Annotation::config(void)
   // basic default settings
   if( isUseDefault )
   {
-    options.push_back("ST,L1");  // warning
     if( levelLimit )
-    {
-      std::string s("PT,");
-      s += levelLimitStr;
-      options.push_back(s);  // severe, not emergency
-
-      // defaults before any table was defined
-      s = levelLimitStr;
-      options.push_back(s);
-    }
+      options.push_back("L" + hdhC::itoa(levelLimit));
     else
-    {
-      options.push_back("PT,L1");  // severe, not emergency
-
-      // defaults before any table was defined;
-      // also for inquiries not defined by the chek-list
-      options.push_back("L1");
-    }
+      options.push_back("L1");  // severe, not emergency
 
     // three place holders corresponding to options
-    descript.push_back( "" );
-    descript.push_back( "" );
     descript.push_back( "" );
   }
 
@@ -153,10 +136,10 @@ Annotation::copyInit(Annotation *n)
      code.push_back( n->code[i] ) ;
   for( size_t i=0 ; i < n->count.size() ; ++i )
      count.push_back( n->count[i] ) ;
+  for( size_t i=0 ; i < n->isAll.size() ; ++i )
+     isAll.push_back( n->isAll[i] ) ;
   for( size_t i=0 ; i < n->level.size() ; ++i )
      level.push_back( n->level[i] ) ;
-  for( size_t i=0 ; i < n->table.size() ; ++i )
-     table.push_back( n->table[i] ) ;
   for( size_t i=0 ; i < n->task.size() ; ++i )
      task.push_back( n->task[i] ) ;
   for( size_t i=0 ; i < n->text.size() ; ++i )
@@ -255,27 +238,30 @@ Annotation::findIndex(std::string &key, bool isOnly)
   }
 
   // scan over explicit flags and explicit name
+  bool notByDefault=false;
   for( size_t i=0 ; i < code.size() ; ++i)
   {
      if( code[i] == key )
      {
         if( currName == var[i] )
         {
-          if( currTableAcronym == table[i] || table[i] == "*" )
+          currIndex = i;
+
+          if( ! isOnly )
           {
-             currIndex = i;
-
-             if( ! isOnly )
-             {
-               effIndex.push_back( i );
-               effVar.push_back( currName );
-             }
-
-             return false;
+            effIndex.push_back( i );
+            effVar.push_back( currName );
           }
+
+          return false;
         }
+        else
+          notByDefault=true;
      }
   }
+
+  if(notByDefault)
+    return notByDefault;
 
   // scan over explicit flags, but wild-card name
   for( size_t i=0 ; i < code.size() ; ++i)
@@ -284,18 +270,15 @@ Annotation::findIndex(std::string &key, bool isOnly)
      {
         if( var[i] == "*" )
         {
-          if( currTableAcronym == table[i] || table[i] == "*" )
+          currIndex = i;
+
+          if( ! isOnly )
           {
-             currIndex = i;
-
-             if( ! isOnly )
-             {
-               effIndex.push_back( i );
-               effVar.push_back( currName );
-             }
-
-             return false;
+            effIndex.push_back( i );
+            effVar.push_back( currName );
           }
+
+          return false;
         }
      }
   }
@@ -307,21 +290,18 @@ Annotation::findIndex(std::string &key, bool isOnly)
      {
         if( currName == var[i] || var[i] == "*" )
         {
-          if( currTableAcronym == table[i] || table[i] == "*" )
+          push_back( key, currName, frq[i], level[i], true,
+              task[i], "", value[i], xRecord_0[i], xRecord_1[i]);
+
+          currIndex = code.size() -1 ;
+
+          if( ! isOnly )
           {
-             push_back( key, currName, frq[i], level[i],
-                 table[i], task[i], "", value[i], xRecord_0[i], xRecord_1[i]);
-
-              currIndex = code.size() -1 ;
-
-             if( ! isOnly )
-             {
-               effIndex.push_back( currIndex );
-               effVar.push_back( currName );
-             }
-
-             return false;
+            effIndex.push_back( currIndex );
+            effVar.push_back( currName );
           }
+
+          return false;
         }
      }
   }
@@ -667,6 +647,7 @@ Annotation::parse(void)
 
   std::vector<std::string> tmpCodes;
   std::vector<std::string> vars;
+  std::vector<bool>        enabledByDefault;
   std::string              checkListText;
   std::string              str0;
 
@@ -684,6 +665,7 @@ Annotation::parse(void)
 
      tmpCodes.clear();  // reset
      vars.clear();
+     enabledByDefault.clear();
 
      if( currFrq.size() )
        currFrq.clear();
@@ -696,8 +678,6 @@ Annotation::parse(void)
        xRec_1.clear();
      }
 
-     bool isPT=false;
-     bool isST=false;
      bool isEmail=false;
      bool isL1=false;
      bool isL2=false;
@@ -707,7 +687,7 @@ Annotation::parse(void)
 
      checkListText = descript[i];
 
-     // extract error flags, tables, and tasks;
+     // extract flags and tasks;
      // both will be applied to each variable below or if the variable
      // is omitted, then to all variables.
      for( size_t j=0 ; j < csl.size() ; ++j )
@@ -750,18 +730,6 @@ Annotation::parse(void)
         if( str0 == "EM" )
         {
           isEmail=true;
-          continue;
-        }
-
-        if( str0 == "PT" )
-        {
-          isPT=true;
-          continue;
-        }
-
-        if( str0 == "VR" )
-        {
-          isST=true;
           continue;
         }
 
@@ -844,11 +812,16 @@ Annotation::parse(void)
           vars.push_back( str0.substr(4) );
         else
           vars.push_back( str0 );
+
+        enabledByDefault.push_back(false);
      }
 
      // any variable specified? No? Then, set '*' for all variables
      if( vars.size() == 0 )
+     {
        vars.push_back("*");
+       enabledByDefault.push_back(true);
+     }
 
      if( tmpCodes.size() == 0 )
        tmpCodes.push_back("*");  // apply to all kinds of error flags
@@ -859,17 +832,10 @@ Annotation::parse(void)
        // here, a variable is specified
        for( size_t cc=0 ; cc < tmpCodes.size() ; ++cc )
        {
-          // index over both types of tables: tt==0 --> ST, tt==1 --> PT
           // push the corresponding vectors
           var.push_back(vars[j]);
+          isAll.push_back(enabledByDefault[j]);
           code.push_back(tmpCodes[cc]);
-
-          if( isPT )
-            table.push_back("PT") ;
-          else if( isST )
-            table.push_back("VR") ;
-          else
-            table.push_back("*") ;
 
           task.push_back("");
           if( isD )
@@ -1126,6 +1092,9 @@ Annotation::printNotes(std::string &tag, std::string &caption,
     printHeader(ofsNotes);
   }
 
+  if( isMultipleTags || !str.size() )
+     return;
+
   // prevent error message flooding
   if( count[currIndex]++ > recErrCountLimit )
     return;
@@ -1154,6 +1123,9 @@ Annotation::printNotes(std::string &tag, std::string &caption,
     if( str[i] == '\n' )
        str[i] = ';' ;
 
+  if( mp_txt[tag].size() )
+    mp_txt[tag] += ';' ;
+
   mp_txt[tag] += str;
 
   return ;
@@ -1162,7 +1134,7 @@ Annotation::printNotes(std::string &tag, std::string &caption,
 void
 Annotation::push_back(std::string pf_code, std::string pf_var,
       std::vector<std::string> &pf_frq, std::string pf_level,
-      std::string pf_table, std::string pf_task, std::string pf_text,
+      bool pf_isAll, std::string pf_task, std::string pf_text,
       std::vector<std::string> &pf_value,
       std::vector<size_t> &pf_xRec_0, std::vector<size_t> &pf_xRec_1)
 {
@@ -1170,7 +1142,7 @@ Annotation::push_back(std::string pf_code, std::string pf_var,
    count.push_back(0) ;
    frq.push_back(pf_frq) ;
    level.push_back(pf_level) ;
-   table.push_back(pf_table) ;
+   isAll.push_back(pf_isAll) ;
    task.push_back(pf_task) ;
    text.push_back(pf_text) ;
    value.push_back(pf_value) ;
@@ -1184,7 +1156,7 @@ Annotation::push_back(std::string pf_code, std::string pf_var,
 void
 Annotation::push_front(std::string pf_code, std::string pf_var,
       std::vector<std::string> &pf_frq, std::string pf_level,
-      std::string pf_table, std::string pf_task, std::string pf_text,
+      bool pf_isAll, std::string pf_task, std::string pf_text,
       std::vector<std::string> &pf_value,
       std::vector<size_t> &pf_xRec_0, std::vector<size_t> &pf_xRec_1)
 {
@@ -1195,7 +1167,7 @@ Annotation::push_front(std::string pf_code, std::string pf_var,
      count.push_back(0) ;
      frq.push_back(pf_frq) ;
      level.push_back(pf_level) ;
-     table.push_back(pf_table) ;
+     isAll.push_back(pf_isAll) ;
      task.push_back(pf_task) ;
      text.push_back(pf_text) ;
      value.push_back(pf_value) ;
@@ -1214,7 +1186,7 @@ Annotation::push_front(std::string pf_code, std::string pf_var,
    std::vector<std::string>::iterator it_code  = code.begin();
    std::vector<size_t>::iterator      it_count = count.begin();
    std::vector<std::string>::iterator it_level = level.begin();
-   std::vector<std::string>::iterator it_table = table.begin();
+   std::vector<bool>::iterator        it_isAll = isAll.begin();
    std::vector<std::string>::iterator it_task  = task.begin();
    std::vector<std::string>::iterator it_text  = text.begin();
    std::vector<std::string>::iterator it_var   = var.begin();
@@ -1228,7 +1200,7 @@ Annotation::push_front(std::string pf_code, std::string pf_var,
    count.insert(it_count, 0) ;
    frq.insert(it_frq, pf_frq) ;
    level.insert(it_level, pf_level) ;
-   table.insert(it_table, pf_table) ;
+   isAll.insert(it_isAll, pf_isAll) ;
    task.insert(it_task, pf_task) ;
    text.insert(it_text, pf_text) ;
    var.insert(it_var, pf_var) ;
@@ -1253,9 +1225,8 @@ Annotation::readConf(void)
   notesConf += checkList ;
 
   ReadLine ifs( notesConf ) ;
-  ifs.skipBashComment();
+  ifs.skipComment();
   ifs.clearSurroundingSpaces();
-  ifs.setBreakpoint('&');  // wil be toggled
 
   // at first, read settings from file
 //  std::ifstream ifs(notesConf.c_str(), std::ios::in);
@@ -1267,15 +1238,18 @@ Annotation::readConf(void)
 
   std::string txt;
   BraceOP groups;
+  Split x_txt;
+  x_txt.setSeparator("&");
+
 
   while( !ifs.getLine(txt) )
   {
     if( txt.size() == 0 )
       continue;
 
+    size_t pos;
     if(txt.find("PERMITTED_FLAG_BEGIN") < std::string::npos)
     {
-       size_t pos;
        if( (pos=txt.find("=")) < std::string::npos)
        {
          Split splt(txt.substr(++pos), ",") ;
@@ -1288,7 +1262,6 @@ Annotation::readConf(void)
 
     // one for all
     size_t pos_x=0;
-    size_t pos;
     if( useAlways.size()
           || (pos_x=txt.find("NOTE_ALWAYS=")) < std::string::npos
             || (pos=txt.find("NOTE_ALWAYS")) < std::string::npos )
@@ -1313,10 +1286,10 @@ Annotation::readConf(void)
       break; // leave the while loop
     }
 
-    // regular entries my be arbitrarily split across several lines
-    ifs.unsetBreakpoint() ;
-    ifs.getLine(str0) ;
-    ifs.setBreakpoint('&') ;
+    // separation of text and task at &
+    x_txt = txt ;
+    txt=x_txt[0];
+    str0=x_txt[1];
 
     if( levelLimit ||
           txt.find("NOTE_LEVEL_LIMIT") < std::string::npos )
@@ -1348,7 +1321,7 @@ Annotation::readConf(void)
     if( txt.size() && txt[txt.size()-1] != '.' )
       txt += '.' ;
 
-    groups.set( str0 );
+    groups.set(str0);
     while ( groups.next(str0) )
       setConfVector( txt, str0 ) ;
   }
@@ -1369,68 +1342,6 @@ Annotation::setConfVector(std::string txt, std::string str0)
   descript.push_back( txt );
 
   return ;
-}
-
-void
-Annotation::setTable(std::string t, std::string acronym)
-{
-  // this method sets the current table name and it clears
-  // all references to the other table.
-
-  if( t.size() == 0 )
-    return;
-
-  if( currTable.size() == 0 )
-    currTable = t;
-  else
-    return;
-
-  currTableAcronym = acronym ;
-
-  std::vector<std::string>::iterator it_code  = code.end()-1;
-  std::vector<size_t>::iterator      it_count = count.end()-1;
-  std::vector<std::string>::iterator it_level = level.end()-1;
-  std::vector<std::string>::iterator it_table = table.end()-1;
-  std::vector<std::string>::iterator it_task  = task.end()-1;
-  std::vector<std::string>::iterator it_text  = text.end()-1;
-  std::vector<std::string>::iterator it_var   = var.end()-1;
-
-  std::vector<std::vector<std::string> >::iterator it_frq = frq.end()-1;
-  std::vector<std::vector<std::string> >::iterator it_value = value.end()-1;
-  std::vector<std::vector<size_t> >::iterator it_xRecord_0 = xRecord_0.end()-1;
-  std::vector<std::vector<size_t> >::iterator it_xRecord_1 = xRecord_1.end()-1;
-
-  for(  ; it_table >= table.begin() ; )
-  {
-     if( *it_table != currTableAcronym && *it_table != "*" )
-     {
-        code.erase(it_code);
-        count.erase(it_count);
-        frq.erase(it_frq);
-        level.erase(it_level);
-        table.erase(it_table);
-        task.erase(it_task);
-        text.erase(it_text);
-        value.erase(it_value);
-        var.erase(it_var);
-        xRecord_0.erase(it_xRecord_0);
-        xRecord_1.erase(it_xRecord_1);
-     }
-
-     --it_code;
-     --it_count;
-     --it_frq;
-     --it_level;
-     --it_table;
-     --it_task;
-     --it_text;
-     --it_value;
-     --it_var;
-     --it_xRecord_0;
-     --it_xRecord_1;
-  }
-
-  return;
 }
 
 void

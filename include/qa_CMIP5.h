@@ -186,11 +186,9 @@ struct CMOR
   void   checkRequestedAttributes(void);
   void   checkReqAtt_global(void);
   void   checkReqAtt_variable(Variable&);
-/*
-  // requested by the CMOR table, thus checked in that context
-  void   checkReqVariableType(void);
-*/
 
+  void   checkSource(void);
+  
   // the next one is applied to several checks
   void   checkStringValues(
             struct DimensionMetaData& f_DMD,
@@ -249,9 +247,6 @@ struct CMOR
 
   //! Starting function for all table cross-checks.
   void   run(InFile&, VariableMetaData&);
-
-  static std::string tableSheet;
-  static std::string tableSheetSub;
 
   // a little bit intricated, because of Omon-3D tracers, cf3hr, and cfSites
   void                     bufTableSheets(VariableMetaData&);
@@ -340,9 +335,6 @@ std::string CMOR::n_units               ="units";
 std::string CMOR::n_valid_max           ="valid_max";
 std::string CMOR::n_valid_min           ="valid_min";
 std::string CMOR::n_value               ="value";
-
-std::string CMOR::tableSheet=hdhC::empty;
-std::string CMOR::tableSheetSub=hdhC::empty;
 
 struct DRS_CV
 {
@@ -471,6 +463,8 @@ public:
   //! Check the path to the tables;
   bool   inqTables(void);
 
+  void   init(std::vector<std::string>&);
+
   //! Initialisation of flushing gathered results to netCDF file.
   /*! Parameter indicates the number of variables. */
   void   initDataOutputBuffer(void);
@@ -492,7 +486,7 @@ public:
   //! Connect this with the object to be checked
 //  void   setInFilePointer(InFile *p) { pIn = p; }
 
-  void   run(std::vector<std::string>&);
+  void   run(void);
 
   void setParent(QA*);
 

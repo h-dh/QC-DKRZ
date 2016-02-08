@@ -3,12 +3,12 @@
 ##/*! \file taskSummary.h
 ## \brief Summary of all processed variables of a given experiment
 
-## Annotations in QA_RESULTS/check_logs/Annotations.yaml/experiment are explored.
+## Annotations in QA_RESULTS/check_logs/Annotations/experiment are explored.
 ##*/
 
 # names of the directories
-annotations=Annotations.yaml
-period=Period.yaml
+annotations=Annotations
+period=Period
 summary=Summary
 
 descript()
@@ -23,6 +23,78 @@ descript()
   echo "  -t path   Path to the check_list table."
   echo "  --debug[=script]"
   echo "  --help"
+}
+
+blk2Files()
+{
+  # same header for the current entry of each file
+  word=( ${blk[iP]} )
+  str0="\n - annotation:"
+  str0="${str0}\n   path: ${word[1]}"
+
+  if [ "${iV}" -gt -1 ] ; then
+    word=( ${blk[iV]} )
+    str0="${str0}\n   variable:"
+
+    # add the list of variables
+    for(( i=iV+1 ; i < iP ; ++i )) ; do
+      word=( ${blk[i]} )
+      str0="${str0}\n    - ${word[1]}"
+    done
+  elif [ "${iA}" -gt -1 ] ; then
+    # note: the same for file: and atomic:
+    word=( ${blk[iA]} )
+    str0="${str0}\n   atomic: ${word[1]}"
+  elif [ "${iF}" -gt -1 ] ; then
+    # note: the same for file: and atomic:
+    word=( ${blk[iF]} )
+    str0="${str0}\n   file: ${word[1]}"
+  fi
+
+  # a sorted array is required below
+  tags=( $( echo -e ${tags[*]/%\\n} | sort) )
+  tags_ix=( ${tags[*]#*|} )
+  tags=( ${tags[*]%|*} )
+
+  prev_tag=
+  N=${#tags_ix[*]}
+
+  for(( j=0 ; j < N ; ++j )) ; do
+    ix=${tags_ix[j]}
+
+    # strip embracing '
+    tag=${tags[j]}
+
+    word=( ${blk[$((ix-1))]} )
+    impact=${word[1]}
+
+    # switch to a another output file
+    if [ "${prev_tag}" != $tag ] ; then
+      # flush before the switch
+      test "${str:0:1}" && echo -e "${str}" >> $outT
+
+      outT=$summary/$exp/${impact}-${tag}
+      test ! -e $outT && echo -e "--- # Annotations (${tag})\n" > $outT
+
+      prev_tag=$tag
+      str="${str0}\n   events:"
+    fi
+
+    str="${str}\n    - event:"
+    str="${str}\n       caption: ${blk[$((ix-2))]:9}"
+    str="${str}\n       impact: ${impact}"
+    str="${str}\n       tag: '${tag}'"
+  done
+
+  unset blk
+  tags=()
+  tags_ix=()
+  iP=-1
+  iV=-1
+  iF=-1
+  iA=-1
+
+  return
 }
 
 period()
@@ -144,9 +216,6 @@ txt="Annotation summary of the QA of experiment\n \
       processBlk
     fi
 
-    # restore stdin and free #9
-    exec 0<&9 9<&-
-
     # find var-freq cases of the CORE entity not delivered
     if [ "${PROJECT}" = CORDEX ] ; then
       if ! expr match "$exp" '.*r0i0p0' &> /dev/null ; then
@@ -183,70 +252,59 @@ txt="Annotation summary of the QA of experiment\n \
     return
   fi
 
-  local ix tags
-  declare -a tags
-
-  while read -a line ; do
-    if [ "${line[0]}" = 'tag:' ] ; then
-      for(( ix=0 ; ix < ${#tags[*]} ; ++ix )) ; do
-        test "${tags[ix]}" = "${line[1]}" && continue 2
-      done
-
-      tags[${#tags[*]}]="${line[1]}"
-    fi
-  done < $aIn
-
   # clear old results
   \rm -f $summary/$exp/L*
-  local capt impct pth htag
-  local isNotFirst
+  local str str0
+  local capt impact path
+  local i ix j iP iV iA iF N
+  local tag prev_tag tag_ix tags word
+  declare -a word
+  declare -a tags
+  declare -a tags_ix
+
+  iP=-1
+  iV=-1
+  iA=-1
+  iF=-1
+
+  exec 0< ${aIn}
+
+  while read line ; do
+    test "${line:0:1}" = '-' -a "${line:0:7}" = '- date:' && break
+  done
 
   # generate a file for each tag
-  for tag in ${tags[*]} ; do
-    htag=${tag}
-    test ${htag:0:1} = \' && htag=${htag:1:$(( ${#htag} - 2 ))}
-    isNotFirst=f
+  while read line ; do
+    if [ "${line:0:7}" = '- date:' ] ; then
+      # the end of a block
+      blk2Files
+    fi
 
-    while read -a line ; do
-      if [ "${line[0]}" = 'tag:' -a "${line[1]}" = $tag ] ; then
-        outT=$summary/$exp/${impct}-${tag:1:$(( ${#tag} - 2 ))}
+    # indices
+    i=${#blk[*]}
+    if [ "${line:0:9}" = variable: ] ; then
+      iV=$i
+    elif [ "${line:0:7}" = atomic: ] ; then
+      iA=$i
+    elif [ "${line:0:5}" = file: ] ; then
+      iF=$i
+    elif [ "${line:0:10}" = data_path: ] ; then
+      iP=$i
+    elif [ "${line:0:4}" = tag: ] ; then
+      # find all tags within the current block; note that the index is appended
+      word=( ${line} )
+      tag=${word[1]//\'}
+      tags[${#tags[*]}]="${tag}|$i"
+    fi
 
-        # skip at the beginning and (automatically) at the end
-        test ${#pth} -gt 0 -a ${isNotFirst} = t && \
-           echo -e '\n---------------------\n' >> $outT
-        isNotFirst=t
-
-        # path and file only once for a flag
-        test ${#pth} -gt 0 && echo -e "${pth}\n${fl}" >> $outT
-
-        echo -e "\n${impct}-${htag}: ${capt}" >> $outT
-
-        read -a line
-        if [ ${line[0]} = text: ] ; then
-          while read -a line ; do
-            test "${line[1]}" = event: -o "${line[0]}" = status: && break
-
-            unset line[0]
-            echo ${line[*]} >> $outT
-          done
-        fi
-        pth=
-      elif [ "${line[0]}" = 'data_path:' ] ; then
-        pth="path: ${line[1]}"
-      elif [ "${line[0]}" = 'file:' ] ; then
-        fl="file: ${line[1]}"
-      elif [ "${line[0]}" = 'atomic:' ] ; then
-        fl="atomic: ${line[1]}"
-      elif [ "${line[0]}" = 'caption:' ] ; then
-        unset line[0]
-        capt=${line[*]}
-        test ${capt:0:1} = \' && capt=${capt:1:$(( ${#capt} - 2 ))}
-      elif [ "${line[0]}" = 'impact:' ] ; then
-        unset line[0]
-        impct="${line[*]}"
-      fi
-    done < $aIn
+    blk[${#blk[*]}]="$line"
   done
+
+  # the last one is still missing
+  blk2Files
+
+  # there is still one remaining
+  test "${str:0:1}" && echo -e "${str}" >> $outT
 
   local f fc
   fc=( $( ls $summary/$exp/L* 2> /dev/null ) )
@@ -262,9 +320,7 @@ txt="Annotation summary of the QA of experiment\n \
   local caption="QA-DKRZ: ${exp}"
 
   if which mutt &> /dev/null ; then
-    fc=( -a _Notes/$exp/annotation_outline.txt )
-
-    mutt -s "${caption}" ${outA} -- ${EMAIL[*]} << EOF
+    mutt -s "${caption}" -a ${outA} ${EMAIL[*]} << EOF
 $( echo "${caption}" )
 EOF
 
@@ -275,6 +331,9 @@ $( cat ${outA} )
 EOF
 
   fi
+
+  # restore stdin and free #9
+  exec 0<&9 9<&-
 
   return
 }
@@ -298,7 +357,6 @@ summaryY()
 
   return
 }
-
 
 ##//! Entry to this script
 

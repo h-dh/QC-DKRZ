@@ -49,41 +49,6 @@ descript()
   echo "  project-name      At present CF, CMIP5, and CORDEX; the latter by default."
 }
 
-getConfigEntry()
-{
-  local section=$1
-  local entry=$2
-  local configFile=$3
-
-  local line is
-
-  while read line ; do
-    test "${is}" -a ! "${line}" && break
-
-    if [ "${line}" = ${section}: ] ; then
-      is=t
-      continue
-    fi
-
-    if [ ${is} ] ; then
-      line=${line// /}
-
-      # repair some manually edited faults
-      while [ ${line/==/=} != ${line} ] ; do
-        line=${line/==/=}
-      done
-
-      if [ "${line%=*}" = "${entry}" ] ; then
-         eval ${entry}=${line}
-         return 0
-      fi
-    fi
-  done < $configFile
-
-  eval ${entry}=
-  return 1
-}
-
 getCurrPaths()
 {
   # where all the work is going to take place
@@ -342,7 +307,8 @@ tr_option()
 
 update()
 {
-  if . $QA_PATH/scripts/editConfigFile.txt $AUTO_UPDATE ; then
+  if . $QA_PATH/scripts/updateConfigFile.txt ${AUTO_UPDATE:-AUTO_UPDATE} \
+        || [ ${isUpdateQA:-f} = t ]; then
     if [ $CONDA_ENV ] ; then
       # look for a new conda-built package
       local tmp
@@ -355,11 +321,10 @@ update()
           item=${tmp[++i]}
           item=${item}-${tmp[++i]}
 
-          if ! . $QA_PATH/scripts/editConfigFile.txt CONDA_BUILD=$item ; then
+          if ! . $QA_PATH/scripts/updateConfigFile.txt CONDA_BUILD=$item ; then
             conda update -c birdhouse qa-dkrz &> /dev/null
 
             getRevNum packRev
-            . $QA_PATH/scripts/editConfigFile.txt QA_REVISION=$packRev
 
             exitVal=101
           fi
@@ -389,13 +354,15 @@ update()
 
       # revison num of the updated package
       getRevNum packRev
-
-      . $QA_PATH/scripts/editConfigFile.txt QA_REVISION=$packRev
     fi
   fi
 
-  if . $QA_PATH/scripts/editConfigFile.txt $AUTO_TABLE_UPDATE \
-      || ${FORCE_RSYNC:-f} = t ; then
+
+  . $QA_PATH/scripts/updateConfigFile.txt QA_REVISION${packRev:+=}$packRev
+
+  if . $QA_PATH/scripts/updateConfigFile.txt \
+          ${AUTO_TABLE_UPDATE:-AUTO_TABLE_UPDATE} \
+              || [ ${FORCE_RSYNC:-f} = t ] ; then
     if [ "$QA_WORK" != "$QA_PATH" ] ; then
       rsync -auz $QA_PATH/tables $QA_WORK &> /dev/null
     fi
@@ -466,16 +433,16 @@ do
     -)  OPTVAL=${OPTARG##*=}
 
         if [ "${UOPTARG:0:7}" = AUTO_UP -o "${UOPTARG:0:7}" = AUTO-UP ] ; then
-          if [ ${OPTARG} = ${OPTVAL} ] ; then
-            AUTO_UPDATE=AUTO_UPDATE=
-          else
+          if [ "${OPTVAL}" ] ; then
             AUTO_UPDATE=AUTO_UPDATE=${OPTVAL}
+          else
+            AUTO_UPDATE=AUTO_UPDATE=enabled
           fi
         elif [ "${UOPTARG:0:13}" = AUTO_TABLE_UP ] ; then
-          if [ ${OPTARG} = ${OPTVAL} ] ; then
-            AUTO_TABLE_UPDATE=AUTO_TABLE_UPDATE=
-          else
+          if [ "${OPTVAL}" ] ; then
             AUTO_TABLE_UPDATE=AUTO_TABLE_UPDATE=${OPTVAL}
+          else
+            AUTO_TABLE_UPDATE=AUTO_TABLE_UPDATE=enabled
           fi
         elif [ "${UOPTARG:0:5}" = BUILD ] ; then
           isBuild=t
@@ -540,19 +507,11 @@ getSrcPath $zeroArg  # sets also CONDA_ENV
 getCurrPaths
 update
 
-test ${DEF_PRJ} \
-  && . $QA_PATH/scripts/editConfigFile.txt DEFAULT_PROJECT=${DEF_PRJ}
-
-getConfigEntry ${QA_PATH} DEFAULT_PROJECT ${CONFIG_FILE}
-
-if [ ${DEFAULT_PROJECT} ] ; then
+if . $QA_PATH/scripts/updateConfigFile.txt DEFAULT_PROJECT ; then
   defPrj=--default_project=${DEFAULT_PROJECT#*=}
 else
   defPrj=--default_project=$defaultProject
 fi
-
-# no parameter: check for a conversion from former; safe
-. $QA_PATH/scripts/editConfigFile.txt
 
 test ${CONDA_ENV} && exit  # miniconda built executables
 

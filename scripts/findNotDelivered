@@ -54,7 +54,6 @@ cordex()
 
   while read line ; do
     test ${#line}   -eq 0  && continue
-    test "${line:0:6}" = 'output' && continue
 
     word=( ${line//,/ } )
 
@@ -69,7 +68,10 @@ cordex()
         test "$q" = mon -o "$q" = sem && isTake=t
       fi
 
-      continue
+      while read line ; do
+        word=( ${line//,/ } )
+        test ${word[0]} = output && continue 2
+      done
     fi
 
     # append to the list of var and freq

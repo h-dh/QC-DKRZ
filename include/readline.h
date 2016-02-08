@@ -138,7 +138,7 @@ public:
 
   bool
     isEOF(void){ return isEof;}
-    
+
 //! Is stream open?
   bool
     isOpen(void) { return is_fopen; }
@@ -191,7 +191,7 @@ public:
 
 //! Set a breakpoint within a line
   void
-    setBreakpoint(char b){ breakpoint=b; isBreakpoint=true;}
+    setLineContinuation(char b){ lineContinuation=b;}
 
 //! Set filename.
   bool
@@ -214,19 +214,27 @@ public:
   size_t
     size(void){ return split.size(); }
 
-//! Discard Bash comments.
-/*! From the first appearance to the end of the line.*/
-    void
-    skipBashComment( void ){ isSkipBashComment=true; }
-
     //! Discard characters.
 /*! From the first appearance to the end of the line.*/
-    void
+  void
     skipCharacter( char c){ vSkipChars.push_back(c); isSkipCharacter=true; }
 
 /*! Note that each character is discrded, not just the string */
-    void
+  void
     skipCharacter(std::string);
+
+//! Discard comments indicated by character [default: #].
+/*! From the first appearance to the end of the line.*/
+  void
+    skipComment(char c='#');
+
+//! Skip leading character(s)
+/*! Note: the vector member has to be used for skipping '\0'.*/
+  void
+    skipLeadingChar(char c='\0'); // white chars by default
+
+  void
+    skipLeadingChar(std::vector<char>&);
 
 //! Skip the first int lines.
   bool
@@ -249,16 +257,16 @@ public:
   std::string
     subLine(size_t pos, size_t n){ return line.substr(pos, n);}
 
-//! Unset a breakpoint within a line
-  void
-    unsetBreakpoint(void){ isBreakpoint=false;}
-
 private:
   // Input filenames
   std::string inFile ;
   std::string line ;
   std::string prevLine ;
-  char breakpoint;
+
+  char commentChar; // default #
+  char lineContinuation;
+  std::vector<char> vc_skipLeadingChar;
+
   std::vector<char> vSkipChars;
   std::vector<double> val ; //line: converted values
 
@@ -268,13 +276,12 @@ private:
   bool   isRange ;        // true: range wird abgefragt
   bool   is_fopen;
 
-  bool isBreakpoint;
   bool isClearSurroundingSpaces;
   bool isEof;
   bool isExternalStream;
   bool isPutBackLine;
   bool isReadFloat ;
-  bool isSkipBashComment;
+  bool isSkipComment;
   bool isSkipCharacter;
   bool isSkipWhiteLine;
   bool isSwappedEof;

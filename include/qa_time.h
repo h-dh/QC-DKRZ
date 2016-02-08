@@ -41,7 +41,7 @@ class TimeOutputBuffer
 
 enum TimeTableMode
 {
-    UNDEF, REGULAR, ORPHAN, DISABLE, CYCLE
+    INIT, UNDEF, REGULAR, ORPHAN, DISABLE, CYCLE
 };
 TimeTableMode timeTableMode;
 
@@ -137,7 +137,7 @@ class QA_Time
   void   initResumeSession(void);
 
   bool   initTimeBounds(double offset=0.) ;
-  void   initTimeTable(std::string id_1st, std::string id_2nd="");
+  void   initTimeTable(void);
 
   void   openQA_NcContrib(NcAPI*);
 
@@ -188,5 +188,4 @@ class QA_Time
   InFile *pIn;
   QA *pQA;
 };
-
 #endif

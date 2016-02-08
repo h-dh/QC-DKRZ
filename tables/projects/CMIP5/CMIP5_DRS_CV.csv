@@ -14,15 +14,16 @@ BEGIN: DRS
 # possible DRS paths with names (including blanks) from the DRS-CV.
 # DS: directory structure, FE: filename encoding.
 # Embracing <> may be omitted
-  CMOR-DS: <activity>/<product>/<institute>/<model>/<experiment>/<frequency>
-!          /<modeling realm>/<variable name>/<ensemble member>
-  ESGF-DS: <activity>/<product>/<institute>/<model>/<experiment>/<frequency>
-!          /<modeling realm>/<MIP table>/<ensemble member>/<version number>/<variable name>
+  CMOR-DS: <activity>/<product>/<institute>/<model>/<experiment>/<frequency>\
+           /<modeling realm>/<variable name>/<ensemble member>
+  ESGF-DS: <activity>/<product>/<institute>/<model>/<experiment>/<frequency>\
+           /<modeling realm>/<MIP table>/<ensemble member>/<version number>\
+           /<variable name>
 
-  CMIP5-FE:<variable name>_<MIP table>_<model>_<experiment>_<ensemble member>
-!          _<temporal subset>_<geographical info>.nc
-  GRIDSPEC-FE:<gridspec>_<modeling realm>_<frequency>_<model>_<experiment>
-!          _<ensemble member>.nc
+  CMIP5-FE:<variable name>_<MIP table>_<model>_<experiment>_<ensemble member>\
+           _<temporal subset>_<geographical info>.nc
+  GRIDSPEC-FE:<gridspec>_<modeling realm>_<frequency>_<model>_<experiment>\
+           _<ensemble member>.nc
 
 # Special format: <DRS-CV name> = global attribute name.
 # Components of directory and file structure.
@@ -43,11 +44,11 @@ BEGIN: DRS
   <temporal subset>
 END: DRS
 
-# VAR_TYPE is the type of a variable
-DATA_VAR:
-   VAR_TYPE=float
-AUX_VAR:
-   VAR_TYPE=double
+# VAR_TYPE is the type of a variable (note: checked via std_output table)
+#DATA_VAR:
+#   VAR_TYPE=float
+#AUX_VAR:
+#   VAR_TYPE=double
 
 global:
    branch_time
@@ -72,4 +73,3 @@ global:
    source
    table_id
    tracking_id
-
