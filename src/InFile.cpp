@@ -432,7 +432,15 @@ InFile::getVariable(void)
     {
       var.dimName.push_back( ds[j] );
       var.dimSize.push_back( nc.getDimSize(ds[j]) );
-      var.dim_ix.push_back(j);
+
+      for( size_t k=0 ; k < variable.size() ; ++k)
+      {
+        if( variable[k].name == ds[j] )
+        {
+          var.dim_ix.push_back(k);
+          break;
+        }
+      }
     }
 
     // get meta data of variables.
