@@ -255,7 +255,8 @@ Annotation::findIndex(std::string &key, bool isOnly)
 
           return false;
         }
-        else
+
+        if( var[i][0] != '*' )
           notByDefault=true;
      }
   }
