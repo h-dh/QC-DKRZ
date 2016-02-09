@@ -206,6 +206,31 @@ BREAK:
             if( xt_eq[1] == xf_eq[1] )  // found identical values
               break;  // try the next attribute
 
+            // this is a very special one for time: one wit separator T and/or Z
+            // the other one without
+            std::string auxName;
+            if( xt_a[0].substr(0,4) == "aux=" )
+              auxName = xt_a[0].substr(4) ;
+            else
+              auxName = xt_a[0] ;
+
+            if( auxName == "time" )
+            {
+               Split x_tt(xt_eq[1]," TZ",true) ;
+               Split x_ff(xf_eq[1]," TZ",true) ;
+
+               if( x_tt.size() == x_ff.size() )
+               {
+                 bool is=true;
+                 for(size_t c=0 ; c < x_tt.size()  ; ++c )
+                   if( x_tt[c] != x_ff[c] )
+                     is=false;
+
+                 if(is)
+                   break;
+               }
+            }
+
             // different values --> annotation
             status=true;
 
@@ -216,7 +241,7 @@ BREAK:
               if( xt_a[0].substr(0,4) == "aux=" )
               {
                 capt = "auxiliary ";
-                capt += hdhC::tf_var(xt_a[0].substr(4), hdhC::colon) ;
+                capt += hdhC::tf_var(auxName, hdhC::colon) ;
               }
               else
                 capt += hdhC::tf_var(xt_a[0], hdhC::colon) ;
@@ -324,7 +349,7 @@ BREAK:
         continue;  // passed already a check
 
       //split at comma
-      xt_a = xt[jf] ;
+      xt_a = xt[jt] ;
 
       // compare the names of the auxiliaries
       if( xf_a[0] != xt_a[0] )
@@ -367,7 +392,7 @@ BREAK:
               capt += hdhC::tf_var(xf_a[0].substr(4), hdhC::colon) ;
             }
             else
-              capt += hdhC::tf_var(xf_a[0].substr(4), hdhC::colon) ;
+              capt += hdhC::tf_var(xf_a[0], hdhC::colon) ;
 
             if( xt_eq[0] == "values" )
             {
@@ -394,7 +419,10 @@ BREAK:
       if( notes->inq( key, dataVar.name) )
       {
         std::string capt("additional auxiliary ");
-        capt += hdhC::tf_var(xf_a[0].substr(4)) ;
+        if( xf_a[0].size() > 4 )
+          capt += hdhC::tf_var(xf_a[0].substr(4)) ;
+        else
+          capt += hdhC::tf_var(xf_a[0]) ;
         capt += "across experiments or sub-temporal files";
 
         (void) notes->operate(capt) ;
