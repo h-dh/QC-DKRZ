@@ -2284,10 +2284,11 @@ QA_Exp::domainCheck(void)
      t_lon = table1[irow][3];
      t_lat = table1[irow][4];
 
-     domainCheckPole("N.Pole lon", t_lon, f_lonName);
-     domainCheckPole("N.Pole lat", t_lat, f_latName);
+     domainCheckPole("NP lon", t_lon, f_lonName);
+     domainCheckPole("NP lat", t_lat, f_latName);
 
-     domainCheckData(f_lonName, f_latName, table1[irow], "Table 1");
+     if( f_lonName.size() && f_latName.size() )
+       domainCheckData(f_lonName, f_latName, table1[irow], "Table 1");
 
      return ;
    }
@@ -2305,7 +2306,8 @@ QA_Exp::domainCheck(void)
 
      // no pole check
 
-     domainCheckData(f_lonName, f_latName, table2[irow], "Table 2");
+     if( f_lonName.size() && f_latName.size() )
+       domainCheckData(f_lonName, f_latName, table2[irow], "Table 2");
 
      return ;
   }
@@ -2457,7 +2459,7 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
     std::string key = "7_9";
     if( notes->inq(key, pQA->fileStr) )
     {
-      std::string capt("CORDEX " + hdhC::tf_assign("domain", tName)) ;
+      std::string capt("CORDEX domain" + hdhC::tf_val(tName)) ;
       capt += " with missing data for ";
 
       if( mv_lon.size() < 2 && mv_lat.size() < 2 )
@@ -2540,7 +2542,9 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
   // check edges of the domain for grid-cell centres
   // vs. the boundaries from file data. Note: file data range may
   // be enlarged.
-  std::string edge_value[4];
+  double edge_file[4];
+  double edge_row[4];
+
   bool is_edge[4];
   if( ! is_lon )
   {
@@ -2557,14 +2561,18 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
         i_last= 0;
      }
 
-     edge_value[0] = hdhC::double2String( mv_lon[i_1st], -5);
-     if( edge_value[0] <= row[5+add] )
+     edge_file[0] = mv_lon[i_1st] ;
+     edge_row[0] = hdhC::string2Double(row[5+add]);
+
+     if( edge_file[0] <= edge_row[0] )
        is_edge[0]=false;
      else
        is_edge[0]=true;
 
-     edge_value[1] = hdhC::double2String( mv_lon[i_last], -5);
-     if( edge_value[1] >= row[6+add] )
+     edge_file[1] = mv_lon[i_last] ;
+     edge_row[1] = hdhC::string2Double(row[6+add]);
+
+     if( edge_file[1] >= edge_row[1] )
        is_edge[1]=false;
      else
        is_edge[1]=true;
@@ -2585,14 +2593,18 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
         i_last= 0;
      }
 
-     edge_value[2] = hdhC::double2String( mv_lat[i_1st], -5);
-     if( edge_value[2] <= row[7+add] )
+     edge_file[2] = mv_lat[i_1st] ;
+     edge_row[2] = hdhC::string2Double(row[7+add]);
+
+     if( edge_file[2] <= edge_row[2] )
        is_edge[2]=false;
      else
        is_edge[2]=true;
 
-     edge_value[3] = hdhC::double2String( mv_lat[i_last], -5);
-     if( edge_value[3] >= row[8+add] )
+     edge_file[3] = mv_lat[i_last] ;
+     edge_row[3] = hdhC::string2Double(row[8+add]);
+
+     if( edge_file[3] >= edge_row[3] )
        is_edge[3]=false;
      else
        is_edge[3]=true;
@@ -2609,9 +2621,9 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
       if( i==0 )
       {
         text1 += "West=" ;
-        text1 += hdhC::double2String( hdhC::string2Double( row[5+add]), -5) ;
+        text1 += row[5+add] ;
         text2 += "West=" ;
-        text2 += edge_value[0] ;
+        text2 += hdhC::double2String(edge_file[0], 5) ;
         isComma=true;
       }
       else if( i==1 )
@@ -2623,9 +2635,9 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
         }
 
         text1 += "East=" ;
-        text1 += hdhC::double2String( hdhC::string2Double( row[6+add]), -5) ;
+        text1 += row[6+add] ;
         text2 += "East=" ;
-        text2 += edge_value[1] ;
+        text2 += hdhC::double2String(edge_file[1], 5) ;
         isComma=true;
       }
 
@@ -2638,9 +2650,9 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
         }
 
         text1 += "South=" ;
-        text1 += hdhC::double2String( hdhC::string2Double( row[7+add]), -5) ;
+        text1 += row[7+add] ;
         text2 += "South=" ;
-        text2 += edge_value[2] ;
+        text2 += hdhC::double2String(edge_file[2], 5) ;
         isComma=true;
       }
       else if( i==3 )
@@ -2654,7 +2666,7 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
         text1 += "North=" ;
         text1 += hdhC::double2String( hdhC::string2Double( row[8+add]), -5) ;
         text2 += "North=" ;
-        text2 += edge_value[3] ;
+        text2 += hdhC::double2String(edge_file[3], 5) ;
         isComma=true;
       }
 
@@ -2684,41 +2696,70 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
 
 void
 QA_Exp::domainCheckDims(std::string item,
-    std::string &t_num, std::string &f_name, std::string tbl_id)
+    std::string &t_num_str, std::string &f_name, std::string tbl_id)
 {
   // compare lat/lon specified in CORDEX Table 1 or 2 with the dimensions
   // and return corresponding name.
-  std::string f_num;
+  int f_num=-1;
+  int t_num = hdhC::string2Double(t_num_str);
 
   // names of all dimensions
   std::vector<std::string> dNames(pQA->pIn->nc.getDimName() );
 
   for( size_t i=0 ; i < dNames.size() ; ++i )
   {
-     int num = pQA->pIn->nc.getDimSize(dNames[i]);
-     f_num = hdhC::itoa(num);
+     int j = pQA->pIn->getVarIndex(dNames[i]);
+     if( j == -1 )
+       continue;
+
+     Variable& var = pQA->pIn->variable[j] ;
+     if( item == "lon" || item == "Nlon" )
+       if( ! (var.coord.isCoordVar && var.coord.isC[0]) )
+        continue;
+     if( item == "lat" || item == "Nlat")
+       if( ! (var.coord.isCoordVar && var.coord.isC[1]) )
+        continue;
+
+     f_num = pQA->pIn->nc.getDimSize(dNames[i]);
+
+     f_name = dNames[i] ;
 
      if( f_num == t_num )
+        return;
+     else if( f_num > t_num )
      {
-        f_name = dNames[i] ;
+        std::string key = "7_7";
+        if( notes->inq(key, pQA->fileStr) )
+        {
+          std::string capt("CORDEX domain Table ") ;
+          capt += tbl_id ;
+          capt += ": CORDEX domain lies inside but dimension";
+          capt += hdhC::tf_val(f_name) ;
+          capt += " is recommended to follow the grid definition, found" ;
+          capt += hdhC::tf_val(hdhC::itoa(f_num)) ;
+          capt += ", required" ;
+          capt += hdhC::tf_val(t_num_str);
+
+          (void) notes->operate(capt) ;
+          notes->setCheckMetaStr(pQA->fail);
+        }
+
         return;
      }
   }
 
-  std::string key = "7_7 (";
-  key += item;
-  key += ")";
+  std::string key = "7_7";
   if( notes->inq(key, pQA->fileStr) )
   {
     std::string capt("CORDEX domain Table ") ;
     capt += tbl_id ;
-    capt += ": Value of ";
-    capt += f_name ;
-    capt += " does not match, found" ;
+    capt += ": Dimension ";
+    capt += hdhC::tf_val(f_name) ;
+    capt += " does not match the grid definition, found" ;
 
-    capt += hdhC::tf_val(f_num) ;
+    capt += hdhC::tf_val(hdhC::itoa(f_num)) ;
     capt += ", required" ;
-    capt += hdhC::tf_val(t_num);
+    capt += hdhC::tf_val(t_num_str);
 
     (void) notes->operate(capt) ;
     notes->setCheckMetaStr(pQA->fail);
@@ -2734,7 +2775,7 @@ QA_Exp::domainCheckPole(std::string item,
   // compare lat/lon of N. Pole  specified in CORDEX Table 1 with
   // corresponding values in the NetCF file.
 
-  bool isItem = item == "N.Pole lon" ;
+  bool isItem = item == "NP lon" ;
 
   if( isItem && t_num == "N/A" )
     return;  // any lon value would do for the North pole in rotated coord.
@@ -2791,6 +2832,9 @@ QA_Exp::domainCheckPole(std::string item,
           // found the attribute
           f_num = hdhC::double2String( hdhC::string2Double(s), -5) ;
           if( f_num == t_num )
+            if( !f_name.size() )
+              f_name=var.name;
+
             return;
         }
       }
@@ -2806,7 +2850,12 @@ QA_Exp::domainCheckPole(std::string item,
           // found the attribute
           f_num = hdhC::double2String( hdhC::string2Double(s), -5) ;
           if( f_num == t_num )
+          {
+            if( !f_name.size() )
+              f_name=var.name;
+
             return;
+          }
         }
       }
     }
