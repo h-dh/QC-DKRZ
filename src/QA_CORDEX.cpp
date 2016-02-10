@@ -2623,7 +2623,7 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
         text1 += "West=" ;
         text1 += row[5+add] ;
         text2 += "West=" ;
-        text2 += hdhC::double2String(edge_file[0], 5) ;
+        text2 += hdhC::double2String(edge_file[0]) ;
         isComma=true;
       }
       else if( i==1 )
@@ -2637,7 +2637,7 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
         text1 += "East=" ;
         text1 += row[6+add] ;
         text2 += "East=" ;
-        text2 += hdhC::double2String(edge_file[1], 5) ;
+        text2 += hdhC::double2String(edge_file[1]) ;
         isComma=true;
       }
 
@@ -2652,7 +2652,7 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
         text1 += "South=" ;
         text1 += row[7+add] ;
         text2 += "South=" ;
-        text2 += hdhC::double2String(edge_file[2], 5) ;
+        text2 += hdhC::double2String(edge_file[2]) ;
         isComma=true;
       }
       else if( i==3 )
@@ -2664,9 +2664,9 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
         }
 
         text1 += "North=" ;
-        text1 += hdhC::double2String( hdhC::string2Double( row[8+add]), -5) ;
+        text1 += row[8+add] ;
         text2 += "North=" ;
-        text2 += hdhC::double2String(edge_file[3], 5) ;
+        text2 += hdhC::double2String(edge_file[3]) ;
         isComma=true;
       }
 
