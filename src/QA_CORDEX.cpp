@@ -2679,10 +2679,10 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
     std::string key = "7_11";
     if( notes->inq(key, pQA->fileStr) )
     {
-      std::string capt("unmatched CORDEX boundaries for ");
-      capt += hdhC::tf_assign("domain", tName) ;
-      capt += ", found " ;
-      capt += hdhC::tf_assign("(file)", text2);
+      std::string capt("unmatched CORDEX boundaries for the ");
+      capt += tName ;
+      capt += " domain, found" ;
+      capt += hdhC::tf_val(text2);
       capt += ", required" ;
       capt += hdhC::tf_val(text1);
 
