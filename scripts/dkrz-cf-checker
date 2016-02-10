@@ -249,10 +249,7 @@ for(( i=0 ; i < ${#fs[*]} ; ++i )) ; do
   fi
 
   param="$(echo -e $param)"
-  if ! $QA_PATH/bin/dkrz-cf-checker.x ${param} ; then
-    test ${fPath} && echo "path: ${fPath}"
-    echo "file: ${fs[i]}"
-  fi
+  $QA_PATH/bin/dkrz-cf-checker.x ${param}
 
   if [ ${isTestSuite:-f} = t ] && echo ${fs[i]} | grep -q Fail ; then
     asdf="$(ncdump -h ${fs[i]} | grep :comment[^[:digit:]])"

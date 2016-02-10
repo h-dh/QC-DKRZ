@@ -72,7 +72,7 @@ class VariableMeta
      bool isZ_p;
      bool isZ_DL;  //dimensionless coord
 
-     std::vector<char> cType;
+     std::vector<char> cType;  // 0:X, 1:Y, 2:Z, 3: T
      std::vector<bool> isC;
      std::vector<int> weight;
   };
