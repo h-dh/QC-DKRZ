@@ -304,7 +304,7 @@ CF::attributeSpellCheck(void)
           break;
       }
 
-      if( eDMin < 0.5 && ! var.isValidAtt(CF::attName[eDMin_ix]) )
+      if( eDMin < 0.25 && ! var.isValidAtt(CF::attName[eDMin_ix]) )
       {
         if( notes->inq(bKey + "0h", var.name) )
         {
@@ -2522,7 +2522,9 @@ CF::postAnnotations(void)
     {
       if( (pos=vs_item[i].rfind('_')) < std::string::npos )
       {
-        spec = vs_annot[i].substr(pos+1) ;
+        if( vs_annot[i].size() > pos+1 )
+          spec = vs_annot[i].substr(pos+1) ;
+
         if(i)
         {
           if( spec0 == spec )
@@ -2748,7 +2750,8 @@ CF::scanStdNameTable(std::vector<int> &zx)
 
          if( var.snTableEntry.found )
          {
-            s = testName[i].substr(s.size()) ;
+            if( testName[i].size() > s.size() )
+              s = testName[i].substr(s.size()) ;
             var.snTableEntry.remainder = hdhC::stripSides(s) ;
 
             // if sn is right, but there is something with the modifier
@@ -3483,6 +3486,9 @@ CF::chap22(void)
 
     for( size_t j=0 ; j < var.attName.size() ; ++j )
     {
+      if( var.attType.size() == j )
+        break;
+
       if( var.attType[j] == NC_STRING )
       {
         if( notes->inq(bKey + "22b", var.name) )
@@ -4082,6 +4088,9 @@ CF::chap26(void)
 
        for( size_t k=0 ; k < CF::attName.size() ; ++k )
        {
+         if( var.attType.size() == k )
+            break;
+
          if( aName == CF::attName[k] )
          {
             if( CF::attType[k] == 'D' )
@@ -6518,7 +6527,7 @@ CF::chap56_attProps(
      if( notes->inq(bKey + "5i", dataVar.name, NO_MT) )
      {
         std::string capt(hdhC::tf_var(dataVar.name, hdhC::colon));
-        capt += "Missing " + hdhC::tf_att(n_coordinates) ;
+        capt += "Missing coordinates attribute" ;
 
         (void) notes->operate(capt) ;
         notes->setCheckCF_Str( fail );
@@ -9491,7 +9500,7 @@ CF::chap9_featureType(
               break;
           }
 
-          if( eDMin < 0.5 && x_str[x] != validFT_vs[eDMin_ix] )
+          if( eDMin < 0.25 && x_str[x] != validFT_vs[eDMin_ix] )
           {
             if( notes->inq(bKey + "0h", n_global) )
             {
@@ -10458,6 +10467,10 @@ CF::chap9_trajectoryProfile(std::vector<int>& xyzt_ix, std::vector<size_t>& dv_i
   return true;
 }
 
+// note that the last group are not names of attributes, but commonly used words
+// to help the spell checker.
+// IMPORTANT: CF_AttType.size() only for real attributes
+
 const char* CF_AttName[] = {
   "standard_error_multiplier"          ,
   "ancillary_variables", "axis"        , "calendar"     , "bounds"       , "cell_measures"
@@ -10476,6 +10489,7 @@ const char* CF_AttName[] = {
 , "scale_factor_at_central_meridian", "scale_factor_at_projection_origin"   , "semi_major_axis"
 , "semi_minor_axis"                 , "standard_parallel"   , "straight_vertical_longitude_from_pole"
 
+, "variance"
 };
 
 const char CF_AttType[] = {
@@ -10497,5 +10511,5 @@ const char CF_AttType[] = {
 ,'N', 'N', 'N'
 };
 
-std::vector<std::string> CF::attName(CF_AttName, CF_AttName + 55);
+std::vector<std::string> CF::attName(CF_AttName, CF_AttName + 56);
 std::vector<char>        CF::attType(CF_AttType, CF_AttType + 55);
