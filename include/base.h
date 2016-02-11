@@ -123,6 +123,7 @@ class Base : public IObj
 
   //see rules for varName and srcName in attach()
   std::vector<Variable> variable;
+  std::vector<std::string> variableNames;  // in the sequence of variable
 
   std::vector<Variable> srcVariable;
   std::vector<std::string> obsolete_srcVarName;

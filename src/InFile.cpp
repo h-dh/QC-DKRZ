@@ -784,6 +784,7 @@ InFile::openNc(bool isNew)
     makeVariable( &nc, var[j] );
 
     vIx[ var[j] ] = j ;
+    variableNames.push_back(variable.back().name);
   }
 
   // a pseudo-variable for the global attributes

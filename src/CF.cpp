@@ -457,9 +457,8 @@ CF::checkCoordinateValues(Variable& var, bool isFormTermAux, T x)
   // Exceptions:
   // variables named by a formula_terms attribute
   // and auxiliary coordinate variables
-  bool testMonotony=true;
-  if( !var.coord.isCoordVar || isFormTermAux )
-    testMonotony=false;
+  bool testMonotony= ( !var.coord.isCoordVar || isFormTermAux ) \
+    ? false : true ;
 
   MtrxArr<T> mv;
 
@@ -520,7 +519,7 @@ CF::checkCoordinateValues(Variable& var, bool isFormTermAux, T x)
       }
 
       // any kind of missing value
-      if( mv.valExcp->exceptionCount.size() )
+      if( var.coord.isCoordVar && mv.valExcp->exceptionCount.size() )
       {
         bool isFirst[]={ true, true, true, true, true, true};
 
@@ -768,7 +767,7 @@ CF::checkGroupRelation(void)
 
           capt += "oordinate " ;
           capt += hdhC::tf_var(var.name) ;
-          capt += "is not related to any other " + n_variable ;
+          capt += "seems to be unrelated to any other " + n_variable ;
 
           (void) notes->operate(capt) ;
           notes->setCheckCF_Str( fail );
@@ -1336,6 +1335,30 @@ CF::finalAtt_coordinates_B(void)
       continue;
     if( var.isLabel )
       continue;
+
+    // a variable depends soley on coordinate dimensions
+    bool isSole=true;
+    for( size_t j=0 ; j < var.dimName.size() ; ++j )
+    {
+      size_t pos;
+      if( hdhC::isAmong(var.dimName[j], pIn->variableNames, pos) )
+      {
+         if( ! pIn->variable[pos].coord.isCoordVar )
+         {
+           isSole=false;
+           break;
+         }
+      }
+      else
+      {
+         isSole=false;
+         break;
+      }
+    }
+
+    if(isSole)
+      continue;
+
     if( pIn->nc.isIndexType(var.name) )
       continue;
 
@@ -1747,21 +1770,32 @@ CF::getAssociatedGroups(void)
   if(isSD)
   {
     // data vars must only depend on a single dim
-    std::string onlyDim;
+    std::vector<std::string> vs_single;
+    std::vector<size_t> vs_count;
+
     for( size_t i=0 ; i < pIn->varSz ; ++i )
     {
       Variable& var = pIn->variable[i];
 
       if( var.isDataVar() )
       {
-        if( var.dimName.size() != 1 )
-          return;
-        else
-          onlyDim=var.dimName[0] ;
+        if( var.dimName.size() == 1 )
+        {
+          size_t vs_ix;
+          if( hdhC::isAmong(var.dimName[0], vs_single, vs_ix) )
+            ++vs_count[vs_ix];
+          else
+          {
+            vs_single.push_back(var.dimName[0]) ;
+            vs_count.push_back(1);
+          }
+        }
       }
     }
 
-    associatedGroups.push_back(onlyDim);
+    for( size_t i=0 ; i < vs_single.size() ; ++i )
+      if( vs_count[i] > 1 )
+        associatedGroups.push_back(vs_single[i]);
   }
 
   return;
