@@ -12,10 +12,43 @@ You can install `QA-DKRZ` either via the conda package manager or from source.
 Installing with Conda Package Manager
 =====================================
 
+Make sure that you have `conda <http://conda.pydata.org/docs/install/quick.html#linux-miniconda-install>`_ installed.
+
+.. note:: Currently only the Linux 64-bit version of the QA tool is supported on conda. The installation is tested on Centos 6 and Ubuntu/Debian 14.04 LTS.
+
+The `conda` package manager should be on your `PATH`. For example you should set `PATH` as following:
+
+.. code-block:: bash
+
+    $ export PATH=~/miniconda/bin:$PATH
+    $ conda -h
+
+The QA tool package is on the `birdhouse anaconda channel <https://anaconda.org/birdhouse/qa-dkrz>`_.
+To install the QA tool just run the following command (all dependencies included):
+
+.. code-block:: bash
+
+   $ conda install -c http://conda.anaconda.org/birdhouse qa-dkrz
+
+
+Check the installation by running the CF-Checker with a NetCDF file:
+
+.. code-block:: bash
+
+   $ dkrz-cf-checker -h
+   $ dkrz-cf-checker my_tasmax.nc
 
 
 Installing from Source
-========================
+======================
+
+Requirements
+------------
+
+The tool requires the BASH shell and a C/C++ compiler.
+
+Building the QA tool
+--------------------
 
 A script ``install`` is provided to manage different installation/update modes.
 
@@ -48,7 +81,7 @@ Building libraries
 
 .. code-block:: bash
 
-  Command-line: ./install --build [opts]
+  $ ./install --build [opts]
 
 Download and install libraries:
 
@@ -76,7 +109,7 @@ Manual Update
 
 .. code-block:: bash
 
-  Command-line: /package-path/install --up[date] [opts]
+  $ /package-path/install --up[date] [opts]
 
 This applies any changes in the repository. If C/C++ programs are affected,
 then executables are remade. Please note that libraries are not updated.
@@ -87,7 +120,7 @@ Automatic Update
 
 .. code-block:: bash
 
-  Command-line: /package-path/install --auto-up [opts]
+  $ /package-path/install --auto-up [opts]
 
 - Once ``--auto-up`` was set, the package will always be synchronised to the
   repository at the beginning of each QA session.
