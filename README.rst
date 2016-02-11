@@ -22,7 +22,16 @@ The easiest way to install the QA tool is to use the conda package manager:
 
    $ conda install -c birdhouse qa-dkrz
 
-See :ref:`installation` for details and how to install from source. Try the :ref:`examples` to get started.
+See :ref:`installation` for details and how to install from source. 
+
+You can now run for example the CF-checker on a NetCDF file:
+
+.. code-block:: bash
+
+   $ dkrz-cf-checker -h
+   $ dkrz-cf-checker my_tasmax.nc
+
+See more :ref:`examples` to get started.
 
 Documentation
 -------------
