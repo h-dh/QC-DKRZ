@@ -1,16 +1,17 @@
-=====================================
-QA-DKRZ - DKRZ Quality Assurance Tool
-=====================================
+=================================================
+QA-DKRZ - Quality Assurance Tool for Climate Data
+=================================================
 
 |build-status| |conda-install|
 
 :Version: 0.5.x
 
-The QA tool is a Quality Assurance checker of metadata in climate data sets (NetCDF files)
-for CF conformance and CMIP5 and CORDEX projects conventions.
+The QA tool is a quality assurance checker for metadata in climate data (NetCDF files). The tool checks
+the `CF-Conventions`_ conformance (Climate and Forecast Conventions) and also projects conventions for CMIP5 and CORDEX.
 
 .. note:: The QA tool is still in a testing stage.
 
+.. _`CF-conventions`: http://cfconventions.org/
 
 Getting Started
 ===============
@@ -59,7 +60,7 @@ You are highly encouraged to participate in the development.
 License
 =======
 
-Please see the *Disclaimer of Warranty* file `DoW.txt` in the top distribution directory.
+Please see the *Disclaimer of Warranty* (`DoW.txt`) file in the top distribution directory.
 
 .. |build-status| image:: https://travis-ci.org/h-dh/QA-DKRZ.svg?branch=master
    :target: https://travis-ci.org/h-dh/QA-DKRZ

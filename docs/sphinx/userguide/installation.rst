@@ -84,7 +84,13 @@ Compile the executable for the project CORDEX:
 
    $ ./install CORDEX
 
-The following projects are supported: CORDEX (by default), CMIP5, CF, NONE.
+The following projects are supported: CORDEX (by default), CMIP5, CF, NONE. 
+
+Compile the CF checker with the following command:
+
+.. code-block:: bash
+
+   $ ./install CF  
 
 A test-run is started automatically generating some results in the directory ``/package-path/example/test_I``.
 

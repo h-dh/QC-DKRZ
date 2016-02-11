@@ -11,21 +11,29 @@ The CF Conformance checker applies to conventions 1.4 -1.7draft.
 
 .. note:: The cf-checkers takes a few seconds for the installation when it runs for the first time.
 
-Command-line for the stand-alone tool (generate executable by ``./install CF``):
+See :ref:`installation` on how to install this tool. See the available options:
 
 .. code-block:: bash
 
-    $ /package-path/scripts/dkrz-cf-checker [opts] [path/]files
+    $ dkrz-cf-checker -h
 
-      -C str        CF conventions string; taken from global attributes by default.
-      -F path       Find all NetCDF files in the sub-dir tree starting at path.
-      -p str        Path to one or more NetCDF file; this is applied only to files.
-      -R            Apply also recommendations given in the CF conventions.
-      -x str        Path to QA-DKRZ/bin; required if the script was copied to the
-                    outside of the package (note that a symbolic link works without
-                    this option).
-      --ts          Run the CF Test Suite located within the package (file names
-                    may be given additionally).
+    Usage: cf-checker [opts] netCDF-file[s]
+    Purpose: Check for CF Conventions Compliance
+    (http://cfconventions.org).
+    The checker is part of the QA-DKRZ package and must have been compiled
+    by '/your-path-to-QA-DKRZ/install CF'.
+      -C str    CF Convention string; taken from global attributes by default.
+      -F path   Find recursively all nc-files from starting point 'path'.
+      -p str    Path to one or more netCDF Files; this is prefixed
+                only to netCDF-files without any path component.
+      -R        Apply also recommendations given by CF conventions.
+      --debug   Show execution commands.
+      --help
+      --param   Only for program development.
+      --ts      Run the files provided in the Test-Suite for CF conventions
+                rules in QA-DKRZ/CF_TestSuite. If particular netCDF files are
+                provided additionally, then only these are used.
+
 
 CF Test Suite
 -------------
