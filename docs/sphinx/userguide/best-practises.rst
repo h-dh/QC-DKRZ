@@ -12,7 +12,7 @@ Get sources
 -----------
 
 * QC-0.4: download the script install
-* QA-DKRZ: git clone https://github.com/h-dh/QA-DKRZ
+* QA-DKRZ: git clone https://github.com/IS-ENES-Data/QA-DKRZ
 
 
 Create the ``install_configure`` file
