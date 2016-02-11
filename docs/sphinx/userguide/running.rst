@@ -4,11 +4,11 @@
 Running the QA
 ==============
 
-A QA session is launched on the command-line or in the back-ground.
+A QA session is launched on the command-line or in the back-ground:
 
 .. code-block:: bash
 
-  /package-path/scripts/qa-DKRZ [-m] [-f task.file] [opts]
+  $ /package-path/scripts/qa-DKRZ [-m] [-f task.file] [opts]
 
 Configuration options are provided on the command-line with the prefix ``-E_`` or ``-e_``.
 
@@ -18,12 +18,14 @@ results. Usually, atomic files causing annotations of a pre-defined degree of
 severity are locked and will not be touched again. There are different ways
 to clear results, which may be combined to a comma-separated list:
 
-.. code-block:: bash
-
-  E_CLEAR        All atomic variables of the current selection, i.e. redo
-  E_CLEAR=note   Variables with annotations of minor severity
-  E_CLEAR=lock   Variables with annotations causing a lock
-  E_CLEAR=var    The acronym of a variable, e.g. 'tas'
+=============  ===========
+Option         Description
+=============  ===========
+E_CLEAR        All atomic variables of the current selection, i.e. redo
+E_CLEAR=note   Variables with annotations of minor severity
+E_CLEAR=lock   Variables with annotations causing a lock
+E_CLEAR=var    The acronym of a variable, e.g. 'tas'
+=============  ===========
 
 
 Annotation
@@ -32,18 +34,21 @@ Annotation
 Any failed QA test raises an annotation. In fact, testing and issuing annotations
 are different processes. The way of testing is done always by the program;
 the user has no influence. However, issuing annotations is controlled by the user
-by means of configuration options and the check-list table. Location:
+by means of configuration options and the check-list table. The location changed with the QC tool version.
+
+QC-0.4:
+
+.. code-block:: bash
+   
+    $ /package-path/tables/SVN_defaults/project-name_check-list.conf
+
+QA-DKRZ (>=0.5):
 
 .. code-block:: bash
 
-    QC-0.4:
-    /package-path/tables/SVN_defaults/project-name_check-list.conf
-
-.. code-block:: bash
-
-    QA-DKRZ:
-    /package-path/tables/projects/*project-name*/project-name_check-list.conf
-    /package-path/tables/projects/CF/CF_check-list.conf
+    
+    $ /package-path/tables/projects/*project-name*/project-name_check-list.conf
+    $ /package-path/tables/projects/CF/CF_check-list.conf
 
 A check may-be discarded entirely or for specified variables. Also, specific data
 values of given variables may be excluded from annotating. Details are explained
@@ -60,15 +65,15 @@ The purpose of such an experiment-like name is to tag a larger set of various
 checks with a name that corresponds to a certain volume of netCDF files.
 Please choose unique names among the respective components .
 
-There
-are several ways to define a name with the precedence of the following options:
+There are several ways to define a name with the precedence of the following options:
 
-.. code-block:: text
-
-    EXP_NAME=string                      Explicit name
-    EXP_FNAME_PATTERN=comma-sep-indices  Pattern common to file names
-    EXP_PATH_INDEX=camma-sep-indices     Components of paths common to the directory structure.
-                                       'all-scope' by default
+===================================  ===========
+Option                               Description
+===================================  ===========
+EXP_NAME=string                      Explicit name
+EXP_FNAME_PATTERN=comma-sep-indices  Pattern common to file names
+EXP_PATH_INDEX=comma-sep-indices     Components of paths common to the directory structure. `all-scope` by default.
+===================================  ===========
 
 *Example for an experiment-like-name*:
 

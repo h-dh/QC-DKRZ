@@ -8,9 +8,11 @@ User Guide
 .. toctree::
     :maxdepth: 2
 
-    introduction
+    overview
     installation
     configuration
+    tools
     running
     examples
+    best-practises
     
