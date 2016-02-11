@@ -1014,7 +1014,7 @@ copyPreamble()
 #      sTxt[0]="3qa_svn_revision: ${rev_1}"
 #      log
 #    fi
-  else
+  elif [ -f ${SESSION_LOGDIR}/session.prmbl ] ; then
        cp ${SESSION_LOGDIR}/session.prmbl $EXP_LOGDIR/${CURR_EXP_NAME}.log
 #       local rev_1
 #       getRevNum rev_1
@@ -2561,7 +2561,7 @@ init()
   test ${SIMPLE_STATUS_LINE:-f} = f && NO_STATUS=t
 
   # parse REATTEMPT_LIMIT and SLEEP_TIME
-  initTryCom
+  intTryComRepeat
 
   # Are the executables in QA_BIN applicable?
   if ! ${QA_BIN#*:}/unixTime.x &> /dev/null ; then
@@ -2583,6 +2583,8 @@ init()
   local i
 
 #  set -f
+  # read ~/.qa-dkrz/conf-.txt for the current revision of tha package
+  . $QA_PATH/scripts/updateConfigFile.txt QA_REVISION
 
   maxNumExecThreads=0
   local nET
@@ -2596,9 +2598,7 @@ init()
   initTables
 
   # save the configuration and init the session logfile
-  if [ ${RESUME_SESSION:-f} = f ] ; then
-    logConfiguration $*
-  fi
+  logConfiguration $*
 
   local pidFile=${SESSION_LOGDIR}/pid.$rootPID
 
@@ -3031,7 +3031,7 @@ initT_CORDEX()
 
 ##//! Initialisation of the command launcher
 
-initTryCom()
+intTryComRepeat()
 {
   # parse REATTEMPT_LIMIT and SLEEP_TIME
 
@@ -3190,7 +3190,7 @@ logConfiguration()
   # with the command-line call
 
   # when a session is resumed
-  test -e ${SESSION_LOGDIR}/session.log && return
+  test -e ${SESSION_LOGDIR}/session.prmbl && return
 
   # a preamble will be copied to all log-files
   local preamble=${SESSION_LOGDIR}/session.prmbl
@@ -3257,6 +3257,7 @@ log()
 
   if [ "$1" = '--start' ] ; then
     s_out="start:\n${sp[1]}date: $( date +'%FT%T' )"
+    s_out="${s_out}\n${sp[1]}qa-revision: ${QA_REVISION}"
     echo -e "$s_out" >> ${SESSION_LOGDIR}/session.prmbl
 
     cp ${SESSION_LOGDIR}/session.prmbl ${SESSION_LOGDIR}/session.log

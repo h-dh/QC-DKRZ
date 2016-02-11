@@ -766,7 +766,7 @@ DRS_CV::findPath_faults(Split& drs, Split& x_e,
 
     if( i == -1 )
     {
-      text = " check failed, suspicion of a missing item in the path, found" ;
+      text = " suspicion of a missing item in the path, found" ;
       text += hdhC::tf_val(drs.getStr()) ;
 
       break;
@@ -781,9 +781,9 @@ DRS_CV::findPath_faults(Split& drs, Split& x_e,
           continue;
       }
 
-      text = " check failed, expected " ;
-      text += hdhC::tf_assign(x_e[j],t) ;
-      text += " found" ;
+      text = " global  " ;
+      text += hdhC::tf_att(hdhC::empty,x_e[j],t) ;
+      text += " vs." ;
       text += hdhC::tf_val(drs[drsBeg+j]) ;
 
       break;
