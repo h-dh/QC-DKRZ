@@ -55,7 +55,7 @@ The tool is distributed in two versions:
 
   .. code-block:: bash
 
-    git clone https://github.com/h-dh/QA-DKRZ
+    git clone https://github.com/IS-ENES-Data/QA-DKRZ
 
   The QA runs are started on the command-line by:
 
@@ -464,7 +464,7 @@ Best Practise
 
     - Get sources
       QC-0.4: download the script install
-      QA-DKRZ: git clone https://github.com/h-dh/QA-DKRZ
+      QA-DKRZ: git clone https://github.com/IS-ENES-Data/QA-DKRZ
 
     - Creation of the 'install_configure' file
         if the NetCDF-4 library with HDF5 support is available:
