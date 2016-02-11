@@ -106,6 +106,7 @@ Variable::clear(void)
     pSrcBase=0;
     pIn=0;
     pNc=0;
+    return;
 }
 
 int

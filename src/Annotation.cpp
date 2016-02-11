@@ -136,8 +136,6 @@ Annotation::copyInit(Annotation *n)
      code.push_back( n->code[i] ) ;
   for( size_t i=0 ; i < n->count.size() ; ++i )
      count.push_back( n->count[i] ) ;
-  for( size_t i=0 ; i < n->isAll.size() ; ++i )
-     isAll.push_back( n->isAll[i] ) ;
   for( size_t i=0 ; i < n->level.size() ; ++i )
      level.push_back( n->level[i] ) ;
   for( size_t i=0 ; i < n->task.size() ; ++i )
@@ -238,7 +236,6 @@ Annotation::findIndex(std::string &key, bool isOnly)
   }
 
   // scan over explicit flags and explicit name
-  bool notByDefault=false;
   for( size_t i=0 ; i < code.size() ; ++i)
   {
      if( code[i] == key )
@@ -255,13 +252,8 @@ Annotation::findIndex(std::string &key, bool isOnly)
 
           return false;
         }
-        else
-          notByDefault=true;
      }
   }
-
-  if(notByDefault)
-    return notByDefault;
 
   // scan over explicit flags, but wild-card name
   for( size_t i=0 ; i < code.size() ; ++i)
@@ -290,7 +282,7 @@ Annotation::findIndex(std::string &key, bool isOnly)
      {
         if( currName == var[i] || var[i] == "*" )
         {
-          push_back( key, currName, frq[i], level[i], true,
+          push_back( key, currName, frq[i], level[i],
               task[i], "", value[i], xRecord_0[i], xRecord_1[i]);
 
           currIndex = code.size() -1 ;
@@ -647,7 +639,6 @@ Annotation::parse(void)
 
   std::vector<std::string> tmpCodes;
   std::vector<std::string> vars;
-  std::vector<bool>        enabledByDefault;
   std::string              checkListText;
   std::string              str0;
 
@@ -665,7 +656,6 @@ Annotation::parse(void)
 
      tmpCodes.clear();  // reset
      vars.clear();
-     enabledByDefault.clear();
 
      if( currFrq.size() )
        currFrq.clear();
@@ -812,16 +802,11 @@ Annotation::parse(void)
           vars.push_back( str0.substr(4) );
         else
           vars.push_back( str0 );
-
-        enabledByDefault.push_back(false);
      }
 
      // any variable specified? No? Then, set '*' for all variables
      if( vars.size() == 0 )
-     {
        vars.push_back("*");
-       enabledByDefault.push_back(true);
-     }
 
      if( tmpCodes.size() == 0 )
        tmpCodes.push_back("*");  // apply to all kinds of error flags
@@ -834,7 +819,6 @@ Annotation::parse(void)
        {
           // push the corresponding vectors
           var.push_back(vars[j]);
-          isAll.push_back(enabledByDefault[j]);
           code.push_back(tmpCodes[cc]);
 
           task.push_back("");
@@ -1134,7 +1118,7 @@ Annotation::printNotes(std::string &tag, std::string &caption,
 void
 Annotation::push_back(std::string pf_code, std::string pf_var,
       std::vector<std::string> &pf_frq, std::string pf_level,
-      bool pf_isAll, std::string pf_task, std::string pf_text,
+      std::string pf_task, std::string pf_text,
       std::vector<std::string> &pf_value,
       std::vector<size_t> &pf_xRec_0, std::vector<size_t> &pf_xRec_1)
 {
@@ -1142,7 +1126,6 @@ Annotation::push_back(std::string pf_code, std::string pf_var,
    count.push_back(0) ;
    frq.push_back(pf_frq) ;
    level.push_back(pf_level) ;
-   isAll.push_back(pf_isAll) ;
    task.push_back(pf_task) ;
    text.push_back(pf_text) ;
    value.push_back(pf_value) ;
@@ -1156,7 +1139,7 @@ Annotation::push_back(std::string pf_code, std::string pf_var,
 void
 Annotation::push_front(std::string pf_code, std::string pf_var,
       std::vector<std::string> &pf_frq, std::string pf_level,
-      bool pf_isAll, std::string pf_task, std::string pf_text,
+      std::string pf_task, std::string pf_text,
       std::vector<std::string> &pf_value,
       std::vector<size_t> &pf_xRec_0, std::vector<size_t> &pf_xRec_1)
 {
@@ -1167,7 +1150,6 @@ Annotation::push_front(std::string pf_code, std::string pf_var,
      count.push_back(0) ;
      frq.push_back(pf_frq) ;
      level.push_back(pf_level) ;
-     isAll.push_back(pf_isAll) ;
      task.push_back(pf_task) ;
      text.push_back(pf_text) ;
      value.push_back(pf_value) ;
@@ -1186,7 +1168,6 @@ Annotation::push_front(std::string pf_code, std::string pf_var,
    std::vector<std::string>::iterator it_code  = code.begin();
    std::vector<size_t>::iterator      it_count = count.begin();
    std::vector<std::string>::iterator it_level = level.begin();
-   std::vector<bool>::iterator        it_isAll = isAll.begin();
    std::vector<std::string>::iterator it_task  = task.begin();
    std::vector<std::string>::iterator it_text  = text.begin();
    std::vector<std::string>::iterator it_var   = var.begin();
@@ -1200,7 +1181,6 @@ Annotation::push_front(std::string pf_code, std::string pf_var,
    count.insert(it_count, 0) ;
    frq.insert(it_frq, pf_frq) ;
    level.insert(it_level, pf_level) ;
-   isAll.insert(it_isAll, pf_isAll) ;
    task.insert(it_task, pf_task) ;
    text.insert(it_text, pf_text) ;
    var.insert(it_var, pf_var) ;

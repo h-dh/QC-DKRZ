@@ -304,7 +304,7 @@ CF::attributeSpellCheck(void)
           break;
       }
 
-      if( eDMin < 0.5 && ! var.isValidAtt(CF::attName[eDMin_ix]) )
+      if( eDMin < 0.25 && ! var.isValidAtt(CF::attName[eDMin_ix]) )
       {
         if( notes->inq(bKey + "0h", var.name) )
         {
@@ -316,7 +316,8 @@ CF::attributeSpellCheck(void)
           }
           else
             capt += hdhC::tf_att(var.name,var.attName[j]) ;
-          capt += "misspelled? Did you mean " ;
+
+          capt += " misspelled? Did you mean " ;
           capt += CF::attName[eDMin_ix] + "?";
 
           (void) notes->operate(capt) ;
@@ -456,9 +457,8 @@ CF::checkCoordinateValues(Variable& var, bool isFormTermAux, T x)
   // Exceptions:
   // variables named by a formula_terms attribute
   // and auxiliary coordinate variables
-  bool testMonotony=true;
-  if( !var.coord.isCoordVar || isFormTermAux )
-    testMonotony=false;
+  bool testMonotony= ( !var.coord.isCoordVar || isFormTermAux ) \
+    ? false : true ;
 
   MtrxArr<T> mv;
 
@@ -519,7 +519,7 @@ CF::checkCoordinateValues(Variable& var, bool isFormTermAux, T x)
       }
 
       // any kind of missing value
-      if( mv.valExcp->exceptionCount.size() )
+      if( var.coord.isCoordVar && mv.valExcp->exceptionCount.size() )
       {
         bool isFirst[]={ true, true, true, true, true, true};
 
@@ -536,7 +536,7 @@ CF::checkCoordinateValues(Variable& var, bool isFormTermAux, T x)
                 capt += "be ";
                 capt += hdhC::tf_assign(n_FillValue,
                                       var.getAttValue(n_FillValue)) ;
-                capt += " found " ;
+                capt += " found" ;
                 isFirst[0]=false;
               }
               else if( isFirst[1] && var.isValidAtt(n_missing_value) )
@@ -767,7 +767,7 @@ CF::checkGroupRelation(void)
 
           capt += "oordinate " ;
           capt += hdhC::tf_var(var.name) ;
-          capt += "is not related to any other " + n_variable ;
+          capt += "seems to be unrelated to any other " + n_variable ;
 
           (void) notes->operate(capt) ;
           notes->setCheckCF_Str( fail );
@@ -1335,6 +1335,30 @@ CF::finalAtt_coordinates_B(void)
       continue;
     if( var.isLabel )
       continue;
+
+    // a variable depends soley on coordinate dimensions
+    bool isSole=true;
+    for( size_t j=0 ; j < var.dimName.size() ; ++j )
+    {
+      size_t pos;
+      if( hdhC::isAmong(var.dimName[j], pIn->variableNames, pos) )
+      {
+         if( ! pIn->variable[pos].coord.isCoordVar )
+         {
+           isSole=false;
+           break;
+         }
+      }
+      else
+      {
+         isSole=false;
+         break;
+      }
+    }
+
+    if(isSole)
+      continue;
+
     if( pIn->nc.isIndexType(var.name) )
       continue;
 
@@ -1746,21 +1770,32 @@ CF::getAssociatedGroups(void)
   if(isSD)
   {
     // data vars must only depend on a single dim
-    std::string onlyDim;
+    std::vector<std::string> vs_single;
+    std::vector<size_t> vs_count;
+
     for( size_t i=0 ; i < pIn->varSz ; ++i )
     {
       Variable& var = pIn->variable[i];
 
       if( var.isDataVar() )
       {
-        if( var.dimName.size() != 1 )
-          return;
-        else
-          onlyDim=var.dimName[0] ;
+        if( var.dimName.size() == 1 )
+        {
+          size_t vs_ix;
+          if( hdhC::isAmong(var.dimName[0], vs_single, vs_ix) )
+            ++vs_count[vs_ix];
+          else
+          {
+            vs_single.push_back(var.dimName[0]) ;
+            vs_count.push_back(1);
+          }
+        }
       }
     }
 
-    associatedGroups.push_back(onlyDim);
+    for( size_t i=0 ; i < vs_single.size() ; ++i )
+      if( vs_count[i] > 1 )
+        associatedGroups.push_back(vs_single[i]);
   }
 
   return;
@@ -2522,7 +2557,9 @@ CF::postAnnotations(void)
     {
       if( (pos=vs_item[i].rfind('_')) < std::string::npos )
       {
-        spec = vs_annot[i].substr(pos+1) ;
+        if( vs_annot[i].size() > pos+1 )
+          spec = vs_annot[i].substr(pos+1) ;
+
         if(i)
         {
           if( spec0 == spec )
@@ -2748,7 +2785,8 @@ CF::scanStdNameTable(std::vector<int> &zx)
 
          if( var.snTableEntry.found )
          {
-            s = testName[i].substr(s.size()) ;
+            if( testName[i].size() > s.size() )
+              s = testName[i].substr(s.size()) ;
             var.snTableEntry.remainder = hdhC::stripSides(s) ;
 
             // if sn is right, but there is something with the modifier
@@ -2936,50 +2974,43 @@ CF::timeUnitsFormat(Variable& var, bool isAnnot)
   }
 */
 
-  // using split ignores multiple blanks
-  // convert dateTtimeZone to 'date time Zone'
-  size_t countColon=0;  // time separator
-  size_t countDash=0;   // date separator
-
-  std::string str0;
-  for( size_t i=0 ; i < units.size() ; ++i )
+  // replace the T-separator of dateTtime by a blank; doesn't matter if
+  // other Ts are replaced, too, because then units wouldn't be of time
+  size_t pos=0;
+  while( (pos=units.find('T',pos)) < std::string::npos )
   {
-    if( units[i] == '-' )
-       ++countDash;
-    else if( countDash == 2 )
+    if( hdhC::isDigit(units[pos-1]) )
     {
-      if( countColon == 2 )
-      {
-         if( ! ( units[i] == '.' || hdhC::isDigit(units[i]) ) )
-         {
-            str0 += ' ';
-            countColon=9999; // the rest declares the time-zone
-         }
-      }
-      else if( units[i] == 'T' )
-      {
-         str0 += ' ';
-         continue;
-      }
-      else if( units[i] == 't' )
-      {
-         str0 += ' ';
-         continue;
-      }
-      else if( units[i] == ':' )
-         ++countColon;
-      else if( units[i] == 'Z' || units[i] == 'z')
-         str0 += ' ';  // separate the trivial time zone indicator
+      if( pos < units.size() && hdhC::isDigit(units[pos+1]))
+        units[pos]=' ';
     }
 
-    str0 += units[i] ;
+    ++pos;
   }
 
-  Split x_units(str0);
+  Split x_units(units);
 
   size_t sz ;
   if( (sz=x_units.size()) < 2 )
     return false;  // to short; even for invalid time units
+
+  //is any time-zone directly appended to time?
+  size_t last = x_units.size() - 1;
+  for( size_t i=0 ; i < x_units[last].size() ; ++i )
+  {
+    if( hdhC::isAlpha(x_units[last][i]) )
+    {
+      if( i && hdhC::isDigit(x_units[last][i-1]) )
+      {
+        // could be an appended TZ, if the string were not totally wrong
+        std::string t0(x_units[last].substr(i));
+        x_units[last] = x_units[last].substr(0,i);
+        x_units.append(t0);  // a trailung tz was found and is now a separate item
+      }
+
+      break;
+    }
+  }
 
   // check the value of units
   bool isInvalidFreq=true;
@@ -2988,166 +3019,26 @@ CF::timeUnitsFormat(Variable& var, bool isAnnot)
   bool isInvalidTime=false;  // could be omitted
   bool isInvalidTZ=false;    // could be omitted
 
-  bool isProcTime=true;  // could be omitted
-  bool isProcTZ=true;    // could be omitted
+  bool tryTime=true;
+  bool tryTZ=true;
 
-  std::vector<std::string> period;
-  period.push_back("year");
-  period.push_back("month");
-  period.push_back("day");
-  period.push_back("hour");
-  period.push_back("minute");
-  period.push_back("second");
-  period.push_back("d");
-  period.push_back("hr");
-  period.push_back("h");
-  period.push_back("min");
-  period.push_back("sec");
-
-  for(size_t itm=0 ; itm < sz ; ++itm )
+  for( size_t itm=0 ; itm < x_units.size() ; ++itm )
   {
     if( isInvalidFreq )
+      isInvalidFreq = timeUnitsFormat_frq(x_units[itm]);
+    else if( isInvalidKey )
+      isInvalidKey  = timeUnitsFormat_key(x_units[itm]);
+    else if( isInvalidDate )
+      isInvalidDate = timeUnitsFormat_date(var, x_units[itm], isAnnot);
+    else if( tryTime )
     {
-      for( size_t i=0 ; i < period.size() ; ++i )
-      {
-        if( (x_units[itm] == period[i]) || (x_units[itm] == (period[i] + "s")) )
-        {
-          isInvalidFreq=false;
-          break;
-        }
-      }
-
-      if( !isInvalidFreq )
-        continue;
+      if( ! (isInvalidTime = timeUnitsFormat_time(x_units[itm])) )
+        tryTime=false;
     }
-
-    if( isInvalidKey )
+    else if( tryTZ )
     {
-      if( x_units[itm] == "since" )
-      {
-        isInvalidKey=false;
-        continue;
-      }
-    }
-
-    if( isInvalidDate )
-    {
-      // split the date; a negative date is ignored
-      Split dt(x_units[itm], "-");
-      size_t countFields=0;
-
-      if( dt.size() )
-      {
-        for( size_t j=0 ; j < dt.size() ; ++j )
-          if( hdhC::isDigit(dt[j]) )
-            ++countFields;
-
-        if( countFields == 3 )
-        {
-          if( isAnnot && followRecommendations
-              && (dt[0] == "0" || dt[0] == "00")
-                 && (dt[1] == "1" || dt[1] == "01")
-                   && (dt[2] == "1" || dt[2] == "01") )
-            chap44a_reco(var);
-
-          isInvalidDate=false;
-          continue;
-        }
-      }
-    }
-
-    if( isProcTime )  // test the time string
-    {
-      size_t countFields=0;
-
-      // a hypen is never valid
-      if( x_units[itm].find('-') < std::string::npos )
-      {
-        isInvalidTime = true;
-        isProcTime=false;
-      }
-      else
-      {
-        Split tm(x_units[itm], hdhC::colon);
-
-        if( tm.size() )
-        {
-          for( size_t j=0 ; j < tm.size() ; ++j )
-          {
-            if( j < 2 )
-            {
-              if( hdhC::isDigit(tm[j]) )
-                ++countFields;
-            }
-            else if( j == 2 )
-            {
-              // special: seconds without an optionally appended TZ character
-              Split x_sec(tm[j], ".");
-
-              if( x_sec.size() == 1 && hdhC::isDigit(x_sec[0]) )
-                ++countFields;
-              else if( x_sec.size() == 2
-                        && hdhC::isDigit(x_sec[0]) && hdhC::isDigit(x_sec[1]) )
-                ++countFields;
-            }
-          }
-        }
-
-        if( countFields == tm.size() )
-          isProcTime=false;
-        else if(countFields)
-        {
-          isInvalidTime = true;
-          isProcTime=false;
-        }
-      }
-
-      continue ;
-    }
-
-    if( isProcTZ )  // time zone other than Z
-    {
-       if( x_units[itm] == "Z" )
-       {
-          isProcTZ=false;
-          continue;
-       }
-
-       bool is=false;
-
-       if( x_units[itm][0] == '-' )
-         str0=x_units[itm].substr(1);
-       else
-         str0=x_units[itm];
-
-       if( str0[0] == ':' )  // invalid begin
-         isInvalidTZ=true;
-       else
-       {
-         Split tz(str0, hdhC::colon);
-         size_t tzSz=tz.size();
-
-         for( size_t j=0 ; j < tzSz ; ++j )
-         {
-           if( ! hdhC::isDigit(tz[j]) )
-             isInvalidTZ=true;
-           else if( tzSz == 1 )
-           { // n, nn, nnnn  are valid
-             if( tz[j].size() > 4 )
-               isInvalidTZ=true;
-           }
-           else if( tzSz == 2 )
-           { // n:n, nn:n, n:nn, nn:nn are valid
-             if( tz[0].size() > 2 || tz[1].size() > 2 )
-               isInvalidTZ=true;
-           }
-           else
-             is=true; // sound TZ
-         }
-       }
-
-       if( is || isInvalidTZ )
-          isProcTZ=false;
+      if( ! (isInvalidTZ = timeUnitsFormat_TZ(var, x_units[itm])) )
+         tryTZ=false;
     }
   }
 
@@ -3159,35 +3050,31 @@ CF::timeUnitsFormat(Variable& var, bool isAnnot)
     return true;
 
   // too many failures: probably not a time unit
-  size_t countBad=0;
-  size_t countGood=0;
+  size_t countInvalid=0;
+  size_t countValid=0;
 
   if( isInvalidFreq )
-    ++countBad;
+    ++countInvalid;
   else
-    ++countGood;
+    ++countValid;
 
   if( isInvalidKey )
-    ++countBad;
+    ++countInvalid;
   else
-    ++countGood;
+    ++countValid;
 
   if( isInvalidDate )
-    ++countBad;
+    ++countInvalid;
   else
-    ++countGood;
+    ++countValid;
 
   if( isInvalidTime )
-    ++countBad;
-  else if( !isProcTime )
-    ++countGood;
+    ++countInvalid;
 
   if( isInvalidTZ )
-    ++countBad;
-  else if( !isProcTZ )
-    ++countGood;
+    ++countInvalid;
 
-  if( isAnnot && countGood > 2 && countBad )
+  if( isAnnot && countValid > 2 && countInvalid )
   {
     std::vector<std::string> text;
 
@@ -3198,15 +3085,15 @@ CF::timeUnitsFormat(Variable& var, bool isAnnot)
       text.push_back("Missing key-word=since in") ;
 
     // time could be omitted, indicated by isProcTime
-    if( isInvalidDate && isProcTime )
+    if( isInvalidDate )
       text.push_back("Missing reference date, found") ;
     else if( isInvalidDate )
-      text.push_back("Invalid date component in") ;
+      text.push_back("Invalid date item in") ;
     else if( isInvalidTime )
-      text.push_back("Invalid time component in") ;
+      text.push_back("Invalid time item in") ;
 
     if( isInvalidTZ )
-      text.push_back("Invalid time zone component in") ;
+      text.push_back("Invalid time-zone item in") ;
 
     for( size_t t=0 ; t < text.size() ; ++t )
     {
@@ -3222,11 +3109,189 @@ CF::timeUnitsFormat(Variable& var, bool isAnnot)
     }
   }
 
-  if( countGood && countGood > countBad )
+  if( countValid && countValid > countInvalid )
     return true; // probably a time units format
 
   return false; //probably not
 }
+
+bool
+CF::timeUnitsFormat_frq(std::string item )
+{
+  std::vector<std::string> period;
+  period.push_back("year");
+  period.push_back("month");
+  period.push_back("day");
+  period.push_back("hour");
+  period.push_back("minute");
+  period.push_back("second");
+  period.push_back("d");
+  period.push_back("hr");
+  period.push_back("h");
+  period.push_back("min");
+  period.push_back("sec");
+
+  int last=item.size()-1;
+
+  if(last > -1)
+  {
+    // both singular and plural are accepted
+    if( item[last] == 's' )
+      item = item.substr(0,last) ;
+  }
+
+  if( hdhC::isAmong(item, period) )
+    return false;  // ok
+
+  return true ;
+}
+
+bool
+CF::timeUnitsFormat_key(std::string item)
+{
+  if( item == "since" )
+    return false;  // ok
+
+  return true;
+}
+
+bool
+CF::timeUnitsFormat_date(Variable& var, std::string item, bool isAnnot)
+{
+  // true means: fault
+
+  // a colon is never valid
+  if( item.find(':') < std::string::npos )
+    return true;
+
+  Split x_item(item, "-");
+
+  size_t countWords=0;
+
+  for( size_t j=0 ; j < x_item.size() ; ++j )
+  {
+    if( hdhC::isDigit(x_item[j]) )
+    {
+        int num = hdhC::string2Double(x_item[j]);
+
+        if( j == 0 )
+          ++countWords;
+        else if( j == 1  && num < 13 )
+          ++countWords;
+        else if( j == 2 && num < 32 )
+          ++countWords;
+    }
+  }
+
+  if( countWords == 3 )
+  {
+    if( isAnnot && followRecommendations
+        && (x_item[0] == "0" || x_item[0] == "00")
+            && (x_item[1] == "1" || x_item[1] == "01")
+              && (x_item[2] == "1" || x_item[2] == "01") )
+      chap44a_reco(var);
+
+    return false;  // ok
+  }
+
+  return true;
+}
+
+bool
+CF::timeUnitsFormat_time(std::string item)
+{
+  // true means: fault
+
+  // a hypen is never valid
+  if( item.find('-') < std::string::npos )
+    return true;
+
+  Split x_item(item, hdhC::colon);
+
+  size_t countWords=0;
+
+  if( x_item.size() )
+  {
+    for(size_t j=0 ; j < x_item.size() ; ++j )
+    {
+      if( hdhC::isDigit(x_item[j]) )
+      {
+        int num = hdhC::string2Double(x_item[j]);
+
+        if( j && num < 60 )
+          ++countWords;
+        else if( j == 0 && num < 24 )
+          ++countWords;
+      }
+    }
+
+    if( countWords == x_item.size() )
+      return false; // ok
+  }
+
+  return true;
+}
+
+bool
+CF::timeUnitsFormat_TZ(Variable& var, std::string item)
+{
+  // true means: fault
+
+  if( item == "Z" || item == "z" )
+    return false;
+
+  if( item[0] == '-' )
+    item=item.substr(1);
+
+  if( item[0] == ':' )  // invalid begin
+    return true;
+  else
+  {
+    std::string t0( hdhC::Lower()(item) );
+
+    if( t0 == "utc" )
+    {
+      if( notes->inq(bKey + "44b", var.name) )
+      {
+        std::string capt(hdhC::tf_att(var.name, n_units, hdhC::colon)) ;
+        capt += "invalid time-zone indicator, found";
+        capt += hdhC::tf_val(item);
+        capt += " instead of Z or omission";
+
+        (void) notes->operate(capt) ;
+        notes->setCheckCF_Str( fail );
+      }
+
+      return false;
+    }
+
+    Split x_item(item, hdhC::colon);
+
+    size_t sz = x_item.size();
+
+    if( sz < 3 )
+    {
+      for( size_t j=0 ; j < sz ; ++j )
+      {
+        if( ! hdhC::isDigit(x_item[j]) )
+           return true;
+        else if( sz == 1 )
+        { // n, nn, nnnn  are valid
+          if( x_item[j].size() > 4 )
+            return true;
+        }
+        else if( sz == 2 )
+        { // n:n, nn:n, n:nn, nn:nn are valid
+          if( x_item[0].size() > 2 || x_item[1].size() > 2 )
+            return true;
+        }
+      }
+    }
+  }
+
+  return false;  // ok
+}
+
 
 std::string
 CF::units_lon_lat(Variable& var, std::string units)
@@ -3483,6 +3548,9 @@ CF::chap22(void)
 
     for( size_t j=0 ; j < var.attName.size() ; ++j )
     {
+      if( var.attType.size() == j )
+        break;
+
       if( var.attType[j] == NC_STRING )
       {
         if( notes->inq(bKey + "22b", var.name) )
@@ -4082,6 +4150,9 @@ CF::chap26(void)
 
        for( size_t k=0 ; k < CF::attName.size() ; ++k )
        {
+         if( var.attType.size() == k )
+            break;
+
          if( aName == CF::attName[k] )
          {
             if( CF::attType[k] == 'D' )
@@ -4435,6 +4506,9 @@ CF::chap34(void)
    // there is nothing to check; the attribute just expresses relationships
    // between non-coordinate variables.
 
+   // non-var terms in the attribute
+   std::vector<std::string> non_var;
+
    for( size_t i=0 ; i < pIn->varSz ; ++i )
    {
      Variable& var = pIn->variable[i];
@@ -4442,27 +4516,50 @@ CF::chap34(void)
      int j;
      if( (j=var.getAttIndex(n_ancillary_variables)) > -1 )
      {
-       std::string &str = var.attValue[j][0];
-       Split x_av(str);
+        non_var.clear();
+        size_t countSuccess=0;
 
-       // scan over declared variable names
-       for( size_t jj=0 ; jj < x_av.size() ; ++jj )
-       {
-         int ii = pIn->getVarIndex(x_av[jj]);
+        std::string &str = var.attValue[j][0];
 
-         if( ii == -1 )
-         {
-           if( notes->inq(bKey + "34a", var.name) )
-           {
-             std::string capt(hdhC::tf_att(var.name, n_ancillary_variables));
-             capt += "declares " + hdhC::tf_var(x_av[jj], hdhC::no_blank) ;
-             capt += ", which is not in the file" ;
+        bool isComma=false;
+        if( str.find(',') < std::string::npos )
+          isComma=true;
 
-             (void) notes->operate(capt) ;
-             notes->setCheckCF_Str( fail );
-           }
-         }
-       }
+        Split x_av(str, "() ,", true);
+
+        // scan over declared variable names
+        for( size_t jj=0 ; jj < x_av.size() ; ++jj )
+        {
+          int ii = pIn->getVarIndex(x_av[jj]);
+
+          if( ii == -1 )
+            non_var.push_back(x_av[jj]);
+          else
+            ++countSuccess;
+        }
+
+        std::string text;
+
+        if( non_var.size() > 2 && countSuccess )
+        {
+          text  = "CF requires a blank separated list of variable names, ";
+          text += "found names embedded in text";
+        }
+        else if( non_var.size() )
+        {
+          text  = "declares non-existing variables, found " ;
+          text += hdhC::getVector2Str(non_var) ;
+        }
+        else if(isComma)
+          text = "CF requires a blank separated list of variable names";
+
+        if( text.size() && notes->inq(bKey + "34a", var.name) )
+        {
+          std::string capt(hdhC::tf_att(var.name, n_ancillary_variables));
+
+          (void) notes->operate(capt + text) ;
+          notes->setCheckCF_Str( fail );
+        }
      }
    }
 
@@ -6518,7 +6615,7 @@ CF::chap56_attProps(
      if( notes->inq(bKey + "5i", dataVar.name, NO_MT) )
      {
         std::string capt(hdhC::tf_var(dataVar.name, hdhC::colon));
-        capt += "Missing " + hdhC::tf_att(n_coordinates) ;
+        capt += "Missing coordinates attribute" ;
 
         (void) notes->operate(capt) ;
         notes->setCheckCF_Str( fail );
@@ -9491,13 +9588,13 @@ CF::chap9_featureType(
               break;
           }
 
-          if( eDMin < 0.5 && x_str[x] != validFT_vs[eDMin_ix] )
+          if( eDMin < 0.25 && x_str[x] != validFT_vs[eDMin_ix] )
           {
             if( notes->inq(bKey + "0h", n_global) )
             {
               std::string capt("is " +
-                hdhC::tf_att(hdhC::empty, n_featureType, x_str[x], hdhC::blank)) ;
-              capt += "misspelled? Did you mean " ;
+                hdhC::tf_att(hdhC::empty, n_featureType, x_str[x])) ;
+              capt += " misspelled? Did you mean " ;
               capt += validFT_vs[eDMin_ix] + "?";
 
               (void) notes->operate(capt) ;
@@ -10458,6 +10555,10 @@ CF::chap9_trajectoryProfile(std::vector<int>& xyzt_ix, std::vector<size_t>& dv_i
   return true;
 }
 
+// note that the last group are not names of attributes, but commonly used words
+// to help the spell checker.
+// IMPORTANT: CF_AttType.size() only for real attributes
+
 const char* CF_AttName[] = {
   "standard_error_multiplier"          ,
   "ancillary_variables", "axis"        , "calendar"     , "bounds"       , "cell_measures"
@@ -10476,6 +10577,7 @@ const char* CF_AttName[] = {
 , "scale_factor_at_central_meridian", "scale_factor_at_projection_origin"   , "semi_major_axis"
 , "semi_minor_axis"                 , "standard_parallel"   , "straight_vertical_longitude_from_pole"
 
+, "variance"
 };
 
 const char CF_AttType[] = {
@@ -10497,5 +10599,5 @@ const char CF_AttType[] = {
 ,'N', 'N', 'N'
 };
 
-std::vector<std::string> CF::attName(CF_AttName, CF_AttName + 55);
+std::vector<std::string> CF::attName(CF_AttName, CF_AttName + 56);
 std::vector<char>        CF::attType(CF_AttType, CF_AttType + 55);

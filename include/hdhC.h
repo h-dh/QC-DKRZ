@@ -373,13 +373,23 @@ isAlpha(std::string, bool isContains=false);
 bool
 isAlphaNum(unsigned char);
 
-// "": exact, "beg"|"end": match from begin|end, "find": anywhere
+// "mode": exact, "beg"|"end": match from begin|end, "find": anywhere
 bool
 isAmong(std::string&, std::vector<std::vector<std::string> >& set,
         std::string mode="");
 
+// size_t& outer, size_t inner fetch also the indeces of vector and position
+// of a first match
+bool
+isAmong(std::string&, std::vector<std::vector<std::string> >& set,
+        size_t& outer, size_t& inner,  std::string mode="");
+
 bool
 isAmong(std::string&, std::vector<std::string>& set, std::string mode="");
+
+// get also the index of a first match
+bool
+isAmong(std::string&, std::vector<std::string>& set, size_t&, std::string mode="");
 
 template <typename T>
 bool
@@ -387,7 +397,15 @@ isAmong(T, std::vector<T>& set);
 
 template <typename T>
 bool
+isAmong(T, std::vector<T>& set, size_t&);
+
+template <typename T>
+bool
 isAmong(T, std::vector<T>& set, bool);  // bool for the compiler
+
+template <typename T>
+bool
+isAmong(T, std::vector<T>& set, size_t&, bool);  // bool for the compiler
 
 // all==true: the entire sub-set must be found in the set
 template <typename T>

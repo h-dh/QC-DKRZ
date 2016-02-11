@@ -581,7 +581,7 @@ InFile::init(void)
       std::vector<std::string> value;
       std::vector<size_t> xRecord_01;
 
-     	notes->push_front(key , "*", freq, level, true, task, "", value,
+     	notes->push_front(key , "*", freq, level, task, "", value,
 	                         xRecord_01, xRecord_01);
       notes->inq(key);
 
@@ -784,6 +784,7 @@ InFile::openNc(bool isNew)
     makeVariable( &nc, var[j] );
 
     vIx[ var[j] ] = j ;
+    variableNames.push_back(variable.back().name);
   }
 
   // a pseudo-variable for the global attributes

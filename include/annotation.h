@@ -115,12 +115,12 @@ class Annotation : public IObj
   //! Insert a directive internally aside a check-list file.
   void push_back(std::string pf_code, std::string pf_var,
           std::vector<std::string> &pf_frq, std::string pf_level,
-          bool pf_isAll, std::string pf_task, std::string pf_text,
+          std::string pf_task, std::string pf_text,
           std::vector<std::string> &pf_value,
           std::vector<size_t> &xRec_0, std::vector<size_t> &xRec_1 );
   void push_front(std::string pf_code, std::string pf_var,
           std::vector<std::string> &pf_frq, std::string pf_level,
-          bool pf_isAll, std::string pf_task, std::string pf_text,
+          std::string pf_task, std::string pf_text,
           std::vector<std::string> &pf_value,
           std::vector<size_t> &xRec_0, std::vector<size_t> &xRec_1 );
 
@@ -177,7 +177,6 @@ class Annotation : public IObj
   std::vector<std::string> code;   // from check_list.txt
   std::vector<size_t>      count;  // number of of occurences
   std::vector<std::string> level;  // L1, ... ,L4
-  std::vector<bool>        isAll;  // enabled by default
   std::vector<std::string> task;   // D/E/S/W: disable/error/warning
   std::vector<std::string> text;   // user-provided headlines
   std::vector<std::string> var;    // acronym; name
