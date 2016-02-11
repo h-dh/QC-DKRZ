@@ -62,7 +62,7 @@ License
 
 Please see the *Disclaimer of Warranty* (`DoW.txt`) file in the top distribution directory.
 
-.. |build-status| image:: https://travis-ci.org/h-dh/QA-DKRZ.svg?branch=master
-   :target: https://travis-ci.org/h-dh/QA-DKRZ
+.. |build-status| image:: https://travis-ci.org/IS-ENES-Data/QA-DKRZ.svg?branch=master
+   :target: https://travis-ci.org/IS-ENES-Data/QA-DKRZ
 .. |conda-install| image:: https://anaconda.org/birdhouse/qa-dkrz/badges/installer/conda.svg
    :target: https://anaconda.org/birdhouse/qa-dkrz
