@@ -27,12 +27,6 @@ then any deviation from compliance will be annotated in the QA results.
 Please, direct questions or comments to hollweg@dkrz.de
 
 
-Requirements
-============
-
-The tool requires the BASH shell and a C/C++ compiler.
-
-
 Versions
 ========
 
