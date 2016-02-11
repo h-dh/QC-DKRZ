@@ -1545,8 +1545,16 @@ bool
 isAmong(std::string& item, std::vector<std::vector<std::string> >& set,
   std::string mode)
 {
-  for(size_t i=0 ; i < set.size() ; ++i )
-    if( isAmong(item, set[i], mode ) )
+  size_t i, j;
+  return isAmong(item, set, i, j, mode);
+}
+
+bool
+isAmong(std::string& item, std::vector<std::vector<std::string> >& set,
+  size_t& i, size_t& j, std::string mode)
+{
+  for(i=0 ; i < set.size() ; ++i )
+    if( isAmong(item, set[i], j, mode ) )
       return true ;
 
   return false;
@@ -1554,6 +1562,14 @@ isAmong(std::string& item, std::vector<std::vector<std::string> >& set,
 
 bool
 isAmong(std::string& item, std::vector<std::string>& set, std::string mode)
+{
+   size_t i;
+   return isAmong(item, set, i, mode);
+}
+
+bool
+isAmong(std::string& item, std::vector<std::string>& set,
+        size_t& i,std::string mode)
 {
   //mode: ""     --> 1: exact
   //      "beg"  --> 2: sub-str on the left
@@ -1571,29 +1587,28 @@ isAmong(std::string& item, std::vector<std::string>& set, std::string mode)
 
   if(!imode)
   {
-    for(size_t i=0 ; i < set.size() ; ++i )
+    for(i=0 ; i < set.size() ; ++i )
       if( item == set[i] )
         return true ;
   }
   else if( imode == 1 )
   {
-    for(size_t i=0 ; i < set.size() ; ++i )
+    for(i=0 ; i < set.size() ; ++i )
       if( item == set[i].substr(0,item.size()) )
         return true ;
   }
   else if( imode == 2 )
   {
-    for(size_t i=0 ; i < set.size() ; ++i )
+    for(i=0 ; i < set.size() ; ++i )
       if( item == set[i].substr(set[i].size() - item.size()) )
         return true ;
   }
   else if( imode == 3 )
   {
-    for(size_t i=0 ; i < set.size() ; ++i )
+    for(i=0 ; i < set.size() ; ++i )
       if( set[i].find(item) < std::string::npos )
         return true ;
   }
-
 
   return false;
 }
@@ -1602,7 +1617,15 @@ template <typename T>
 bool
 isAmong(T item, std::vector<T>& set)
 {
-  for(size_t i=0 ; i < set.size() ; ++i )
+  size_t i;
+  return isAmong(item, set, i);
+}
+
+template <typename T>
+bool
+isAmong(T item, std::vector<T>& set, size_t& i)
+{
+  for(i=0 ; i < set.size() ; ++i )
     if( item == set[i] )
       return true ;
 
@@ -1613,8 +1636,16 @@ template <typename T>
 bool
 isAmong(T item, std::vector<T>& set, bool is)
 {
+  size_t i;
+  return isAmong(item, set, i, is);
+}
+
+template <typename T>
+bool
+isAmong(T item, std::vector<T>& set, size_t& i, bool is)
+{
   // note that the bool ist just for the compiler
-  for(size_t i=0 ; i < set.size() ; ++i )
+  for( i=0 ; i < set.size() ; ++i )
     if( item == set[i] )
       return true ;
 
