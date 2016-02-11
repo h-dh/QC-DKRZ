@@ -8,29 +8,50 @@
 Installation
 ============
 
-.. code-block:: text
+Get sources
+-----------
 
-    - Get sources
-      QC-0.4: download the script install
-      QA-DKRZ: git clone https://github.com/h-dh/QA-DKRZ
+* QC-0.4: download the script install
+* QA-DKRZ: git clone https://github.com/h-dh/QA-DKRZ
 
-    - Creation of the 'install_configure' file
-        if the NetCDF-4 library with HDF5 support is available:
-        ./install
 
-        if supported libs should be protected (by hard-links) against deletion:
-        ./install --link=path
+Create the ``install_configure`` file
+-------------------------------------
 
-        if NetCDF libs have to be built:
-        ./install --build
+If the NetCDF-4 library with HDF5 support is available:
 
-    - Edit the 'install_configure' file
+.. code-block:: bash
 
-    - Verify installation success: ./install --show-inst
-      Note that a verification is already done by the next step which eventually
-      generates results in /package-path/example/test_I
+   $ ./install
 
-    - Make executables: ./install [PROJECT]
+If supported libs should be protected (by hard-links) against deletion:
+
+.. code-block:: bash
+
+   $ ./install --link=path
+
+If NetCDF libs have to be built:
+
+.. code-block:: bash
+
+   $ ./install --build
+
+Edit the ``install_configure`` file
+-----------------------------------
+
+Verify installation success:
+ 
+.. code-block:: bash
+ 
+   $ ./install --show-inst
+
+Note that a verification is already done by the next step which eventually generates results in ``/package-path/example/test_I``.
+
+Make executables: 
+
+.. code-block:: bash
+
+   $ ./install [PROJECT]
 
 Configuration
 =============
