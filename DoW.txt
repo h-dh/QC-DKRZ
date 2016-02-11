@@ -8,4 +8,4 @@ for solving a problem whose incorrect solution could result in injury to a perso
 loss of property.  You use this package at your own risk. 
 The author and publisher disclaim all liability for direct, 
 incidental or consequential damages resulting from your use 
-of the programs, scipts or anything else in this book.
+of the programs, scripts or anything else in this book.
