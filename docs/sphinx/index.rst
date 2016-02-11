@@ -14,6 +14,11 @@ Contents:
    introduction
    userguide/index
 
+.. toctree::
+    :maxdepth: 1
+
+    faq
+    .. changelog
 
 
 Indices and tables

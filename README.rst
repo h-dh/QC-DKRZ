@@ -1,8 +1,10 @@
-====================================
-QA-DKRZ: DKRZ Quality Assurance Tool
-====================================
+=====================================
+QA-DKRZ - DKRZ Quality Assurance Tool
+=====================================
 
 |build-status| |conda-install|
+
+:Version: 0.5.x
 
 Quality Assurance checker of meta-data in climate data sets (netCDF files)
 for CF conformance and CMIP5 and CORDEX projects conventions.
