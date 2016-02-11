@@ -9,4 +9,8 @@ User Guide
     :maxdepth: 2
 
     introduction
+    installation
+    configuration
+    running
+    examples
     
