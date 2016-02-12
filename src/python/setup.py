@@ -6,9 +6,9 @@ from setuptools import setup
 version = '0.5.3'
 description = 'The QA tool is a quality assurance checker for metadata in climate data (NetCDF files).'
 long_description = (
-    open('../../../README.rst').read() + '\n' +
+    open('README.rst').read() # + '\n' +
     #open('AUTHORS.rst').read() + '\n' +
-    open('../../../CHANGES.rst').read()
+    #open('CHANGES.rst').read()
 )
 
 requires = [line.strip() for line in open('requirements.txt')]
