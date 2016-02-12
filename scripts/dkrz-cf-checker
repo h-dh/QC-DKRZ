@@ -2,11 +2,12 @@
 
 descript()
 {
-  echo -e "\nUsage: cf-checker [opts] netCDF-file[s]"
-  echo "Purpose: Check for CF Conventions Compliance"
-  echo "(http://cfconventions.org)."
-  echo "The checker is part of the QA-DKRZ package and must have been compiled"
-  echo "by '/your-path-to-QA-DKRZ/install CF'."
+  echo -e "\nUsage: dkrz-cf-checker [opts] netCDF-file[s]"
+  echo "Purpose: Check for CF Conventions Compliance (http://cfconventions.org)."
+  echo "The checker is part of the QA-DKRZ package in"
+  echo "https://github.com/IS-ENES-Data/QA-DKRZ.git"
+  echo "Compilation: '/your-path-to-QA-DKRZ/install CF' unless"
+  echo "it was fetched by conda install -c birdhouse qa-dkrz,"
   echo "e-mail: hollweg@dkrz.de"
   echo " -C str    CF Convention string; taken from global attributes by default."
   echo " -F path   Find recursively all nc-files from starting point 'path'."
@@ -16,9 +17,10 @@ descript()
   echo " --debug   Show execution commands."
   echo " --help"
   echo " --param   Only for program development."
-  echo " --ts      Run the files provided in the Test-Suite for CF conventions"
+  echo " --ts[=]   Run the files provided in the Test-Suite for CF conventions"
   echo "           rules in QA-DKRZ/CF_TestSuite. If particular netCDF files are"
-  echo "           provided additionally, then only these are used."
+  echo "           provided additionally, then only these are used. Then,"
+  echo "           use optional args Fail or Pass."
   echo " netCDF-file(s)"
 
   exit
@@ -147,7 +149,9 @@ do
           isParamFileOnly=t
         elif [ "${OPTARG}" = "test-suite" ] ; then
           isTestSuite=t
-        elif [ "${OPTARG}" = "ts" ] ; then
+        elif [ "${OPTARG%=*}" = "ts" ] ; then
+          test "${OPTARG%=*}" != "${OPTARG}" && tsCase=/${OPTARG#*=}
+
           isTestSuite=t
         fi
         ;;
@@ -189,6 +193,8 @@ if [ ${isTestSuite:-f} = t ] ; then
       exit 1
     fi
   fi
+
+  startingDir=$QA_PATH/CF-TestSuite/Nc${tsCase}
 else
   fs=( $* )
 fi
