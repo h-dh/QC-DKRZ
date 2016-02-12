@@ -39,7 +39,7 @@ setup(name='qatool',
       install_requires=requires,
       entry_points = {
           'console_scripts': [
-              'cfchecker=qatool:main',
+              'cfchecker=qatool.cfchecker:main',
               ]}     
       ,
       )
