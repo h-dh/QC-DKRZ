@@ -163,7 +163,10 @@ compare(double x, std::string op, double y,
 
 /*! epsilon is 10^-DECS of the smaller value of the magnitude of x and y*/
 bool
-compare(double x, char op, double y, int DECS=10);
+compare(double x, std::string op, double y, int DECS=10);
+
+bool
+compare(double x, std::string op, double y, double epsilon);
 
 //! Convert time
 /*! Time given in a certain unit is converted to a target unit.

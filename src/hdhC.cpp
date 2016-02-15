@@ -255,38 +255,43 @@ bool compare(double x, char op, double y, double epsilon)
 */
 
 bool
-compare(double x, char op, double y, int decimals)
+compare(double x, std::string op, double y, int decimals)
 {
-  // fabs( (x + x*10^-decimals) op (y + y*10^-decimals )
+  double epsilon=1;
+  for( int i=0 ; i < decimals ; ++i )
+     epsilon /= 10.;
+  epsilon *= 2. ;
 
-  // epsilon is 10^-DECS of the smaller value of x and y*/
-
+  return compare(x, op, y, epsilon);
+}
+bool
+compare(double x, std::string op, double y, double epsilon)
+{
 // compare x and y within uncertainty ranges e
   // A factor of 2 is substituted in epsilon
   // modes: op: "=" --> x == y
   //        op: "<"  --> x < y
   //        op: ">"  --> x > y
-  double delta=1;
-  for( int i=0 ; i < decimals ; ++i )
-     delta /= 10.;
-  delta *= 2. ;
+  //        op: ">=" and "<=", too
+
+  op += ' ';
 
   double xy= fabs(x - y);
 
-  if( op == '=' )
-    return xy < delta ? true : false;
+  if( op[0] == '=' )
+    return xy < epsilon ? true : false;
 
-  else if( op == '>' )
+  else if( op[0] == '>' )
   {
-    if( xy < delta )
-      return false;
+    if(xy < epsilon )
+      return op[1] == '=' ? true : false ;
 
     return x > y ? true : false ;
   }
-  else if( op == '<' )
+  else if( op[0] == '<' )
   {
-    if( xy < delta )
-      return false;
+    if( xy < epsilon )
+      return op[1] == '=' ? true : false ;
 
     return x < y ? true : false ;
   }
