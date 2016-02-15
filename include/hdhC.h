@@ -468,6 +468,9 @@ parabolaSummit(double xm, double x, double xp, double ym,
 double
 planck(double anue,double t);
 
+double
+rounding(double, int dNum=0);
+
 //! Convert string to double (K&R).
 /*! Extract a number from string. Multiple numbers in a string
  separated by any char that is not part of a number (i.e. not

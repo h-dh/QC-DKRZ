@@ -266,30 +266,30 @@ compare(double x, char op, double y, int decimals)
   // modes: op: "=" --> x == y
   //        op: "<"  --> x < y
   //        op: ">"  --> x > y
-  double delta_x = x;
-  double delta_y = y;
-
+  double delta=1;
   for( int i=0 ; i < decimals ; ++i )
-  {
-     delta_x /= 10.;
-     delta_y /= 10.;
-  }
+     delta /= 10.;
+  delta *= 2. ;
 
-  double epsilon = fabs(delta_y - delta_x);
-  double val = fabs( x - y );
+  double xy= fabs(x - y);
 
-  if( op == '>' )
+  if( op == '=' )
+    return xy < delta ? true : false;
+
+  else if( op == '>' )
   {
-    if( val > epsilon )
-      return true;
+    if( xy < delta )
+      return false;
+
+    return x > y ? true : false ;
   }
   else if( op == '<' )
   {
-    if( val < epsilon )
-      return true;
+    if( xy < delta )
+      return false;
+
+    return x < y ? true : false ;
   }
-  else if( val <= epsilon )
-     return true;
 
   return false;
 }
@@ -1999,6 +1999,21 @@ double planck(double anue,double t)
 }
 
 // ----------------------------------------------------
+
+double
+rounding(double v, int dNum)
+{
+   double fact=1.;
+   for(int i=0 ; i < dNum ; ++i)
+     fact *= 10.;
+
+   v *= fact;
+   v += 0.5;
+
+   int iv = static_cast<int>(v);
+
+   return static_cast<double>(iv) / fact;
+}
 
 // private function
 double string2DoubleFct( std::string &, size_t & );
