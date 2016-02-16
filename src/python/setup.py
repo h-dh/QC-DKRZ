@@ -3,7 +3,7 @@
 from setuptools import find_packages
 from setuptools import setup
 
-version = '0.5.3'
+version = '0.5.4'
 description = 'The QA tool is a quality assurance checker for metadata in climate data (NetCDF files).'
 long_description = (
     open('README.rst').read() # + '\n' +
