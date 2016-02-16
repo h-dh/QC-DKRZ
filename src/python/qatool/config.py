@@ -12,8 +12,9 @@ def write_options():
     if not config:
         load_configuration()
     for section in config.sections():
-        for option in config.options(section):
-            print section,option,config.get(section,option)
+        print 'Section:', section
+        for name, value in config.items(section):
+            print '  %s = %s' % (name, value)
 
 def get_config_value(section, option):
     """Get desired value from  configuration files
@@ -34,10 +35,11 @@ def get_config_value(section, option):
             value = config.get(section, option)
 
             # Convert Boolean string to real Boolean values
-            if value.lower() == "false":
-                value = False
-            elif value.lower() == "true":
-                value = True
+            if value:
+                if value.lower() == "false":
+                    value = False
+                elif value.lower() == "true":
+                    value = True
 
     return value
 
@@ -48,7 +50,7 @@ def load_configuration(cfgfiles=None):
     """
     global config
     
-    config = ConfigParser.SafeConfigParser()
+    config = ConfigParser.SafeConfigParser(allow_no_value=True)
 
     if not cfgfiles:
         cfgfiles = _get_default_config_files_location()
