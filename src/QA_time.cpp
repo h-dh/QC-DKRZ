@@ -1135,7 +1135,7 @@ QA_Time::sync(void)
   if( firstTimeValue > (qa_t+epsilon) )
     return false;
 
-  if( hdhC::compare(qa_t, lastTimeValue, '=', epsilon) )
+  if( hdhC::compare(qa_t, "=", lastTimeValue,  epsilon) )
     return true; // up-to-date
 
   // Note: QA always continues a previous session
@@ -1163,7 +1163,7 @@ QA_Time::sync(void)
       if( (qa_t + epsilon) < val )
         return false ;  // the usual case
 
-      if( hdhC::compare(qa_t, val, '=', epsilon) )
+      if( hdhC::compare(qa_t, "=", val, epsilon) )
       {
         // a previous QA had checked an infile that was extended
         // in the meantime.

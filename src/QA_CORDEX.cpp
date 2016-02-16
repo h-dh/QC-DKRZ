@@ -931,7 +931,7 @@ DRS_CV::testPeriod(Split& x_f)
 
     double db_centre=(pQA->qaTime.firstTimeBoundsValue[0]
                         + pQA->qaTime.firstTimeBoundsValue[1])/2. ;
-    if( ! hdhC::compare(db_centre, '=', pQA->qaTime.firstTimeValue) )
+    if( ! hdhC::compare(db_centre, "=", pQA->qaTime.firstTimeValue) )
     {
       std::string key("5_7");
       if( notes->inq( key, pQA->qaExp.getVarnameFromFilename()) )
@@ -2545,7 +2545,8 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
   double edge_file[4];
   double edge_row[4];
 
-  bool is_edge[4];
+  bool is_edge[] = {false, false, false, false};
+  ;
   if( ! is_lon )
   {
      int j = pQA->pIn->getVarIndex(var_lon) ;
@@ -2564,18 +2565,12 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
      edge_file[0] = mv_lon[i_1st] ;
      edge_row[0] = hdhC::string2Double(row[5+add]);
 
-     if( edge_file[0] <= edge_row[0] )
-       is_edge[0]=false;
-     else
-       is_edge[0]=true;
+     is_edge[0] = hdhC::compare( edge_file[0], "<=", edge_row[0]) ? false : true;
 
      edge_file[1] = mv_lon[i_last] ;
      edge_row[1] = hdhC::string2Double(row[6+add]);
 
-     if( edge_file[1] >= edge_row[1] )
-       is_edge[1]=false;
-     else
-       is_edge[1]=true;
+     is_edge[1] = hdhC::compare( edge_file[1], ">=", edge_row[1]) ? false : true;
   }
 
   if( ! is_lat )
@@ -2596,18 +2591,12 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
      edge_file[2] = mv_lat[i_1st] ;
      edge_row[2] = hdhC::string2Double(row[7+add]);
 
-     if( edge_file[2] <= edge_row[2] )
-       is_edge[2]=false;
-     else
-       is_edge[2]=true;
+     is_edge[2] = hdhC::compare( edge_file[2], "<=", edge_row[2]) ? false : true;
 
      edge_file[3] = mv_lat[i_last] ;
      edge_row[3] = hdhC::string2Double(row[8+add]);
 
-     if( edge_file[3] >= edge_row[3] )
-       is_edge[3]=false;
-     else
-       is_edge[3]=true;
+     is_edge[3] = hdhC::compare( edge_file[3], ">=", edge_row[3]) ? false : true;
   }
 
   std::string text1;
@@ -2618,12 +2607,14 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
   {
     if( is_edge[i] )
     {
+      std::string wesn;
+
       if( i==0 )
       {
-        text1 += "West=" ;
+        wesn="West";
+        text1 += wesn + "=";  // required
         text1 += row[5+add] ;
-        text2 += "West=" ;
-        text2 += hdhC::double2String(edge_file[0]) ;
+        text2 += hdhC::tf_assign(wesn,hdhC::double2String(edge_file[0])) ;
         isComma=true;
       }
       else if( i==1 )
@@ -2634,10 +2625,10 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
           text2 += ", ";
         }
 
-        text1 += "East=" ;
+        wesn="East";
+        text1 += wesn + "=";  // required
         text1 += row[6+add] ;
-        text2 += "East=" ;
-        text2 += hdhC::double2String(edge_file[1]) ;
+        text2 += hdhC::tf_assign(wesn, hdhC::double2String(edge_file[1])) ;
         isComma=true;
       }
 
@@ -2649,10 +2640,10 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
           text2 += ", ";
         }
 
-        text1 += "South=" ;
+        wesn="South";
+        text1 += wesn + "=" ;  // required
         text1 += row[7+add] ;
-        text2 += "South=" ;
-        text2 += hdhC::double2String(edge_file[2]) ;
+        text2 += hdhC::tf_assign(wesn,hdhC::double2String(edge_file[2])) ;
         isComma=true;
       }
       else if( i==3 )
@@ -2663,10 +2654,10 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
           text2 += ", ";
         }
 
-        text1 += "North=" ;
+        wesn="North";
+        text1 += wesn + "=" ;  // required
         text1 += row[8+add] ;
-        text2 += "North=" ;
-        text2 += hdhC::double2String(edge_file[3]) ;
+        text2 += hdhC::tf_assign(wesn,hdhC::double2String(edge_file[3])) ;
         isComma=true;
       }
 
@@ -2681,10 +2672,10 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
     {
       std::string capt("unmatched CORDEX boundaries for the ");
       capt += tName ;
-      capt += " domain, found" ;
-      capt += hdhC::tf_val(text2);
-      capt += ", required" ;
-      capt += hdhC::tf_val(text1);
+      capt += " domain, found " ;
+      capt += text2;
+      capt += ", required " ;
+      capt += text1;
 
       (void) notes->operate(capt) ;
       notes->setCheckMetaStr(pQA->fail);

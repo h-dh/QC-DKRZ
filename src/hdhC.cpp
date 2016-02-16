@@ -255,41 +255,46 @@ bool compare(double x, char op, double y, double epsilon)
 */
 
 bool
-compare(double x, char op, double y, int decimals)
+compare(double x, std::string op, double y, int decimals)
 {
-  // fabs( (x + x*10^-decimals) op (y + y*10^-decimals )
+  double epsilon=1;
+  for( int i=0 ; i < decimals ; ++i )
+     epsilon /= 10.;
+  epsilon *= 2. ;
 
-  // epsilon is 10^-DECS of the smaller value of x and y*/
-
+  return compare(x, op, y, epsilon);
+}
+bool
+compare(double x, std::string op, double y, double epsilon)
+{
 // compare x and y within uncertainty ranges e
   // A factor of 2 is substituted in epsilon
   // modes: op: "=" --> x == y
   //        op: "<"  --> x < y
   //        op: ">"  --> x > y
-  double delta_x = x;
-  double delta_y = y;
+  //        op: ">=" and "<=", too
 
-  for( int i=0 ; i < decimals ; ++i )
-  {
-     delta_x /= 10.;
-     delta_y /= 10.;
-  }
+  op += ' ';
 
-  double epsilon = fabs(delta_y - delta_x);
-  double val = fabs( x - y );
+  double xy= fabs(x - y);
 
-  if( op == '>' )
+  if( op[0] == '=' )
+    return xy < epsilon ? true : false;
+
+  else if( op[0] == '>' )
   {
-    if( val > epsilon )
-      return true;
+    if(xy < epsilon )
+      return op[1] == '=' ? true : false ;
+
+    return x > y ? true : false ;
   }
-  else if( op == '<' )
+  else if( op[0] == '<' )
   {
-    if( val < epsilon )
-      return true;
+    if( xy < epsilon )
+      return op[1] == '=' ? true : false ;
+
+    return x < y ? true : false ;
   }
-  else if( val <= epsilon )
-     return true;
 
   return false;
 }
@@ -1999,6 +2004,21 @@ double planck(double anue,double t)
 }
 
 // ----------------------------------------------------
+
+double
+rounding(double v, int dNum)
+{
+   double fact=1.;
+   for(int i=0 ; i < dNum ; ++i)
+     fact *= 10.;
+
+   v *= fact;
+   v += 0.5;
+
+   int iv = static_cast<int>(v);
+
+   return static_cast<double>(iv) / fact;
+}
 
 // private function
 double string2DoubleFct( std::string &, size_t & );

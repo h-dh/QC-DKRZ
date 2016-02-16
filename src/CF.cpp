@@ -2951,6 +2951,8 @@ CF::setCheck(std::string &s)
 bool
 CF::timeUnitsFormat(Variable& var, bool isAnnot)
 {
+  // true: is a time units format; perhaps wrong
+
   if( !isCheck )
     return false;
 
@@ -3019,26 +3021,75 @@ CF::timeUnitsFormat(Variable& var, bool isAnnot)
   bool isInvalidTime=false;  // could be omitted
   bool isInvalidTZ=false;    // could be omitted
 
+  bool tryFreq=true;
+  bool tryKey=true;
+  bool tryDate=true;
   bool tryTime=true;
   bool tryTZ=true;
 
+  int seq[] = { 5, 5, 5, 5, 5};  // sequence of recognised units items
+
+  std::vector<std::string> text;
+  size_t prevSz;
+
   for( size_t itm=0 ; itm < x_units.size() ; ++itm )
   {
-    if( isInvalidFreq )
-      isInvalidFreq = timeUnitsFormat_frq(x_units[itm]);
-    else if( isInvalidKey )
-      isInvalidKey  = timeUnitsFormat_key(x_units[itm]);
-    else if( isInvalidDate )
-      isInvalidDate = timeUnitsFormat_date(var, x_units[itm], isAnnot);
+    prevSz=text.size();
+
+    if( tryFreq )
+    {
+      if( timeUnitsFormat_frq(x_units[itm], text) )
+      {
+        tryFreq=false;
+        seq[itm]=itm;
+
+        if( prevSz == text.size() )
+          isInvalidFreq=false;
+      }
+    }
+    else if( tryKey )
+    {
+      if( timeUnitsFormat_key(x_units[itm], text) )
+      {
+        tryKey=false;
+        seq[itm]=itm;
+
+        if( prevSz == text.size() )
+          isInvalidKey=false;
+      }
+    }
+    else if( tryDate )
+    {
+      if( timeUnitsFormat_date(var, x_units[itm], text, isAnnot) )
+      {
+        tryDate=false;
+        seq[itm]=itm;
+
+        if( prevSz == text.size() )
+          isInvalidDate=false;
+      }
+    }
     else if( tryTime )
     {
-      if( ! (isInvalidTime = timeUnitsFormat_time(x_units[itm])) )
+      if( timeUnitsFormat_time(x_units[itm], text) )
+      {
         tryTime=false;
+        seq[itm]=itm;
+
+        if( prevSz < text.size() )
+          isInvalidTime=true;
+      }
     }
     else if( tryTZ )
     {
-      if( ! (isInvalidTZ = timeUnitsFormat_TZ(var, x_units[itm])) )
-         tryTZ=false;
+      if( timeUnitsFormat_TZ(x_units[itm], text) )
+      {
+        tryTZ=false;
+        seq[itm]=itm;
+
+        if( prevSz < text.size() )
+          isInvalidTZ=true;
+      }
     }
   }
 
@@ -3046,9 +3097,22 @@ CF::timeUnitsFormat(Variable& var, bool isAnnot)
                    || isInvalidTime || isInvalidTZ ;
 
   // annotation section
+  bool is=true;
   if( ! isInvalid )
-    return true;
+  {
+    for( size_t i=1 ; i < 5 ; ++i )
+    {
+      if( is && seq[i-1] > seq[i] )
+      {
+        is=false;
+        text.push_back("Fault in the sequence of units items");
+        break;
+      }
+    }
 
+    if(is)
+      return true;
+  }
   // too many failures: probably not a time unit
   size_t countInvalid=0;
   size_t countValid=0;
@@ -3074,27 +3138,8 @@ CF::timeUnitsFormat(Variable& var, bool isAnnot)
   if( isInvalidTZ )
     ++countInvalid;
 
-  if( isAnnot && countValid > 2 && countInvalid )
+  if( countInvalid && countValid > countInvalid && isAnnot )
   {
-    std::vector<std::string> text;
-
-    if( isInvalidFreq )
-      text.push_back("Missing frequency in") ;
-
-    if( isInvalidKey )
-      text.push_back("Missing key-word=since in") ;
-
-    // time could be omitted, indicated by isProcTime
-    if( isInvalidDate )
-      text.push_back("Missing reference date, found") ;
-    else if( isInvalidDate )
-      text.push_back("Invalid date item in") ;
-    else if( isInvalidTime )
-      text.push_back("Invalid time item in") ;
-
-    if( isInvalidTZ )
-      text.push_back("Invalid time-zone item in") ;
-
     for( size_t t=0 ; t < text.size() ; ++t )
     {
       if( notes->inq(bKey + "44b", var.name) )
@@ -3107,16 +3152,15 @@ CF::timeUnitsFormat(Variable& var, bool isAnnot)
         notes->setCheckCF_Str( fail );
       }
     }
+
+    return true;
   }
 
-  if( countValid && countValid > countInvalid )
-    return true; // probably a time units format
-
-  return false; //probably not
+  return false; //units? probably not
 }
 
 bool
-CF::timeUnitsFormat_frq(std::string item )
+CF::timeUnitsFormat_frq(std::string item, std::vector<std::string>& text )
 {
   std::vector<std::string> period;
   period.push_back("year");
@@ -3141,32 +3185,62 @@ CF::timeUnitsFormat_frq(std::string item )
   }
 
   if( hdhC::isAmong(item, period) )
-    return false;  // ok
+    return true;  // ok
 
-  return true ;
+  text.push_back("Missing or wrong frequency, found in") ;
+
+  return false ;
 }
 
 bool
-CF::timeUnitsFormat_key(std::string item)
+CF::timeUnitsFormat_key(std::string item, std::vector<std::string>& text)
 {
   if( item == "since" )
-    return false;  // ok
+    return true;  // ok
 
-  return true;
+  if( item == "before" )
+  {
+    text.push_back("Wrong key-word" + hdhC::tf_val(item)) ;
+    text.back() += ", found in";
+    return true;
+  }
+
+  return false;
 }
 
 bool
-CF::timeUnitsFormat_date(Variable& var, std::string item, bool isAnnot)
+CF::timeUnitsFormat_date(Variable& var, std::string item,
+                         std::vector<std::string>& text, bool isAnnot)
 {
-  // true means: fault
+  // true: is a date, perhaps faulty
 
-  // a colon is never valid
+  size_t countYes=0;
+  size_t countNo=0;
+  bool isBC=false;
+  bool isColon=false;
+
+  if( item[0] == '-' )
+  {
+    item=item.substr(1);
+    ++countYes;
+    isBC=true;
+  }
+
   if( item.find(':') < std::string::npos )
-    return true;
+  {
+    isColon=true;
+    ++countNo;
+  }
 
-  Split x_item(item, "-");
+  Split x_item(item, "-:", true);
+  size_t sz = x_item.size();
 
-  size_t countWords=0;
+  if( sz == 3 )
+    ++countYes;
+  else
+    ++countNo;
+
+  size_t countItems=0;
 
   for( size_t j=0 ; j < x_item.size() ; ++j )
   {
@@ -3174,16 +3248,32 @@ CF::timeUnitsFormat_date(Variable& var, std::string item, bool isAnnot)
     {
         int num = hdhC::string2Double(x_item[j]);
 
-        if( j == 0 )
-          ++countWords;
+        if( j == 0 && num > 24 )
+          ++countItems;
         else if( j == 1  && num < 13 )
-          ++countWords;
+          ++countItems;
         else if( j == 2 && num < 32 )
-          ++countWords;
+          ++countItems;
+        else
+          ++countNo;
     }
+    else
+      ++countNo;
   }
 
-  if( countWords == 3 )
+  // decision whether a date or not
+  if( countNo >= (countYes+countItems) )
+    return false;
+
+  // a colon is never valid
+  if(isColon)
+  {
+    text.push_back("The date item should be separated by");
+    text.back() += hdhC::tf_val("-") + ", found";
+    text.back() += hdhC::tf_val(":") + " in";
+  }
+
+  if( countItems == 3 && !isBC )
   {
     if( isAnnot && followRecommendations
         && (x_item[0] == "0" || x_item[0] == "00")
@@ -3191,105 +3281,149 @@ CF::timeUnitsFormat_date(Variable& var, std::string item, bool isAnnot)
               && (x_item[2] == "1" || x_item[2] == "01") )
       chap44a_reco(var);
 
-    return false;  // ok
+    return true;  // ok
+  }
+
+  if( countItems < 3 )
+  {
+    text.push_back("Invalid date, expected yyyy-mm-dd found") ;
+    text.back() += hdhC::tf_val(item) + " in";
   }
 
   return true;
 }
 
 bool
-CF::timeUnitsFormat_time(std::string item)
+CF::timeUnitsFormat_time(std::string item, std::vector<std::string>& text)
 {
-  // true means: fault
+  // true: is a time item, perhaps faulty
 
-  // a hypen is never valid
+  size_t countYes=0;
+  size_t countNo=0;
+
+  if( item[0] == '-' )
+  {
+    item=item.substr(1);
+    ++countNo;
+  }
+
+  Split x_item(item, "-:", true);
+  size_t sz = x_item.size();
+
+  if( sz == 3 )
+    ++countYes;
+  else
+    ++countNo;
+
+  size_t countItems=0;
+
+  for( size_t j=0 ; j < x_item.size() ; ++j )
+  {
+    if( hdhC::isDigit(x_item[j]) )
+    {
+        int num = hdhC::string2Double(x_item[j]);
+
+        if( j == 0 && num < 24 )
+          ++countItems;
+        else if( num < 60 )
+          ++countItems;
+        else
+          ++countNo;
+    }
+    else
+      ++countNo;
+  }
+
+  // decision whether a date or not
+  if( countNo >= (countYes+countItems) )
+    return false;
+
+  // a colon is never valid
   if( item.find('-') < std::string::npos )
+  {
+    text.push_back("Time item should be separated by");
+    text.back() += hdhC::tf_val(":") + ", found";
+    text.back() += hdhC::tf_val("-") + " in";
+  }
+
+  if( countItems < x_item.size() )
+  {
+    text.push_back("Invalid time, expected hh:mm:ss[.DEC] found") ;
+    text.back() += hdhC::tf_val(item) + " in";
+  }
+
+  return true;
+}
+
+bool
+CF::timeUnitsFormat_TZ(std::string item, std::vector<std::string>& text)
+{
+  // true: is TZ item
+
+  if( item == "Z" || item == "z" )
     return true;
+
+  size_t countYes=0;
+  size_t countNo=0;
+
+  if( item[0] == '-' )
+  {
+    item=item.substr(1);
+    ++countNo;
+    item=item.substr(1);
+  }
+
+  if( item[0] == ':' )  // invalid begin
+  {
+    text.push_back("time-zone item should not begin with a colon, found in") ;
+    ++countNo;
+  }
+
+  std::string t0( hdhC::Lower()(item) );
+
+  if( t0 == "utc" )
+  {
+    text.push_back("invalid time-zone indicator, found") ;
+    text.back() += hdhC::tf_val(item);
+    text.back() += " instead of Z or omission in";
+
+    return true;
+  }
 
   Split x_item(item, hdhC::colon);
 
-  size_t countWords=0;
+  size_t sz = x_item.size();
 
-  if( x_item.size() )
+  for( size_t j=0 ; j < sz ; ++j )
   {
-    for(size_t j=0 ; j < x_item.size() ; ++j )
-    {
-      if( hdhC::isDigit(x_item[j]) )
-      {
-        int num = hdhC::string2Double(x_item[j]);
-
-        if( j && num < 60 )
-          ++countWords;
-        else if( j == 0 && num < 24 )
-          ++countWords;
-      }
-    }
-
-    if( countWords == x_item.size() )
-      return false; // ok
+    if( hdhC::isDigit(x_item[j]) )
+      ++countYes;
   }
 
-  return true;
-}
+  if( sz == 1  )
+  { // n, nn, nnnn  are valid
+    if( x_item[0].size() > 4 )
+      ++countNo;
+    else
+      ++countYes;
+  }
 
-bool
-CF::timeUnitsFormat_TZ(Variable& var, std::string item)
-{
-  // true means: fault
+  else if( sz == 2 )
+  { // n:n, nn:n, n:nn, nn:nn are valid
+    if( x_item[0].size() > 2 || x_item[1].size() > 2 )
+      ++countNo;
+    else
+      ++countYes;
+  }
 
-  if( item == "Z" || item == "z" )
+  // decision whether a date or not
+  if( countNo >= countYes )
     return false;
 
-  if( item[0] == '-' )
-    item=item.substr(1);
+  text.push_back("invalid time-zone item, found in") ;
+  text.back() += hdhC::tf_val(item);
 
-  if( item[0] == ':' )  // invalid begin
-    return true;
-  else
-  {
-    std::string t0( hdhC::Lower()(item) );
-
-    if( t0 == "utc" )
-    {
-      if( notes->inq(bKey + "44b", var.name) )
-      {
-        std::string capt(hdhC::tf_att(var.name, n_units, hdhC::colon)) ;
-        capt += "invalid time-zone indicator, found";
-        capt += hdhC::tf_val(item);
-        capt += " instead of Z or omission";
-
-        (void) notes->operate(capt) ;
-        notes->setCheckCF_Str( fail );
-      }
-
-      return false;
-    }
-
-    Split x_item(item, hdhC::colon);
-
-    size_t sz = x_item.size();
-
-    if( sz < 3 )
-    {
-      for( size_t j=0 ; j < sz ; ++j )
-      {
-        if( ! hdhC::isDigit(x_item[j]) )
-           return true;
-        else if( sz == 1 )
-        { // n, nn, nnnn  are valid
-          if( x_item[j].size() > 4 )
-            return true;
-        }
-        else if( sz == 2 )
-        { // n:n, nn:n, n:nn, nn:nn are valid
-          if( x_item[0].size() > 2 || x_item[1].size() > 2 )
-            return true;
-        }
-      }
-    }
-  }
-
-  return false;  // ok
+  return true;
 }
 
 
@@ -4148,66 +4282,59 @@ CF::chap26(void)
          notes->setCheckCF_Str( fail );
        }
 
-       for( size_t k=0 ; k < CF::attName.size() ; ++k )
+       size_t k;
+       if( hdhC::isAmong(aName, CF::attName, k) )
        {
-         if( var.attType.size() == k )
-            break;
-
-         if( aName == CF::attName[k] )
-         {
-            if( CF::attType[k] == 'D' )
+          if( CF::attType[k] == 'D' )
+          {
+            if( var.attType[j] != var.type )
             {
-               if( var.attType[j] != var.type )
-               {
-                 if( notes->inq(bKey + "26a", var.name) )
-                 {
-                   std::string capt(hdhC::tf_var(var.name));
-                   capt += "and " + hdhC::tf_att(aName);
-                   capt += "have to be the same type, found ";
-                   capt += hdhC::tf_val(pIn->nc.getTypeStr(var.attType[j])) ;
-                   capt += " and";
-                   capt += hdhC::tf_val(pIn->nc.getTypeStr(var.type)) ;
+              if( notes->inq(bKey + "26a", var.name) )
+              {
+                std::string capt(hdhC::tf_var(var.name));
+                capt += "and " + hdhC::tf_att(aName);
+                capt += "have to be the same type, found ";
+                capt += hdhC::tf_val(pIn->nc.getTypeStr(var.attType[j])) ;
+                capt += " and";
+                capt += hdhC::tf_val(pIn->nc.getTypeStr(var.type)) ;
 
-                   (void) notes->operate(capt) ;
-                   notes->setCheckCF_Str( fail );
-                 }
-               }
+                (void) notes->operate(capt) ;
+                notes->setCheckCF_Str( fail );
+              }
             }
+          }
 
-            else if( CF::attType[k] == 'S' )
+          else if( CF::attType[k] == 'S' )
+          {
+            if( var.attType[j] != NC_CHAR )
             {
-               if( var.attType[j] != NC_CHAR )
-               {
-                 if( notes->inq(bKey + "26b", var.name) )
-                 {
-                   std::string capt(hdhC::tf_att(var.name, aName));
-                   capt += "should be character type, found ";
-                   capt += pIn->nc.getTypeStr(var.attType[j]) ;
+              if( notes->inq(bKey + "26b", var.name) )
+              {
+                std::string capt(hdhC::tf_att(var.name, aName));
+                capt += "should be character type, found ";
+                capt += pIn->nc.getTypeStr(var.attType[j]) ;
 
-                   (void) notes->operate(capt) ;
-                   notes->setCheckCF_Str( fail );
-                 }
-               }
+                (void) notes->operate(capt) ;
+                notes->setCheckCF_Str( fail );
+              }
             }
+          }
 
-            else if( CF::attType[k] == 'N' )
+          else if( CF::attType[k] == 'N' )
+          {
+            if( ! pIn->nc.isNumericType(var.name, CF::attName[k] ) )
             {
-               if( ! pIn->nc.isNumericType(var.name, CF::attName[k] ) )
-               {
-                 if( notes->inq(bKey + "26c", var.name) )
-                 {
-                   std::string capt(hdhC::tf_att(var.name, aName));
-                   capt += "should be numeric type, found ";
-                   capt += pIn->nc.getTypeStr(var.attType[j]) ;
+              if( notes->inq(bKey + "26c", var.name) )
+              {
+                std::string capt(hdhC::tf_att(var.name, aName));
+                capt += "should be numeric type, found ";
+                capt += pIn->nc.getTypeStr(var.attType[j]) ;
 
-                   (void) notes->operate(capt) ;
-                   notes->setCheckCF_Str( fail );
-                 }
-               }
+                (void) notes->operate(capt) ;
+                notes->setCheckCF_Str( fail );
+              }
             }
-
-            break;  // try next attribute
-         }
+          }
        }
      }
    }
