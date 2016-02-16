@@ -48,7 +48,13 @@ def execute(args):
     elif args.verbose == 2:
         logger.setLevel(logging.DEBUG)
     cmd = ['dkrz-cf-checker']
-    if args.ncfile:
+    if args.verbose >=2:
+        cmd.append('--debug')
+    if args.extra_checks:
+        cmd.append('-R')
+    if args.path:
+        cmd.extend(['-F', path])
+    elif args.ncfile:
         cmd.extend(args.ncfile)
     try:
         output = subprocess.check_output(cmd)
