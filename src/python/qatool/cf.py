@@ -14,11 +14,18 @@ class CFCheck(BaseCheck):
         if self.criteria == 'strict':
             cmd.append('-R')
         cmd.append(ds)
+
+        success = False
        
         try:
             logger.info('running %s', cmd)
             output = subprocess.check_output(cmd)
+            if "PASS" in output:
+                success = True
             self.write_output(output)
         except subprocess.CalledProcessError as err:
+            if "PASS" in err.output:
+                success = True
             self.write_output(err.output)
+        return success
 
