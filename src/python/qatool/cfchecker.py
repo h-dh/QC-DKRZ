@@ -26,7 +26,12 @@ def create_parser():
                         help="Output format.")
     parser.add_argument('-o', '--output', default='-', action='store',
                         help="Output filename. Default = '-' (standard output)")
-    parser.add_argument('ncfile', nargs='*', help= "Defines the location of the dataset to be checked.")
+    parser.add_argument('-c', '--cfg', action='store',
+                        help="Optional configuration file.")
+    parser.add_argument('-e', '--env', nargs='*', default=[],
+                        help="Set environment variable (key=value).")
+    parser.add_argument('ncfile', nargs='*',
+                        help= "Defines the location of the dataset to be checked.")
 
     return parser
 
@@ -56,6 +61,11 @@ def execute(args):
         cmd.extend(['-F', path])
     elif args.ncfile:
         cmd.extend(args.ncfile)
+    if args.cfg:
+        pass
+    if args.env:
+        user_environ = {k:v for k,v in (x.split('=') for x in args.env) }
+        print user_environ
     try:
         output = subprocess.check_output(cmd)
         write_output(filename=args.output, output=output)
