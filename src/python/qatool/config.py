@@ -16,7 +16,7 @@ def write_options():
         for name, value in config.items(section):
             print '  %s = %s' % (name, value)
 
-def get_config_value(section, option):
+def get_config_value(section, option, raw=False):
     """Get desired value from  configuration files
     :param section: section in configuration files
     :type section: string
@@ -34,12 +34,15 @@ def get_config_value(section, option):
         if config.has_option(section, option):
             value = config.get(section, option)
 
-            # Convert Boolean string to real Boolean values
-            if value:
-                if value.lower() == "false":
-                    value = False
-                elif value.lower() == "true":
-                    value = True
+            if not raw:
+                # Convert Boolean string to real Boolean values
+                if value:
+                    if value.lower() == "false":
+                        value = False
+                    elif value.lower() == "true":
+                        value = True
+                    elif ',' in value:
+                        value = [val.strip() for val in value.split(',')]
 
     return value
 
