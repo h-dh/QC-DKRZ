@@ -18,7 +18,8 @@ class CFCheck(BaseCheck):
         success = False
        
         try:
-            logger.info('running %s', cmd)
+            logger.info('checking [cf] dataset %s', ds)
+            logger.debug('call %s', cmd)
             output = subprocess.check_output(cmd)
             if "PASS" in output:
                 success = True

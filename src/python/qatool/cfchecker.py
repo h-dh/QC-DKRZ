@@ -1,3 +1,4 @@
+import os
 import argparse
 import argcomplete
 import subprocess
@@ -21,8 +22,8 @@ def create_parser():
                         help="Increase output. May be specified up to three times.")
     parser.add_argument('-R', dest='strict', action='store_true',
                         help='Apply also recommendations given by CF conventions.')
-    #parser.add_argument('-F', dest='path', action='store',
-    #                    help='Finds recursively all NetCDF files from starting point PATH.')
+    parser.add_argument('-F', dest='path', action='store',
+                        help='Finds recursively all NetCDF files from starting point PATH.')
     parser.add_argument('-f', '--format', default='text', choices=['text', 'html', 'json'], action='store',
                         help="Output format.")
     parser.add_argument('-o', '--output', default='-', action='store',
@@ -63,5 +64,12 @@ def main():
         print user_environ
 
     checker = CFCheck(verbose=verbose, criteria=criteria, output_filename=args.output, output_format=args.format)
-    for ds_loc in args.ncfile:
-        checker.run(ds_loc)
+    if args.path:
+        for path,dir,files in os.walk(args.path):
+            for filename in files:
+                if filename.endswith(('.nc',)):
+                    ds_loc = os.path.abspath(os.path.join(path, filename))
+                    checker.run(ds_loc)
+    else:
+        for ds_loc in args.ncfile:
+            checker.run(ds_loc)
