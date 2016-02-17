@@ -8,8 +8,11 @@ def test_load_config():
     assert config.get_config_value('settings', 'project_data') == '/tmp/data'
     assert config.get_config_value('settings', 'qa_results') == '/tmp/output/one/two'
     assert config.get_config_value('settings', 'use_strict') == False
+    assert config.get_config_value('settings', 'use_strict', raw=True) == 'false'
     assert config.get_config_value('settings', 'use_strict2') == None
     assert config.get_config_value('checks', 'cf') == '1.4'
+    assert config.get_config_value('ui', 'clear') == ['lock', 'note']
+    assert config.get_config_value('ui', 'clear', raw=True) == 'lock,note'
     assert config.get_config_value('processing', 'nice') == '15'
     #assert False
     
