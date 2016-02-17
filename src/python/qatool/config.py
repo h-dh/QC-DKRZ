@@ -1,7 +1,7 @@
 import os
 
 import qatool
-from qatool.configparser import ExtendedConfigParser
+from qatool.configparser import CustomConfigParser
 
 import logging
 logger = logging.getLogger(__name__)
@@ -50,7 +50,7 @@ def load_configuration(cfgfiles=None):
     """
     global config
     
-    config = ExtendedConfigParser(allow_no_value=True)
+    config = CustomConfigParser(allow_no_value=True)
 
     if not cfgfiles:
         cfgfiles = _get_default_config_files_location()

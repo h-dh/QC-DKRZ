@@ -2,8 +2,8 @@ import re
 import ConfigParser
 from ConfigParser import DEFAULTSECT
 
-class ExtendedConfigParser(ConfigParser.SafeConfigParser):
-    """Extended ConfigParser with the possibility to append option values with '+='."""
+class CustomConfigParser(ConfigParser.SafeConfigParser):
+    """Custom ConfigParser with the possibility to append option values with '+='."""
     
     OPTCRE = re.compile(
         r'(?P<option>[^+:=\s][^+:=]*)'        # very permissive!
