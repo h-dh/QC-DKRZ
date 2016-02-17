@@ -2,6 +2,7 @@ import argparse
 import argcomplete
 import subprocess
 
+from qatool.cf import CFCheck
 from qatool import __version__
 
 import logging
@@ -18,10 +19,10 @@ def create_parser():
                         help='Display the cfhecker version information.')
     parser.add_argument('--verbose' , '-v', action="count",
                         help="Increase output. May be specified up to three times.")
-    parser.add_argument('-R', dest='extra_checks', action='store_true',
+    parser.add_argument('-R', dest='strict', action='store_true',
                         help='Apply also recommendations given by CF conventions.')
-    parser.add_argument('-F', dest='path', action='store',
-                        help='Finds recursively all NetCDF files from starting point PATH.')
+    #parser.add_argument('-F', dest='path', action='store',
+    #                    help='Finds recursively all NetCDF files from starting point PATH.')
     parser.add_argument('-f', '--format', default='text', choices=['text', 'html', 'json'], action='store',
                         help="Output format.")
     parser.add_argument('-o', '--output', default='-', action='store',
@@ -36,49 +37,31 @@ def create_parser():
     return parser
 
 
-def write_output(filename='-', output=None):
-    if filename == '-':
-        print output
-    else:
-        with open(filename, 'w') as fp:
-            fp.write(output)
+def main():
+    parser = create_parser()
+    argcomplete.autocomplete(parser)
 
+    args = parser.parse_args()
 
-def execute(args):
+    verbose = False
+    criteria = 'normal'
+    
     if args.version:
         print("DKRZ cfchecker version %s" % __version__)
         return 0
     if args.verbose == 1:
-        logger.setLevel(logging.INFO)
+        logging.root.setLevel(logging.INFO)
     elif args.verbose == 2:
-        logger.setLevel(logging.DEBUG)
-    cmd = ['dkrz-cf-checker']
-    if args.verbose >=2:
-        cmd.append('--debug')
-    if args.extra_checks:
-        cmd.append('-R')
-    if args.path:
-        cmd.extend(['-F', path])
-    elif args.ncfile:
-        cmd.extend(args.ncfile)
+        logging.root.setLevel(logging.DEBUG)
+        verbose = True
+    if args.strict:
+        criteria = 'strict'
     if args.cfg:
         pass
     if args.env:
         user_environ = {k:v for k,v in (x.split('=') for x in args.env) }
         print user_environ
-    try:
-        output = subprocess.check_output(cmd)
-        write_output(filename=args.output, output=output)
-    except subprocess.CalledProcessError as err:
-        write_output(filename=args.output, output=err.output)
-    return 0
 
-        
-def main():
-    logger.setLevel(logging.INFO)
-
-    parser = create_parser()
-    argcomplete.autocomplete(parser)
-
-    args = parser.parse_args()
-    execute(args)
+    checker = CFCheck(verbose=verbose, criteria=criteria, output_filename=args.output, output_format=args.format)
+    for ds_loc in args.ncfile:
+        checker.run(ds_loc)
