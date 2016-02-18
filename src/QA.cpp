@@ -115,7 +115,7 @@ QA::applyOptions(bool isPost)
      if( split[0] == "pP" || split[0] == "postProc"
        || split[0] == "post_proc")
      {
-       enablePostProc=true;
+//       enablePostProc=true;
        break;
      }
   }
@@ -894,7 +894,6 @@ QA::openQA_Nc(InFile &in)
     return;
 
   if( nc->open(qaFile.getFile(), "NC_WRITE", false) )
-//   if( isQA_open ) // false: do not exit in case of error
   {
     // continue a previous session
     importedRecFromPrevQA=nc->getNumOfRecords();
@@ -920,7 +919,7 @@ QA::openQA_Nc(InFile &in)
   if( qaNcfileFlags.size() )
     nc->create(qaFile.getFile(),  qaNcfileFlags);
   else
-    nc->create(qaFile.getFile(),  "Replace");
+    nc->create(qaFile.getFile(),  "NC_NETCDF4");
 
   bool isNoTime=false;
   if( qaTime.isTime && pIn->isTime )

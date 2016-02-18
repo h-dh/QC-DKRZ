@@ -93,6 +93,7 @@ NcAPI::clearLayout(void)
     layout.varIsRecordType.clear();
     layout.noData.clear();
     hasEffVarUnlimitedDim.clear();
+
     delete [] layout.rec_start[i] ;
     delete [] layout.rec_count[i] ;
 
@@ -112,6 +113,10 @@ NcAPI::clearLayout(void)
   layout.rec_start.clear();
   layout.rec_count.clear();
   layout.rec_index.clear();
+  layout.rec_leg_begin.clear();
+  layout.rec_leg_sz.clear() ;
+  layout.rec_leg_end.clear();
+  layout.rec_prev_taker.clear();
 
   layout.varStorage.clear();
   layout.varChunkSize.clear();
@@ -1347,6 +1352,11 @@ NcAPI::defineVar(std::string vName, nc_type type,
   layout.rec_start.push_back( new size_t [currDimName.size()] );
   layout.rec_count.push_back( new size_t [currDimName.size()] );
   layout.rec_index.push_back( UINT_MAX ); //indicates non-record
+
+  layout.rec_leg_begin.push_back( 0 );
+  layout.rec_leg_sz.push_back( 0 );  // default for large multi-dim arrays
+  layout.rec_leg_end.push_back( 0 );
+  layout.rec_prev_taker.push_back( 0 );  // pointer of the last data taker
 
   size_t sz=1;  // Set 1 for limited variables, not used.
 
@@ -2870,6 +2880,9 @@ NcAPI::getData(MtrxArr<ToT> &to, int varid, size_t rec)
 
   // note that the leg length is atomatically set to a single step
   // for higher-dimensonal arrays.
+  if( ! layout.rec_leg_sz[varid] )
+     setRecLeg(layout.varidMap[varid]);
+
   size_t currLeg = layout.rec_leg_sz[varid];
 
   // read operation required
@@ -2881,8 +2894,11 @@ NcAPI::getData(MtrxArr<ToT> &to, int varid, size_t rec)
 
     if( layout.rec_leg_end[varid] > layout.varDimSize[varid][0] )
     {
-      layout.rec_leg_end[varid] = layout.varDimSize[varid][0];
-      currLeg = layout.varDimSize[varid][0] - rec ;
+      // take into growth due to writing
+      std::vector<size_t> vs_vdSz( getVarDimSize(layout.varidMap[varid]) );
+
+      layout.rec_leg_end[varid] = vs_vdSz[0];
+      currLeg = vs_vdSz[0] - rec ;
     }
 
     (void) getData(varid, rec, currLeg);
@@ -3595,17 +3611,12 @@ NcAPI::getLayout(void)
      layout.rec_index.push_back( UINT_MAX );  //indicates non-record
 
      layout.rec_leg_begin.push_back( 0 );
-     layout.rec_leg_sz.push_back( 1 );  // default for large multi-dim arrays
+     layout.rec_leg_sz.push_back( 0 );
+     layout.rec_leg_sz.push_back( 0 );  // default for large multi-dim arrays
      layout.rec_leg_end.push_back( 0 );
      layout.rec_prev_taker.push_back( 0 );  // pointer of the last data taker
 
-     if( rank < 3 )
-     {
-       if( layout.varDimSize[id][0] > rec_leg_max )
-         layout.rec_leg_sz.back() = rec_leg_max ;
-       else
-         layout.rec_leg_sz.back() = layout.varDimSize[id][0] ;
-     }
+     setRecLeg(vName);
 
      // compression
      int shuffle=0;
@@ -5322,6 +5333,25 @@ NcAPI::setFletcher32(int varid, int f)
     checkType.push_back("meta");
 
     exceptionHandling(key, capt, text, checkType, getVarnameFromVarID(varid));
+  }
+
+  return;
+}
+
+void
+NcAPI::setRecLeg(std::string vName)
+{
+  layout.rec_leg_sz.back() = 1;  // default for large multi-dim arrays
+
+  std::vector<size_t> vs_vdSz( getVarDimSize(vName) );
+  int id = getVarID(vName);
+
+  if( vs_vdSz.size() && vs_vdSz.size() < 3 )
+  {
+    if( vs_vdSz.size() > rec_leg_max )
+      layout.rec_leg_sz[id] = rec_leg_max ;
+    else
+      layout.rec_leg_sz[id] = vs_vdSz[0] ;
   }
 
   return;

@@ -876,6 +876,9 @@ void
     void
       setPath(std::string &p){ncPath=p;}
 
+    void
+      setRecLeg(std::string vName);
+
 private:
     int ncid;
     int status ;
@@ -1073,6 +1076,10 @@ private:
       getEndian(NcAPI &u, int varid, int &endian)
          {endian =u.layout.varEndian[varid] ;}
 
+    void
+      getFletcher32(NcAPI &u, int varid, int &f)
+         {f =u.layout.varFletcher32[varid] ;}
+
     size_t
       getRecordSize(int varid) ;
 
@@ -1181,10 +1188,6 @@ private:
 //! Fletcher32 for netcdf4
     void
       setFletcher32(int varid, int fletcher32);
-
-    void
-      getFletcher32(NcAPI &u, int varid, int &f)
-         {f =u.layout.varFletcher32[varid] ;}
 
     void
       updateAtts(int varid, std::string aName, size_t aIndex,

@@ -929,7 +929,8 @@ ReplicatedRecord::test(int nRecs, size_t bufferCount, size_t nextFlushBeg,
 
   name_chks = name + "_checksum";
 
-  int recNum = pQA->nc->getNumOfRecords();
+  int recNum = pQA->nc->getNumOfRecords(true);  // force nc-inquiry
+
   std::pair<int,int> readRange(0,0);
   MtrxArr<double> ma_low;
   MtrxArr<double> ma_t;
@@ -1392,6 +1393,7 @@ QA_Data::flush(void)
 {
   if( bufferCount )
   {
+
      // test for entirely identical records
      if( allRecordsAreIdentical )
      {
@@ -1407,7 +1409,9 @@ QA_Data::flush(void)
      }
 
      // Test for replicated records.
-     else if( replicated )
+     //else
+
+       if( replicated )
      {
          int nRecs=static_cast<int>( pQA->nc->getNumOfRecords() );
 
@@ -1425,6 +1429,10 @@ QA_Data::flush(void)
 
      dataOutputBuffer.flush();
      sharedRecordFlag.flush();
+
+//     pQA->nc->clear();
+//     pQA->nc->close();
+//     pQA->nc->open(pQA->qaFile.getFile(), "", false);
 
      bufferCount = 0;
   }
@@ -1906,7 +1914,6 @@ QA_Data::testStndDev(hdhC::FieldData &fA)
 {
   if( ! fA.isValid )
     return false;
-
 
   if( fA.isStndDevValid )
     return false;
