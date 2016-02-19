@@ -917,7 +917,7 @@ private:
     std::vector<bool> hasEffVarUnlimitedDim;
 
     int numOfRecords;
-    size_t rec_leg_max;
+    size_t max_read_sz;
 
     // Spaces for records of various types
     std::vector<MtrxArr<signed char> >        rec_val_schar;

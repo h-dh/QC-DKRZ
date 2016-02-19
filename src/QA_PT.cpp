@@ -206,7 +206,7 @@ BREAK:
             if( xt_eq[1] == xf_eq[1] )  // found identical values
               break;  // try the next attribute
 
-            // this is a very special one for time: one wit separator T and/or Z
+            // this is a very special one for time: one with separator T and/or Z
             // the other one without
             std::string auxName;
             if( xt_a[0].substr(0,4) == "aux=" )
@@ -542,7 +542,6 @@ Consistency::getValues(Variable &var, std::string &s)
       }
       else
       {
-          ck=0;
           MtrxArr<double> mv;
           pIn->nc.getData(mv, var.name );
 

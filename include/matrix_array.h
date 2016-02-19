@@ -1233,7 +1233,7 @@ public:
             std::vector<char>* mode=0, std::string* s=0);
 
   //! Get size of data.
-  size_t  size(void) const { return rep->arr_sz;}
+  size_t  size(void) const;
 
   void    testValueException(void)
              { valExcp->testValueException(rep->arr, rep->arr_sz,
@@ -1438,8 +1438,6 @@ MtrxArr<T>::operator=( const MtrxArr<T_in> &g)
     validRangeBegin=g.validRangeBegin;
     validRangeEnd=g.validRangeEnd;
   }
-
-  testValueException();
 
   return *this;
 }
@@ -1866,8 +1864,6 @@ MtrxArr<T>::assign( const T_in *p, std::vector<size_t> d )
   for( size_t i=0 ; i < rep->arr_sz ; ++i )
     arr[i] = static_cast<T>(p[i]);
 
-  testValueException();
-
   return;
 }
 
@@ -2282,6 +2278,16 @@ MtrxArr<T>::resize(size_t nx, size_t ny, size_t nz)
 
   resize(t);
   return;
+}
+
+template<typename T>
+size_t
+MtrxArr<T>::size(void) const
+{
+  if( !validRangeEnd.size() || !validRangeEnd[0] )
+    return 0;
+
+  return rep->arr_sz;
 }
 
 template<typename T>

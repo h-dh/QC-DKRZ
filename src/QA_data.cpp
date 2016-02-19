@@ -932,7 +932,7 @@ ReplicatedRecord::test(int nRecs, size_t bufferCount, size_t nextFlushBeg,
   int recNum = pQA->nc->getNumOfRecords(true);  // force nc-inquiry
 
   std::pair<int,int> readRange(0,0);
-  MtrxArr<double> ma_low;
+  MtrxArr<double> ma_chks;
   MtrxArr<double> ma_t;
 
   // reading by chunks
@@ -940,10 +940,10 @@ ReplicatedRecord::test(int nRecs, size_t bufferCount, size_t nextFlushBeg,
   {
     // time and checksum array are synchronised
     (void) pQA->nc->getData(ma_t, "time", readRange.second) ;
-    (void) pQA->nc->getData(ma_low, name_chks, readRange.second) ;
+    (void) pQA->nc->getData(ma_chks, name_chks, readRange.second) ;
 
     readRange = pQA->nc->getDataIndexRange(name_chks) ;
-    size_t sz = ma_low.size();
+    size_t sz = ma_chks.size();
 
     // loop over the temporarily stored values
     for( size_t j0=0 ; j0 < bufferCount ; ++j0 )
@@ -957,13 +957,10 @@ ReplicatedRecord::test(int nRecs, size_t bufferCount, size_t nextFlushBeg,
 
       for( size_t i=0 ; i < sz ; ++i, j=j0 )
       {
-        if( status[i] )
-          continue;
-
         size_t countGroupMembers=0;
         int high ;
 
-        while( ma_low[i]
+        while( ma_chks[i]
           == (high=pQA->qaExp.varMeDa[vMD_ix].qaData.dataOutputBuffer.checksum[j]) )
         {
           // we suspect identity.
@@ -987,7 +984,7 @@ ReplicatedRecord::test(int nRecs, size_t bufferCount, size_t nextFlushBeg,
             break;
 
           if( low0 == -1 )
-            low0 = ma_low[j0] ;
+            low0 = ma_chks[j0] ;
         }
 
         if( countGroupMembers && j < bufferCount )
