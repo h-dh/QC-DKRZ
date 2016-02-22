@@ -5,11 +5,8 @@ descript()
   echo "purpose: show full checked time period from log-files"
   echo "  options:"
   echo "  -P str   Project name (CMIP5 by default)."
-  echo "  -p path  A common path for all files or tokens"
+  echo "  -p path  A common path for all files"
   echo "  -Q       Quiet"
-  echo "  -t str   comma-sep-list of 'name,ensemble' pairs"
-  echo "           where '|ensemble' may be omitted."
-  echo "  -x       set -x"
   echo "  f(s)     *.log files in experiment_logs of QA results."
   echo "           Files without a leading path component are"
   echo "           searched in the path supplied with -p. If a "
@@ -34,30 +31,45 @@ findFreq()
   echo -e '# Periods of checked atomic scopes.\n---' > $out
 
   local str_b str_e str_s
+  local latest earliest
 
-  # separate by frequency
+  # separate frequencies
   for(( i=0 ; i < ${#freqs[*]} ; ++i )) ; do
     num=0
 
     # find the latest date processed so far
-    latest=''
-    earliest=xxx
     for(( ix=0 ; ix < ${#fName[*]} ; ++ix )) ; do
       test ${freq[ix]} != ${freqs[i]} && continue
 
       # find the latest date processed so far
-      if [[ "${latest}" < "${d_end[ix]}" ]] ; then
+      if [[ "${d_end[ix]}" ]] ; then
+         latest=${d_end[ix]}
+         num=$(( num +1 ))
+      fi
+
+      # find the earliest date processed so far
+      if [[ "${d_beg[ix]}" ]] ; then
+         earliest=${d_beg[ix]}
+         num=$(( num +1 ))
+      fi
+
+      test ${num} -eq 2 && break
+    done
+    num=0
+
+    for(( ; ix < ${#fName[*]} ; ++ix )) ; do
+      test ${freq[ix]} != ${freqs[i]} && continue
+
+      # find the latest date processed so far
+      if [[ "${d_end[ix]}" && "${latest}" < "${d_end[ix]}" ]] ; then
          latest=${d_end[ix]}
       fi
 
       # find the earliest date processed so far
-      if [[ "${earliest}" > "${d_beg[ix]}" ]] ; then
+      if [[ "${d_beg[ix]}" && "${earliest}" > "${d_beg[ix]}" ]] ; then
          earliest=${d_beg[ix]}
       fi
     done
-
-    # appended (and now to be removed) for a specific class of annotations
-    fName=( ${fName[*]%-ensemble} )
 
     for(( ix=0 ; ix < ${#fName[*]} ; ++ix )) ; do
       test ${freq[ix]} = ${freqs[i]} && num=$(( num + 1 ))
@@ -69,31 +81,24 @@ findFreq()
     for(( ix=0 ; ix < ${#fName[*]} ; ++ix )) ; do
       test ${freq[ix]} != ${freqs[i]} && continue
 
-      echo "  - atomic_name: ${fName[ix]}" >> $out
+      echo "  - variable: ${fName[ix]}" >> $out
 
       str_b='    begin:'
       str_e='    end:'
       str_s='    status: PASS'
 
       if [ ${freq[ix]} != fx ] ; then
-        if [ "${d_beg[ix]%T*}" = xxx ] ; then
+        if [ "${d_beg[ix]%T*}" = "${d_end[ix]%T*}" ] ; then
           # rejected checks due to ambiguous time range
           str_s='    status: FAIL:BE'
-        else
-          str_b="${str_b} ${d_beg[ix]}"
-          str_e="${str_e} ${d_end[ix]}"
-        fi
-
-        if [[ "${d_beg[ix]%T*}" > "${earliest%T*}" ]] ; then
+        elif [[ "${d_beg[ix]%T*}" > "${earliest%T*}" ]] ; then
           str_s='    status: FAIL:B'
-        elif [ "${d_beg[ix]%T*}" = xxx ] ; then
-          # rejected checks due to ambiguous time range
-          str_s='    status: FAIL:BE'
-        fi
-
-        if [[ "${d_end[ix]%T*}" < "${latest%T*}" ]] ; then
+        elif [[ "${d_end[ix]%T*}" < "${latest%T*}" ]] ; then
           str_s='    status: FAIL:E'
         fi
+
+        test "${d_beg[ix]}" && str_b="${str_b} ${d_beg[ix]}"
+        test "${d_end[ix]}" && str_e="${str_e} ${d_end[ix]}"
       fi
 
       echo -e "${str_b}\n${str_e}\n${str_s}" >> $out
@@ -102,13 +107,13 @@ findFreq()
   done
 }
 
-opFiles()
+run()
 {
   test ${isQuiet:-f} = f && \
   echo "xtractTimeRange_from.log: processing"
 
   for(( i=0 ; i < ${#files[*]} ; ++i )) ; do
-    file=${files[*]}
+    file=${files[i]}
 
     ff=${file##*/}
     out=${path[i]}Period/${ff%.log}.period
@@ -122,47 +127,6 @@ opFiles()
     test ! -s ${out} && \rm -f ${out}
   done  # files
 
-}
-
-opTokens()
-{
-for(( n=0 ; n < ${#tokens[*]} ; ++n )) ; do
-
-  token=${tokens[n]}
-
-  ts=( ${token//,/ } )
-
-  set -f
-  if [ ${#ts[*]} -eq 1 ] ; then
-    t=*${token}*
-  else
-    t=*
-    for(( i=0 ; i < ${#ts[*]} ; ++i )) ; do
-      t=${t}${ts[i]}*
-    done
-  fi
-  set +f
-
-  files=( $( ls -d ${path}${t}.log ) )
-
-  out=Period/${token//,/_}.period
-  echo -n '' > $out
-
-  fName=()
-  d_beg=()
-  d_end=()
-  freq=()
-  freqs=()
-
-  for file in ${files[*]} ; do
-
-    readFile
-
-  done  # files
-
-  findFreq
-
-done  # token
 }
 
 readFile()
@@ -205,6 +169,9 @@ readFile()
 
      # find name and periods
      isCP=t
+     prds[0]=''
+     prds[1]=''
+
      for(( l=0 ; l < sz ; ++l )) ; do
        words=( ${blk[l]} )
        if [ "${words[0]}" = 'file:' ] ; then
@@ -212,10 +179,9 @@ readFile()
        elif [ "${words[0]}" = 'period:' ] ; then
           for k in 0 1 ; do
             words=( ${blk[$((l+k+1))]} )
-            if [ "${words[1]}" != 'miss' ] ; then
-               prds[${k}]=${words[1]}
+            if [ "${words[1]}" ] ; then
+               prds[k]=${words[1]}
             else
-               prds[${k}]=''
                isCP=f
             fi
           done
@@ -231,7 +197,7 @@ readFile()
        # try for a single date
        f=$( expr match "${name}" '\(.*\)_[[:digit:]]' )
 
-       # else: name=name
+       # else: fixed or invalid variables
        test $? -eq 0 && name=$f
      else
        name=$f
@@ -245,10 +211,12 @@ readFile()
      # a new entry to be stored when 'Checked'
      if [ ${#fName[ix]} -eq 0 ] ; then
        fName[$ix]=${name}
+
+       # file length
        test ${#name} -gt ${len:-0} && len=${#name}
 
-       d_beg[$ix]=xxx  # preset
-       d_end[$ix]=0  # preset
+       d_beg[$ix]=''  # preset
+       d_end[$ix]=''  # preset
 
        fs=( ${name//_/ } )
 
@@ -266,19 +234,20 @@ readFile()
      fi
 
      # once false, then false until the end
-     test ${isContPrd[$ix]:-t} = t && isContPrd[$ix]=$isCP
-
-     if [ ${isContPrd[$ix]}=t -a ${#prds[*]} -eq 2 ] ; then
-        # only store new entries
-        # could be scattered among different files, by accident
-
-        if [[ ${d_beg[ix]} > ${prds[0]} ]] ; then
-          d_beg[$ix]=${prds[0]}
+     if [ ${isContPrd[$ix]:-t} = t -a $isCP = t ] ; then
+        if [ "${prds[0]}" ] ; then
+          if [[ !"${d_beg[ix]}" || ${d_beg[ix]} > ${prds[0]} ]] ; then
+            d_beg[$ix]=${prds[0]}
+          fi
         fi
 
-        if [[ ${d_end[ix]} < ${prds[1]} ]] ; then
-          d_end[$ix]=${prds[1]}
+        if [ "${prds[1]}" ] ; then
+          if [[ !"${d_end[ix]}" || ${d_end[ix]} < ${prds[1]} ]] ; then
+            d_end[$ix]=${prds[1]}
+          fi
         fi
+     else
+        isContPrd[$ix]=f
      fi
    done
 
@@ -293,15 +262,13 @@ prj=CMIP5
 
 test $# -eq 0 && descript
 
-while getopts hp:P:Qt:x-: option ${args[*]}
+while getopts hp:P:Q-: option ${args[*]}
 do
   case $option in
     h)  descript ;;
     p)  pOpt=${OPTARG} ;;
     P)  prj=${OPTARG} ;;
     Q)  isQuiet=t ;;
-    t)  tokens=( ${tokens[*]} ${OPTARG} ) ;;
-    x)  set -x ;;
    -)   if [ "$OPTARG" = "help" ] ; then
           descript
         elif [ "${OPTARG%%=*}" = "debug" ] ; then
@@ -354,9 +321,4 @@ declare -a d_en
 
 declare -a freq
 
-
-if [ ${#tokens[*]} -gt 0 ] ; then
-  opTokens
-else
-  opFiles
-fi
+run
