@@ -500,7 +500,7 @@ findEmbeddedConf()
   # backward compatibility: qc
   local pos
   if findStr ${item} _qc pos ; then
-    local item_alt=${item:0:${pos}}_qa${item:$((pos+3))}
+    local item_alt=${item:0:pos}_qa${item:$((pos+3))}
   fi
 
   pDir[1]=${QA_WORK}/tables/

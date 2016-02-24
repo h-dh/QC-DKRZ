@@ -3050,19 +3050,19 @@ intTryComRepeat()
     perd=0
     for(( j=0 ; j < ${#rL} ; ++j )) ; do
       case ${rL:$j:1} in
-        s) perd=${rL:0:$j}
+        s) perd=${rL:0:j}
            break ;;
-        m) perd=$( echo "${rL:0:$j} * 60" | bc -l )
+        m) perd=$( echo "${rL:0:j} * 60" | bc -l )
            break ;;
-        h) perd=$( echo "${rL:0:$j} * 3600" | bc -l )
+        h) perd=$( echo "${rL:0:j} * 3600" | bc -l )
            break ;;
-        d) perd=$( echo "${rL:0:$j} * 86400" | bc -l )
+        d) perd=$( echo "${rL:0:j} * 86400" | bc -l )
            break ;;
-        w) perd=$( echo "${rL:0:$j} * 604800" | bc -l )
+        w) perd=$( echo "${rL:0:j} * 604800" | bc -l )
            break ;;
-        M) perd=$( echo "${rL:0:$j} * 2592000" | bc -l )
+        M) perd=$( echo "${rL:0:j} * 2592000" | bc -l )
            break ;;
-        y) perd=$( echo "${rL:0:$j} * 31536000" | bc -l )
+        y) perd=$( echo "${rL:0:j} * 31536000" | bc -l )
            break ;;
         \?) ;; # not valid; ignore
       esac
