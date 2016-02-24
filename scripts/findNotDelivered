@@ -10,9 +10,10 @@ bufOut()
       pp=${pp%.period}
 
       eval echo '' $out
-      eval echo "=========================================" $out
-      eval echo -e "\\\\nVariable-frequency cases listed in CORDEX_variables_requirement," $out
-      eval echo "but not found in available data frequencies:\\\\n" $out
+      eval echo "==== Missing Variables ==================" $out
+      eval echo '' $out
+      eval echo -e "Variable-frequency cases listed in CORDEX_variables_requirement," $out
+      eval echo "but not found in available data frequencies." $out
       isFirst=f
     fi
 

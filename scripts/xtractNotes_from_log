@@ -34,10 +34,14 @@ atomise()
   #              each tag has the sh1sum of the caption appended
   # atomicEnd:   end time
 
+  findExpFamily expFamily atomicBase[*]
+
   # the atomicBase names are grouped coorresponding to tags
   findPureAtomic
 
   exec 1> $atom
+  echo -n ''
+
   exec 0< $annot
 
   printAnnotations
@@ -127,14 +131,12 @@ atomicParsing_blk()
 checkSolvedGroupTags()
 {
   # return 1 if a group-tag had previously been processed
-  local tag=$1
+  local xtag=$1
   local g=$2
   local N=$3
 
-  local len
-
   # a) tag is in the list of grouped tags
-  local i jg j k gTags
+  local i jg j k gTags tag
   declare -a gTags
 
 # N and ig are defined in outer scope for groups
@@ -147,7 +149,7 @@ checkSolvedGroupTags()
   for(( i=g ; i < N ; ++i )) ; do
     for(( jg=0 ; jg < gN ; ++jg )) ; do
       len=${#gTags[jg]}
-      tag=${tag:0:${len}}
+      tag=${xtag:0:len}
       if [ $tag = ${gTags[jg]} ] ; then
         isGT=t
         break 2
@@ -331,6 +333,27 @@ findAnnotatedBlock()
   return 1
 }
 
+findExpFamily()
+{
+  local IFS=${oldIFS}
+
+  # find exp families
+  local fEF_aB=(${!2})
+
+  fEF_aB=(${fEF_aB[*]#*_})
+
+  local fEF_eF=( $( echo -e " ${fEF_aB[*]/%/\\n}" | sort -u) )
+  local i fEF_eFC
+  for(( i=0 ; i < ${#fEF_eF[*]} ; ++i )) ; do
+    fEF_eFC[i]=$( echo -e " ${fEF_aB[*]/%/\\n}" | grep -c ${fEF_eF[i]} )
+  done
+
+  eval ${1}=\( ${fEF_eF[*]} \)
+  eval ${1}Count=\( ${fEF_eFC[*]} \)
+
+  return
+}
+
 findPureAtomic()
 {
   # find pure atomic tags. If found, then remove them from the non-atomic tags
@@ -362,12 +385,6 @@ findPureAtomic()
   unset ttags
   unset tags0
 
-  for(( ix=0 ; ix < ${#atomicBase[*]} ; ++ix )) ; do
-    atomicTags[ix]=${atomicTags[ix]//\/\//}
-    atomicTags[ix]=${atomicTags[ix]//,\//,}
-    atomicTags[ix]=${atomicTags[ix]//\/,/,}
-  done
-
   # ensemble of atomic vars; either for all or for groups
 
   # array with all pure atomic tags
@@ -384,7 +401,7 @@ findPureAtomic()
   done
 
   # remove identical ones
-  grpPAT=( $( echo -e ${grpPAT[*]/%\\n} | sort -u) )
+  grpPAT=( $( echo -e " ${grpPAT[*]/%/\\n}" | sort -u) )
 
   # tag <-> atomicBase relations
   local N=${#grpPAT[*]}
@@ -538,16 +555,21 @@ getVarTag()
   # skip variable tail always indicated by ','
   local capt="${blk[capt_ix]%%,*}"
 
+  # skip '   caption: '
+  capt=${capt#*: }
+
+  # skip tails from first occurrence of ': '
+  capt=${capt%%: *}
+
   # skip sub-strings in <> bracketes
 #  capt="${capt//\<*\>/}"
 
   # skip leading spaces
-  for(( j=0 ; j < ${#capt} ; ++j )) ; do
-    test "${blk[capt_ix]:j:1}" != ' ' && break
-  done
+#  for(( j=0 ; j < ${#capt} ; ++j )) ; do
+#    test "${blk[capt_ix]:j:1}" != ' ' && break
+#  done
 
-
-  capt=$( echo "${capt:j}" | sha1sum | awk '{print $1}' )
+  capt=$( echo "${capt}" | sha1sum | awk '{print $1}' )
 
 #  toggleX
 
@@ -726,7 +748,7 @@ printA_fileTag()
    szAB=${#atomicBase[*]}
   for(( ix=0 ; ix < szAB ; ++ix )) ; do
     szA=${#atomicBase[ix]}
-    test "${fName:0:${szA}}" = "${atomicBase[ix]}" && break
+    test "${fName:0:szA}" = "${atomicBase[ix]}" && break
   done
 
   for(( j=0 ; j < ${#event_ix[*]} ; ++j )) ; do
@@ -815,11 +837,49 @@ printA_header()
   for(( i=0 ; i < sz ; ++i )) ; do
     if [ "$1" = group ] ; then
       if [ $i -eq ${file_ix} ] ; then
-        echo "   variable:"
+        local aB aBC coll k m exps
+        declare -a exps
 
         for(( j=0 ; j < ${#b_ix[*]} ; ++j )) ; do
-          echo "    - ${atomicBase[${b_ix[j]}]}"
+          coll[j]=${atomicBase[${b_ix[j]}]}
         done
+
+        findExpFamily aB coll[*]
+
+        # does the number of bases in a family equal that of the entire set?
+        for(( j=0 ; j < ${#aB[*]} ; ++j )) ; do
+           for(( k=0 ; k < ${#expFamily[*]} ; ++k )) ; do
+             if [ ${aB[j]} = ${expFamily[k]} ] ; then
+                if [ ${aBCount[j]} -eq ${expFamilyCount[k]} ] ; then
+                  for(( m=0 ; m < ${#coll[*]} ; ++m )) ; do
+                    if [ ${coll[m]#*_} = ${aB[j]} ] ; then
+                       coll[m]=
+                    fi
+                  done
+
+                  exps[${#exps[*]}]=${aB[j]}
+                  coll=(${coll[*]})
+                  break
+                fi
+             fi
+           done
+        done
+
+        if [ "${exps}" ] ; then
+          echo "   experiment:"
+
+          for(( j=0 ; j < ${#exps[*]} ; ++j )) ; do
+            echo "    - ${exps[j]}"
+          done
+        fi
+
+        if [ "${coll}" ] ; then
+          echo "   variable:"
+
+          for(( j=0 ; j < ${#coll[*]} ; ++j )) ; do
+            echo "    - ${coll[j]}"
+          done
+        fi
 
         #adjust the path: remove the trailing varName-directory
 #         local atomicBaseSet
@@ -1058,7 +1118,6 @@ xtrctAnnotated()
 
     exec 0< ${path[i]}$file
     exec 1> $annot
-#    exec 0< $annot
 
     # reset file
     echo -n ''

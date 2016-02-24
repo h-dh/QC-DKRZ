@@ -28,7 +28,7 @@ findFreq()
   done
 
   # yaml header
-  echo -e '# Periods of checked atomic scopes.\n---' > $out
+  echo -e '--- # Periods of checked atomic scopes.\n' > $out
 
   local str_b str_e str_s
   local latest earliest
@@ -236,13 +236,13 @@ readFile()
      # once false, then false until the end
      if [ ${isContPrd[$ix]:-t} = t -a $isCP = t ] ; then
         if [ "${prds[0]}" ] ; then
-          if [[ !"${d_beg[ix]}" || ${d_beg[ix]} > ${prds[0]} ]] ; then
+          if [[ ! "${d_beg[ix]}" || ${d_beg[ix]} > ${prds[0]} ]] ; then
             d_beg[$ix]=${prds[0]}
           fi
         fi
 
         if [ "${prds[1]}" ] ; then
-          if [[ !"${d_end[ix]}" || ${d_end[ix]} < ${prds[1]} ]] ; then
+          if [[ ! "${d_end[ix]}" || ${d_end[ix]} < ${prds[1]} ]] ; then
             d_end[$ix]=${prds[1]}
           fi
         fi
