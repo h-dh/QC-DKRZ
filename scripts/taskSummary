@@ -166,7 +166,7 @@ summaryHR()
 {
   local aIn=$annotations/${exp}.note
 
-  txt="Annotation summary of a QA-DKRZ run\n"
+  txt="Annotation summary of QA-DKRZ: $(date +'%F %T') \n"
   txt="${txt}\nExperiment: ${exp}"
   txt="${txt}\nPath to the annotations in YAML format: $(pwd)/${aIn}"
 
