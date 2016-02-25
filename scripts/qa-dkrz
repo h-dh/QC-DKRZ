@@ -1623,7 +1623,7 @@ getNextVariable()
   fi
 
   local ix
-  local qa_fl text
+  local text
   local status checksumTable
 
   local link_filenameBase=$1
@@ -3592,7 +3592,12 @@ operatePipes()
     nF_TP[${j}]=$PROJECT_TABLE
     nF_SUBPATH[${j}]=${subPath}
     nF_name[${j}]=${fBase[ix]}
-    nF_SEQ[${j}]=f
+
+    if [ "${qa_fl}" ] ; then
+      nF_SEQ[${j}]=s
+    else
+      nF_SEQ[${j}]=f
+    fi
 
     countActivePipes=$(( countActivePipes + 1 ))
   fi
@@ -3626,7 +3631,6 @@ operatePipes()
       p_nF=(${!metaV})
       CURR_EXP_NAME=${nF_EXP[nFcurr]}
       PROJECT_TABLE=${nF_TP[nFcurr]}
-      FILE_SEQUENCE=${nF_SEQ[nFcurr]:-f}
 
       subPath=${nF_SUBPATH[nFcurr]}
 
@@ -3661,10 +3665,11 @@ operatePipes()
 
       nextFile=${p_nF[0]}
 
-      if [ ${FILE_SEQUENCE} = 'f' ] ; then
+      if [ ${nF_SEQ[${nFcurr}]} = 'f' ] ; then
         if [ ${#p_nF[*]} -eq 1 ] ; then
           FILE_SEQUENCE=x # there is only a single file
         else
+          FILE_SEQUENCE=f
           nF_SEQ[${nFcurr}]=s
         fi
       elif [ ${#p_nF[*]} -eq 1 ] ; then
