@@ -2545,6 +2545,7 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
   double edge_file[4];
   double edge_row[4];
 
+
   bool is_edge[] = {false, false, false, false};
   ;
   if( ! is_lon )
@@ -2565,12 +2566,16 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
      edge_file[0] = mv_lon[i_1st] ;
      edge_row[0] = hdhC::string2Double(row[5+add]);
 
-     is_edge[0] = hdhC::compare( edge_file[0], "<=", edge_row[0]) ? false : true;
+     int precision=5;
+
+     is_edge[0] = hdhC::compare(edge_file[0], "<=", edge_row[0], precision)
+                     ? false : true;
 
      edge_file[1] = mv_lon[i_last] ;
      edge_row[1] = hdhC::string2Double(row[6+add]);
 
-     is_edge[1] = hdhC::compare( edge_file[1], ">=", edge_row[1]) ? false : true;
+     is_edge[1] = hdhC::compare(edge_file[1], ">=", edge_row[1], precision)
+                     ? false : true;
   }
 
   if( ! is_lat )
@@ -2588,15 +2593,19 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
         i_last= 0;
      }
 
+     int precision=5;
+
      edge_file[2] = mv_lat[i_1st] ;
      edge_row[2] = hdhC::string2Double(row[7+add]);
 
-     is_edge[2] = hdhC::compare( edge_file[2], "<=", edge_row[2]) ? false : true;
+     is_edge[2] = hdhC::compare(edge_file[2], "<=", edge_row[2], precision)
+                     ? false : true;
 
      edge_file[3] = mv_lat[i_last] ;
      edge_row[3] = hdhC::string2Double(row[8+add]);
 
-     is_edge[3] = hdhC::compare( edge_file[3], ">=", edge_row[3]) ? false : true;
+     is_edge[3] = hdhC::compare(edge_file[3], ">=", edge_row[3], precision)
+                     ? false : true;
   }
 
   std::string text1;
