@@ -559,7 +559,7 @@ getVarTag()
   capt=${capt#*: }
 
   # skip tails from first occurrence of ': '
-  capt=${capt%%: *}
+#  capt=${capt%%: *}
 
   # skip sub-strings in <> bracketes
 #  capt="${capt//\<*\>/}"
