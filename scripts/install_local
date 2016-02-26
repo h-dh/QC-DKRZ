@@ -166,7 +166,7 @@ distclean()
   for t in zlib hdf5 netcdf udunits ; do
     eval name=\${curr_${t}}
 
-    bash ${QA_PATH}/scripts/install_local_${t} --distclean  \
+    bash ${QA_SRC}/scripts/install_local_${t} --distclean  \
        -q --prefix=${qaLocal} ${QUIET:+-q}
   done
 
@@ -178,7 +178,7 @@ editInstallConfigure_build()
   # adjust eventually install_configure settings
   # of LIB and INCLUDE to new paths
 
-  local ic=${QA_PATH}/install_configure
+  local ic=${QA_SRC}/install_configure
 
   local libStr="LIB=${qaLocal}/lib:${qaLocal}/lib64"
   local asdf="$(grep "^LIB=" $ic 2> /dev/null)"
@@ -232,8 +232,8 @@ editInstallConfigure_link()
   local ic=install_configure
 
   # should not happen
-  test ! -f ${QA_PATH}/$ic && \
-     cp ${QA_PATH}/.$ic ${QA_PATH}/ic
+  test ! -f ${QA_SRC}/$ic && \
+     cp ${QA_SRC}/.$ic ${QA_SRC}/ic
 
   # avoid duplicates
   # get items from ic and test for a valid path
@@ -241,7 +241,7 @@ editInstallConfigure_link()
 
   # if there was not a change for all h, n ,u, z
   if [ $numOfLinks -lt 4  ] ; then
-    if px=$(grep "^LIB=" ${QA_PATH}/$ic 2> /dev/null ) ; then
+    if px=$(grep "^LIB=" ${QA_SRC}/$ic 2> /dev/null ) ; then
       isLIB=t
     fi
     px=${px#LIB=}
@@ -252,7 +252,7 @@ editInstallConfigure_link()
       fi
     done
 
-    if px=$(grep "^INCLUDE=" ${QA_PATH}/$ic 2> /dev/null ) ; then
+    if px=$(grep "^INCLUDE=" ${QA_SRC}/$ic 2> /dev/null ) ; then
       isINCLUDE=t
     fi
     px=${px#INCLUDE=}
@@ -264,8 +264,8 @@ editInstallConfigure_link()
     done
   fi
 
-  nL=( ${libs[*]/#/${QA_PATH}\/local\/} ${oL[*]} )
-  nI=( ${incls[*]/#/${QA_PATH}\/local\/} ${oI[*]} )
+  nL=( ${libs[*]/#/${QA_SRC}\/local\/} ${oL[*]} )
+  nI=( ${incls[*]/#/${QA_SRC}\/local\/} ${oI[*]} )
 
   local lib
   for i1 in ${nL[*]} ; do
@@ -351,8 +351,8 @@ f_build()
     mv _${name}.tar.gz ${name}.tar.gz
   fi
 
-  if [ ! -f ${QA_PATH}/local/source/$name/QA_Compilation ] ; then
-    bash ${QA_PATH}/scripts/install_local_${1}  \
+  if [ ! -f ${QA_SRC}/local/source/$name/QA_Compilation ] ; then
+    bash ${QA_SRC}/scripts/install_local_${1}  \
       ${isDebug:+--debug} ${QUIET:+-q} \
       --prefix=${qaLocal} --curr_src=$name \
 
@@ -364,7 +364,7 @@ f_build()
       myStat=DONE
     fi
 
-    log ${QA_PATH}/scripts/install_local_${1} ${isDebug:+--debug} \
+    log ${QA_SRC}/scripts/install_local_${1} ${isDebug:+--debug} \
     --prefix=${qaLocal} ${QUIET:+-q} ${myStat} --curr_src=$name
 
     test ${myStat} = FAIL && exit 1
@@ -768,11 +768,11 @@ saveAsCycle()
 
 saveLocal()
 {
-  test -d $QA_PATH/local && \
-    saveAsCycle KEEP-ORIG $QA_PATH/local
+  test -d $QA_SRC/local && \
+    saveAsCycle KEEP-ORIG $QA_SRC/local
 
-  test -f $QA_PATH/install_configure && \
-    saveAsCycle KEEP-ORIG $QA_PATH/install_configure
+  test -f $QA_SRC/install_configure && \
+    saveAsCycle KEEP-ORIG $QA_SRC/install_configure
 
   return
 }
@@ -802,8 +802,8 @@ tr_option()
 
 # ++++++++++++   main   +++++++++++++++
 
-#QA_PATH was exported
-qaLocal=${QA_PATH}/local
+#QA_SRC was exported
+qaLocal=${QA_SRC}/local
 
 while getopts hq-: option ${args[*]}
 do

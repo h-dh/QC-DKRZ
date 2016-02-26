@@ -131,7 +131,7 @@ period()
 
   test ! -e $exp.log && return
 
-  prg=${QA_PATH}/scripts/xtractTimeRange_from_log
+  prg=${QA_SRC}/scripts/xtractTimeRange_from_log
 
   test ${#prg} -gt 0 && \
     /bin/bash ${prg} ${DEBUG_X} -P ${PROJECT} -Q $exp.log
@@ -233,7 +233,7 @@ summaryHR()
     if [ "${PROJECT}" = CORDEX ] ; then
       if ! expr match "$exp" '.*r0i0p0' &> /dev/null ; then
         if [ ${#std_table} -gt 0 ] ; then
-          /bin/bash ${QA_PATH}/scripts/findNotDelivered ${DEBUG_X} \
+          /bin/bash ${QA_SRC}/scripts/findNotDelivered ${DEBUG_X} \
           --project=CORDEX \
           --period=$outP \
           --table=${std_table} \
@@ -366,7 +366,7 @@ summaryY()
 
   test ! -e $exp.log && return
 
-  /bin/bash ${QA_PATH}/scripts/xtractNotes_from_log ${DEBUG_X} ${MERGE} -H $exp.log
+  /bin/bash ${QA_SRC}/scripts/xtractNotes_from_log ${DEBUG_X} ${MERGE} -H $exp.log
 
   return
 }
@@ -377,7 +377,7 @@ summaryY()
 ##{
 ######## main ############
 
-# QA_PATH was exported
+# QA_SRC was exported
 
   QA_RESULTS=QA_RESULTS # by default
   PROJECT='unkown_project'
@@ -393,7 +393,7 @@ summaryY()
       s)  std_table=${OPTARG} ;;
       t)  test -e ${OPTARG} -a ! -d ${OPTARG} && cl_table=${OPTARG} ;;
       -)  if [ "${OPTARG:0:3}" = src ] ; then
-            QA_PATH=${OPTARG##*=}
+            QA_SRC=${OPTARG##*=}
           elif [ "$OPTARG" = help ] ; then
             descript
             exit

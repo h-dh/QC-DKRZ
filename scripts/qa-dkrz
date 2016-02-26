@@ -190,7 +190,7 @@ bind_checksum()
   fi
 
   # calculate the checksum(s)
-  ${QA_PATH}/scripts/checkSum -b ${QA_BIN#*:} $type \
+  ${QA_SRC}/scripts/checkSum -b ${QA_BIN#*:} $type \
       -q ${QA_RESULTS} ${YAML:+--yaml} ${CS_NO_HISTORY:+--no_history} \
       ${CS_STAND_ALONE:+-w}  $email ${CS_TABLE:+-t} ${CS_TABLE} \
       ${CURR_EXP_NAME:+-x} ${CURR_EXP_NAME} \
@@ -431,7 +431,7 @@ callQaExecutor()
           QA_HOST \
           QA_NCFILE_FLAGS \
           QA_RESULTS \
-          QA_PATH \
+          QA_SRC \
           REATTEMPT_LIMIT \
           REPLICATED_RECORD \
           SESSION \
@@ -475,7 +475,7 @@ callQaExecutor()
     text="${text}\nIMPORTED_PATH=${QA_BIN#*:}"
     echo -e "$text" > $procFile
 
-    $QA_PATH/scripts/$QA_FILE_EXECUTER "${ca}QA_PATH=${QA_PATH} PROC_POOL=$PROC_POOL PROC_FILE=${procFile##*/} PAR_PID=${rootPID}" &
+    $QA_SRC/scripts/$QA_FILE_EXECUTER "${ca}QA_SRC=${QA_SRC} PROC_POOL=$PROC_POOL PROC_FILE=${procFile##*/} PAR_PID=${rootPID}" &
   else
     local bin
     for bin in ${QA_BIN[*]} ; do
@@ -489,7 +489,7 @@ callQaExecutor()
     echo -e "$text" > $procFile
 
     if callPing ; then
-      ssh $nextHost $QA_PATH/scripts/$QA_FILE_EXECUTER "PROC_POOL=$PROC_POOL PROC_FILE=${procFile##*/} PAR_PID=${rootPID} &" &> /dev/null
+      ssh $nextHost $QA_SRC/scripts/$QA_FILE_EXECUTER "PROC_POOL=$PROC_POOL PROC_FILE=${procFile##*/} PAR_PID=${rootPID} &" &> /dev/null
     fi
   fi
 
@@ -511,10 +511,10 @@ catFiles()
   declare -a sec
 
   if [ -f ${target} ] ; then
-    local secTarget=$( $QA_PATH/bin/fModTime.x ${target} | awk '{print $6}')
+    local secTarget=$( $QA_SRC/bin/fModTime.x ${target} | awk '{print $6}')
 
     for(( i=0 ; i < ${#fs[*]} ; ++i )) ; do
-       sec[i]=$( $QA_PATH/bin/fModTime.x ${fs[i]} | awk '{print $6}')
+       sec[i]=$( $QA_SRC/bin/fModTime.x ${fs[i]} | awk '{print $6}')
 
        if [ ${sec[i]} -gt ${secTarget} ] ; then
           isNew=t
@@ -1256,7 +1256,7 @@ getAllExps()
 getCF_STD_NAME()
 {
   local p
-  p=${QA_PATH}/tables/projects/CF
+  p=${QA_SRC}/tables/projects/CF
 
   local name=cf-standard-name-table.xml
 
@@ -2221,9 +2221,9 @@ getProjectTableName()
 
 getRevNum()
 {
-  # get the number saved in QA_PATH/.conf as revision=num
+  # get the number saved in QA_SRC/.conf as revision=num
   local rev revs
-  revs=( $( grep 'revision=' ${QA_PATH}/.conf 2> /dev/null \
+  revs=( $( grep 'revision=' ${QA_SRC}/.conf 2> /dev/null \
        | awk -F= '{print $2}' ) )
 
   if [ ! ${revs[0]} ] ; then
@@ -2522,7 +2522,7 @@ init()
 
   # package update requested and required?
   if [ !${NO_GIT} ] \
-          && ! ${QA_PATH}/install ${INSTALL_ARGS//,/ } ${PROJECT_AS} ; then
+          && ! ${QA_SRC}/install ${INSTALL_ARGS//,/ } ${PROJECT_AS} ; then
     # could not make the executable for the given project
     std_out flush "could not make: install ${PROJECT_AS}"
     exit 1
@@ -2581,7 +2581,7 @@ init()
 
 #  set -f
   # read ~/.qa-dkrz/conf-.txt for the current revision of tha package
-  . $QA_PATH/scripts/updateConfigFile.txt QA_REVISION
+  . $QA_SRC/scripts/updateConfigFile.txt QA_REVISION
 
   maxNumExecThreads=0
   local nET
@@ -2591,7 +2591,7 @@ init()
 
   initProjectTableName
 
-  # QA_WORK/tables -> QA_Results/tables
+  # QA_HOME/tables -> QA_Results/tables
   initTables
 
   # save the configuration and init the session logfile
@@ -2865,8 +2865,8 @@ initTables()
   #   tables/${PROJECT}
   #   tables
 
-  # 1) default tables are provided in ${QA_PATH}/tables/projects/PROJECT.
-  # 2) a table of the same name provided in ${QA_PATH}/tables gets
+  # 1) default tables are provided in ${QA_SRC}/tables/projects/PROJECT.
+  # 2) a table of the same name provided in ${QA_SRC}/tables gets
   #    priority, thus may be persistently modified.
   # 3) tables from 2) or 1) are copied to ${QA_Results}/tables.
   # 4) Option TABLE_AUTO_UPDATE is the default, i.e. tables in
@@ -2929,18 +2929,18 @@ initT()
 
    if [ ${USE_STRICT:-f} = t ] ; then
       # if USE_STRICT is enabled, then projects[/prj] is required
-      p=${QA_WORK}/${pDir[0]}/
+      p=${QA_HOME}/${pDir[0]}/
 
    elif [ ! -f ${value} ] ; then
       # a local instance precedes always
-      if [ -f ${QA_WORK}/${value} ] ; then
+      if [ -f ${QA_HOME}/${value} ] ; then
         # explicitly in a sub-dir path
-        p=${QA_WORK}/
+        p=${QA_HOME}/
       else
         for(( ix=0 ; ix < 4 ; ++ix )) ; do
 
           # scan through the precedence chain
-          test -f ${QA_WORK}/${pDir[ix]}/${value} && p=${QA_WORK}/${pDir[ix]}/
+          test -f ${QA_HOME}/${pDir[ix]}/${value} && p=${QA_HOME}/${pDir[ix]}/
         done
       fi
    fi
@@ -2990,7 +2990,7 @@ initTcat()
 
 initT_CORDEX()
 {
-   local pth=${QA_WORK}/${pDir[0]}
+   local pth=${QA_HOME}/${pDir[0]}
 
    if [ "$table" = TABLE_RCM_NAME ] ; then
      if [ ${NO_GIT:-f} = f -a ${NO_WGET:-f} = f ] ; then
@@ -3829,19 +3829,19 @@ rmBlock()
 runExample()
 {
   # running an example for CORDEX
-  mkdir -p $QA_WORK/example &> /dev/null
-  cd $QA_WORK/example
+  mkdir -p $QA_HOME/example &> /dev/null
+  cd $QA_HOME/example
 
-  \rm -rf $QA_WORK/example/results $QA_WORK/example/qa-test.task
+  \rm -rf $QA_HOME/example/results $QA_HOME/example/qa-test.task
 
   # prepare the example, if not done, yet
-  cp $QA_PATH/example/templates/qa-test.task $QA_WORK/example
-  sed -i "s%PROJECT_DATA=data%PROJECT_DATA=${QA_WORK}/example/data%" \
-         $QA_WORK/example/qa-test.task
-  sed -i "s%QA_RESULTS=results%QA_RESULTS=${QA_WORK}/example/results%" \
-         $QA_WORK/example/qa-test.task
+  cp $QA_SRC/example/templates/qa-test.task $QA_HOME/example
+  sed -i "s%PROJECT_DATA=data%PROJECT_DATA=${QA_HOME}/example/data%" \
+         $QA_HOME/example/qa-test.task
+  sed -i "s%QA_RESULTS=results%QA_RESULTS=${QA_HOME}/example/results%" \
+         $QA_HOME/example/qa-test.task
 
-  exec $QA_PATH/scripts/qa-dkrz -f ${QA_WORK}/example/qa-test.task
+  exec $QA_SRC/scripts/qa-dkrz -f ${QA_HOME}/example/qa-test.task
 
   return
 }
@@ -4006,15 +4006,15 @@ std_out()
   # neither email nor session logfile. Store in dir NoDevice
 #  if [ ${isSent} = f ] ; then
 #    # str0 gets the filename for undeliverables
-#    if mkdir -p $QA_PATH/NoDevice &> /dev/null ; then
+#    if mkdir -p $QA_SRC/NoDevice &> /dev/null ; then
 #      str0="undeliv_$( date +'%FT%T' )_${HOSTNAME%%.*}".txt
-#      echo "$str0" >> $QA_PATH/NoDevice/$str0
+#      echo "$str0" >> $QA_SRC/NoDevice/$str0
 
 #      for(( j=0 ; j < ${#outputText[*]} ; ++j )) ; do
-#        echo -e -n "${outputText[j]}" >> $QA_PATH/NoDevice/$str0
+#        echo -e -n "${outputText[j]}" >> $QA_SRC/NoDevice/$str0
 
 #      for(( j=0 ; j < ${#outputText[*]} ; ++j )) ; do
-#        echo -e -n "${outputText[j]}" >> $QA_PATH/NoDevice/$str0
+#        echo -e -n "${outputText[j]}" >> $QA_SRC/NoDevice/$str0
 #      done
 #    fi
 #  fi
@@ -4072,8 +4072,8 @@ taskSum()
     done
 
     if [ ${isStart} = t ] ; then
-      /bin/bash ${QA_PATH}/scripts/taskSummary ${DEBUG_X} \
-        -p ${QA_RESULTS}/check_logs --src=$QA_PATH \
+      /bin/bash ${QA_SRC}/scripts/taskSummary ${DEBUG_X} \
+        -p ${QA_RESULTS}/check_logs --src=$QA_SRC \
         ${cvr} ${ers} ${prj} ${qrs} ${tcl} ${EXP_NAMES[exp_ix]} &
 
       pidBuf[i]=$!
@@ -4423,13 +4423,13 @@ traceCalibration()
   local prg
 
   if [ ${HOSTNAME} = surge ] ; then
-    prg="${QA_PATH}/bin/unixTime.x dec"
+    prg="${QA_SRC}/bin/unixTime.x dec"
   elif [ ${HOSTNAME:0:3} = liz ] ; then
-    prg="${QA_PATH}/bin_l/unixTime.x dec"
+    prg="${QA_SRC}/bin_l/unixTime.x dec"
   elif [ ${HOSTNAME:0:4} = pass ] ; then
-    prg="${QA_PATH}/bin_p/unixTime.x dec"
+    prg="${QA_SRC}/bin_p/unixTime.x dec"
   elif [ ${HOSTNAME:0:4} = bliz ] ; then
-    prg="${QA_PATH}/bin_b/unixTime.x dec"
+    prg="${QA_SRC}/bin_b/unixTime.x dec"
   else
     echo "traceCalibration: executable unixTime.x not found"
     exit

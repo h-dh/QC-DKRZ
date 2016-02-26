@@ -36,7 +36,7 @@ getSrcPath()
     x_conda=${x_conda%/bin}
     if [ -d $x_conda/opt/qa-dkrz ] ; then
        CONDA_ENV=t
-       export QA_PATH=$x_conda/opt/qa-dkrz
+       export QA_SRC=$x_conda/opt/qa-dkrz
        return
     fi
   fi
@@ -98,7 +98,7 @@ getSrcPath()
       tmp=${tmp}/${arr[i]}
 
       if [ -f ${tmp}/.install_configure ] ; then
-        QA_PATH=$tmp
+        QA_SRC=$tmp
         break
       fi
     done
@@ -123,7 +123,7 @@ getSrcPath()
     exit 1
   fi
 
-  export QA_PATH=${QA_PATH}
+  export QA_SRC=${QA_SRC}
 
   return
 }
@@ -161,12 +161,12 @@ done
 
 shift $(( $OPTIND - 1 ))
 
-getSrcPath $0  # sets QA_PATH and if required CONDA_ENV
+getSrcPath $0  # sets QA_SRC and if required CONDA_ENV
 
 test ! $CONDA_ENV &&
-  $QA_PATH/install CF &> /dev/null
+  $QA_SRC/install CF &> /dev/null
 
-QA_WORK=$QA_PATH
+QA_WORK=$QA_SRC
 
 # files
 if [ ${isTestSuite:-f} = t ] ; then
@@ -174,27 +174,27 @@ if [ ${isTestSuite:-f} = t ] ; then
   ts_fs=( $* )
 
   # generate the netcdf files
-  count=$(find $QA_PATH/CF-TestSuite/Nc -name "*.nc" 2> /dev/null | grep -c .)
+  count=$(find $QA_SRC/CF-TestSuite/Nc -name "*.nc" 2> /dev/null | grep -c .)
   if [ ${count} -lt 25 ] ; then  # sufficient to outnumber protected nc-files
-    if [ ! -f $QA_PATH/CF-TestSuite/Txt ] ; then
-      if [ -f $QA_PATH/CF-TestSuite/Txt.tar.bz2 ] ; then
+    if [ ! -f $QA_SRC/CF-TestSuite/Txt ] ; then
+      if [ -f $QA_SRC/CF-TestSuite/Txt.tar.bz2 ] ; then
         tar -C   ${QA_WORK}/CF-TestSuite \
-            -xjf ${QA_PATH}/CF-TestSuite/Txt.tar.bz2
+            -xjf ${QA_SRC}/CF-TestSuite/Txt.tar.bz2
       else
-        echo "$QA_PATH/CF-TestSuite/Txt no such directory"
+        echo "$QA_SRC/CF-TestSuite/Txt no such directory"
         exit 1
       fi
     fi
 
-    if [ -d $QA_PATH/CF-TestSuite/Txt ] ; then
-      $QA_PATH/CF-TestSuite/scripts/mkAllNc > /dev/null
+    if [ -d $QA_SRC/CF-TestSuite/Txt ] ; then
+      $QA_SRC/CF-TestSuite/scripts/mkAllNc > /dev/null
     else
-      echo "$QA_PATH/CF-TestSuite/Txt no such directory"
+      echo "$QA_SRC/CF-TestSuite/Txt no such directory"
       exit 1
     fi
   fi
 
-  startingDir=$QA_PATH/CF-TestSuite/Nc${tsCase}
+  startingDir=$QA_SRC/CF-TestSuite/Nc${tsCase}
 else
   fs=( $* )
 fi
@@ -204,7 +204,7 @@ if [ ${#startingDir} -gt 0 ] ; then
   fs=( ${fs[*]} $( find ${startingDir} -name "*.nc" | sort ) )
 fi
 
-param_T="\\n-t ${QA_PATH}/tables/projects/CF"
+param_T="\\n-t ${QA_SRC}/tables/projects/CF"
 
 param_IN="\\nIN::oCF"
 
@@ -255,7 +255,7 @@ for(( i=0 ; i < ${#fs[*]} ; ++i )) ; do
   fi
 
   param="$(echo -e $param)"
-  $QA_PATH/bin/dkrz-cf-checker.x ${param}
+  $QA_SRC/bin/dkrz-cf-checker.x ${param}
 
   if [ ${isTestSuite:-f} = t ] && echo ${fs[i]} | grep -q Fail ; then
     asdf="$(ncdump -h ${fs[i]} | grep :comment[^[:digit:]])"

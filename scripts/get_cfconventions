@@ -161,7 +161,7 @@ do
     -) if [ ${OPTARG%=*} = "config_file" ] ; then
          CONFIG_FILE=${OPTARG##*=}
        elif [ ${OPTARG%=*} = "qa_path" ] ; then
-         QA_PATH=${OPTARG##*=}
+         QA_SRC=${OPTARG##*=}
        fi
        ;;
    \?) exit 1 ;;
@@ -175,7 +175,7 @@ test $# -eq 1  && cd $1 &> /dev/null
 # search for updates only once a day
 today=$( date '+%Y%m%d' )
 
-if ! . $QA_PATH/scripts/updateConfigFile.txt CF_LAST_UPDATE_CHECK=$today  ; then
+if ! . $QA_SRC/scripts/updateConfigFile.txt CF_LAST_UPDATE_CHECK=$today  ; then
   exit
 fi
 
