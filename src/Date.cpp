@@ -93,6 +93,12 @@ Date::operator=( std::string z)
   return *this;
 }
 
+double
+Date::operator-( const Date &d )
+{
+  return (jul.jdn + jul.time) - (d.jul.jdn + d.jul.time) ;
+}
+
 void
 Date::addMonths( long double v )
 {
