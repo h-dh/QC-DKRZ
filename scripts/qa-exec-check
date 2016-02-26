@@ -1859,11 +1859,10 @@ tryCom()
 
     # for a configuration defined period
     if [ $((countAttempts++)) -lt $limits ] ; then
-exit
        sleep $t_slice
        continue
     fi
-exit
+
     # number of allowed attempts exceeded.
 
     # it is ok to have failed, so just return

@@ -812,29 +812,25 @@ clear()
             && ls ${QA_RESULTS}/data/${subPath}/${fBase[ix]}.clear &> /dev/null ; then
          isClear=t
        fi
-    elif [ ${f%=*} = level ] ; then
-       f="^${f#*=}-"
-
-       # clear specified level
-       if grep -q $f ${QA_RESULTS}/data/${subPath}/qa_note_${fBase[ix]}* &> /dev/null
-       then
-         isClear=t
-       elif grep -q $f ${QA_RESULTS}/data/${subPath}/qa_lock_${fBase[ix]}* &> /dev/null
-       then
-         isClear=t
+    elif [ ${f%=*} = level -o ${f} != ${f/=/} -a ${f%=*} = tag ] ; then
+       if [ ${f%=*} = level ] ; then
+         # clear specified level
+         f="^${f#*=}-"
+       else
+         # e.g. L1-${tag}: where tag=CF_12 would match CF_12, CF_12x etc.
+         f="^[[:alnum:]]*-*${f#*=}.*: "
        fi
-    elif [ ${f} != ${f/=/} -a ${f%=*} = tag ] ; then
-       # e.g. L1-${tag}: where tag=CF_12 would match CF_12, CF_12x etc.
-       f="^[[:alnum:]]*-*${f#*=}.*: "
 
-       # clear specified level and/or flag
-       if grep -q $f ${QA_RESULTS}/data/${subPath}/qa_note_${fBase[ix]}* &> /dev/null
-       then
-         isClear=t
-       elif grep -q $f ${QA_RESULTS}/data/${subPath}/qa_lock_${fBase[ix]}* &> /dev/null
-       then
-         isClear=t
-       fi
+       local fl
+       for fl in \
+         $(ls ${QA_RESULTS}/data/${subPath}/qa_note_${fBase[ix]}* 2> /dev/null) \
+         $( ls ${QA_RESULTS}/data/${subPath}/qa_lock_${fBase[ix]}* 2> /dev/null)
+       do
+        if grep -q $f $fl &> /dev/null ; then
+          isClear=t
+          break
+        fi
+       done
     elif [ ${f} != ${f/=/} -a ${f%=*} = var ] ; then
        # CLEAR=var=name
        if expr match ${fBase[ix]} "${f}" &> /dev/null ; then
@@ -861,6 +857,7 @@ clear()
 
   if [ ${isClear} = t ] ; then
     if [ "${isFL}" = t ] ; then
+      # follow links
       fs=( $( \
            tryCom \
            ls ${QA_RESULTS}/data/${subPath}/*_${fBase[ix]}* 2> /dev/null ) )
