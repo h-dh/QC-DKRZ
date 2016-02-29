@@ -23,12 +23,13 @@ descript()
   echo "  -h                Display usage and exit."
   echo "  --auto-up         Enable automatic updates from the repository at the"
   echo "                    beginning of a run. Suspended by --auto-up=d[isable]."
+  echo "                    Enabled initially by default."
   echo "  --build           Download and build required libraries."
   echo "  --debug[=script]  Display execution commands. If the name of a script"
-  echo "                    called internally is assigned, then debug only this one."
+  echo "                    is assigned, then debug only this one."
   echo "  --help            Display usage and exit."
-  echo "  --link=path       Hard links of external NetCDF installations from the directories"
-  echo "                    in 'your-path/${package}/local'."
+  echo "  --link=path       Hard links of external NetCDF installations from the"
+  echo "                    directories in 'your-path/${package}/local'."
   echo "                    Shared by all hdf, netcdf, udunits  and zlib."
   echo "  --link_type=path  Same as for 'link' but just for type=netcdf, hdf, zlib, or udunits"
   echo "  --local=str       Path where lib and include directories are to be installed"
@@ -37,54 +38,34 @@ descript()
   echo "  --show-inst       Display properties of the current installation."
   echo "  --up[date]        Update the QA package from the repository."
   echo "                    Note: not for netCDF, HDF5, udunits2 or zlib."
-  echo "  --workspace=str   Path to put updated tables [ ~/.qa-dkrz/tables by"
-  echo "                    default]. Also, str is the location of the CF test,"
-  echo "                    suite, an example run, and of qc check results for"
-  echo "                    omitted option QC_RESULTS. Special: Omitted str "
-  echo "                    defaults to the QA-DKRZ path, i.e. as for QC-0.4;"
-  echo "                    write permission required. The default for the workspace itself"
-  echo "                    is \$HOME\.qa-dkrz [if not available, then the user"
-  echo "                    is asked to provide --workspace".
+  echo "  --work=path       Location of the .config.txt file and project tables,"
+  echo "                    ~/.qa-dkrz by default. Required if multiple users are"
+  echo "                    to access the same set of tables."
   echo ""
-  echo "  project-name      At present CF, CMIP5, and CORDEX; the latter by default."
+  echo "  project-name(s)   At present CF, CMIP5, and CORDEX; the latter by default."
 }
 
 getCurrPaths()
 {
   # where all the work is going to take place
   if [ $QA_HOME ] ; then
-    test ! -d $QA_HOME && mkdir -p $QA_HOME 2> /dev/null
+    if ! mkdir -p $QA_HOME 2> /dev/null ; then
+      echo "could not mkdir $QA_HOME"
+      exit
+    fi
   else
     QA_HOME=~/.qa-dkrz
   fi
 
   # the config filename and location
-  local isPrint=f
 
-  if [ ! ${CONFIG_FILE} ] ; then
-    if [ -w ~ ] ; then
-      local cPath=~/.qa-dkrz
-      test ! -d $cPath && mkdir -p $cPath 2> /dev/null
+  if [ -w "$QA_HOME" ] ; then
+    # not determined but may-be provided by the user
+    export CONFIG_FILE=$QA_HOME/config.txt
 
-      export CONFIG_FILE=$cPath/config.txt
-
-    elif [ -w "$QA_SRC" ] ; then
-      test ! -d $QA_SRC/.qa-dkrz && mkdir -p $QA_SRC/.qa-dkrz 2> /dev/null
-      export CONFIG_FILE=$QA_SRC/.qa-dkrz/config.txt
-
-    elif [ -w "$QA_HOME" ] ; then
-      # not determined but may-be provided by the user
-      test ! -d $QA_HOME && mkdir -p $QA_HOME/.qa-dkrz 2> /dev/null
-      export CONFIG_FILE=$QA_HOME/config.txt
-
-    else
-      isPrint=t
-    fi
-  fi
-
-  if [ ${isPrint} = t ] ; then
-    echo "HOME and QA_DKRZ without write permissions,"
-    echo "please restart with added option --workspace=path"
+  else
+    echo "directory $QA_HOME without write permissions,"
+    echo "please restart with added option --work=path"
     exit
   fi
 
@@ -447,8 +428,6 @@ do
           fi
         elif [ "${UOPTARG:0:5}" = BUILD ] ; then
           isBuild=t
-        elif [ "${UOPTARG:0:11}" = CONFIG_FILE ] ; then
-          export CONFIG_FILE=${OPTVAL}
         elif [ ${UOPTARG:0:5} = DEBUG -o ${UOPTARG} = 'DEBUG=install' ] ; then
           set -x
         elif [ "${UOPTARG%%=*}" = HELP ] ; then
@@ -469,7 +448,7 @@ do
           continue
         elif [ "${UOPTARG:0:2}" = UP ] ; then
           isUpdateQA=t
-        elif [ "${UOPTARG:0:9}" = WORKSPACE ] ; then
+        elif [ "${UOPTARG:0:4}" = WORK ] ; then
           QA_HOME=${UOPTARG##*=}
         fi
 
