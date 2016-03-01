@@ -696,13 +696,14 @@ checkLockFile()
 {
    # return 0 :: true
    # $1 == PATH: check only paths
+   # $2        : qa_*.nc file if any
 
    # any variable locked?
-   ls ${QA_RESULTS}/data/${subPath}/*_lock_${1}${2}.txt &> /dev/null
+   ls ${QA_RESULTS}/data/${subPath}/*_lock_${1}.txt &> /dev/null
    local x_lock=$?
 
    if [ ${LOCK_NOTES:-f} = t ] ; then
-     ls ${QA_RESULTS}/data/${subPath}/*_note_${1}${2}.txt &> /dev/null
+     ls ${QA_RESULTS}/data/${subPath}/*_note_${1}.txt &> /dev/null
      local x_note=$?
    fi
 
@@ -711,8 +712,7 @@ checkLockFile()
        return 0 # option says: don't ignore a blocking file
      else
        # option says: ignore blocking file
-       if ! ls ${QA_RESULTS}/data/${subPath}/qa_${1}${2}.nc &> /dev/null
-       then
+       if [ ! "${2}" ] ; then
          # no qa-result.nc file; block always
          return 0
        fi
@@ -1772,6 +1772,14 @@ getNextVariable()
 
   qa_fl=$( ls ${QA_RESULTS}/data/${subPath}/qa_${1}.nc 2> /dev/null)
 
+  # apply rules, clearings, and test for qa_note files
+  if \
+#trace \
+    testLocks $1 $qa_fl ; then
+      nextFile=  # ignore, try next
+      return 0
+  fi
+
   # sync with qa_file if available
   #exception: only scan for the tracking id
   if [ "${qa_fl}" -a ${TRACKING_ID_ONLY:-f} = f ] ; then
@@ -1975,22 +1983,6 @@ getNextSubPath()
     getFilenameBase
 
     if [ ${#fBase[*]} -gt 0 ] ; then
-      for(( ix = ${#fBase[*]} - 1 ; ix > -1 ; --ix )) ; do
-        if [ ${fBase[ix]} ] ; then
-          # apply rules, clearings, and test for qa_note files
-          if \
-#trace \
-            testLocks ; then
-            unset fBase[ix]
-            local hasChanged=t
-            continue
-          fi
-        fi
-      done
-
-      # remove empty items
-      test ${hasChanged:-f} = t && fBase=(${fBase[*]})
-
       # found unlocked variable (constraint: SHOW_CLEAR=f)
       mkdir -p ${QA_RESULTS}/data/${subPath}
 
@@ -4195,10 +4187,13 @@ testFileLink()
 
 testLocks()
 {
+  # $1: fBase[ix]
+  # $2: qa_*.nc if any
+
   # apply rules, clearings, and test for qa_note files
   if \
 #trace \
-  applyRules ${fBase[ix]} ; then
+  applyRules $1 ; then
     return 0  # not selected
   fi
 
@@ -4208,7 +4203,7 @@ testLocks()
     if [ ${EXP_PATH_INDEX[0]} ] ; then
       getExperimentName ${subPath}
     else
-      getExperimentName ${fBase[ix]}
+      getExperimentName $1
     fi
 
     # if CLEAR=only or SHOW_CLEAR was set, then try another variable
@@ -4219,10 +4214,10 @@ testLocks()
 
   if \
 #trace \
-  checkLockFile ${fBase[ix]} ; then
+  checkLockFile $1 $2 ; then
 #    if [ ${PROGRESS_BAR} ] ; then
-      local num=$( ls -d ${PROJECT_DATA}/${subPath}/${fBase[ix]}*.nc \
-                    | grep -c . )
+#      local num=$( ls -d ${PROJECT_DATA}/${subPath}/${1}*.nc \
+#                    | grep -c . )
 #    fi
 
     return 0  # is blocked
