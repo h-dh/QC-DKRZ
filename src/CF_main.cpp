@@ -41,16 +41,12 @@ int main(int argc,char *argv[])
 
   parseOptions(argc, argv, in, cf, notes);
 
-  int retVal=0;
-
   // runs also the cf checker
   in.init();
 
   cf.notes->printFlags();
-  if( cf.notes->getExitValue() )
-    retVal=1 ;
 
-  return retVal;
+  return cf.notes->getExitValue() ;
 }
 
 void
