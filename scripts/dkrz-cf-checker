@@ -8,19 +8,19 @@ descript()
   echo "https://github.com/IS-ENES-Data/QA-DKRZ.git"
   echo "Compilation: '/your-path-to-QA-DKRZ/install CF' unless"
   echo "it was fetched by conda install -c birdhouse qa-dkrz,"
-  echo "e-mail: hollweg@dkrz.de"
-  echo " -C str    CF Convention string; taken from global attributes by default."
-  echo " -F path   Find recursively all nc-files from starting point 'path'."
-  echo " -p str    Path to one or more netCDF Files; this is prefixed"
-  echo "           only to netCDF-files without any path component."
-  echo " -R        Apply also recommendations given by CF conventions."
-  echo " --debug   Show execution commands."
+  echo "Email: hollweg@dkrz.de"
+  echo " -C str     CF Convention string; taken from global attributes by default."
+  echo " -F path    Find recursively all nc-files from starting point 'path'."
+  echo " -p str     Path to one or more netCDF Files; this is prefixed"
+  echo "            only to netCDF-files without any path component."
+  echo " -R         Apply also recommendations given by CF conventions."
+  echo " --debug    Show execution commands."
   echo " --help"
-  echo " --param   Only for program development."
-  echo " --ts[=]   Run the files provided in the Test-Suite for CF conventions"
-  echo "           rules in QA-DKRZ/CF_TestSuite. If particular netCDF files are"
-  echo "           provided additionally, then only these are used. Then,"
-  echo "           use optional args Fail or Pass."
+  echo " --param    Only for program development."
+  echo " --ts[=arg] Run the files provided in the Test-Suite for CF conventions"
+  echo "            rules in QA-DKRZ/CF_TestSuite. If particular netCDF files are"
+  echo "            provided additionally, then only these are used. If a filename"
+  echo "            cannot be resolved unambigously, then use optional args F[ail] or P[ass}."
   echo " netCDF-file(s)"
 
   exit
@@ -150,8 +150,14 @@ do
         elif [ "${OPTARG}" = "test-suite" ] ; then
           isTestSuite=t
         elif [ "${OPTARG%=*}" = "ts" ] ; then
-          test "${OPTARG%=*}" != "${OPTARG}" && tsCase=/${OPTARG#*=}
-
+          if [ "${OPTARG%=*}" != "${OPTARG}" ] ; then
+            arg=${OPTARG#*=}
+            if [ ${arg[0]} = p -o ${arg[0]} = P ] ; then
+              tsCase=/Pass
+            else
+              tsCase=/Fail
+            fi
+          fi
           isTestSuite=t
         fi
         ;;
@@ -233,19 +239,27 @@ for(( i=0 ; i < ${#fs[*]} ; ++i )) ; do
   param=
 
   # prepare parameters for the cf-checker.x
-  if [ ${#fPath} -gt 0 ] ; then
-     param="-p ${fPath}\\n"
-  elif [ ${f/\//} != ${f} ] ; then
-     param="-p ${f%/*}\\n"
+  if [ ! "${fPath}" -a ${f/\//} != ${f} ] ; then
+     fPath=${f%/*}
      f=${f##*/}
   fi
 
   # only selected ones from the set of test files
   if [ ${#ts_fs[*]} -gt 0 ] ; then
     for(( i_ts=0 ; i_ts < ${#ts_fs[*]} ; ++i_ts )) ; do
-      test ${f} = ${ts_fs[i_ts]##*/} && break
+      if [ ${f} = ${ts_fs[i_ts]##*/} ] ; then
+        test ! "$fPath" && fPath=${ts_fs[i_ts]%/*}
+        break
+      fi
     done
     test ${i_ts} -eq ${#ts_fs[*]} && continue
+  fi
+
+  if [ "$fPath" ] ; then
+    param="-p ${fPath}\\n"
+  else
+    echo "Please, provide a path with optn -p"
+    exit 1
   fi
 
   param="${param}-f $f"
