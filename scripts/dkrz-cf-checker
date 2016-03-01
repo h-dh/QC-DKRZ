@@ -20,7 +20,7 @@ descript()
   echo " --ts[=arg] Run the files provided in the Test-Suite for CF conventions"
   echo "            rules in QA-DKRZ/CF_TestSuite. If particular netCDF files are"
   echo "            provided additionally, then only these are used. If a filename"
-  echo "            cannot be resolved unambigously, then use optional args F[ail] or P[ass}."
+  echo "            cannot be resolved unambigously, then use optional arg F[ail] or P[ass}."
   echo " netCDF-file(s)"
 
   exit
