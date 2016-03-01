@@ -1339,6 +1339,9 @@ set_qa_par()
  test ${DATA_IN_PRODUCTION:-f} = t && \
    par=${par}"${s}"dIP
 
+ test ${DISABLE_CONSISTENCY_CHECK:-f} = t && \
+   par=${par}"${s}"dCC
+
  test ${DISABLE_TIME_BOUNDS_CHECK:-f} = t && \
    par=${par}"${s}"dTB
 

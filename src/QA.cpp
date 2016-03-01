@@ -234,16 +234,7 @@ QA::applyOptions(bool isPost)
        continue;
      }
 
-     if( split[0] == "tPr"
-          || split[0] == "tableProject" )  // dummy
-     {
-       if( split.size() == 2 )
-          consistencyFile.setFile(split[1]);
-     }
    }
-
-   if( consistencyFile.path.size() == 0 )
-      consistencyFile.setPath(tablePath);
 
    if( table_DRS_CV.path.size() == 0 )
       table_DRS_CV.setPath(tablePath);
@@ -290,24 +281,29 @@ QA::checkDataBody(std::string vName)
   return false;
 }
 
-bool
-QA::checkConsistency(InFile &in)
+void
+QA::checkConsistency(InFile &in, std::vector<std::string> &opt,
+                     std::string& tPath)
 {
   defaultPrjTableName() ;
 
   // Read or write the project table.
-  Consistency consistency(this, &in, consistencyFile);
+  Consistency consistency(this, &in, opt, tPath);
+
+  if( !consistency.isEnabled() )
+    return;
+
   consistency.setAnnotation(notes);
   consistency.setExcludedAttributes( excludedAttribute );
 
-  bool is = consistency.check();
+  consistency.check();
 
   // inquire whether the meta-data checks passed
   int ev;
   if( (ev = notes->getExitValue()) > 1 )
     setExit( ev );
 
-  return is;
+  return ;
 }
 
 void
@@ -579,7 +575,7 @@ QA::init(void)
    }
 
    // check consistency between sub-sequent files or experiments
-   (void) checkConsistency(*pIn) ;
+   checkConsistency(*pIn, optStr, tablePath) ;
 
    if( !isCheckTime )
      notes->setCheckTimeStr("OMIT");

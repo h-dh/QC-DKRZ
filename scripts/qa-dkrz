@@ -299,6 +299,8 @@ callQaConfig()
 
   test ${RESUME_SESSION:-f} = t && log_sessMessage "session resumed."
 
+  test ${EXP_PATH_INDEX:-f} = f && DISABLE_CONSISTENCY_CHECK=t
+
   # always set
   PATH=${QA_BIN#*:}:$PATH
 

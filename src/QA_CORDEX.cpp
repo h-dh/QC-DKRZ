@@ -1017,19 +1017,19 @@ DRS_CV::testPeriodAlignment(std::vector<std::string> &sd, Date** pDates)
   bool is[] = { true, true, true, true };
   double uncertainty=0.1 ;
   if( pQA->qaExp.getFrequency() != "day" )
-    uncertainty = 1.; // becvause of variable len of months
+    uncertainty = 1.; // because of variable len of months
 
   // time value: left-side
   Date myDate( *pDates[2] );
   myDate.addTime(-pQA->qaTime.refTimeStep/2.);
   double dDiff = fabs(myDate - *pDates[0]) ;
-  is[0] = dDiff < uncertainty ;  // some tolerance
+  is[0] = dDiff < uncertainty ;
 
   // time value: right-side
   myDate = *pDates[3] ;
   myDate.addTime(pQA->qaTime.refTimeStep/2.);
   dDiff = fabs(myDate - *pDates[1]) ;
-  is[1] = dDiff < uncertainty ;  // some tolerance
+  is[1] = dDiff < uncertainty ;
 
   if(pQA->qaTime.isTimeBounds)
   {

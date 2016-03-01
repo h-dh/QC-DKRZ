@@ -1,18 +1,59 @@
 #include "qa_PT.h"
 
 Consistency::Consistency(QA *p0, InFile *p1,
-    struct hdhC::FileSplit& pTFile )
+    std::vector<std::string> &opt, std::string tPath )
 {
    qa  = p0;
    pIn = p1;
+   checkEnabled=true;
 
-   projectTableFile = pTFile;
+   applyOptions(opt, tPath);
 
    excludedAttributes.push_back("comment");
    excludedAttributes.push_back("history");
    excludedAttributes.push_back("associated_files");
 
    status=false;
+}
+
+void
+Consistency::applyOptions(std::vector<std::string> &optStr,
+                          std::string& tablePath)
+{
+  for( size_t i=0 ; i < optStr.size() ; ++i)
+  {
+     Split split(optStr[i], "=");
+
+     if( split[0] == "dCC"
+          || split[0] == "disableConsistencyCheck"
+             || split[0] == "disable_consistency_check")
+     {
+       checkEnabled=false;
+       return;
+     }
+
+     if( split[0] == "tP"
+          || split[0] == "tablePath" || split[0] == "table_path")
+     {
+       if( split.size() == 2 )
+          tablePath=split[1];
+
+       continue;
+     }
+
+     if( split[0] == "tPr"
+          || split[0] == "tableProject" )  // dummy
+     {
+       if( split.size() == 2 )
+          consistencyTableFile.setFile(split[1]);
+     }
+
+   }
+
+   if( consistencyTableFile.path.size() == 0 )
+      consistencyTableFile.setPath(tablePath);
+
+   return;
 }
 
 bool
@@ -43,7 +84,7 @@ Consistency::check(Variable &dataVar, std::string entryID)
   // matching the varname and frequency (account also rotated).
 
   // Open project table. Mode:  read
-  std::string str0(projectTableFile.getFile());
+  std::string str0(consistencyTableFile.getFile());
 
   std::ifstream ifs(str0.c_str(), std::ios::in);
   if( !ifs.is_open() )  // file does not exist
@@ -670,7 +711,7 @@ Consistency::write(Variable &dataVar, std::string& entryID)
 
   getMetaData(dataVar, entryID, md);
 
-  std::string pFile =  projectTableFile.getFile();
+  std::string pFile =  consistencyTableFile.getFile();
 
   lockFile(pFile);
 
