@@ -2511,6 +2511,12 @@ init()
     fi
   fi
 
+  if [ ${QA_EXAMPLE:-f} = t ] ; then
+    # run example for CORDEX
+    runExample
+    exit
+  fi
+
   test ! ${PROJECT} && PROJECT=NONE
   test ! ${PROJECT_AS} && PROJECT_AS=${PROJECT}
 
@@ -2520,12 +2526,6 @@ init()
     # could not make the executable for the given project
     std_out flush "could not make: install ${PROJECT_AS}"
     exit 1
-  fi
-
-  if [ ${QA_EXAMPLE:-f} = t ] ; then
-    # run example for CORDEX, if not done, yet
-    runExample
-    exit
   fi
 
   # expand comma-sep-list to arrays
@@ -2585,7 +2585,6 @@ init()
 
   initProjectTableName
 
-  # QA_HOME/tables -> QA_Results/tables
   initTables
 
   # save the configuration and init the session logfile
@@ -3823,19 +3822,51 @@ rmBlock()
 runExample()
 {
   # running an example for CORDEX
-  mkdir -p $QA_HOME/example &> /dev/null
-  cd $QA_HOME/example
+  dir=$(pwd)
+  dir=${dir%/example}/example
 
-  \rm -rf $QA_HOME/example/results $QA_HOME/example/qa-test.task
+  test "${EXAMPLE_PATH}" && dir=${EXAMPLE_PATH}/example
+
+  test ${dir:0:1} != '/' && dir=$(pwd)/$dir
+
+  if ! mkdir -p ${dir} &> /dev/null ; then
+    echo "could not mkdir ${dir}, please use option --example=path"
+    exit
+  fi
+
+  cd $dir
+
+  \rm -rf results config.txt data tables qa-test.task
+
+  echo "make examples in $dir " > $TTY
+  echo "make qa_test.task " > $TTY
 
   # prepare the example, if not done, yet
-  cp $QA_SRC/example/templates/qa-test.task $QA_HOME/example
-  sed -i "s%PROJECT_DATA=data%PROJECT_DATA=${QA_HOME}/example/data%" \
-         $QA_HOME/example/qa-test.task
-  sed -i "s%QA_RESULTS=results%QA_RESULTS=${QA_HOME}/example/results%" \
-         $QA_HOME/example/qa-test.task
+  cp $QA_SRC/example/templates/qa-test.task .
+  sed -i "s%PROJECT_DATA=data%PROJECT_DATA=${dir}/data%" \
+         qa-test.task
+  sed -i "s%QA_RESULTS=results%QA_RESULTS=${dir}/results%" \
+         qa-test.task
 
-  exec $QA_SRC/scripts/qa-dkrz -f ${QA_HOME}/example/qa-test.task
+  # data
+  echo "make data " > $TTY
+  tar --bzip2 -xf ${QA_SRC}/example/templates/data.tbz
+  fs=( $( find data -name "*.txt" ) )
+
+  if which ncgen &> /dev/null ; then
+    for f in ${fs[*]} ; do
+      ncgen -x -k 3 -o ${f%txt}nc $f
+      \rm -f $f
+    done
+  else
+    echo "building data in example requires the ncgen utility"
+    exit
+  fi
+
+  echo "run"  > $TTY
+  echo "$QA_SRC/scripts/qa-dkrz -m --work=$dir -f qa-test.task" > $TTY
+
+  exec $QA_SRC/scripts/qa-dkrz -m --work=$dir -f qa-test.task
 
   return
 }

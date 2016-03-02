@@ -2184,6 +2184,9 @@ do
 
         elif [ "${UOPTARG:0:7}" = EXAMPLE ] ; then
           setKWL QA_EXAMPLE=t
+          if [ ${OPTARG} != ${OPTARG#*=} ] ; then
+            setKWL EXAMPLE_PATH=${OPTARG#*=}
+          fi
 
         elif [ "${OPTARG:0:4}" = fpid ] ; then
           setKWL FORMER_PID=$OPTARG
@@ -2203,7 +2206,7 @@ do
         elif [ "${UOPTARG%=*}" = SET_DEFAULT_PROJECT ] ; then
           installArgs="${installArgs}--set_default_project=${OPTARG#*=},"
 
-        elif [ "${UOPTARG:0:9}" = WORKSPACE ] ; then
+        elif [ "${UOPTARG:0:4}" = WORK ] ; then
           installArgs="${installArgs}QA_HOME=${OPTARG#*=},"
           setKWL QA_HOME=${OPTARG##*=}
 

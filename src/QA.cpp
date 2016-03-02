@@ -917,26 +917,9 @@ QA::openQA_Nc(InFile &in)
   else
     nc->create(qaFile.getFile(),  "NC_NETCDF4");
 
-  bool isNoTime=false;
-  if( qaTime.isTime && pIn->isTime )
-  {
-    // create a dimension for fixed variables only if there is any
-    for( size_t m=0 ; m < qaExp.varMeDa.size() ; ++m )
-    {
-      if( qaExp.varMeDa[m].var->isFixed )
-      {
-        isNoTime=true;
-        break;
-      }
-    }
-
-    if( !isNoTime )
-      qaTime.openQA_NcContrib(nc);
-  }
+  if( qaTime.time_ix > -1 )
+    qaTime.openQA_NcContrib(nc);
   else
-    isNoTime=true;
-
-  if( isNoTime )
   {
     // dimensions
     qaTime.name="fixed";
