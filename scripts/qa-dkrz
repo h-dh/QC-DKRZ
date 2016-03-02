@@ -1376,11 +1376,18 @@ getExperimentNameFromPath()
   # check for path component 'output'
   test ! ${EXP_PATH_BASE} && EXP_PATH_BASE=${pcs[0]}
 
+  local countEPB=0
   local c expPathIndex M N
   N=${#pcs[*]}
 
   for(( c=0 ; c < N ; ++c )) ; do
     if [ "${pcs[c]}" = ${EXP_PATH_BASE} ] ; then
+      # check for an occurrence different than the left most
+      if [ ${countEPB} -lt ${EXP_PATH_BASE_POS} ] ; then
+        countEPB=$(( countEPB+1))
+        continue
+      fi
+
       local ix
       for(( ix=0 ; ix < ${#EXP_PATH_INDEX[*]} ; ++ix )) ; do
         expPathIndex[ix]=$(( c + ${EXP_PATH_INDEX[ix]} ))
@@ -2749,6 +2756,12 @@ initExperimentName()
     for t in ${EXP_PATH_INDEX[*]} ; do
       test ${t} -gt ${EXP_PATH_INDEX_MAX} && EXP_PATH_INDEX_MAX=${t}
     done
+
+    # for multiple occurrences
+    EXP_PATH_BASE_POS=0
+    if [ "${EXP_PATH_BASE/:/}" != "${EXP_PATH_BASE}" ] ; then
+      EXP_PATH_BASE_POS=${EXP_PATH_BASE##*:}
+    fi
   else
     EXP_NAME='all-scope'
   fi
