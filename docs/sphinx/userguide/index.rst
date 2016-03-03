@@ -11,8 +11,7 @@ User Guide
     overview
     installation
     configuration
-    tools
-    running
-    examples
-    best-practises
-    
+    best-practice
+    results
+    cf-checker
+

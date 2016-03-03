@@ -4,17 +4,12 @@
  Configuration
 ===============
 
-
-
-QA Configuration
-================
-
 The QA would run basically on the command-line only with the specification of
-the target(s) to be checked. However, using options facilitates a check in
-particular for a given project.
-Configuration options could be supplied on the command-line and by one or more
-conf-files. Configuration options follow a specific syntax with case-insensitive
-option names (e.g. ``KEY-WORD`` and ``kEy-WorD``).
+the target(s) to be checked. However, using options and gathering these
+in conf-files facilitates checks.
+
+Configuration options follow a specific syntax with case-insensitive
+option names (e.g. kEy-WorD).
 
 .. code-block:: bash
 
@@ -23,26 +18,28 @@ option names (e.g. ``KEY-WORD`` and ``kEy-WorD``).
   KEY-WORD   +=    value[,value ...]   same, but appended
 
 
-Partitioning of data
---------------------
+Partitioning of Data Sets
+-------------------------
 
-The specification of a path to a directory tree by option ``PROJECT_DATA`` results
-in a check of every NetCDF files found within the entire tree. This can be further
-customised by the key-words ``SELECT`` and ``LOCK``, which follow special rules.
+The specification of a path to a data directory tree by option ``PROJECT_DATA``
+results in a check of every NetCDF files found within the entire tree.
+This can be further customised by the key-words ``SELECT`` and ``LOCK``,
+which follow special rules.
 
 .. code-block:: bash
 
-  KEY-WORD                            var1[,var2,...]   specified variables for every path;
-                                                        += mode for sub-paths
-  KEY-WORD      path1[,path2,...] [=]                   all variables within the specified path;
-                                                        += mode for sub-paths
-  KEY-WORD      path1[,path2,...]  =  [var1[,var2,...]  specified variables within the given paths;
-                                                        the  = char in-between is mandatory;
-                                                        += mode for sub-paths
+  KEY-WORD                            var1[,var2,...]   specified variables for every path; += mode
+  KEY-WORD      path1[,path2,...] [=]                   all variables within the specified path; +=mode
+  KEY-WORD      path1[,path2,...]  =  [var1[,var2,...]  specified variables within the given paths; += mode
   KEY-WORD  =   path1[,path2,...]  =  [var1[,var2,...]  same, but overwrite mode
   KEY-WORD  +=  path1[,path2,...]  =  [var1[,var2,...]  append to a previous assignment
 
-- Highest precedence is for options on the command-line.
+
+Some options act on other options:
+
+- Options on the command-line have to be prefixed by '-E\_'.
+
+- Highest precedence for options on the command-line.
 
 - If path has no leading '/', then the search is relative to the path specified
   by option PROJECT_DATA.
@@ -51,40 +48,30 @@ customised by the key-words ``SELECT`` and ``LOCK``, which follow special rules.
   cancellation of previous SELECTions in any configuration file.
 
 - If SELECTions are specified on the command-line (options -S) with an absolute
-  path, i.e. beginning with '/', then PROJECT_DATA specified in any other
-  config-files is cancelled..
+  path, i.e. beginning with '/', then PROJECT_DATA specified in any
+  config-file is cancelled..
 
-- All selections refer to the atomic data set of a given variable, i.e. all
-  sub-atomic files; even if a file name is appended to a path.
+- All selections refer to atomic variables, i.e. all
+  sub-temporal files, even if a file name is appended to a path.
 
-- Locking gets the higher precedence over selection.
+- LOCKing gets the higher precedence over SELECTion.
 
 - Path and variable indicators are separated by the '=' character, which may be
-  omitted when there is no variable (except the case that each of the paths
+  omitted when there is no variable (except the case that the path item
   contains no '/' character).
 
-- Regular expressions may be applied for both path(s) and variable(s).
+- Regular expressions may be applied to both path(s) and variable(s).
 
-- If an expanded path points to a sub-dir tree, then this is searched for the
-  variables.
-
-- A variable is selected if the expanded variable part fits the beginning of the
-  name, e.g. specifying 'tas' would select all tas, tasmax, and tasmin files.
+- A variable is selected if the beginning of the name is unambigous,
+  e.g. specifying 'tas' would select all tas, tasmax, and tasmin files.
   Note that every file name begins with ``variable_...`` for CMIP5/CORDEX, thus,
   use ``tas_`` for this alone.
 
 
-Configuration files
+Configuration Files
 ===================
 
 A description of the configuration options is given in the repository.
-
-
-.. code-block:: bash
-
-    QC-0.4:
-    /package-path/tables/SVN_defaults/"project-name"_qc.conf
-
 
 .. code-block:: bash
 
@@ -98,23 +85,38 @@ to site-specific demands, which are robust against changes in the repository,
 and long-term default settings from the repository. All options may be specified
 on the command-line plus some more (
 ``/package-path/QA-DKRZ/scripts/qa_DKRZ --help``).
-A sequence of configuration files is accomplished by ``QA_CONF=conf-file``
-assignments embedded in the configuration files (nesting depth is unrestricted).
+A sequence of configuration files is defined by ``QA_CONF=conf-file``
+assignments embedded in the configuration files.
 The precedence of configuration files/options is given below from highest to
 lowest:
 
 -  directly on the command-line
 -  in the task-file (``-f file``) specified on the command-line.
 -  QA_CONF assignments embedded (descending starts from the ``-f file``).
--  site-specific files provided by files located straight in ``/package-path/tables``.
+-  site-specific files provided by files located straight in
+   ``/package-path/tables``.
 -  defaults for the entire project:
 
-   .. code-block:: bash
 
-       QC-0.4:
-       /package-path/tables/SVN_defaults
+Experiment Names
+================
 
-   .. code-block:: bash
+QA-DKRZ checks files individually, the results are gathered in containers
+unique for a specific scope. Albeit most projects have defined a term
+'experiment', this is not suitable to provide a realm common to a sub-set
+of data files. Note that having everything identical, but the model for instance
+could cause annotations, i.e. differences for some variables,
+in the QA results.
 
-       QA-DKRZ:
-       /package-path/tables/projects/project-name
+For CMIP5 and CORDEX, an unambiguous scope is defined by the properties of
+the so-called Data Reference System, i.e. the components of the path to
+the variables. The option ``EXP_PATH_INDEX`` together with option
+``EXP_PATH_BASE``
+defines a unique experiment-name, where the former contains a comma-separated list
+of indices of the path components and the latter the starting component with
+index=0, e.g. ``EXP_PATH_BASE=output`` and ``EXP_PATH_INDEX=1,2,3,4,6``.
+An example is commented in :ref:`results`.
+
+.. note:: If ``EXP_PATH_INDEX`` is not set, then consistency checks are disabled.
+
+

@@ -4,22 +4,30 @@
 Installation
 ============
 
-You can install `QA-DKRZ` either via the conda package manager or from source.
+`QA-DKRZ` may be installed  either via the conda package manager or from source.
+
+The conda package manager installs a ready-to-use package, however without any
+sources. Also, 32-bit machines are required.
+
+If you want to have sources or use a different machine architecture, then the
+installation from source should be first choice.
 
 
 .. _conda-install:
 
-Installing with Conda Package Manager
-=====================================
+By Conda Package Manager
+========================
 
-Make sure that you have `conda <http://conda.pydata.org/docs/install/quick.html#linux-miniconda-install>`_ installed. The quick steps to install `miniconda` on Linux 64-bit are:
+Make sure that you have
+`conda <http://conda.pydata.org/docs/install/quick.html#linux-miniconda-install>`_ installed. The quick steps to install `miniconda` on Linux 64-bit are:
 
 .. code-block:: bash
 
    $ wget https://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh
    $ bash Miniconda-latest-Linux-x86_64.sh
 
-.. note:: Currently we only support the Linux 64-bit version of the QA tool on conda. The installation is tested on Centos 6 and Ubuntu/Debian 14.04 LTS.
+.. note:: The installation is tested on 32-bit Centos 6 and
+          Ubuntu/Debian 14.04 LTS.
 
 Please check that the ``conda`` package manager is on your ``PATH``. For example you may set the ``PATH`` environment variable as following:
 
@@ -44,33 +52,37 @@ Check the installation by running the CF-Checker with a NetCDF file:
    $ dkrz-cf-checker my_tasmax.nc
 
 
-Installing from Source
-======================
+From Source
+===========
+
 
 Requirements
 ------------
 
-The tool requires the BASH shell and a C/C++ compiler.
+The tool requires the BASH shell and a C/C++ compiler (AIX works, too).
+
 
 Building the QA tool
 --------------------
 
-A script ``install`` is provided to manage different installation/update modes.
-``install`` runs on linux utilising Bash and C/C++ (AIX works, too).
+The sources are downloaded from GitHub by
 
-Environmental variables CC, CXX, CFLAGS, and CXXFLAGS are accepted.
+.. code-block:: bash
 
-``install`` establishes access to libraries, which may be linked or built, as well
-as updating sources and executables.
+   $ git clone  https://github.com/IS-ENES-Data/QA-DKRZ
 
-A file ``install_configure`` is installed during the first run of install.
+Any installation is done with the script ``install`` ( a prefix './' could
+be helpful in some cases).
 
-If option ``--build`` is not applied, then the user is notified to edit ``install_configure``.
-
-After the installation, compiler settings and paths to libraries are always
-read from ``install_configure``.
-
-Proceedings of installation/update are logged in file ``install.log``.
+- By default, a config.txt file and tables of various projects are
+  copied to .qa-dkrz in the users home-directory.
+- The script stops by asking for editing a file ``install_configure``, which
+  will be protected against any update.
+- Environmental variables CC, CXX, CFLAGS, and CXXFLAGS are accepted.
+- ``install`` establishes access to libraries, which may be linked or built,
+  as well as updating sources and executables.
+- Option ``--build`` triggers building of libraries.
+- Proceedings are logged in file ``install.log``.
 
 The full set of options is described by:
 
@@ -78,74 +90,50 @@ The full set of options is described by:
 
   $ ./install --help
 
-Compile the executable for the project CORDEX: 
+Building Libraries
+==================
 
-.. code-block:: bash
-
-   $ ./install CORDEX
-
-The following projects are supported: CORDEX (by default), CMIP5, CF, NONE. 
-
-Compile the CF checker with the following command:
-
-.. code-block:: bash
-
-   $ ./install CF  
-
-A test-run is started automatically generating some results in the directory ``/package-path/example/test_I``.
-
-Building libraries
-------------------
+If you decide to use your own set of libraries (accessing provided ones
+is preferred by respective settings in the install_configure file), then
+this is accomplished by
 
 .. code-block:: bash
 
   $ ./install --build [opts]
 
-This downloads and installs the following libraries:
+Sources of the following libraries are downloaded and installed:
 
 - zlib-1.2.8 from www.zlib.net,
 - hdf5-1.8.9 from www.hdfgroup.org,
 - netcdf-4.3.0 from www.unidata.ucar.edu (shared, no FORTRAN, non-parallel),
-- udunits package from http://www.unidata.ucar.edu/packages/udunits (not for QC-0.4).
+- udunits package from http://www.unidata.ucar.edu/packages/udunits.
 
 The libraries are built in sub-directory ``local/source``.
 If libraries had been built previously, then the sources are updated and
 the libraries are rebuilt.
 
+.. _updates:
 
-Update you installation
-------------------------
+=======
+Updates
+=======
 
-Updating the QA sources from the repository and re-compilation of executables is done
-easiest by using the ``install`` script. There are two modes: automatic and manually.
-Please note that the execution of ``/package-path/install [project]`` does
-not call for any updates by default; this will only recompile locally changed
-C/C++ programs.
-
-**Manual Update**:
+Updating the QA sources from the repository and re-compilation of executables
+is done automatically by default for both kinds of installation. This may be
+switched off by
 
 .. code-block:: bash
 
-  $ /package-path/install --up[date] [opts]
+  $ /package-path/install --auto-up=disable
 
-This applies any changes in the repository. If C/C++ programs are affected,
-then executables are remade. Please note that libraries are not updated.
-If you want to do so, then you have to set option ``--build``.
+, reversed by ``--auto-up``. In particular for the installation from sources,
+i.e. using the ``git`` tool, the creation of an empty file ``.ignore_GitHub``
+in the QA-DKRZ path disables updating of the sources, too.
 
-**Automatic Update**:
+Similar to that update processing works for the tables of projects
+using ``--auto-table-up``.
 
-.. code-block:: bash
+.. note:: If enabled, then every qa-dkrz run triggers the install-tool
+          for a search of updates of the QA tool itself,
+          while updating of project tables is done only once a day.
 
-  $ /package-path/install --auto-up [opts]
-
-- Once ``--auto-up`` was set, the package will always be synchronised to the
-  repository at the beginning of each QA session.
-- This mode may be disabled by option ``--auto-up=disable``.
-- Enabling/disabling the auto-mode works also during operational runs of the
-  qa-DKRZ script.
-- Daily search for updates of the required tables from
-  http://www.cfconventions.org (done off-line for QC-0.4, which applies the standard-name table.).
-
-  - ``area-type-table.xml``
-  - ``cf-standard-name-table.xml``
-  - ``standardized-region-names.html``
