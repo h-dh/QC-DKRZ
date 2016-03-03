@@ -210,10 +210,11 @@ checkTools()
     fi
   fi
 
-  # a few simple commands
+  # a few simple commands: exclude bc ssh
+  # below: awk expt
   local cmd
   for cmd in basename 'date +\'%F%T'' \
-             bc git grep kill ls mkdir mv rm sleep ssh test
+             git grep kill ls mkdir mv sed rm sleep test
   do
     if tryExist com $cmd ; then
       test $CHECK_TOOLS = t && std_out "${cmd}\t\t available"
