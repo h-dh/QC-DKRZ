@@ -28,16 +28,17 @@ install:
   - export PREFIX="$HOME/miniconda"
   - echo "CC=\"/usr/bin/gcc\"" > install_configure
   - echo "CXX=\"/usr/bin/g++\"" >> install_configure
-  - echo "CFLAGS=\"-O2 -Wall\"" >> install_configure 
+  - echo "CFLAGS=\"-O2 -Wall\"" >> install_configure
   - echo "CXXFLAGS=\"-O2 -Wall -D NC4\"" >> install_configure
   - echo "LIB=\"${PREFIX}/lib\"" >> install_configure
   - echo "INCLUDE=\"${PREFIX}/include\"" >> install_configure
 
 script:
+  - echo $(ls -l $HOME)
   - touch .ignore_GitHub
   - ./install CF
   - ./install CORDEX
   - ./install CMIP5
 after_script:
-  - test -d "./bin" 
+  - test -d "./bin"
   - ./scripts/qa-dkrz --example
