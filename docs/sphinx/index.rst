@@ -12,15 +12,18 @@ Contents:
    :maxdepth: 2
 
    introduction
-   userguide/index
+
+   faq
+   glossary
+   changelog
+
+User-guide
+==========
 
 .. toctree::
-    :maxdepth: 1
+   :maxdepth: 2
 
-    faq
-    glossary
-    changelog
-
+   userguide/index
 
 Indices and tables
 ==================
