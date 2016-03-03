@@ -48,25 +48,23 @@ descript()
 getCurrPaths()
 {
   # where all the work is going to take place
-  if [ $QA_HOME ] ; then
-    if ! mkdir -p $QA_HOME 2> /dev/null ; then
-      echo "could not mkdir $QA_HOME"
-      exit
-    fi
-  else
+  if [ ! $QA_HOME ] ; then
     QA_HOME=~/.qa-dkrz
   fi
 
   # the config filename and location
+  if ! mkdir -p $QA_HOME 2> /dev/null ; then
+    echo "could not mkdir $QA_HOME"
+    exit 1
+  fi
 
-  if [ -w "$QA_HOME" ] ; then
-    # not determined but may-be provided by the user
-    export CONFIG_FILE=$QA_HOME/config.txt
+  # not determined but may-be provided by the user
+  export CONFIG_FILE=$QA_HOME/config.txt
 
-  else
+  if [ ! -w $QA_HOME ] ; then
     echo "directory $QA_HOME without write permissions,"
     echo "please restart with added option --work=path"
-    exit
+    exit 1
   fi
 
   return

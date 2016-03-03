@@ -34,7 +34,6 @@ install:
   - echo "INCLUDE=\"${PREFIX}/include\"" >> install_configure
 
 script:
-  - echo $(ls -l $HOME)
   - touch .ignore_GitHub
   - ./install CF
   - ./install CORDEX
