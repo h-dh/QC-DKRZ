@@ -336,10 +336,11 @@ update()
       cd $QA_PATH
 
       # switch repository
-      git remote set-url origin https://github.com/IS-ENES-Data/QA-DKRZ.git
-
-      exec install $*
-
+      asdf=( $( git remote -v ) )
+      if [ ${asdf[1]} != ${asdf[1]//h-dh/} ; then
+        git remote set-url origin https://github.com/IS-ENES-Data/QA-DKRZ.git
+        exec install $*
+      fi
 
       # is qa-dkrz going to change?
       local qa_dkrzDate=$(ls -l \
