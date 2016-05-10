@@ -336,7 +336,7 @@ update()
       cd $QA_PATH
 
       # switch repository
-      git remote set-url https://github.com/IS-ENES-Data/QA-DKRZ.git
+      git remote set-url origin https://github.com/IS-ENES-Data/QA-DKRZ.git
 
       exec install $*
 
