@@ -335,6 +335,12 @@ update()
     elif [ ! -f ${QA_PATH}/.ignore_GitHub ] ; then
       cd $QA_PATH
 
+      # switch repository
+      git remote set-url https://github.com/IS-ENES-Data/QA-DKRZ.git
+
+      exec install $*
+
+
       # is qa-dkrz going to change?
       local qa_dkrzDate=$(ls -l \
            --time-style=+'%s' ${QA_PATH}/scripts/qa_dkrz \
@@ -505,7 +511,7 @@ done
 
 getSrcPath $zeroArg  # sets also CONDA_ENV
 getCurrPaths
-update
+update ${allArgs[*]}
 
 if . $QA_PATH/scripts/updateConfigFile.txt DEFAULT_PROJECT ; then
   defPrj=--default_project=${DEFAULT_PROJECT#*=}
