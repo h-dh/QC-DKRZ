@@ -337,7 +337,7 @@ update()
 
       # switch repository
       asdf=( $( git remote -v ) )
-      if [ ${asdf[1]} != ${asdf[1]//h-dh/} ; then
+      if [ ${asdf[1]} != ${asdf[1]//h-dh/} ] ; then
         git remote set-url origin https://github.com/IS-ENES-Data/QA-DKRZ.git
         exec install $*
       fi
