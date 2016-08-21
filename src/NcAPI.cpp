@@ -93,6 +93,7 @@ NcAPI::clearLayout(void)
     layout.varIsRecordType.clear();
     layout.noData.clear();
     hasEffVarUnlimitedDim.clear();
+
     delete [] layout.rec_start[i] ;
     delete [] layout.rec_count[i] ;
 
@@ -112,6 +113,10 @@ NcAPI::clearLayout(void)
   layout.rec_start.clear();
   layout.rec_count.clear();
   layout.rec_index.clear();
+  layout.rec_leg_begin.clear();
+  layout.rec_leg_sz.clear() ;
+  layout.rec_leg_end.clear();
+  layout.rec_prev_taker.clear();
 
   layout.varStorage.clear();
   layout.varChunkSize.clear();
@@ -1348,6 +1353,11 @@ NcAPI::defineVar(std::string vName, nc_type type,
   layout.rec_count.push_back( new size_t [currDimName.size()] );
   layout.rec_index.push_back( UINT_MAX ); //indicates non-record
 
+  layout.rec_leg_begin.push_back( 0 );
+  layout.rec_leg_sz.push_back( 0 );  // default for large multi-dim arrays
+  layout.rec_leg_end.push_back( 0 );
+  layout.rec_prev_taker.push_back( 0 );  // pointer of the last data taker
+
   size_t sz=1;  // Set 1 for limited variables, not used.
 
   for( size_t i=0 ; i < currDimName.size() ; ++i )
@@ -1357,7 +1367,7 @@ NcAPI::defineVar(std::string vName, nc_type type,
     if( isDimUnlimited()
           && m == static_cast<size_t>(layout.unlimitedDimID) )
     {
-      layout.rec_start.back()[i]=0;  //substitute current record
+      layout.rec_start.back()[i]=0;  //place-holder for current record
       layout.rec_count.back()[i]=1;
       layout.rec_index.back()=i;
       continue;
@@ -2870,6 +2880,9 @@ NcAPI::getData(MtrxArr<ToT> &to, int varid, size_t rec)
 
   // note that the leg length is atomatically set to a single step
   // for higher-dimensonal arrays.
+  if( ! layout.rec_leg_sz[varid] )
+     setRecLeg(layout.varidMap[varid]);
+
   size_t currLeg = layout.rec_leg_sz[varid];
 
   // read operation required
@@ -2881,8 +2894,14 @@ NcAPI::getData(MtrxArr<ToT> &to, int varid, size_t rec)
 
     if( layout.rec_leg_end[varid] > layout.varDimSize[varid][0] )
     {
-      layout.rec_leg_end[varid] = layout.varDimSize[varid][0];
-      currLeg = layout.varDimSize[varid][0] - rec ;
+      // take into growth due to writing
+      std::vector<size_t> vs_vdSz( getVarDimSize(layout.varidMap[varid]) );
+
+      if( !vs_vdSz.size() )
+        vs_vdSz.push_back(1);  // scalar variable
+
+      layout.rec_leg_end[varid] = vs_vdSz[0];
+      currLeg = vs_vdSz[0] - rec ;
     }
 
     (void) getData(varid, rec, currLeg);
@@ -3094,9 +3113,7 @@ size_t
 NcAPI::getDataSize(int varid)
 {
   // return total number of data values.
-  size_t num=1;
-  if( hasEffVarUnlimitedDim[varid] )
-    num = getNumOfRecords();
+  size_t num = getNumOfRecords();
 
   num *= layout.recSize[varid];
 
@@ -3595,17 +3612,12 @@ NcAPI::getLayout(void)
      layout.rec_index.push_back( UINT_MAX );  //indicates non-record
 
      layout.rec_leg_begin.push_back( 0 );
-     layout.rec_leg_sz.push_back( 1 );  // default for large multi-dim arrays
+     layout.rec_leg_sz.push_back( 0 );
+     layout.rec_leg_sz.push_back( 0 );  // default for large multi-dim arrays
      layout.rec_leg_end.push_back( 0 );
      layout.rec_prev_taker.push_back( 0 );  // pointer of the last data taker
 
-     if( rank < 3 )
-     {
-       if( layout.varDimSize[id][0] > rec_leg_max )
-         layout.rec_leg_sz.back() = rec_leg_max ;
-       else
-         layout.rec_leg_sz.back() = layout.varDimSize[id][0] ;
-     }
+//     setRecLeg(vName);
 
      // compression
      int shuffle=0;
@@ -3750,15 +3762,15 @@ NcAPI::getLayout(void)
             layout.rec_start.back()[i]=0;
             layout.rec_count.back()[i]=1;
             layout.rec_index.back()=i;
-
-            continue;
          }
+         else
+         {
+            size_t dSz = layout.dimSize[ m ] ;
+            sz *= dSz ;
 
-         size_t dSz = layout.dimSize[ m ] ;
-         sz *= dSz ;
-
-         layout.rec_start.back()[i]=0;
-         layout.rec_count.back()[i]=dSz;
+            layout.rec_start.back()[i]=0;
+            layout.rec_count.back()[i]=dSz;
+         }
      }
 
      // special: scalar defined by 0-dimensional variable
@@ -3931,8 +3943,8 @@ NcAPI::getRecordSize(int varid)
   // return size of a record.
 
   // return 0, if vName is limited, i.e. for non-records.
-  if( ! hasEffVarUnlimitedDim[varid] )
-    return 0 ;
+//  if( ! hasEffVarUnlimitedDim[varid] )
+//    return 0 ;
 
   return layout.recSize[varid] ;
 }
@@ -4199,7 +4211,7 @@ NcAPI::init(void)
   isThisOpen  = false;
 
   numOfRecords=-1;
-  rec_leg_max=1024;
+  max_read_sz=100000;
 
   isChunking  = false ;
   isDeflate   = false ;
@@ -5323,6 +5335,23 @@ NcAPI::setFletcher32(int varid, int f)
 
     exceptionHandling(key, capt, text, checkType, getVarnameFromVarID(varid));
   }
+
+  return;
+}
+
+void
+NcAPI::setRecLeg(std::string vName)
+{
+  int id = getVarID(vName);
+  layout.rec_leg_sz[id] = 1;
+
+  size_t recSz=getRecordSize(id);
+  size_t num=getNumOfRecords(vName, true);
+
+  if( (num*recSz) > max_read_sz )
+    layout.rec_leg_sz[id] = max_read_sz / recSz ;
+  else if( num > 0 )
+    layout.rec_leg_sz[id] = num;
 
   return;
 }

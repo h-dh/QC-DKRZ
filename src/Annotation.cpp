@@ -1076,8 +1076,8 @@ Annotation::printNotes(std::string &tag, std::string &caption,
     printHeader(ofsNotes);
   }
 
-  if( isMultipleTags || !str.size() )
-     return;
+//  if( isMultipleTags || !str.size() )
+//     return;
 
   // prevent error message flooding
   if( count[currIndex]++ > recErrCountLimit )
@@ -1098,11 +1098,11 @@ Annotation::printNotes(std::string &tag, std::string &caption,
       *ofsNotes << "\n" << caption << std::endl;
 
   *ofsNotes <<  str ;
-  if( str[str.size()-1] != '\n' )
+  size_t sz=str.size();
+  if( sz && str[sz-1] != '\n' )
     *ofsNotes <<  std::endl;
 
   // output the pure text with '\n' replaced by ';'
-  size_t sz=str.size();
   for( size_t i=0 ; i < sz ; ++i )
     if( str[i] == '\n' )
        str[i] = ';' ;

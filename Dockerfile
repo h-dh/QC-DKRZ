@@ -2,7 +2,7 @@
 #
 
 FROM continuumio/miniconda
-MAINTAINER https://github.com/h-dh/QA-DKRZ
+MAINTAINER https://github.com/IS-ENES-Data/QA-DKRZ
 
 LABEL Description="Quality Assurance Tool by DKRZ" Vendor="DKRZ" Version="0.5.0"
 

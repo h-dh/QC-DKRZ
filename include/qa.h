@@ -91,7 +91,8 @@ class QA : public IObj
   bool   checkDataBody(std::string vName="");
 
   //!    true requires a check against the project meta data
-  bool   checkConsistency(InFile &in);
+  void   checkConsistency(InFile &in, std::vector<std::string> &opts,
+                          std::string& tPath);
 
   /*! Close records for time and data.*/
   void   closeEntry(void);

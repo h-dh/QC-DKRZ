@@ -190,7 +190,7 @@ bind_checksum()
   fi
 
   # calculate the checksum(s)
-  ${QA_PATH}/scripts/checkSum -b ${QA_BIN#*:} $type \
+  ${QA_SRC}/scripts/checkSum -b ${QA_BIN#*:} $type \
       -q ${QA_RESULTS} ${YAML:+--yaml} ${CS_NO_HISTORY:+--no_history} \
       ${CS_STAND_ALONE:+-w}  $email ${CS_TABLE:+-t} ${CS_TABLE} \
       ${CURR_EXP_NAME:+-x} ${CURR_EXP_NAME} \
@@ -298,6 +298,8 @@ callQaConfig()
   fi
 
   test ${RESUME_SESSION:-f} = t && log_sessMessage "session resumed."
+
+  test ${EXP_PATH_INDEX:-f} = f && DISABLE_CONSISTENCY_CHECK=t
 
   # always set
   PATH=${QA_BIN#*:}:$PATH
@@ -431,7 +433,7 @@ callQaExecutor()
           QA_HOST \
           QA_NCFILE_FLAGS \
           QA_RESULTS \
-          QA_PATH \
+          QA_SRC \
           REATTEMPT_LIMIT \
           REPLICATED_RECORD \
           SESSION \
@@ -475,7 +477,7 @@ callQaExecutor()
     text="${text}\nIMPORTED_PATH=${QA_BIN#*:}"
     echo -e "$text" > $procFile
 
-    $QA_PATH/scripts/$QA_FILE_EXECUTER "${ca}QA_PATH=${QA_PATH} PROC_POOL=$PROC_POOL PROC_FILE=${procFile##*/} PAR_PID=${rootPID}" &
+    $QA_SRC/scripts/$QA_FILE_EXECUTER "${ca}QA_SRC=${QA_SRC} PROC_POOL=$PROC_POOL PROC_FILE=${procFile##*/} PAR_PID=${rootPID}" &
   else
     local bin
     for bin in ${QA_BIN[*]} ; do
@@ -489,7 +491,7 @@ callQaExecutor()
     echo -e "$text" > $procFile
 
     if callPing ; then
-      ssh $nextHost $QA_PATH/scripts/$QA_FILE_EXECUTER "PROC_POOL=$PROC_POOL PROC_FILE=${procFile##*/} PAR_PID=${rootPID} &" &> /dev/null
+      ssh $nextHost $QA_SRC/scripts/$QA_FILE_EXECUTER "PROC_POOL=$PROC_POOL PROC_FILE=${procFile##*/} PAR_PID=${rootPID} &" &> /dev/null
     fi
   fi
 
@@ -511,10 +513,10 @@ catFiles()
   declare -a sec
 
   if [ -f ${target} ] ; then
-    local secTarget=$( $QA_PATH/bin/fModTime.x ${target} | awk '{print $6}')
+    local secTarget=$( $QA_SRC/bin/fModTime.x ${target} | awk '{print $6}')
 
     for(( i=0 ; i < ${#fs[*]} ; ++i )) ; do
-       sec[i]=$( $QA_PATH/bin/fModTime.x ${fs[i]} | awk '{print $6}')
+       sec[i]=$( $QA_SRC/bin/fModTime.x ${fs[i]} | awk '{print $6}')
 
        if [ ${sec[i]} -gt ${secTarget} ] ; then
           isNew=t
@@ -694,13 +696,14 @@ checkLockFile()
 {
    # return 0 :: true
    # $1 == PATH: check only paths
+   # $2        : qa_*.nc file if any
 
    # any variable locked?
-   ls ${QA_RESULTS}/data/${subPath}/*_lock_${1}${2}.txt &> /dev/null
+   ls ${QA_RESULTS}/data/${subPath}/*_lock_${1}.txt &> /dev/null
    local x_lock=$?
 
    if [ ${LOCK_NOTES:-f} = t ] ; then
-     ls ${QA_RESULTS}/data/${subPath}/*_note_${1}${2}.txt &> /dev/null
+     ls ${QA_RESULTS}/data/${subPath}/*_note_${1}.txt &> /dev/null
      local x_note=$?
    fi
 
@@ -709,8 +712,7 @@ checkLockFile()
        return 0 # option says: don't ignore a blocking file
      else
        # option says: ignore blocking file
-       if ! ls ${QA_RESULTS}/data/${subPath}/qa_${1}${2}.nc &> /dev/null
-       then
+       if [ ! "${2}" ] ; then
          # no qa-result.nc file; block always
          return 0
        fi
@@ -812,29 +814,25 @@ clear()
             && ls ${QA_RESULTS}/data/${subPath}/${fBase[ix]}.clear &> /dev/null ; then
          isClear=t
        fi
-    elif [ ${f%=*} = level ] ; then
-       f="^${f#*=}-"
-
-       # clear specified level
-       if grep -q $f ${QA_RESULTS}/data/${subPath}/qa_note_${fBase[ix]}* &> /dev/null
-       then
-         isClear=t
-       elif grep -q $f ${QA_RESULTS}/data/${subPath}/qa_lock_${fBase[ix]}* &> /dev/null
-       then
-         isClear=t
+    elif [ ${f%=*} = level -o ${f} != ${f/=/} -a ${f%=*} = tag ] ; then
+       if [ ${f%=*} = level ] ; then
+         # clear specified level
+         f="^${f#*=}-"
+       else
+         # e.g. L1-${tag}: where tag=CF_12 would match CF_12, CF_12x etc.
+         f="^[[:alnum:]]*-*${f#*=}.*: "
        fi
-    elif [ ${f} != ${f/=/} -a ${f%=*} = tag ] ; then
-       # e.g. L1-${tag}: where tag=CF_12 would match CF_12, CF_12x etc.
-       f="^[[:alnum:]]*-*${f#*=}.*: "
 
-       # clear specified level and/or flag
-       if grep -q $f ${QA_RESULTS}/data/${subPath}/qa_note_${fBase[ix]}* &> /dev/null
-       then
-         isClear=t
-       elif grep -q $f ${QA_RESULTS}/data/${subPath}/qa_lock_${fBase[ix]}* &> /dev/null
-       then
-         isClear=t
-       fi
+       local fl
+       for fl in \
+         $(ls ${QA_RESULTS}/data/${subPath}/qa_note_${fBase[ix]}* 2> /dev/null) \
+         $( ls ${QA_RESULTS}/data/${subPath}/qa_lock_${fBase[ix]}* 2> /dev/null)
+       do
+        if grep -q $f $fl &> /dev/null ; then
+          isClear=t
+          break
+        fi
+       done
     elif [ ${f} != ${f/=/} -a ${f%=*} = var ] ; then
        # CLEAR=var=name
        if expr match ${fBase[ix]} "${f}" &> /dev/null ; then
@@ -861,6 +859,7 @@ clear()
 
   if [ ${isClear} = t ] ; then
     if [ "${isFL}" = t ] ; then
+      # follow links
       fs=( $( \
            tryCom \
            ls ${QA_RESULTS}/data/${subPath}/*_${fBase[ix]}* 2> /dev/null ) )
@@ -1259,7 +1258,7 @@ getAllExps()
 getCF_STD_NAME()
 {
   local p
-  p=${QA_PATH}/tables/projects/CF
+  p=${QA_SRC}/tables/projects/CF
 
   local name=cf-standard-name-table.xml
 
@@ -1377,11 +1376,18 @@ getExperimentNameFromPath()
   # check for path component 'output'
   test ! ${EXP_PATH_BASE} && EXP_PATH_BASE=${pcs[0]}
 
+  local countEPB=0
   local c expPathIndex M N
   N=${#pcs[*]}
 
   for(( c=0 ; c < N ; ++c )) ; do
     if [ "${pcs[c]}" = ${EXP_PATH_BASE} ] ; then
+      # check for an occurrence different than the left most
+      if [ ${countEPB} -lt ${EXP_PATH_BASE_POS} ] ; then
+        countEPB=$(( countEPB+1))
+        continue
+      fi
+
       local ix
       for(( ix=0 ; ix < ${#EXP_PATH_INDEX[*]} ; ++ix )) ; do
         expPathIndex[ix]=$(( c + ${EXP_PATH_INDEX[ix]} ))
@@ -1623,7 +1629,7 @@ getNextVariable()
   fi
 
   local ix
-  local qa_fl text
+  local text
   local status checksumTable
 
   local link_filenameBase=$1
@@ -1772,6 +1778,14 @@ getNextVariable()
   fi
 
   qa_fl=$( ls ${QA_RESULTS}/data/${subPath}/qa_${1}.nc 2> /dev/null)
+
+  # apply rules, clearings, and test for qa_note files
+  if \
+#trace \
+    testLocks $1 $qa_fl ; then
+      nextFile=  # ignore, try next
+      return 0
+  fi
 
   # sync with qa_file if available
   #exception: only scan for the tracking id
@@ -1976,22 +1990,6 @@ getNextSubPath()
     getFilenameBase
 
     if [ ${#fBase[*]} -gt 0 ] ; then
-      for(( ix = ${#fBase[*]} - 1 ; ix > -1 ; --ix )) ; do
-        if [ ${fBase[ix]} ] ; then
-          # apply rules, clearings, and test for qa_note files
-          if \
-#trace \
-            testLocks ; then
-            unset fBase[ix]
-            local hasChanged=t
-            continue
-          fi
-        fi
-      done
-
-      # remove empty items
-      test ${hasChanged:-f} = t && fBase=(${fBase[*]})
-
       # found unlocked variable (constraint: SHOW_CLEAR=f)
       mkdir -p ${QA_RESULTS}/data/${subPath}
 
@@ -2224,9 +2222,9 @@ getProjectTableName()
 
 getRevNum()
 {
-  # get the number saved in QA_PATH/.conf as revision=num
+  # get the number saved in QA_SRC/.conf as revision=num
   local rev revs
-  revs=( $( grep 'revision=' ${QA_PATH}/.conf 2> /dev/null \
+  revs=( $( grep 'revision=' ${QA_SRC}/.conf 2> /dev/null \
        | awk -F= '{print $2}' ) )
 
   if [ ! ${revs[0]} ] ; then
@@ -2520,21 +2518,21 @@ init()
     fi
   fi
 
+  if [ ${QA_EXAMPLE:-f} = t ] ; then
+    # run example for CORDEX
+    runExample
+    exit
+  fi
+
   test ! ${PROJECT} && PROJECT=NONE
   test ! ${PROJECT_AS} && PROJECT_AS=${PROJECT}
 
   # package update requested and required?
   if [ !${NO_GIT} ] \
-          && ! ${QA_PATH}/install ${INSTALL_ARGS//,/ } ${PROJECT_AS} ; then
+          && ! ${QA_SRC}/install ${INSTALL_ARGS//,/ } ${PROJECT_AS} ; then
     # could not make the executable for the given project
     std_out flush "could not make: install ${PROJECT_AS}"
     exit 1
-  fi
-
-  if [ ${QA_EXAMPLE:-f} = t ] ; then
-    # run example for CORDEX, if not done, yet
-    runExample
-    exit
   fi
 
   # expand comma-sep-list to arrays
@@ -2584,7 +2582,7 @@ init()
 
 #  set -f
   # read ~/.qa-dkrz/conf-.txt for the current revision of tha package
-  . $QA_PATH/scripts/updateConfigFile.txt QA_REVISION
+  . $QA_SRC/scripts/updateConfigFile.txt QA_REVISION
 
   maxNumExecThreads=0
   local nET
@@ -2594,7 +2592,6 @@ init()
 
   initProjectTableName
 
-  # QA_WORK/tables -> QA_Results/tables
   initTables
 
   # save the configuration and init the session logfile
@@ -2759,6 +2756,12 @@ initExperimentName()
     for t in ${EXP_PATH_INDEX[*]} ; do
       test ${t} -gt ${EXP_PATH_INDEX_MAX} && EXP_PATH_INDEX_MAX=${t}
     done
+
+    # for multiple occurrences
+    EXP_PATH_BASE_POS=0
+    if [ "${EXP_PATH_BASE/:/}" != "${EXP_PATH_BASE}" ] ; then
+      EXP_PATH_BASE_POS=${EXP_PATH_BASE##*:}
+    fi
   else
     EXP_NAME='all-scope'
   fi
@@ -2868,8 +2871,8 @@ initTables()
   #   tables/${PROJECT}
   #   tables
 
-  # 1) default tables are provided in ${QA_PATH}/tables/projects/PROJECT.
-  # 2) a table of the same name provided in ${QA_PATH}/tables gets
+  # 1) default tables are provided in ${QA_SRC}/tables/projects/PROJECT.
+  # 2) a table of the same name provided in ${QA_SRC}/tables gets
   #    priority, thus may be persistently modified.
   # 3) tables from 2) or 1) are copied to ${QA_Results}/tables.
   # 4) Option TABLE_AUTO_UPDATE is the default, i.e. tables in
@@ -2932,18 +2935,18 @@ initT()
 
    if [ ${USE_STRICT:-f} = t ] ; then
       # if USE_STRICT is enabled, then projects[/prj] is required
-      p=${QA_WORK}/${pDir[0]}/
+      p=${QA_HOME}/${pDir[0]}/
 
    elif [ ! -f ${value} ] ; then
       # a local instance precedes always
-      if [ -f ${QA_WORK}/${value} ] ; then
+      if [ -f ${QA_HOME}/${value} ] ; then
         # explicitly in a sub-dir path
-        p=${QA_WORK}/
+        p=${QA_HOME}/
       else
         for(( ix=0 ; ix < 4 ; ++ix )) ; do
 
           # scan through the precedence chain
-          test -f ${QA_WORK}/${pDir[ix]}/${value} && p=${QA_WORK}/${pDir[ix]}/
+          test -f ${QA_HOME}/${pDir[ix]}/${value} && p=${QA_HOME}/${pDir[ix]}/
         done
       fi
    fi
@@ -2993,7 +2996,7 @@ initTcat()
 
 initT_CORDEX()
 {
-   local pth=${QA_WORK}/${pDir[0]}
+   local pth=${QA_HOME}/${pDir[0]}
 
    if [ "$table" = TABLE_RCM_NAME ] ; then
      if [ ${NO_GIT:-f} = f -a ${NO_WGET:-f} = f ] ; then
@@ -3050,19 +3053,19 @@ intTryComRepeat()
     perd=0
     for(( j=0 ; j < ${#rL} ; ++j )) ; do
       case ${rL:$j:1} in
-        s) perd=${rL:0:$j}
+        s) perd=${rL:0:j}
            break ;;
-        m) perd=$( echo "${rL:0:$j} * 60" | bc -l )
+        m) perd=$( echo "${rL:0:j} * 60" | bc -l )
            break ;;
-        h) perd=$( echo "${rL:0:$j} * 3600" | bc -l )
+        h) perd=$( echo "${rL:0:j} * 3600" | bc -l )
            break ;;
-        d) perd=$( echo "${rL:0:$j} * 86400" | bc -l )
+        d) perd=$( echo "${rL:0:j} * 86400" | bc -l )
            break ;;
-        w) perd=$( echo "${rL:0:$j} * 604800" | bc -l )
+        w) perd=$( echo "${rL:0:j} * 604800" | bc -l )
            break ;;
-        M) perd=$( echo "${rL:0:$j} * 2592000" | bc -l )
+        M) perd=$( echo "${rL:0:j} * 2592000" | bc -l )
            break ;;
-        y) perd=$( echo "${rL:0:$j} * 31536000" | bc -l )
+        y) perd=$( echo "${rL:0:j} * 31536000" | bc -l )
            break ;;
         \?) ;; # not valid; ignore
       esac
@@ -3592,7 +3595,12 @@ operatePipes()
     nF_TP[${j}]=$PROJECT_TABLE
     nF_SUBPATH[${j}]=${subPath}
     nF_name[${j}]=${fBase[ix]}
-    nF_SEQ[${j}]=f
+
+    if [ "${qa_fl}" ] ; then
+      nF_SEQ[${j}]=s
+    else
+      nF_SEQ[${j}]=f
+    fi
 
     countActivePipes=$(( countActivePipes + 1 ))
   fi
@@ -3626,7 +3634,6 @@ operatePipes()
       p_nF=(${!metaV})
       CURR_EXP_NAME=${nF_EXP[nFcurr]}
       PROJECT_TABLE=${nF_TP[nFcurr]}
-      FILE_SEQUENCE=${nF_SEQ[nFcurr]:-f}
 
       subPath=${nF_SUBPATH[nFcurr]}
 
@@ -3661,10 +3668,11 @@ operatePipes()
 
       nextFile=${p_nF[0]}
 
-      if [ ${FILE_SEQUENCE} = 'f' ] ; then
+      if [ ${nF_SEQ[${nFcurr}]} = 'f' ] ; then
         if [ ${#p_nF[*]} -eq 1 ] ; then
           FILE_SEQUENCE=x # there is only a single file
         else
+          FILE_SEQUENCE=f
           nF_SEQ[${nFcurr}]=s
         fi
       elif [ ${#p_nF[*]} -eq 1 ] ; then
@@ -3827,19 +3835,51 @@ rmBlock()
 runExample()
 {
   # running an example for CORDEX
-  mkdir -p $QA_WORK/example &> /dev/null
-  cd $QA_WORK/example
+  dir=$(pwd)
+  dir=${dir%/example}/example
 
-  \rm -rf $QA_WORK/example/results $QA_WORK/example/qa-test.task
+  test "${EXAMPLE_PATH}" && dir=${EXAMPLE_PATH}/example
+
+  test ${dir:0:1} != '/' && dir=$(pwd)/$dir
+
+  if ! mkdir -p ${dir} &> /dev/null ; then
+    echo "could not mkdir ${dir}, please use option --example=path"
+    exit
+  fi
+
+  cd $dir
+
+  \rm -rf results config.txt data tables qa-test.task
+
+  echo "make examples in $dir " > $TTY
+  echo "make qa_test.task " > $TTY
 
   # prepare the example, if not done, yet
-  cp $QA_PATH/example/templates/qa-test.task $QA_WORK/example
-  sed -i "s%PROJECT_DATA=data%PROJECT_DATA=${QA_WORK}/example/data%" \
-         $QA_WORK/example/qa-test.task
-  sed -i "s%QA_RESULTS=results%QA_RESULTS=${QA_WORK}/example/results%" \
-         $QA_WORK/example/qa-test.task
+  cp $QA_SRC/example/templates/qa-test.task .
+  sed -i "s%PROJECT_DATA=data%PROJECT_DATA=${dir}/data%" \
+         qa-test.task
+  sed -i "s%QA_RESULTS=results%QA_RESULTS=${dir}/results%" \
+         qa-test.task
 
-  exec $QA_PATH/scripts/qa-dkrz -f ${QA_WORK}/example/qa-test.task
+  # data
+  echo "make data " > $TTY
+  tar --bzip2 -xf ${QA_SRC}/example/templates/data.tbz
+  fs=( $( find data -name "*.txt" ) )
+
+  if which ncgen &> /dev/null ; then
+    for f in ${fs[*]} ; do
+      ncgen -x -k 3 -o ${f%txt}nc $f
+      \rm -f $f
+    done
+  else
+    echo "building data in example requires the ncgen utility"
+    exit
+  fi
+
+  echo "run"  > $TTY
+  echo "$QA_SRC/scripts/qa-dkrz -m --work=$dir -f qa-test.task" > $TTY
+
+  exec $QA_SRC/scripts/qa-dkrz -m --work=$dir -f qa-test.task
 
   return
 }
@@ -4004,15 +4044,15 @@ std_out()
   # neither email nor session logfile. Store in dir NoDevice
 #  if [ ${isSent} = f ] ; then
 #    # str0 gets the filename for undeliverables
-#    if mkdir -p $QA_PATH/NoDevice &> /dev/null ; then
+#    if mkdir -p $QA_SRC/NoDevice &> /dev/null ; then
 #      str0="undeliv_$( date +'%FT%T' )_${HOSTNAME%%.*}".txt
-#      echo "$str0" >> $QA_PATH/NoDevice/$str0
+#      echo "$str0" >> $QA_SRC/NoDevice/$str0
 
 #      for(( j=0 ; j < ${#outputText[*]} ; ++j )) ; do
-#        echo -e -n "${outputText[j]}" >> $QA_PATH/NoDevice/$str0
+#        echo -e -n "${outputText[j]}" >> $QA_SRC/NoDevice/$str0
 
 #      for(( j=0 ; j < ${#outputText[*]} ; ++j )) ; do
-#        echo -e -n "${outputText[j]}" >> $QA_PATH/NoDevice/$str0
+#        echo -e -n "${outputText[j]}" >> $QA_SRC/NoDevice/$str0
 #      done
 #    fi
 #  fi
@@ -4070,8 +4110,8 @@ taskSum()
     done
 
     if [ ${isStart} = t ] ; then
-      /bin/bash ${QA_PATH}/scripts/taskSummary ${DEBUG_X} \
-        -p ${QA_RESULTS}/check_logs --src=$QA_PATH \
+      /bin/bash ${QA_SRC}/scripts/taskSummary ${DEBUG_X} \
+        -p ${QA_RESULTS}/check_logs --src=$QA_SRC \
         ${cvr} ${ers} ${prj} ${qrs} ${tcl} ${EXP_NAMES[exp_ix]} &
 
       pidBuf[i]=$!
@@ -4191,10 +4231,13 @@ testFileLink()
 
 testLocks()
 {
+  # $1: fBase[ix]
+  # $2: qa_*.nc if any
+
   # apply rules, clearings, and test for qa_note files
   if \
 #trace \
-  applyRules ${fBase[ix]} ; then
+  applyRules $1 ; then
     return 0  # not selected
   fi
 
@@ -4204,7 +4247,7 @@ testLocks()
     if [ ${EXP_PATH_INDEX[0]} ] ; then
       getExperimentName ${subPath}
     else
-      getExperimentName ${fBase[ix]}
+      getExperimentName $1
     fi
 
     # if CLEAR=only or SHOW_CLEAR was set, then try another variable
@@ -4215,10 +4258,10 @@ testLocks()
 
   if \
 #trace \
-  checkLockFile ${fBase[ix]} ; then
+  checkLockFile $1 $2 ; then
 #    if [ ${PROGRESS_BAR} ] ; then
-      local num=$( ls -d ${PROJECT_DATA}/${subPath}/${fBase[ix]}*.nc \
-                    | grep -c . )
+#      local num=$( ls -d ${PROJECT_DATA}/${subPath}/${1}*.nc \
+#                    | grep -c . )
 #    fi
 
     return 0  # is blocked
@@ -4421,13 +4464,13 @@ traceCalibration()
   local prg
 
   if [ ${HOSTNAME} = surge ] ; then
-    prg="${QA_PATH}/bin/unixTime.x dec"
+    prg="${QA_SRC}/bin/unixTime.x dec"
   elif [ ${HOSTNAME:0:3} = liz ] ; then
-    prg="${QA_PATH}/bin_l/unixTime.x dec"
+    prg="${QA_SRC}/bin_l/unixTime.x dec"
   elif [ ${HOSTNAME:0:4} = pass ] ; then
-    prg="${QA_PATH}/bin_p/unixTime.x dec"
+    prg="${QA_SRC}/bin_p/unixTime.x dec"
   elif [ ${HOSTNAME:0:4} = bliz ] ; then
-    prg="${QA_PATH}/bin_b/unixTime.x dec"
+    prg="${QA_SRC}/bin_b/unixTime.x dec"
   else
     echo "traceCalibration: executable unixTime.x not found"
     exit

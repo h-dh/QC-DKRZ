@@ -29,23 +29,47 @@ blk2Files()
 {
   # same header for the current entry of each file
   word=( ${blk[iP]} )
-  str0="\n - annotation:"
-  str0="${str0}\n   path: ${word[1]}"
+#  str0="\n - annotation:"
+#  str0="${str0}\n   path: ${word[1]}"
+  str0="\n   path: ${word[1]}"
+
+  if [ "${iX}" -gt -1 ] ; then
+    str0="${str0}\n   experiment:"
+    iX=$((iX + 1))
+
+    # add the list of experiments
+    while [ ${iX} -gt -1 ] ; do
+      word=( ${blk[iX]} )
+
+      if [ ${word[0]} = '-' ] ; then
+        str0="${str0}\n     ${word[1]}"
+        iX=$((iX + 1))
+      else
+        iX=-1
+        str0="${str0}\n"
+      fi
+    done
+  fi
 
   if [ "${iV}" -gt -1 ] ; then
-    word=( ${blk[iV]} )
     str0="${str0}\n   variable:"
+    iV=$((iV + 1))
 
     # add the list of variables
-    for(( i=iV+1 ; i < iP ; ++i )) ; do
-      word=( ${blk[i]} )
-      str0="${str0}\n    - ${word[1]}"
+    while [ ${iV} -gt -1 ] ; do
+      word=( ${blk[iV]} )
+
+      if [ ${word[0]} = '-' ] ; then
+        str0="${str0}\n     ${word[1]}"
+        iV=$((iV + 1))
+      else
+        iV=-1
+        str0="${str0}\n"
+      fi
     done
-  elif [ "${iA}" -gt -1 ] ; then
-    # note: the same for file: and atomic:
-    word=( ${blk[iA]} )
-    str0="${str0}\n   atomic: ${word[1]}"
-  elif [ "${iF}" -gt -1 ] ; then
+  fi
+
+  if [ "${iF}" -gt -1 ] ; then
     # note: the same for file: and atomic:
     word=( ${blk[iF]} )
     str0="${str0}\n   file: ${word[1]}"
@@ -74,16 +98,16 @@ blk2Files()
       test "${str:0:1}" && echo -e "${str}" >> $outT
 
       outT=$summary/$exp/${impact}-${tag}
-      test ! -e $outT && echo -e "--- # Annotations (${tag})\n" > $outT
+#      test ! -e $outT && echo -e "--- # Annotations (${tag})\n" > $outT
 
       prev_tag=$tag
-      str="${str0}\n   events:"
+      str="${str0}" # \n   events:"
     fi
 
-    str="${str}\n    - event:"
-    str="${str}\n       caption: ${blk[$((ix-2))]:9}"
-    str="${str}\n       impact: ${impact}"
-    str="${str}\n       tag: '${tag}'"
+    str="${str}\n   annotation:"
+    str="${str}\n     caption: ${blk[$((ix-2))]:9}"
+    str="${str}\n     impact: ${impact}"
+    str="${str}\n     tag: '${tag}'"
   done
 
   unset blk
@@ -92,7 +116,7 @@ blk2Files()
   iP=-1
   iV=-1
   iF=-1
-  iA=-1
+  iX=-1
 
   return
 }
@@ -107,15 +131,10 @@ period()
 
   test ! -e $exp.log && return
 
-  prg=${QA_PATH}/scripts/xtractTimeRange_from_log
+  prg=${QA_SRC}/scripts/xtractTimeRange_from_log
 
   test ${#prg} -gt 0 && \
     /bin/bash ${prg} ${DEBUG_X} -P ${PROJECT} -Q $exp.log
-
-  isPeriodFault=f
-  if grep -q 'FAIL' $period/${exp}.period &> /dev/null ; then
-    isPeriodFault=t
-  fi
 
   return
 }
@@ -147,15 +166,9 @@ summaryHR()
 {
   local aIn=$annotations/${exp}.note
 
-txt="Annotation summary of the QA of experiment\n \
-    ${exp}\
-\n\nAccess to all QA results:\n \
-   ${QA_RESULTS} \
-\n\nAccess to the logfiles:\n \
-   ${QA_RESULTS}/check_logs \
-\n\nPath to the annotations in YAML format:\n\
-   $(pwd)/${aIn}\n\
-\n\n"
+  txt="Annotation summary of QA-DKRZ: $(date +'%F %T') \n"
+  txt="${txt}\nExperiment: ${exp}"
+  txt="${txt}\nPath to the annotations in YAML format: $(pwd)/${aIn}"
 
   mkdir -p $summary/$exp
 
@@ -172,7 +185,7 @@ txt="Annotation summary of the QA of experiment\n \
     declare -a line
 
     while read -a line ; do
-      if [ "${line[1]}" = atomic_name: -a ${#line[2]} -gt ${max_len} ] ; then
+      if [ "${line[1]}" = variable: -a ${#line[2]} -gt ${max_len} ] ; then
         max_len=${#line[2]}
       fi
     done < $period/${exp}.period
@@ -196,7 +209,7 @@ txt="Annotation summary of the QA of experiment\n \
         echo -e -n "\nFrequency: ${line[2]}, " >> $outP
         read -a line
         echo Number of variables: ${line[1]} >> $outP
-      elif [ "${line[1]}" = 'atomic_name:' ] ; then
+      elif [ "${line[1]}" = 'variable:' ] ; then
         # process a blk
         processBlk
         fName=${line[2]}
@@ -220,7 +233,7 @@ txt="Annotation summary of the QA of experiment\n \
     if [ "${PROJECT}" = CORDEX ] ; then
       if ! expr match "$exp" '.*r0i0p0' &> /dev/null ; then
         if [ ${#std_table} -gt 0 ] ; then
-          /bin/bash ${QA_PATH}/scripts/findNotDelivered ${DEBUG_X} \
+          /bin/bash ${QA_SRC}/scripts/findNotDelivered ${DEBUG_X} \
           --project=CORDEX \
           --period=$outP \
           --table=${std_table} \
@@ -231,17 +244,17 @@ txt="Annotation summary of the QA of experiment\n \
     fi
 
     if [ -e $outP ] ; then
-      echo -e " \n\n==== Atomic Time Ranges =========================\n" \
-                    >> $outA
-      cat $outP     >> $outA
-      echo -e "\n"  >> $outA
+      if grep -q -- '--' $outP 2> /dev/null ; then
+        echo -e " \n\n==== Failed Time Range =========================\n" \
+                >> $outA
 
-      if [ ${isPeriodFault:-f} = t ] ; then
-        mv  $outP $summary/$exp/failed_periods.txt
-      else
-        # now its done with the human readable periods
-        \rm $outP &> /dev/null
+        while read line ; do
+          test "${line/--/}" != "${line}" && echo "${line}" >> $outA
+        done < $outP
+        echo -e "\n"  >> $outA
       fi
+
+      mv  $outP $summary/$exp/time_range.txt
     fi
   fi
 
@@ -256,7 +269,7 @@ txt="Annotation summary of the QA of experiment\n \
   \rm -f $summary/$exp/L*
   local str str0
   local capt impact path
-  local i ix j iP iV iA iF N
+  local i ix j iP iV iX iF N
   local tag prev_tag tag_ix tags word
   declare -a word
   declare -a tags
@@ -264,8 +277,8 @@ txt="Annotation summary of the QA of experiment\n \
 
   iP=-1
   iV=-1
-  iA=-1
   iF=-1
+  iX=-1
 
   exec 0< ${aIn}
 
@@ -282,10 +295,10 @@ txt="Annotation summary of the QA of experiment\n \
 
     # indices
     i=${#blk[*]}
-    if [ "${line:0:9}" = variable: ] ; then
+    if [ "${line:0:11}" = experiment: ] ; then
+      test ${iX} -eq -1 && iX=$i  # only the first occurrence
+    elif [ "${line:0:9}" = variable: ] ; then
       iV=$i
-    elif [ "${line:0:7}" = atomic: ] ; then
-      iA=$i
     elif [ "${line:0:5}" = file: ] ; then
       iF=$i
     elif [ "${line:0:10}" = data_path: ] ; then
@@ -353,7 +366,7 @@ summaryY()
 
   test ! -e $exp.log && return
 
-  /bin/bash ${QA_PATH}/scripts/xtractNotes_from_log ${DEBUG_X} ${MERGE} -H $exp.log
+  /bin/bash ${QA_SRC}/scripts/xtractNotes_from_log ${DEBUG_X} ${MERGE} -H $exp.log
 
   return
 }
@@ -364,7 +377,7 @@ summaryY()
 ##{
 ######## main ############
 
-# QA_PATH was exported
+# QA_SRC was exported
 
   QA_RESULTS=QA_RESULTS # by default
   PROJECT='unkown_project'
@@ -380,7 +393,7 @@ summaryY()
       s)  std_table=${OPTARG} ;;
       t)  test -e ${OPTARG} -a ! -d ${OPTARG} && cl_table=${OPTARG} ;;
       -)  if [ "${OPTARG:0:3}" = src ] ; then
-            QA_PATH=${OPTARG##*=}
+            QA_SRC=${OPTARG##*=}
           elif [ "$OPTARG" = help ] ; then
             descript
             exit
@@ -414,7 +427,7 @@ summaryY()
     # output in $annotation/EXP_NAME/annotation_summary.txt.
     summaryY
 
-    # summary of annotations for humann reqaders.
+    # summary of annotations for humann readers.
     summaryHR
   done
 

@@ -34,9 +34,9 @@ tr_option()
 
 # ------ main -------
 
-# QA_PATH was exported
-mkdir -p $QA_PATH/local/source
-out=$QA_PATH/local/source/INSTALL_hdf.log
+# QA_SRC was exported
+mkdir -p $QA_SRC/local/source
+out=$QA_SRC/local/source/INSTALL_hdf.log
 
 while getopts hp:q-: option ${args[*]}
 do
@@ -48,7 +48,7 @@ do
         exit ;;
     q)  QUIET=t ;;
     -)  if [ "${UOPTARG%=*}" = CURR_SRC ] ; then
-           currSrc=${QA_PATH}/local/source/${OPTARG#*=}
+           currSrc=${QA_SRC}/local/source/${OPTARG#*=}
         elif [ "${UOPTARG%=*}" = DEBUG ] ; then
            test "${UOPTARG}" = DEBUG -o ${OPTARG#*=} = ${0##*/} && set -x
         elif [ "$UOPTARG" = DISTCLEAN ] ; then

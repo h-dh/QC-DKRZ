@@ -11,7 +11,10 @@ class InFile;
 class Consistency
 {
   public:
-  Consistency(QA *, InFile*, struct hdhC::FileSplit& );
+  Consistency(QA *, InFile*, std::vector<std::string> &opt,
+              std::string tPath="" );
+
+  void   applyOptions(std::vector<std::string> &opt, std::string& tPath);
 
   //! Prepare the comparison of dimensions between file and project table.
   /*! This is checked for each chunk or atomic data set in each
@@ -30,6 +33,7 @@ class Consistency
 
   void   getVarType(Variable&, std::string &);
 
+  bool   isEnabled(void){ return checkEnabled; }
   bool   lockFile(std::string &fName);
 
   void   setAnnotation(Annotation *p){ notes=p;}
@@ -44,8 +48,9 @@ class Consistency
 
   std::vector<std::string> excludedAttributes;
 
-  struct hdhC::FileSplit projectTableFile;
+  struct hdhC::FileSplit consistencyTableFile;
 
+  bool checkEnabled;
   bool status;
 
   Annotation *notes;

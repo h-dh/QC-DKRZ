@@ -26,10 +26,10 @@
 
       test "${uCF_is}" -a ! "${line}" && break
 
-      if [ "${line}" = ${QA_PATH}: ] ; then
+      if [ "${line}" = ${QA_SRC}: ] ; then
         uCF_is=t
         uCF_blkBeg=$uCF_num
-        uCF_str=${QA_PATH}:
+        uCF_str=${QA_SRC}:
         continue
       fi
 
@@ -51,22 +51,9 @@
 
   # append a new section
   if [ ${uCF_blkBeg:-0} -eq 0 ] ; then
-    echo -e "\n${QA_PATH}:" >> $CONFIG_FILE
-
-    for item in $* ; do
-      value=${item#*=}
-
-      if [ ${value} = ${item} ] ; then
-        item="${item}=enabled"
-      elif [ ${value} = d -o ${value:0:7} = disable ] ; then
-        test $# -eq 1 && retVal=1
-        continue
-      fi
-
-      echo ${item} >> $CONFIG_FILE
-    done
-
-    return $retVal
+    echo -e "\n${QA_SRC}:"        >> $CONFIG_FILE
+    echo AUTO_UPDATE=enabled       >> $CONFIG_FILE
+    echo AUTO_TABLE_UPDATE=enabled >> $CONFIG_FILE
   fi
 
   # check items

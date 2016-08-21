@@ -2,7 +2,9 @@
 # Note: all other sub-paths are appended to QC_RESULTS/data
 # Note: the former DATA_ROOT_FS was replaced by this, but is still valid.
 # PROJECT_DATA=your-path/QC/example/data/CMIP5
-  PROJECT_DATA=data/CORDEX
+  PROJECT_DATA=data/CORDEX/output
+
+  EXP_PATH_BASE=output
 
 # Path to QC's results and log dir. Required. This will be expanded
 # automatically by the last path component of option DATA_ROOT.
@@ -25,8 +27,7 @@
 # SELECT .*/6hr,.*/mon/atmos/=v1  # example for a path selection
 # SELECT := .*/v?[[:digit:]]{3}=  # example for all DRS versions
 
-#  SELECT output/MPI-M/MPI-ESM-LR/L1A85/mon/atmos=
-  SELECT AFR-44/Inst/forcing/historical/.*/model=
+  SELECT AFR-44=
 
 # Send a summary of notifications and checked periods of variables
 # to this (list of) email recipients after each finished QC session.
@@ -42,6 +43,8 @@
 # Modes can be enabled by key-words: meta, time, data.
 # Note: data includes meta and time; time includes meta.
 # CHECK_MODE=meta  #[data]
+
+CHECKSUM
 
 # embedded path to another qc configuration file with lower priority
   QA_CONF=CORDEX_qa.conf

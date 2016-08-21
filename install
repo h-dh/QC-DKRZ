@@ -23,12 +23,13 @@ descript()
   echo "  -h                Display usage and exit."
   echo "  --auto-up         Enable automatic updates from the repository at the"
   echo "                    beginning of a run. Suspended by --auto-up=d[isable]."
+  echo "                    Enabled initially by default."
   echo "  --build           Download and build required libraries."
   echo "  --debug[=script]  Display execution commands. If the name of a script"
-  echo "                    called internally is assigned, then debug only this one."
+  echo "                    is assigned, then debug only this one."
   echo "  --help            Display usage and exit."
-  echo "  --link=path       Hard links of external NetCDF installations from the directories"
-  echo "                    in 'your-path/${package}/local'."
+  echo "  --link=path       Hard links of external NetCDF installations from the"
+  echo "                    directories in 'your-path/${package}/local'."
   echo "                    Shared by all hdf, netcdf, udunits  and zlib."
   echo "  --link_type=path  Same as for 'link' but just for type=netcdf, hdf, zlib, or udunits"
   echo "  --local=str       Path where lib and include directories are to be installed"
@@ -37,60 +38,33 @@ descript()
   echo "  --show-inst       Display properties of the current installation."
   echo "  --up[date]        Update the QA package from the repository."
   echo "                    Note: not for netCDF, HDF5, udunits2 or zlib."
-  echo "  --workspace=str   Path to put updated tables [ ~/.qa-dkrz/tables by"
-  echo "                    default]. Also, str is the location of the CF test,"
-  echo "                    suite, an example run, and of qc check results for"
-  echo "                    omitted option QC_RESULTS. Special: Omitted str "
-  echo "                    defaults to the QA-DKRZ path, i.e. as for QC-0.4;"
-  echo "                    write permission required. The default for the workspace itself"
-  echo "                    is \$HOME\.qa-dkrz [if not available, then the user"
-  echo "                    is asked to provide --workspace".
+  echo "  --work=path       Location of the .config.txt file and project tables,"
+  echo "                    ~/.qa-dkrz by default. Required if multiple users are"
+  echo "                    to access the same set of tables."
   echo ""
-  echo "  project-name      At present CF, CMIP5, and CORDEX; the latter by default."
+  echo "  project-name(s)   At present CF, CMIP5, and CORDEX; the latter by default."
 }
 
 getCurrPaths()
 {
   # where all the work is going to take place
-  if [ $QA_WORK ] ; then
-    test ! -d $QA_WORK && mkdir -p $QA_WORK 2> /dev/null
-  else
-    if [ $CONDA_ENV ] ; then
-      QA_WORK=~/.qa-dkrz
-      test ! -d $QA_WORK   && mkdir -p $QA_WORK   2> /dev/null
-    else
-      QA_WORK=$QA_PATH
-    fi
+  if [ ! $QA_HOME ] ; then
+    QA_HOME=~/.qa-dkrz
   fi
 
   # the config filename and location
-  local isPrint=f
-
-  if [ ! ${CONFIG_FILE} ] ; then
-    if [ -w ~ ] ; then
-      local cPath=~/.qa-dkrz
-      test ! -d $cPath && mkdir -p $cPath 2> /dev/null
-
-      export CONFIG_FILE=$cPath/config.txt
-
-    elif [ -w "$QA_PATH" ] ; then
-      test ! -d $QA_PATH/.qa-dkrz && mkdir -p $QA_PATH/.qa-dkrz 2> /dev/null
-      export CONFIG_FILE=$QA_PATH/.qa-dkrz/config.txt
-
-    elif [ -w "$QA_WORK" ] ; then
-      # not determined but may-be provided by the user
-      test ! -d $QA_WORK && mkdir -p $QA_WORK/.qa-dkrz 2> /dev/null
-      export CONFIG_FILE=$QA_WORK/config.txt
-
-    else
-      isPrint=t
-    fi
+  if ! mkdir -p $QA_HOME 2> /dev/null ; then
+    echo "could not mkdir $QA_HOME"
+    exit 1
   fi
 
-  if [ ${isPrint} = t ] ; then
-    echo "HOME and QA_DKRZ without write permissions,"
-    echo "please restart with added option --workspace=path"
-    exit
+  # not determined but may-be provided by the user
+  export CONFIG_FILE=$QA_HOME/config.txt
+
+  if [ ! -w $QA_HOME ] ; then
+    echo "directory $QA_HOME without write permissions,"
+    echo "please restart with added option --work=path"
+    exit 1
   fi
 
   return
@@ -109,10 +83,10 @@ getRevNum()
   local branch currIdent
 
   if [ $CONDA_ENV ] ; then
-    if branch=$(grep branch $QA_PATH/install.log 2> /dev/null) ; then
+    if branch=$(grep branch $QA_SRC/install.log 2> /dev/null) ; then
       branch=${branch#*=}
     fi
-    if currIdent=$(grep branch $QA_PATH/install.log 2> /dev/null) ; then
+    if currIdent=$(grep branch $QA_SRC/install.log 2> /dev/null) ; then
       currIdent=${currIdent#*=}
     fi
   else
@@ -146,14 +120,14 @@ getSrcPath()
   # extract the path to the root of the QA package
 
   # is it in a conda built?
-  getCondaPath $0 QA_PATH
+  getCondaPath $0 QA_SRC
 
-  if getCondaPath $0 QA_PATH ; then
-    export QA_PATH
+  if getCondaPath $0 QA_SRC ; then
+    export QA_SRC
     CONDA_ENV=t
   fi
 
-  test ${QA_PATH} && return
+  test ${QA_SRC} && return
 
   local target isInvalid
 
@@ -212,7 +186,13 @@ getSrcPath()
       tmp=${tmp}/${arr[i]}
 
       if [ -f ${tmp}/.install_configure ] ; then
-        export QA_PATH=$tmp
+        # final check
+        if [ ! -e $tmp/install ] ; then
+           echo "$tmp is not QA_SRC; EXIT"
+           exit
+        fi
+
+        export QA_SRC=$tmp
         break
       fi
     done
@@ -237,7 +217,7 @@ getSrcPath()
     exit 1
   fi
 
-  export QA_PATH=${QA_PATH}
+  export QA_SRC=${QA_SRC}
 
   return
 }
@@ -307,7 +287,7 @@ tr_option()
 
 update()
 {
-  if . $QA_PATH/scripts/updateConfigFile.txt ${AUTO_UPDATE:-AUTO_UPDATE} \
+  if . $QA_SRC/scripts/updateConfigFile.txt ${AUTO_UPDATE:-AUTO_UPDATE} \
         || [ ${isUpdateQA:-f} = t ]; then
     if [ $CONDA_ENV ] ; then
       # look for a new conda-built package
@@ -321,7 +301,7 @@ update()
           item=${tmp[++i]}
           item=${item}-${tmp[++i]}
 
-          if ! . $QA_PATH/scripts/updateConfigFile.txt CONDA_BUILD=$item ; then
+          if ! . $QA_SRC/scripts/updateConfigFile.txt CONDA_BUILD=$item ; then
             conda update -c birdhouse qa-dkrz &> /dev/null
 
             getRevNum packRev
@@ -332,8 +312,8 @@ update()
         fi
       done
 
-    elif [ ! -f ${QA_PATH}/.ignore_GitHub ] ; then
-      cd $QA_PATH
+    elif [ ! -f ${QA_SRC}/.ignore_GitHub ] ; then
+      cd $QA_SRC
 
       # switch repository
       asdf=( $( git remote -v ) )
@@ -344,7 +324,7 @@ update()
 
       # is qa-dkrz going to change?
       local qa_dkrzDate=$(ls -l \
-           --time-style=+'%s' ${QA_PATH}/scripts/qa_dkrz \
+           --time-style=+'%s' ${QA_SRC}/scripts/qa_dkrz \
            | awk '{print $6}' 2> /dev/null )
 
       test "$(getGitBranch)" != master && \
@@ -354,7 +334,7 @@ update()
 #      git pull --no-edit -q origin master &> /dev/null
 
       if [ ${qa_dkrzDate} != $( ls -l \
-           --time-style=+'%s' ${QA_PATH}/scripts/qa_dkrz \
+           --time-style=+'%s' ${QA_SRC}/scripts/qa_dkrz \
            | awk '{print $6}' 2> /dev/null ) ] ; then
         exitVal=101
       fi
@@ -365,19 +345,19 @@ update()
   fi
 
 
-  . $QA_PATH/scripts/updateConfigFile.txt QA_REVISION${packRev:+=}$packRev
+  . $QA_SRC/scripts/updateConfigFile.txt QA_REVISION${packRev:+=}$packRev
 
-  if . $QA_PATH/scripts/updateConfigFile.txt \
+  if . $QA_SRC/scripts/updateConfigFile.txt \
           ${AUTO_TABLE_UPDATE:-AUTO_TABLE_UPDATE} \
               || [ ${FORCE_RSYNC:-f} = t ] ; then
-    if [ "$QA_WORK" != "$QA_PATH" ] ; then
-      rsync -auz $QA_PATH/tables $QA_WORK &> /dev/null
+    if [ "$QA_HOME" != "$QA_SRC" ] ; then
+      rsync -auz $QA_SRC/tables $QA_HOME &> /dev/null
     fi
 
-    ${QA_PATH}/scripts/get_cfconventions \
-        --qa_path=${QA_PATH} \
+    ${QA_SRC}/scripts/get_cfconventions \
+        --qa_path=${QA_SRC} \
         --config_file=$CONFIG_FILE \
-        ${QA_WORK}/tables/projects/CF
+        ${QA_HOME}/tables/projects/CF
   fi
 
   return
@@ -453,8 +433,6 @@ do
           fi
         elif [ "${UOPTARG:0:5}" = BUILD ] ; then
           isBuild=t
-        elif [ "${UOPTARG:0:11}" = CONFIG_FILE ] ; then
-          export CONFIG_FILE=${OPTVAL}
         elif [ ${UOPTARG:0:5} = DEBUG -o ${UOPTARG} = 'DEBUG=install' ] ; then
           set -x
         elif [ "${UOPTARG%%=*}" = HELP ] ; then
@@ -464,10 +442,10 @@ do
           isLink=t
         elif [ "${UOPTARG:0:6}" = ONLY_Q ] ; then
           :  # for backward compatibilty
-        elif [ "${UOPTARG:0:7}" = QA_PATH ] ; then
-          export QA_PATH=${OPTVAL}
-        elif [ "${UOPTARG:0:7}" = QA_WORK ] ; then
-          QA_WORK=${OPTVAL}
+        elif [ "${UOPTARG:0:7}" = QA_SRC ] ; then
+          export QA_SRC=${OPTVAL}
+        elif [ "${UOPTARG:0:7}" = QA_HOME ] ; then
+          QA_HOME=${OPTVAL}
         elif [ "${UOPTARG}" = SRC ] ; then
           :  # for backward compatibilty
         elif [ "${UOPTARG%=*}" = SET_DEFAULT_PROJECT ] ; then
@@ -475,8 +453,8 @@ do
           continue
         elif [ "${UOPTARG:0:2}" = UP ] ; then
           isUpdateQA=t
-        elif [ "${UOPTARG:0:9}" = WORKSPACE ] ; then
-          QA_WORK=${UOPTARG##*=}
+        elif [ "${UOPTARG:0:4}" = WORK ] ; then
+          QA_HOME=${UOPTARG##*=}
         fi
 
         # collect options, which have not been processed above
@@ -502,8 +480,8 @@ for pck in $* ; do
     netcdf=${pck}
   elif [ ${PCK:0:7} = UDUNITS ] ; then
     udunits=${pck}
-  elif [ ${PCK:0:7} = QA_WORK ] ; then
-    QA_WORK=${PCK:8}
+  elif [ ${PCK:0:7} = QA_HOME ] ; then
+    QA_HOME=${PCK:8}
     FORCE_RSYNC=t
   else
     coll[${#coll[*]}]=$pck  # collect project names
@@ -514,7 +492,7 @@ getSrcPath $zeroArg  # sets also CONDA_ENV
 getCurrPaths
 update ${allArgs[*]}
 
-if . $QA_PATH/scripts/updateConfigFile.txt DEFAULT_PROJECT ; then
+if . $QA_SRC/scripts/updateConfigFile.txt DEFAULT_PROJECT ; then
   defPrj=--default_project=${DEFAULT_PROJECT#*=}
 else
   defPrj=--default_project=$defaultProject
@@ -533,6 +511,6 @@ else
   pcks=
 fi
 
-exec $QA_PATH/scripts/install.sh ${debug} --pack=${package} \
+exec $QA_SRC/scripts/install.sh ${debug} --pack=${package} \
 ${isContinueLog:+--continue_log} ${pcks} ${defPrj} \
 ${coll[*]}

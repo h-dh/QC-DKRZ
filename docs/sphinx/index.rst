@@ -3,16 +3,27 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to QA-DKRZ's documentation!
-===================================
+QA-DKRZ documentation
+=====================
 
 Contents:
 
 .. toctree::
    :maxdepth: 2
 
-   qa-user-manual
+   introduction
 
+   faq
+   glossary
+   changelog
+
+User-guide
+==========
+
+.. toctree::
+   :maxdepth: 2
+
+   userguide/index
 
 Indices and tables
 ==================

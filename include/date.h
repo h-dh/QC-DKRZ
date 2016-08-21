@@ -145,6 +145,8 @@ public:
   //! Assignment by const Date reference.
   Date& operator=  ( const  Date &);
 
+  double operator-  ( const  Date &);
+
   //! Comparison operators.
   bool   operator== ( const Date &d)
               { return jul.operator==(d.jul) ; }

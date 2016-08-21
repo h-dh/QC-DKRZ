@@ -931,7 +931,7 @@ DRS_CV::testPeriod(Split& x_f)
 
     double db_centre=(pQA->qaTime.firstTimeBoundsValue[0]
                         + pQA->qaTime.firstTimeBoundsValue[1])/2. ;
-    if( ! hdhC::compare(db_centre, '=', pQA->qaTime.firstTimeValue) )
+    if( ! hdhC::compare(db_centre, "=", pQA->qaTime.firstTimeValue) )
     {
       std::string key("5_7");
       if( notes->inq( key, pQA->qaExp.getVarnameFromFilename()) )
@@ -967,68 +967,28 @@ DRS_CV::testPeriod(Split& x_f)
   if( pQA->qaTime.lastTimeValue != 0. )
     pDates[3]->addTime(pQA->qaTime.lastTimeValue);
 
-  // alignment of of contained dates and those in the filename
-  // the booleanx indicate faults
-//  bool is_t_beg = is_t_end = is_tb_beg = is_tb_end = false;
-  bool isFault[4];
-  for(size_t i=0 ; i < 4 ; ++i )
-    isFault[i]=false;
-
-  // time value: left-side
-  Date myDate( *pDates[2] );
-  myDate.addTime(-pQA->qaTime.refTimeStep);
-  isFault[0] = myDate == *pDates[0] ;
-
-  // time value: right-side
-  myDate = *pDates[3] ;
-  myDate.addTime(pQA->qaTime.refTimeStep);
-  isFault[1] = myDate ==*pDates[1] ;
-
-  if(pQA->qaTime.isTimeBounds)
-  {
-    // time_bounds: left-side
-    myDate = *pDates[4] ;
-    myDate.addTime(pQA->qaTime.refTimeStep);
-    isFault[2] = myDate == *pDates[0] ;
-
-    // time_bounds: right-side
-    myDate = *pDates[5] ;
-    myDate.addTime(-pQA->qaTime.refTimeStep);
-    isFault[3] = myDate == *pDates[1] ;
-  }
-
   // the annotations
-  if( testPeriodAlignment(sd, pDates, isFault) )
+  if( !testPeriodAlignment(sd, pDates) )
   {
-    std::string key("1_6d");
-    std::string capt("period in the filename: ") ;
-    capt +="note that StartTime-EndTime is compliant with CMOR peculiarity";
-
-    if( notes->inq( key, pQA->qaExp.getVarnameFromFilename()) )
+    if( testPeriodDatesFormat(sd) ) // format of period dates.
     {
-      (void) notes->operate(capt) ;
+      // period requires a cut specific to the various frequencies.
+      std::vector<std::string> text ;
+      testPeriodCutRegular(sd, text) ;
 
-      notes->setCheckMetaStr( pQA->fail );
-    }
-  }
-  else if( testPeriodDatesFormat(sd) ) // format of period dates.
-  {
-    // period requires a cut specific to the various frequencies.
-    std::vector<std::string> text ;
-    testPeriodCutRegular(sd, text) ;
-
-    if( text.size() )
-    {
-      std::string key("1_6e");
-      std::string capt("period in the filename") ;
-
-      for( size_t i=0 ; i < text.size() ; ++i )
+      if( text.size() )
       {
-        if( notes->inq( key, pQA->qaExp.getVarnameFromFilename()) )
-        {
-          (void) notes->operate(capt + text[i]) ;
+        std::string key("1_6e");
+        std::string capt("period in the filename") ;
 
-          notes->setCheckMetaStr( pQA->fail );
+        for( size_t i=0 ; i < text.size() ; ++i )
+        {
+          if( notes->inq( key, pQA->qaExp.getVarnameFromFilename()) )
+          {
+            (void) notes->operate(capt + text[i]) ;
+
+            notes->setCheckMetaStr( pQA->fail );
+          }
         }
       }
     }
@@ -1044,17 +1004,47 @@ DRS_CV::testPeriod(Split& x_f)
 }
 
 bool
-DRS_CV::testPeriodAlignment(std::vector<std::string> &sd, Date** pDates, bool b[])
+DRS_CV::testPeriodAlignment(std::vector<std::string> &sd, Date** pDates)
 {
-  // some pecularities of CMOR, which will probably not be modified
-  // for a behaviour as expected.
-  // The CORDEX Archive Design doc states in Appendix C:
-  // "..., for using CMOR, the StartTime-EndTime element [in the filename]
-  //  is based on the first and last time value included in the file ..."
-
-  // if a test for a CMOR setting fails, testing goes on
+  // regular test: filename vs. time_bounds
   if( *pDates[0] == *pDates[2] && *pDates[1] == *pDates[3] )
+    return true;
+  else
+    if( testPeriodCut_CMOR_isGOD(sd, pDates) )
       return true;
+
+  // alignment of time bounds and period in the filename
+  bool is[] = { true, true, true, true };
+  double uncertainty=0.1 ;
+  if( pQA->qaExp.getFrequency() != "day" )
+    uncertainty = 1.; // because of variable len of months
+
+  // time value: left-side
+  Date myDate( *pDates[2] );
+  myDate.addTime(-pQA->qaTime.refTimeStep/2.);
+  double dDiff = fabs(myDate - *pDates[0]) ;
+  is[0] = dDiff < uncertainty ;
+
+  // time value: right-side
+  myDate = *pDates[3] ;
+  myDate.addTime(pQA->qaTime.refTimeStep/2.);
+  dDiff = fabs(myDate - *pDates[1]) ;
+  is[1] = dDiff < uncertainty ;
+
+  if(pQA->qaTime.isTimeBounds)
+  {
+    // time_bounds: left-side
+    Date myDate = *pDates[4] ;
+//    myDate.addTime(-pQA->qaTime.refTimeStep/2.);
+//    dDiff = fabs(myDate - *pDates[0]) ;
+    is[2] = myDate == *pDates[4] ;
+
+    // time_bounds: right-side
+    myDate = *pDates[5] ;
+//    myDate.addTime(pQA->qaTime.refTimeStep/2.);
+//    dDiff = fabs(myDate - *pDates[1]) ;
+    is[3] = myDate == *pDates[5] ;
+  }
 
   for(size_t i=0 ; i < 2 ; ++i)
   {
@@ -1064,7 +1054,7 @@ DRS_CV::testPeriodAlignment(std::vector<std::string> &sd, Date** pDates, bool b[
     if( i && !pQA->isFileComplete )
        continue;
 
-    if( !( !b[0+i] || !b[2+i] ) )
+    if( !is[0+i] || !is[2+i] )
     {
       std::string key("1_6g");
       if( notes->inq( key, pQA->fileStr) )
@@ -1280,23 +1270,90 @@ DRS_CV::testPeriodCutRegular(std::vector<std::string> &sd,
         text.push_back(": time span of 10 years is exceeded");
      }
 
-     if( frequency == "sem" )
-     {
-       if( isBegin )
-       {
-          if( sd[0].substr(4,2) != "12" )
-            text.push_back(": StartTime should be YYYY12");
-       }
+      if( isBegin )
+      {
+        if( sd[0].substr(4,2) != "12" )
+          text.push_back(": StartTime should be YYYY12");
+      }
 
-       if( isEnd )
-       {
-          if( sd[1].substr(4,2) != "11" )
-            text.push_back(": EndTime should be YYYY11");
-       }
-     }
+      if( isEnd )
+      {
+        if( sd[1].substr(4,2) != "11" )
+          text.push_back(": EndTime should be YYYY11");
+      }
   }
 
   return;
+}
+
+bool
+DRS_CV::testPeriodCut_CMOR_isGOD(std::vector<std::string> &sd, Date**)
+{
+  // some pecularities of CMOR, which will probably not be modified
+  // for a behaviour as expected.
+  // The CORDEX Archive Design doc states in Appendix C:
+  // "..., for using CMOR, the StartTime-EndTime element [in the filename]
+  //  is based on the first and last time value included in the file ..."
+
+  // in such cases, saisonal's first and last month, respectively,
+  // is shifted by one month in the filename
+
+  bool isBegin = pQA->fileSequenceState == 'l' || pQA->fileSequenceState == 's' ;
+  bool isEnd   = pQA->fileSequenceState == 'f' || pQA->fileSequenceState == 's' ;
+
+  std::string frequency(pQA->qaExp.getFrequency());
+
+  bool isRet=false;
+
+  // period length per file as recommended?
+  if( frequency == "sem" )
+  {
+    // CMOR cuts the period on both ends; the resulting months
+    // for Start/End time are equal
+    int shiftedMon[]={ 1, 4, 7, 10};
+
+    if( isBegin )
+    {
+      int currMon = hdhC::string2Double(sd[0].substr(4,2));
+      for( size_t i=0 ; i < 4 ; ++i )
+      {
+        if( currMon == shiftedMon[i] )
+        {
+          isRet=true;
+          break;
+        }
+      }
+    }
+
+    if( !isRet && isEnd )
+    {
+      int currMon = hdhC::string2Double(sd[0].substr(4,2));
+      for( size_t i=0 ; i < 4 ; ++i )
+      {
+        if( currMon == shiftedMon[i] )
+        {
+          isRet=true;
+          break;
+        }
+      }
+    }
+  }
+
+  if(isRet)
+  {
+    std::string key("1_6d");
+    std::string capt("period in the filename: ") ;
+    capt +="CMOR shifted StartTime-EndTime by one month";
+
+    if( notes->inq( key, pQA->qaExp.getVarnameFromFilename()) )
+    {
+      (void) notes->operate(capt) ;
+
+      notes->setCheckMetaStr( pQA->fail );
+    }
+  }
+
+  return isRet;
 }
 
 bool
@@ -2545,7 +2602,9 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
   double edge_file[4];
   double edge_row[4];
 
-  bool is_edge[4];
+
+  bool is_edge[] = {false, false, false, false};
+  ;
   if( ! is_lon )
   {
      int j = pQA->pIn->getVarIndex(var_lon) ;
@@ -2564,18 +2623,16 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
      edge_file[0] = mv_lon[i_1st] ;
      edge_row[0] = hdhC::string2Double(row[5+add]);
 
-     if( edge_file[0] <= edge_row[0] )
-       is_edge[0]=false;
-     else
-       is_edge[0]=true;
+     int precision=5;
+
+     is_edge[0] = hdhC::compare(edge_file[0], "<=", edge_row[0], precision)
+                     ? false : true;
 
      edge_file[1] = mv_lon[i_last] ;
      edge_row[1] = hdhC::string2Double(row[6+add]);
 
-     if( edge_file[1] >= edge_row[1] )
-       is_edge[1]=false;
-     else
-       is_edge[1]=true;
+     is_edge[1] = hdhC::compare(edge_file[1], ">=", edge_row[1], precision)
+                     ? false : true;
   }
 
   if( ! is_lat )
@@ -2593,21 +2650,19 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
         i_last= 0;
      }
 
+     int precision=5;
+
      edge_file[2] = mv_lat[i_1st] ;
      edge_row[2] = hdhC::string2Double(row[7+add]);
 
-     if( edge_file[2] <= edge_row[2] )
-       is_edge[2]=false;
-     else
-       is_edge[2]=true;
+     is_edge[2] = hdhC::compare(edge_file[2], "<=", edge_row[2], precision)
+                     ? false : true;
 
      edge_file[3] = mv_lat[i_last] ;
      edge_row[3] = hdhC::string2Double(row[8+add]);
 
-     if( edge_file[3] >= edge_row[3] )
-       is_edge[3]=false;
-     else
-       is_edge[3]=true;
+     is_edge[3] = hdhC::compare(edge_file[3], ">=", edge_row[3], precision)
+                     ? false : true;
   }
 
   std::string text1;
@@ -2618,12 +2673,14 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
   {
     if( is_edge[i] )
     {
+      std::string wesn;
+
       if( i==0 )
       {
-        text1 += "West=" ;
+        wesn="West";
+        text1 += wesn + "=";  // required
         text1 += row[5+add] ;
-        text2 += "West=" ;
-        text2 += hdhC::double2String(edge_file[0]) ;
+        text2 += hdhC::tf_assign(wesn,hdhC::double2String(edge_file[0])) ;
         isComma=true;
       }
       else if( i==1 )
@@ -2634,10 +2691,10 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
           text2 += ", ";
         }
 
-        text1 += "East=" ;
+        wesn="East";
+        text1 += wesn + "=";  // required
         text1 += row[6+add] ;
-        text2 += "East=" ;
-        text2 += hdhC::double2String(edge_file[1]) ;
+        text2 += hdhC::tf_assign(wesn, hdhC::double2String(edge_file[1])) ;
         isComma=true;
       }
 
@@ -2649,10 +2706,10 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
           text2 += ", ";
         }
 
-        text1 += "South=" ;
+        wesn="South";
+        text1 += wesn + "=" ;  // required
         text1 += row[7+add] ;
-        text2 += "South=" ;
-        text2 += hdhC::double2String(edge_file[2]) ;
+        text2 += hdhC::tf_assign(wesn,hdhC::double2String(edge_file[2])) ;
         isComma=true;
       }
       else if( i==3 )
@@ -2663,10 +2720,10 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
           text2 += ", ";
         }
 
-        text1 += "North=" ;
+        wesn="North";
+        text1 += wesn + "=" ;  // required
         text1 += row[8+add] ;
-        text2 += "North=" ;
-        text2 += hdhC::double2String(edge_file[3]) ;
+        text2 += hdhC::tf_assign(wesn,hdhC::double2String(edge_file[3])) ;
         isComma=true;
       }
 
@@ -2681,10 +2738,10 @@ QA_Exp::domainCheckData(std::string &var_lon, std::string &var_lat,
     {
       std::string capt("unmatched CORDEX boundaries for the ");
       capt += tName ;
-      capt += " domain, found" ;
-      capt += hdhC::tf_val(text2);
-      capt += ", required" ;
-      capt += hdhC::tf_val(text1);
+      capt += " domain, found " ;
+      capt += text2;
+      capt += ", required " ;
+      capt += text1;
 
       (void) notes->operate(capt) ;
       notes->setCheckMetaStr(pQA->fail);

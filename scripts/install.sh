@@ -186,7 +186,7 @@ getSrcPath()
     x_conda=${x_conda%/bin}
     if [ -d $x_conda/opt/qa-dkrz ] ; then
        CONDA_ENV=t
-       export QA_PATH=$x_conda/opt/qa-dkrz
+       export QA_SRC=$x_conda/opt/qa-dkrz
        return
     fi
   fi
@@ -248,7 +248,7 @@ getSrcPath()
       tmp=${tmp}/${arr[i]}
 
       if [ -f ${tmp}/.install_configure ] ; then
-        QA_PATH=$tmp
+        QA_SRC=$tmp
         break
       fi
     done
@@ -273,7 +273,7 @@ getSrcPath()
     exit 1
   fi
 
-  export QA_PATH=${QA_PATH}
+  export QA_SRC=${QA_SRC}
 
   return
 }
@@ -296,7 +296,7 @@ libInclSetting()
       isLink=
      else
       echo 'no path to at least one of netCDF, hdf, zlib, udunits2,'
-      echo 'please, inspect files QA_PATH/local/source/INSTALL_*.log'
+      echo 'please, inspect files QA_SRC/local/source/INSTALL_*.log'
       exit 1
      fi
 
@@ -505,9 +505,9 @@ makeProject()
       fi
     fi
 
-    if ! make ${always} -q -C $BIN -f ${QA_PATH}/$MAKEFILE ${cfc} ; then
+    if ! make ${always} -q -C $BIN -f ${QA_SRC}/$MAKEFILE ${cfc} ; then
        # not upto-date
-       if make ${always} ${mk_D} -C $BIN -f ${QA_PATH}/$MAKEFILE ${cfc} ; then
+       if make ${always} ${mk_D} -C $BIN -f ${QA_SRC}/$MAKEFILE ${cfc} ; then
          test ${PROJECT} != CF && log "make qa-${PROJECT}.x" DONE
        else
          test ${PROJECT} != CF && log "make qa-${PROJECT}.x" FAIL
@@ -526,18 +526,18 @@ makeProject()
 makeUtilities()
 {
   # small utilities
-  if make ${always} -q -C $BIN -f ${QA_PATH}/$MAKEFILE c-prog cpp-prog ; then
+  if make ${always} -q -C $BIN -f ${QA_SRC}/$MAKEFILE c-prog cpp-prog ; then
     status=$?
 #    log "C/C++ utilities" DONE=up-to-date
   else
     # not up-to-date
     # executes with an error, then again
     text=$(make ${always} ${mk_D} \
-            -C $BIN -f ${QA_PATH}/$MAKEFILE c-prog cpp-prog 2>&1 )
+            -C $BIN -f ${QA_SRC}/$MAKEFILE c-prog cpp-prog 2>&1 )
     if [ $? -gt 0 ]; then
       export CFLAGS="${CFLAGS[*]} -DSTATVFS"
       text=$(make ${always} ${mk_D} \
-            -C $BIN -f ${QA_PATH}/$MAKEFILE c-prog cpp-prog 2>&1 )
+            -C $BIN -f ${QA_SRC}/$MAKEFILE c-prog cpp-prog 2>&1 )
     fi
 
     if [ $? -eq 0 ] ; then
@@ -606,13 +606,13 @@ showInst()
      echo -e "\t${fs[*]##*/}"
    fi
 
-   fs=($( ls -d ${QA_PATH}/local/*))
+   fs=($( ls -d ${QA_SRC}/local/*))
    echo -e "\nQA/local:"
    for f in ${fs[*]##*/} ; do
      echo -e "\t$f"
    done
 
-   if fs=($( ls -d ${QA_PATH}/local/source/* 2> /dev/null)) ; then
+   if fs=($( ls -d ${QA_SRC}/local/source/* 2> /dev/null)) ; then
      echo "QA/local/source:"
 
      for f in ${fs[*]##*/} ; do
@@ -691,7 +691,7 @@ showInst()
 
    # -------------------
 
-   cd $QA_PATH &> /dev/null
+   cd $QA_SRC &> /dev/null
 
 #   local LANG=en_US
 #   echo ''
@@ -741,7 +741,7 @@ store_LD_LIB_PATH()
   done
 
   # store/update LD_LIBRARY_PATH in .conf
-  . $QA_PATH/scripts/updateConfigFile LD_LIBRARY_PATH=${ldp}
+  . $QA_SRC/scripts/updateConfigFile LD_LIBRARY_PATH=${ldp}
 
   return
 }
@@ -782,7 +782,7 @@ do
     d)  mk_D=-d ;;                   # make with debugging info
     h)  descript
         exit ;;
-    q)  QA_PATH=${OPTARG} ;;
+    q)  QA_SRC=${OPTARG} ;;
     -)  if [ "${UOPTARG}" = CONTINUE_LOG ] ; then
            isContLog=t
         elif [ "${UOPTARG:0:5}" = BUILD ] ; then
@@ -819,9 +819,9 @@ shift $(( $OPTIND - 1 ))
 
 # get path
 getSrcPath $0
-cd ${QA_PATH}
+cd ${QA_SRC}
 
-export LD_LIBRARY_PATH=${QA_PATH}/local/lib64:${QA_PATH}/local/lib
+export LD_LIBRARY_PATH=${QA_SRC}/local/lib64:${QA_SRC}/local/lib
 export LD_RUN_PATH=${LD_LIBRARY_PATH}
 
 # compiler settings
@@ -831,7 +831,7 @@ compilerSetting
 # existence, linking or building
 libInclSetting
 
-BIN=${QA_PATH}/bin
+BIN=${QA_SRC}/bin
 
 test ! -d $BIN && mkdir bin
 

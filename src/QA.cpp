@@ -115,7 +115,7 @@ QA::applyOptions(bool isPost)
      if( split[0] == "pP" || split[0] == "postProc"
        || split[0] == "post_proc")
      {
-       enablePostProc=true;
+//       enablePostProc=true;
        break;
      }
   }
@@ -234,16 +234,7 @@ QA::applyOptions(bool isPost)
        continue;
      }
 
-     if( split[0] == "tPr"
-          || split[0] == "tableProject" )  // dummy
-     {
-       if( split.size() == 2 )
-          consistencyFile.setFile(split[1]);
-     }
    }
-
-   if( consistencyFile.path.size() == 0 )
-      consistencyFile.setPath(tablePath);
 
    if( table_DRS_CV.path.size() == 0 )
       table_DRS_CV.setPath(tablePath);
@@ -290,24 +281,29 @@ QA::checkDataBody(std::string vName)
   return false;
 }
 
-bool
-QA::checkConsistency(InFile &in)
+void
+QA::checkConsistency(InFile &in, std::vector<std::string> &opt,
+                     std::string& tPath)
 {
   defaultPrjTableName() ;
 
   // Read or write the project table.
-  Consistency consistency(this, &in, consistencyFile);
+  Consistency consistency(this, &in, opt, tPath);
+
+  if( !consistency.isEnabled() )
+    return;
+
   consistency.setAnnotation(notes);
   consistency.setExcludedAttributes( excludedAttribute );
 
-  bool is = consistency.check();
+  consistency.check();
 
   // inquire whether the meta-data checks passed
   int ev;
   if( (ev = notes->getExitValue()) > 1 )
     setExit( ev );
 
-  return is;
+  return ;
 }
 
 void
@@ -579,7 +575,7 @@ QA::init(void)
    }
 
    // check consistency between sub-sequent files or experiments
-   (void) checkConsistency(*pIn) ;
+   checkConsistency(*pIn, optStr, tablePath) ;
 
    if( !isCheckTime )
      notes->setCheckTimeStr("OMIT");
@@ -894,7 +890,6 @@ QA::openQA_Nc(InFile &in)
     return;
 
   if( nc->open(qaFile.getFile(), "NC_WRITE", false) )
-//   if( isQA_open ) // false: do not exit in case of error
   {
     // continue a previous session
     importedRecFromPrevQA=nc->getNumOfRecords();
@@ -920,28 +915,11 @@ QA::openQA_Nc(InFile &in)
   if( qaNcfileFlags.size() )
     nc->create(qaFile.getFile(),  qaNcfileFlags);
   else
-    nc->create(qaFile.getFile(),  "Replace");
+    nc->create(qaFile.getFile(),  "NC_NETCDF4");
 
-  bool isNoTime=false;
-  if( qaTime.isTime && pIn->isTime )
-  {
-    // create a dimension for fixed variables only if there is any
-    for( size_t m=0 ; m < qaExp.varMeDa.size() ; ++m )
-    {
-      if( qaExp.varMeDa[m].var->isFixed )
-      {
-        isNoTime=true;
-        break;
-      }
-    }
-
-    if( !isNoTime )
-      qaTime.openQA_NcContrib(nc);
-  }
+  if( qaTime.time_ix > -1 )
+    qaTime.openQA_NcContrib(nc);
   else
-    isNoTime=true;
-
-  if( isNoTime )
   {
     // dimensions
     qaTime.name="fixed";

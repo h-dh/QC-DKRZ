@@ -2,23 +2,25 @@
 
 descript()
 {
-  echo -e "\nUsage: cf-checker [opts] netCDF-file[s]"
-  echo "Purpose: Check for CF Conventions Compliance"
-  echo "(http://cfconventions.org)."
-  echo "The checker is part of the QA-DKRZ package and must have been compiled"
-  echo "by '/your-path-to-QA-DKRZ/install CF'."
-  echo "e-mail: hollweg@dkrz.de"
-  echo " -C str    CF Convention string; taken from global attributes by default."
-  echo " -F path   Find recursively all nc-files from starting point 'path'."
-  echo " -p str    Path to one or more netCDF Files; this is prefixed"
-  echo "           only to netCDF-files without any path component."
-  echo " -R        Apply also recommendations given by CF conventions."
-  echo " --debug   Show execution commands."
+  echo -e "\nUsage: dkrz-cf-checker [opts] netCDF-file[s]"
+  echo "Purpose: Check for CF Conventions Compliance (http://cfconventions.org)."
+  echo "The checker is part of the QA-DKRZ package in"
+  echo "https://github.com/IS-ENES-Data/QA-DKRZ.git"
+  echo "Compilation: '/your-path-to-QA-DKRZ/install CF' unless"
+  echo "it was fetched by conda install -c birdhouse qa-dkrz,"
+  echo "Email: hollweg@dkrz.de"
+  echo " -C str     CF Convention string; taken from global attributes by default."
+  echo " -F path    Find recursively all nc-files from starting point 'path'."
+  echo " -p str     Path to one or more netCDF Files; this is prefixed"
+  echo "            only to netCDF-files without any path component."
+  echo " -R         Apply also recommendations given by CF conventions."
+  echo " --debug    Show execution commands."
   echo " --help"
-  echo " --param   Only for program development."
-  echo " --ts      Run the files provided in the Test-Suite for CF conventions"
-  echo "           rules in QA-DKRZ/CF_TestSuite. If particular netCDF files are"
-  echo "           provided additionally, then only these are used."
+  echo " --param    Only for program development."
+  echo " --ts[=arg] Run the files provided in the Test-Suite for CF conventions"
+  echo "            rules in QA-DKRZ/CF_TestSuite. If particular netCDF files are"
+  echo "            provided additionally, then only these are used. If a filename"
+  echo "            cannot be resolved unambigously, then use optional arg F[ail] or P[ass}."
   echo " netCDF-file(s)"
 
   exit
@@ -34,7 +36,7 @@ getSrcPath()
     x_conda=${x_conda%/bin}
     if [ -d $x_conda/opt/qa-dkrz ] ; then
        CONDA_ENV=t
-       export QA_PATH=$x_conda/opt/qa-dkrz
+       export QA_SRC=$x_conda/opt/qa-dkrz
        return
     fi
   fi
@@ -96,7 +98,7 @@ getSrcPath()
       tmp=${tmp}/${arr[i]}
 
       if [ -f ${tmp}/.install_configure ] ; then
-        QA_PATH=$tmp
+        QA_SRC=$tmp
         break
       fi
     done
@@ -121,7 +123,7 @@ getSrcPath()
     exit 1
   fi
 
-  export QA_PATH=${QA_PATH}
+  export QA_SRC=${QA_SRC}
 
   return
 }
@@ -147,7 +149,15 @@ do
           isParamFileOnly=t
         elif [ "${OPTARG}" = "test-suite" ] ; then
           isTestSuite=t
-        elif [ "${OPTARG}" = "ts" ] ; then
+        elif [ "${OPTARG%=*}" = "ts" ] ; then
+          if [ "${OPTARG%=*}" != "${OPTARG}" ] ; then
+            arg=${OPTARG#*=}
+            if [ ${arg[0]} = p -o ${arg[0]} = P ] ; then
+              tsCase=/Pass
+            else
+              tsCase=/Fail
+            fi
+          fi
           isTestSuite=t
         fi
         ;;
@@ -157,48 +167,55 @@ done
 
 shift $(( $OPTIND - 1 ))
 
-getSrcPath $0  # sets QA_PATH and if required CONDA_ENV
+getSrcPath $0  # sets QA_SRC and if required CONDA_ENV
 
 test ! $CONDA_ENV &&
-  $QA_PATH/install CF &> /dev/null
+  $QA_SRC/install CF &> /dev/null
 
-QA_WORK=$QA_PATH
+QA_WORK=$QA_SRC
 
 # files
-if [ ${isTestSuite:-f} = t ] ; then
-  # only for the set of test files
-  ts_fs=( $* )
+fs=( $* )
 
+if [ ${isTestSuite:-f} = t ] ; then
   # generate the netcdf files
-  count=$(find $QA_PATH/CF-TestSuite/Nc -name "*.nc" 2> /dev/null | grep -c .)
+  count=$(find $QA_SRC/CF-TestSuite/Nc -name "*.nc" 2> /dev/null | grep -c .)
   if [ ${count} -lt 25 ] ; then  # sufficient to outnumber protected nc-files
-    if [ ! -f $QA_PATH/CF-TestSuite/Txt ] ; then
-      if [ -f $QA_PATH/CF-TestSuite/Txt.tar.bz2 ] ; then
+    if [ ! -f $QA_SRC/CF-TestSuite/Txt ] ; then
+      if [ -f $QA_SRC/CF-TestSuite/Txt.tar.bz2 ] ; then
         tar -C   ${QA_WORK}/CF-TestSuite \
-            -xjf ${QA_PATH}/CF-TestSuite/Txt.tar.bz2
+            -xjf ${QA_SRC}/CF-TestSuite/Txt.tar.bz2
       else
-        echo "$QA_PATH/CF-TestSuite/Txt no such directory"
+        echo "$QA_SRC/CF-TestSuite/Txt no such directory"
         exit 1
       fi
     fi
 
-    if [ -d $QA_PATH/CF-TestSuite/Txt ] ; then
-      $QA_PATH/CF-TestSuite/scripts/mkAllNc > /dev/null
+    if [ -d $QA_SRC/CF-TestSuite/Txt ] ; then
+      $QA_SRC/CF-TestSuite/scripts/mkAllNc > /dev/null
     else
-      echo "$QA_PATH/CF-TestSuite/Txt no such directory"
+      echo "$QA_SRC/CF-TestSuite/Txt no such directory"
       exit 1
     fi
   fi
-else
-  fs=( $* )
+
+  startingDir=$QA_SRC/CF-TestSuite/Nc${tsCase}
+
+  if [ ${#startingDir} -gt 0 ] ; then
+    ts_fs=( $( find ${startingDir} -name "*.cn" ) )
+    ts_fs=( ${ts_fs[*]} $( find ${startingDir} -name "*.nc" | sort ) )
+  fi
+
+  unset startingDir
 fi
 
+# not for the test suite
 if [ ${#startingDir} -gt 0 ] ; then
   fs=( ${fs[*]} $( find ${startingDir} -name "*.cn" ) )
   fs=( ${fs[*]} $( find ${startingDir} -name "*.nc" | sort ) )
 fi
 
-param_T="\\n-t ${QA_PATH}/tables/projects/CF"
+param_T="\\n-t ${QA_SRC}/tables/projects/CF"
 
 param_IN="\\nIN::oCF"
 
@@ -217,28 +234,42 @@ if [ ${isParamFileOnly:-f} = f ] ; then
 fi
 
 for(( i=0 ; i < ${#fs[*]} ; ++i )) ; do
-
-  # only selected ones from the set of test files
-  if [ ${#ts_fs[*]} -gt 0 ] ; then
-    for(( i_ts=0 ; i_ts < ${#ts_fs[*]} ; ++i_ts )) ; do
-      test ${fs[i]##*/} = ${ts_fs[i_ts]} && break
-    done
-    test ${i_ts} -eq ${#ts_fs[*]} && continue
-  fi
+  f=${fs[i]}
 
   param=
 
   # prepare parameters for the cf-checker.x
-  test ${#fPath} -gt 0 && param="-p ${fPath}\\n"
+  if [ ! "${fPath}" -a ${f/\//} != ${f} ] ; then
+     fPath=${f%/*}
+     f=${f##*/}
+  fi
 
-  param="${param}-f ${fs[i]}"
+  # only selected ones from the set of test files
+  if [ ${#ts_fs[*]} -gt 0 ] ; then
+    for(( i_ts=0 ; i_ts < ${#ts_fs[*]} ; ++i_ts )) ; do
+      if [ ${f} = ${ts_fs[i_ts]##*/} ] ; then
+        test ! "$fPath" && fPath=${ts_fs[i_ts]%/*}
+        break
+      fi
+    done
+    test ${i_ts} -eq ${#ts_fs[*]} && continue
+  fi
+
+  if [ "$fPath" ] ; then
+    param="-p ${fPath}\\n"
+  else
+    echo "Please, provide a path with optn -p"
+    exit 1
+  fi
+
+  param="${param}-f $f"
   param="${param}${param_T}"
   param="${param}${param_IN}"
   param="${param}${param_CF}"
 
   param="${param}${param_X}:note="
   if [ ${isTestSuite:-f} = t ] ; then
-    if [ ${fs[i]##*/} != cf_0f.nc ] ; then
+    if [ ${f##*/} != cf_0f.nc ] ; then
       param="${param},{CF_0d,D},{CF_0e,D},{CF_0f,D},{CF_12e,D}"
     fi
   fi
@@ -249,12 +280,13 @@ for(( i=0 ; i < ${#fs[*]} ; ++i )) ; do
   fi
 
   param="$(echo -e $param)"
-  $QA_PATH/bin/dkrz-cf-checker.x ${param}
+  $QA_SRC/bin/dkrz-cf-checker.x ${param}
+  retVal=$?
 
-  if [ ${isTestSuite:-f} = t ] && echo ${fs[i]} | grep -q Fail ; then
-    asdf="$(ncdump -h ${fs[i]} | grep :comment[^[:digit:]])"
+  if [ ${isTestSuite:-f} = t ] && echo $f | grep -q Fail ; then
+    asdf="$(ncdump -h $f | grep :comment[^[:digit:]])"
     echo "${asdf#*:}"
-#    asdf="$(ncdump -h ${fs[i]} | grep :note)"
+#    asdf="$(ncdump -h $f | grep :note)"
 #    test "${asdf}" && echo -e "${asdf#*:}"
     echo -e "\n"
   fi
@@ -263,3 +295,5 @@ done
 echo "========================================"
 
 test -e param_file_$$.txt && \rm param_file_$$.txt
+
+exit $retVal

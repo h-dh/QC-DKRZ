@@ -163,7 +163,10 @@ compare(double x, std::string op, double y,
 
 /*! epsilon is 10^-DECS of the smaller value of the magnitude of x and y*/
 bool
-compare(double x, char op, double y, int DECS=10);
+compare(double x, std::string op, double y, int DECS=10);
+
+bool
+compare(double x, std::string op, double y, double epsilon);
 
 //! Convert time
 /*! Time given in a certain unit is converted to a target unit.
@@ -467,6 +470,9 @@ parabolaSummit(double xm, double x, double xp, double ym,
 //! Planck function.
 double
 planck(double anue,double t);
+
+double
+rounding(double, int dNum=0);
 
 //! Convert string to double (K&R).
 /*! Extract a number from string. Multiple numbers in a string
